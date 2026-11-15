@@ -207,6 +207,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="${detailPath}" text="Open in the calendar" icon="sym_o_calendar_month" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
                             <link url="${sharedLinks['Events/Registrations']}" text="Registrations" icon="sym_o_groups" link-type="anchor"
                                     parameter-map="{workEffortId:workEffortId}" condition="hasOffer &amp;&amp; sharedLinks['Events/Registrations']"/>
+                            <!-- P18: the offer's door (CheckIn), once it is published -->
+                            <link url="${sharedLinks['Events/CheckIn']}" text="Check in" icon="sym_o_qr_code_scanner" link-type="anchor"
+                                    parameter-map="{registrationPolicyId:offer?.registrationPolicyId}"
+                                    condition="offer &amp;&amp; (offer.statusId == 'ErpPublished' || offer.statusId == 'ErpClosed') &amp;&amp; sharedLinks['Events/CheckIn']"/>
                             <container-dialog id="CloseOfferDialog" button-text="Close registration" icon="sym_o_block" width="480"
                                     title="Close the registration for ${offer.occurrenceText}" condition="offer &amp;&amp; offer.canClose">
                                 <form-single name="CloseOffer" transition="closeOffer" map="stateValues">

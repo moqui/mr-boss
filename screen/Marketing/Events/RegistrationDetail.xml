@@ -35,6 +35,10 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.work.EventRegistrationServices.get#Registration" out-map="found" transaction="force-new" ignore-error="true"
                     in-map="{registrationId:registrationId}"/>
             <script>ec.message.clearErrors()</script>
+            <!-- P18: its attendance (Attendance: when, how, by whom and why it was checked in) -->
+            <service-call name="mantle.work.EventRegistrationServices.get#Attendance" out-map="attended" transaction="force-new" ignore-error="true"
+                    in-map="{registrationId:registrationId}"/>
+            <script>ec.message.clearErrors()</script>
         </if>
         <set field="recordFound" from="!!found?.registration"/>
         <script><![CDATA[
@@ -61,7 +65,9 @@ along with this software (see the LICENSE.md file). If not, see
                 {label: 'Refund', value: reg.refundText ? reg.refundText + (reg.refundPercent != null ? ' (' + reg.refundPercent + '%)' : '') : ''},
                 {label: 'Entry code', value: reg.credentialText},
                 {label: 'Cancelled', value: reg.cancelledText ? reg.cancelledText + (reg.cancelReason ? ': ' + reg.cancelReason : '') : ''},
-                {label: 'Terms accepted', value: reg.termsRevision != null ? 'Revision ' + reg.termsRevision : ''}
+                {label: 'Terms accepted', value: reg.termsRevision != null ? 'Revision ' + reg.termsRevision : ''},
+                {label: 'Checked in', value: attended?.attendance ? [attended.attendance.checkInText, attended.attendance.methodText,
+                    attended.attendance.byText ? 'by ' + attended.attendance.byText : null, attended.attendance.reason || null].filter(Boolean).join(' · ') : ''}
             ].filter(fact => fact.value)
         ]]></script>
     </actions>

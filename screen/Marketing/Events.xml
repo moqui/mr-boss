@@ -19,15 +19,17 @@ along with this software (see the LICENSE.md file). If not, see
     MARKETING_EVENT_MANAGE sets up their registration. Every read and write is mantle.work.EventRegistrationServices or the calendar's
     mantle.work.EventServices, which check the permission, the organization and the calendar's rule again. P17: Registrations (an
     event's or offer's attendees, StaffRegistration and RegistrationBatch) and RegistrationDetail (one registration, its change), the
-    events managers'; P18 CheckIn. -->
+    events managers'; P18 CheckIn (an offer's door: an events manager's under their own sign-in, or the offer's shared door tablet,
+    whose request runs as a display account with no Marketing context: screen/Marketing.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Events" default-menu-index="7" menu-image="sym_o_event" menu-image-type="icon">
     <always-actions>
-        <script>if(!marketing.capabilities.eventRead)throw new Error('PERMISSION_DENIED: Events are for Marketing readers')</script>
+        <!-- a door tablet (marketing.device) reaches CheckIn alone, by its route group; CheckIn's services check it -->
+        <script>if(!marketing.device &amp;&amp; !marketing.capabilities.eventRead)throw new Error('PERMISSION_DENIED: Events are for Marketing readers')</script>
         <!-- EventDetail's Marketing links (Commons' EventDetail shows eventAppLinks, mount data and never a right): Registration setup
             for a registration event of the user's organizations; each screen checks again -->
         <set field="eventAppLinks" from="[]"/>
-        <if condition="ec.web?.parameters?.workEffortId">
+        <if condition="!marketing.device &amp;&amp; ec.web?.parameters?.workEffortId">
             <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="eventCheck" transaction="force-new" ignore-error="true"
                     in-map="{appRoot:appRoot, recordType:'event', recordId:String(ec.web.parameters.workEffortId)}"/>
             <script><![CDATA[
@@ -37,7 +39,10 @@ along with this software (see the LICENSE.md file). If not, see
                         url: marketing.webBase + '/Events/RegistrationSetup?workEffortId=' + encodeURIComponent(eventCheck.recordId)},
                         // P17: the event's registrations, the events managers'
                         {label: 'Registrations', icon: 'sym_o_groups',
-                        url: marketing.webBase + '/Events/Registrations?workEffortId=' + encodeURIComponent(eventCheck.recordId)}]
+                        url: marketing.webBase + '/Events/Registrations?workEffortId=' + encodeURIComponent(eventCheck.recordId)},
+                        // P18: its check-in, the events managers' (an offer chosen there)
+                        {label: 'Check in', icon: 'sym_o_qr_code_scanner',
+                        url: marketing.webBase + '/Events/CheckIn?workEffortId=' + encodeURIComponent(eventCheck.recordId)}]
             ]]></script>
         </if>
     </always-actions>
@@ -47,6 +52,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="RegistrationSetup" location="component://mr-boss/screen/Marketing/Events/RegistrationSetup.xml" menu-include="false"/>
         <subscreens-item name="Registrations" location="component://mr-boss/screen/Marketing/Events/Registrations.xml" menu-include="false"/>
         <subscreens-item name="RegistrationDetail" location="component://mr-boss/screen/Marketing/Events/RegistrationDetail.xml" menu-include="false"/>
+        <subscreens-item name="CheckIn" location="component://mr-boss/screen/Marketing/Events/CheckIn.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="MarketingEventsPanel" type="tab"/>

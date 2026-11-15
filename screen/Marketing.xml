@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     routing to Sales and their handoffs, the authors'; BOSS_MKT_LEAD_RULES) and Sales' LeadSources in Settings; P14 Content (campaign
     content, blog posts, the shared landing pages with Marketing's registration and Commons Knowledge; every Marketing reader's); P16
     Events (the registration events, Commons' EventDetail mounted and RegistrationSetup; every Marketing reader's, set up by the events
-    managers). -->
+    managers); P18 its CheckIn, an events manager's under their own sign-in or an event's shared door tablet's (below). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
 
@@ -35,7 +35,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Marketing"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
-        <service-call name="ironstone.marketing.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="marketing"/>
+        <!-- P18: a shared device's request (an event's door tablet; its route group MARKETING_CHECKIN admits Events/CheckIn and its
+            transitions alone) runs as a display account, which is no Marketing user and holds no root grant: it gets no context,
+            capability or link and is served no record panel (People's and Maintenance's roots); CheckIn's services check the device
+            themselves (Mantle's EventCheckIn.js) -->
+        <if condition="UserSecurityChecks.currentDevice()"><then>
+            <set field="marketing" from="{device: true, capabilities: {}, organizationPartyIds: [], sharedLinks: {}, webBase: '/qapps/Marketing'}"/>
+        </then><else>
+            <service-call name="ironstone.marketing.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="marketing"/>
+        </else></if>
         <!-- the record panels serve Marketing's own record hosts only (the People P2, Insights P12, Maintenance P1 and Sales P1 mount
             lesson): this root's inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits to
             a user given Marketing without Commons. P2: the campaign, checked by check#Record (a Marketing reader of its
@@ -45,6 +53,8 @@ along with this software (see the LICENSE.md file). If not, see
             const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
             const panelName = pathNames[pathNames.indexOf('Marketing') + 1]
             panelRecordType = null
+            if ((panelName === 'Chatter' || panelName === 'RecordFiles') && marketing.device)
+                throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files are not available on a shared device')
             if ((panelName === 'Chatter' || panelName === 'RecordFiles') && ec.context.recordEntity) {
                 const panelHosts = {'mantle.marketing.campaign.MarketingCampaign': 'campaign', 'mantle.marketing.campaign.CampaignSend': 'send'}
                 const entityName = String(ec.context.recordEntity)
