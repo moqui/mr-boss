@@ -51,7 +51,12 @@ const registeredKeys = [
     // Sales' (impl-sales P11)
     "Sales.QuotesToSend",
     "Sales.QuotesExpiring",
-    "Sales.OrdersAwaitingApproval"
+    "Sales.OrdersAwaitingApproval",
+    // Marketing's (impl-marketing P20)
+    "Marketing.SendsAwaitingApproval",
+    "Marketing.FailedDeliveries",
+    "Marketing.UncertainDeliveries",
+    "Marketing.HeldRegistrations"
 ]
 // The spec's own providers (owner InsightsSpec), over Insights' own services: one that answers, one whose answer lacks its
 // count and one whose call fails (both failures), one whose owner refuses, one whose route the reader cannot open and one for

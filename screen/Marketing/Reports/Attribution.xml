@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Reports › Attribution (design-marketing §11 Attribution: AttributionBasis, OutcomeRows, AttributionSummary; style-guide
+    §3.10 Report; impl-marketing P20): Mantle's mantle.marketing.MarketingReportServices.get#Attribution over the placed sales orders of the
+    period by their primary campaign (unattributed apart), each order once, with value, invoiced, returns and net by currency and the leads
+    by their campaign; an order's own row only for a reader who may see the order in Sales or Commerce (the others counted). The
+    administrator (MARKETING_CONFIGURE) corrects an order's attribution with a reason (TrackingServices correct#OrderAttribution, a
+    successor decision). A report reader's; Mantle checks again. CSV of each list; print. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Attribution" default-menu-index="4" menu-image="sym_o_conversion_path" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="marketingCampaignId"/>
+    <parameter name="includeChildren"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition name="correctAttribution">
+        <service-call name="mantle.marketing.TrackingServices.correct#OrderAttribution"
+                in-map="{orderId:orderId, expectedOutcomeLinkId:expectedOutcomeLinkId, marketingCampaignId:(correctCampaignId || null), reason:reason}"/>
+        <default-response url="."/>
+        <error-response url="." save-parameters="true"/>
+    </transition>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)"/>
+        <set field="optionValues" from="{organizationPartyId, marketingCampaignId: marketingCampaignId || null, includeChildren: includeChildren || null, fromDate: fromDate || null, thruDate: thruDate || null}"/>
+        <set field="serviceValues" from="optionValues"/>
+        <set field="loadRefusal" value=""/>
+        <set field="report" from="null"/>
+        <if condition="marketing.capabilities.reportRead">
+            <service-call name="mantle.marketing.MarketingReportServices.get#Attribution" out-map="report" transaction="force-new" ignore-error="true" in-map="serviceValues"/>
+            <set field="loadRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
+            <if condition="loadRefusal"><set field="report" from="null"/></if>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="summaryRows" from="report?.summaryRows || []"/>
+        <set field="outcomeRows" from="report?.outcomeRows || []"/>
+        <set field="campaignPath" from="sharedLinks['Campaigns/CampaignDetail'] || null"/>
+        <set field="canCorrect" from="!!marketing.capabilities.configure"/>
+        <set field="printUrl" from="'/apps/Marketing/Reports/Attribution?' + Object.entries(Object.assign({renderMode: 'html-print'},
+                optionValues)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '=' + encodeURIComponent(entry[1])).join('&amp;')"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Attribution" type="h5"/></container>
+            <container style="col-auto">
+                <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" target-window="_blank" condition="report"/>
+            </container>
+        </container>
+        <form-single name="ReportOptions" transition="." map="optionValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'organizations', selected:organizationPartyId}"/></drop-down></default-field>
+            </field>
+            <field name="marketingCampaignId">
+                <default-field title="Campaign"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'reportCampaigns', organizationPartyId:organizationPartyId, selected:marketingCampaignId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="includeChildren">
+                <default-field title="Children" tooltip="Each campaign with its child campaigns, each counted once"><check><option key="true" text="Include child campaigns"/></check></default-field>
+            </field>
+            <field name="fromDate"><default-field title="From" tooltip="Empty: 30 days ago"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Through" tooltip="Empty: now"><date-time type="date"/></default-field></field>
+            <field name="submitButton"><default-field title=""><submit text="Run report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row><field-ref name="organizationPartyId"/><field-ref name="marketingCampaignId"/><field-ref name="includeChildren"/></field-row>
+                <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                <field-ref name="submitButton"/>
+            </field-layout>
+        </form-single>
+        <label text="${loadRefusal || 'This report is not available to you.'}" type="p" style="text-negative" condition="!report"/>
+        <section name="AttributionFound" condition="report">
+            <widgets>
+                <label text="${report.fromText} – ${report.thruText}, as of ${report.asOfText}. ${report.basis}" type="p" style="text-caption m-muted"/>
+                <label text="Orders ${report.orderCount} · Unattributed ${report.unattributedCount}" type="h6"/>
+                <container-box>
+                    <box-header title="By campaign"/>
+                    <box-body-nopad>
+                        <form-list name="AttributionSummary" list="summaryRows" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="campaignName">
+                                <conditional-field title="Campaign" condition="campaignPath &amp;&amp; marketingCampaignId">
+                                    <link url="${campaignPath}" url-type="plain" text="${campaignName}" link-type="anchor" parameter-map="{marketingCampaignId:marketingCampaignId}"/>
+                                </conditional-field>
+                                <default-field title="Campaign"><display/></default-field>
+                            </field>
+                            <field name="leadCount" align="right"><default-field title="Leads"><display/></default-field></field>
+                            <field name="qualifiedCount" align="right"><default-field title="Qualified"><display/></default-field></field>
+                            <field name="orderCount" align="right"><default-field title="Orders"><display/></default-field></field>
+                            <field name="orderValueText" align="right"><default-field title="Order value"><display/></default-field></field>
+                            <field name="invoicedText" align="right"><default-field title="Invoiced"><display/></default-field></field>
+                            <field name="returnedText" align="right"><default-field title="Returns"><display/></default-field></field>
+                            <field name="netText" align="right"><default-field title="Net"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="campaignName"/><field-ref name="orderCount"/></column>
+                                <column><field-ref name="orderValueText"/><field-ref name="netText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No order was placed in this period." type="p" style="m-muted q-pa-sm" condition="!summaryRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Orders"/>
+                    <box-body-nopad>
+                        <label text="${report.hiddenCount} orders you may not open in Sales or Commerce are counted above and not listed." type="p"
+                                style="text-caption m-muted q-pa-sm" condition="report.hiddenCount"/>
+                        <form-list name="OutcomeRows" list="outcomeRows" skip-form="true" paginate="false" show-csv-button="true" condition="outcomeRows.length">
+                            <field name="orderId"><default-field title="Order"><display/></default-field></field>
+                            <field name="placedText"><default-field title="Placed"><display/></default-field></field>
+                            <field name="campaignName"><default-field title="Primary campaign"><display/></default-field></field>
+                            <field name="basisText"><default-field title="Basis"><display/></default-field></field>
+                            <field name="evidenceText"><default-field title="Evidence time"><display/></default-field></field>
+                            <field name="orderValueText" align="right"><default-field title="Value"><display/></default-field></field>
+                            <field name="netText" align="right"><default-field title="Invoiced net"><display/></default-field></field>
+                            <field name="correct">
+                                <conditional-field title="" condition="canCorrect">
+                                    <container-dialog id="CorrectAttribution_${orderId}" button-text="Correct" title="Correct the attribution of order ${orderId}" icon="sym_o_edit">
+                                        <form-single name="CorrectAttributionForm" transition="correctAttribution"
+                                                map="{orderId:orderId, expectedOutcomeLinkId:outcomeLinkId, correctCampaignId:marketingCampaignId}">
+                                            <field name="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedOutcomeLinkId"><default-field><hidden/></default-field></field>
+                                            <field name="correctCampaignId">
+                                                <default-field title="Primary campaign" tooltip="Empty: unattributed"><drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'reportCampaigns', organizationPartyId:organizationPartyId, selected:marketingCampaignId}"/>
+                                                </drop-down></default-field>
+                                            </field>
+                                            <field name="reason"><default-field title="Reason"><text-area rows="2"/></default-field></field>
+                                            <field name="submitButton"><default-field title=""><submit text="Save the correction" type="primary"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                                <default-field title=""><display text=""/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="orderId"/><field-ref name="campaignName"/></column>
+                                <column><field-ref name="orderValueText"/><field-ref name="correct"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

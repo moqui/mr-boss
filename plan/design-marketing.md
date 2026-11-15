@@ -1782,6 +1782,32 @@ and documented exchange-rate date are selected. **Needs:** MKT-TRACKING, MKT-REP
 
 **Source:** research §9; Odoo campaign lead/quotation/invoice links and native SalesOpportunityTracking/TrackingCodeOrder.
 
+**As built (impl-marketing P20).** Mantle `mantle.marketing.MarketingReportServices` (MarketingReports.js) answers a report reader
+(MARKETING_REPORT_VIEW) of the organizations of their Marketing scope, aggregates only: `get#CampaignPerformance` (the campaigns whose
+window meets the period, each with its children counted once when asked; accepted promotional deliveries and the people reached once,
+visits a visitor key once, leads by created date and qualified by qualified date, confirmed registrations, the attributed orders'
+value, invoiced, completed returns and net by currency, ROI only over one currency with an actual cost, else unavailable with why;
+numSent and qualifiedLeadCount as the hourly aggregation job last computed them), `get#DeliveryAnalysis` (the sends released in the
+period, an automation's by its recipients handed off in it; each recipient once; accepted is the ledger's Sent, delivered needs a
+receipt; open and click rates over the accepted recipients who allowed tracking; automated fetches apart; conversions are the orders
+attributed to a recipient's own tracked click or visit; an experiment's variants beside, adding up to the send), `get#AudienceGrowth`
+(each list's evidenced consent records: opening and closing by the latest record before each boundary, grants with a merge's carried
+grants apart, withdrawals and the reasons given, expired and pending requests, members now; reach across lists once; suppressions apart)
+and `get#Attribution` (each placed order once by its primary campaign, unattributed apart, with leads by their campaign at capture;
+an order's own row only for a reader who may see it in Sales or Commerce). Nothing past a limit is cut: TOO_MANY_RECORDS. The decision
+is `TrackingServices.record#OrderAttribution`, called by `handle#OrderPlaced` after each placement (MarketingOutcomeLink, one in force
+an order, with its basis, evidence and evidence time; TrackingCodeOrder beside a tracking event, never billable); the order's identity
+is its local visit and the visitor key that visit's events carried, or its customer as a recipient who allows tracking now, never
+inferred across devices; a staff correction (MARKETING_CONFIGURE) is a successor with its reason. The visits metric is `count#Visits`
+(and Sales' `count#SalesVisits`). Retention (`run#MarketingRetention`, nightly): a purged import's row names and masked addresses,
+unconfirmed public requests a week past their expiry, tracking events past the organization's statistics retention (never one an
+attribution names) and expired link tokens, each on its own. Insights: the catalog entries, the metrics `Marketing.Visits` and
+`Marketing.AttributedOrders`, the datasets `boss-marketing-deliveries` and `boss-marketing-audience` (their row filter Marketing's
+scope, `MantleMarketingScope`), the dashboard `boss-marketing-campaigns`, the alert templates for complaints, hard bounces and the
+uncertain backlog, the weekly campaign digest, four attention providers, the flow targets `Marketing.Campaigns` and `Marketing.Sends`
+(the customer flow's "Finds us" step), and the campaign-sent business annotation (`CampaignSent`, Mantle's business event, registered
+by the release and the winner's release).
+
 ## 12. Settings
 
 ### Settings

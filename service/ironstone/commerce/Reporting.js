@@ -319,11 +319,40 @@ function onlineSales(p) {
             netChangeText: row.netChange == null ? "" : percentText(row.netChange)
         })
     for (const row of topProducts) row.salesCsv = plain(row.sales)
+    answer.trafficRows = trafficOf(scope, shown.slice(0, 6))
     const tables = [
         {columns: salesColumns, list: scope.stores.length === 1 ? totalRows : storeRows.concat(totalRows)},
         {columns: productColumns, list: topProducts}
     ]
     return exported(p, "OnlineSales", "Online sales", answer, tables)
+}
+
+// impl-marketing P20 (impl-commerce §7, F28; Marketing P15's finding): the visits of the stores' sites and the orders placed, with how
+// many a campaign is the primary attribution of, per period (the latest six): Marketing's count#StoreVisits and count#StoreConversions
+// after their own store check; none when no site of these stores has a Shop mount, or when Marketing is not there to count them.
+function trafficOf(scope, periods) {
+    if (!scope.storeIds.length) return []
+    const rows = []
+    for (const period of periods) {
+        try {
+            const window = {productStoreIds: scope.storeIds, fromDate: new Date(period.from), thruDate: new Date(period.thru)}
+            const visits = lib.probe("mantle.marketing.TrackingServices.count#StoreVisits", window)
+            if (!visits.siteCount) return []
+            const orders = lib.probe("mantle.marketing.MarketingReportServices.count#StoreConversions", window)
+            rows.push({
+                periodText: period.text,
+                visitCount: visits.visitCount,
+                orderCount: orders.orderCount,
+                attributedCount: orders.attributedCount,
+                attributedText: orders.amountsText || "",
+                conversionText: visits.visitCount ? percentText((orders.orderCount * 100) / visits.visitCount) : ""
+            })
+        } catch (error) {
+            ec.logger.warn("Online sales' visits and campaign orders were not counted: " + error.message)
+            return []
+        }
+    }
+    return rows
 }
 
 // ===== Home's PeriodStrip (design §1.2, §3 Home) =====

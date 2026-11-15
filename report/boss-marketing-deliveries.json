@@ -1,0 +1,34 @@
+{
+  "id": "boss-marketing-deliveries",
+  "type": "dataset",
+  "title": "Marketing deliveries",
+  "body": {
+    "folder": "Marketing",
+    "description": "Campaign deliveries of the delivery ledger (promotional sends and automation steps, never a test or a transactional notice) with their organization, channel, sending profile, state (queued, sent, waiting to retry, failed, suppressed, uncertain), receipt (delivered, soft or hard bounce, complaint) and times, by when each was created. Each viewer reads the deliveries of the organizations of their Marketing report scope (MARKETING_REPORT_VIEW). No recipient, address or message.",
+    "documentType": "BossMarketingDelivery",
+    "timeField": "createdDate",
+    "signal": "business",
+    "rowFilterService": "mantle.marketing.MarketingReportServices.get#ReportRowFilter",
+    "rowFilterParameters": {
+      "organizationField": "organizationPartyId"
+    },
+    "fieldDefaults": {
+      "organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
+      },
+      "stateEnumId": {
+        "enumTypeId": "MessageDeliveryState"
+      },
+      "receiptEnumId": {
+        "enumTypeId": "MessageDeliveryReceipt"
+      },
+      "channelEnumId": {
+        "enumTypeId": "MessageDeliveryChannel"
+      }
+    }
+  }
+}

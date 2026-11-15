@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Reports › Delivery analysis (design-marketing §11 DeliveryAnalysis: DeliveryCohort, DeliveryMeasures, EngagementMeasures;
+    style-guide §3.10 Report; impl-marketing P20): Mantle's mantle.marketing.MarketingReportServices.get#DeliveryAnalysis over the sends
+    released in the period (or one send), each recipient once: the dispatch and the ledger's outcomes (accepted is the transport's,
+    delivered needs a receipt), bounces and complaints, and the engagement of the accepted recipients who allowed tracking (unique opens and
+    clicks, automated fetches apart, conversions), each rate with its denominator; an experiment's variants beside. A report reader's;
+    Mantle checks again. CSV of each list; print. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Delivery analysis" default-menu-index="2" menu-image="sym_o_outgoing_mail" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="marketingCampaignId"/>
+    <parameter name="campaignSendId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)"/>
+        <set field="optionValues" from="{organizationPartyId, marketingCampaignId: marketingCampaignId || null, campaignSendId: campaignSendId || null, fromDate: fromDate || null, thruDate: thruDate || null}"/>
+        <set field="serviceValues" from="optionValues"/>
+        <set field="loadRefusal" value=""/>
+        <set field="report" from="null"/>
+        <if condition="marketing.capabilities.reportRead">
+            <service-call name="mantle.marketing.MarketingReportServices.get#DeliveryAnalysis" out-map="report" transaction="force-new" ignore-error="true" in-map="serviceValues"/>
+            <set field="loadRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
+            <if condition="loadRefusal"><set field="report" from="null"/></if>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="sendRows" from="report?.sendRows || []"/>
+        <set field="variantRows" from="report?.variantRows || []"/>
+        <set field="totals" from="report?.totals || {}"/>
+        <set field="sendPath" from="sharedLinks['Sends/SendDetail'] || null"/>
+        <set field="printUrl" from="'/apps/Marketing/Reports/DeliveryAnalysis?' + Object.entries(Object.assign({renderMode: 'html-print'},
+                optionValues)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '=' + encodeURIComponent(entry[1])).join('&amp;')"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Delivery analysis" type="h5"/></container>
+            <container style="col-auto">
+                <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" target-window="_blank" condition="report"/>
+            </container>
+        </container>
+        <form-single name="ReportOptions" transition="." map="optionValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'organizations', selected:organizationPartyId}"/></drop-down></default-field>
+            </field>
+            <field name="marketingCampaignId">
+                <default-field title="Campaign"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'reportCampaigns', organizationPartyId:organizationPartyId, selected:marketingCampaignId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="campaignSendId">
+                <default-field title="Send"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'reportSends', organizationPartyId:organizationPartyId, marketingCampaignId:marketingCampaignId, selected:campaignSendId}"><depends-on field="organizationPartyId"/><depends-on field="marketingCampaignId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="fromDate"><default-field title="From" tooltip="Empty: 30 days ago"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Through" tooltip="Empty: now"><date-time type="date"/></default-field></field>
+            <field name="submitButton"><default-field title=""><submit text="Run report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row><field-ref name="organizationPartyId"/><field-ref name="marketingCampaignId"/><field-ref name="campaignSendId"/></field-row>
+                <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                <field-ref name="submitButton"/>
+            </field-layout>
+        </form-single>
+        <label text="${loadRefusal || 'This report is not available to you.'}" type="p" style="text-negative" condition="!report"/>
+        <section name="DeliveryFound" condition="report">
+            <widgets>
+                <label text="${report.fromText} – ${report.thruText}, as of ${report.asOfText}. ${report.basis}" type="p" style="text-caption m-muted"/>
+                <label text="Accepted ${totals.acceptedCount} of ${totals.attemptedCount} handed off · Delivered ${totals.deliveredCount} (${totals.deliveryRateText}; receipts for ${totals.receiptCoverageText}) · Failed ${totals.failedCount} · Uncertain ${totals.uncertainCount} · Opens ${totals.openRateText} · Clicks ${totals.clickRateText} of ${totals.trackedAcceptedCount} tracked"
+                        type="h6"/>
+                <label text="No send was released in this period." type="p" style="m-muted" condition="!sendRows.length"/>
+                <container-box condition="sendRows.length">
+                    <box-header title="Delivery by send"/>
+                    <box-body-nopad>
+                        <form-list name="DeliveryMeasures" list="sendRows" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="sendName">
+                                <conditional-field title="Send" condition="sendPath">
+                                    <link url="${sendPath}" url-type="plain" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
+                                </conditional-field>
+                                <default-field title="Send"><display/></default-field>
+                            </field>
+                            <field name="channelText"><default-field title="Channel"><display/></default-field></field>
+                            <field name="releasedText"><default-field title="Released"><display/></default-field></field>
+                            <field name="preparedCount" align="right"><default-field title="Prepared"><display/></default-field></field>
+                            <field name="attemptedCount" align="right"><default-field title="Handed off"><display/></default-field></field>
+                            <field name="skippedCount" align="right"><default-field title="Withdrawn or skipped"><display/></default-field></field>
+                            <field name="acceptedCount" align="right"><default-field title="Accepted"><display/></default-field></field>
+                            <field name="deliveredCount" align="right"><default-field title="Delivered"><display/></default-field></field>
+                            <field name="deliveryRateText" align="right"><default-field title="Delivery rate" tooltip="Delivered over accepted; not available without receipts"><display/></default-field></field>
+                            <field name="failedCount" align="right"><default-field title="Failed"><display/></default-field></field>
+                            <field name="uncertainCount" align="right"><default-field title="Uncertain"><display/></default-field></field>
+                            <field name="hardBounceCount" align="right"><default-field title="Hard bounces"><display/></default-field></field>
+                            <field name="complaintCount" align="right"><default-field title="Complaints"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="sendName"/><field-ref name="releasedText"/></column>
+                                <column><field-ref name="acceptedCount"/><field-ref name="deliveryRateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box condition="sendRows.length">
+                    <box-header title="Engagement"/>
+                    <box-body-nopad>
+                        <form-list name="EngagementMeasures" list="sendRows" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="sendName"><default-field title="Send"><display/></default-field></field>
+                            <field name="trackedAcceptedCount" align="right"><default-field title="Tracked accepted" tooltip="Accepted recipients who allowed tracking: the denominator of the rates"><display/></default-field></field>
+                            <field name="openCount" align="right"><default-field title="Unique opens"><display/></default-field></field>
+                            <field name="openRateText" align="right"><default-field title="Open rate"><display/></default-field></field>
+                            <field name="clickCount" align="right"><default-field title="Unique clicks"><display/></default-field></field>
+                            <field name="clickRateText" align="right"><default-field title="Click rate"><display/></default-field></field>
+                            <field name="conversionCount" align="right"><default-field title="Conversions"><display/></default-field></field>
+                            <field name="automatedCount" align="right"><default-field title="Automated fetches" tooltip="Link scanners and prefetches, set apart: never engagement"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="sendName"/><field-ref name="trackedAcceptedCount"/></column>
+                                <column><field-ref name="clickRateText"/><field-ref name="conversionCount"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box condition="variantRows.length">
+                    <box-header title="Experiment variants"/>
+                    <box-body-nopad>
+                        <form-list name="VariantMeasures" list="variantRows" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="campaignSendId"><default-field title="Send"><display/></default-field></field>
+                            <field name="variantLabel"><default-field title="Variant"><display/></default-field></field>
+                            <field name="preparedCount" align="right"><default-field title="Prepared"><display/></default-field></field>
+                            <field name="acceptedCount" align="right"><default-field title="Accepted"><display/></default-field></field>
+                            <field name="trackedAcceptedCount" align="right"><default-field title="Tracked accepted"><display/></default-field></field>
+                            <field name="clickRateText" align="right"><default-field title="Click rate"><display/></default-field></field>
+                            <field name="conversionCount" align="right"><default-field title="Conversions"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="variantLabel"/><field-ref name="campaignSendId"/></column>
+                                <column><field-ref name="acceptedCount"/><field-ref name="clickRateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

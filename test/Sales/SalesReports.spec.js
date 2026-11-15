@@ -63,7 +63,8 @@ feature("Pipeline analysis and Win/loss render for the report reader with their 
         pipeline.output.includes("Pipeline by source")
         pipeline.output.includes("Time in each stage")
         pipeline.output.includes("Funnel of the lead cohort")
-        pipeline.output.includes("Not available")
+        // the funnel's visit step is Marketing's visits (impl-marketing P20): a count, no longer "Not available"
+        pipeline.output.includes("Visits")
         winLoss.errors.length == 0
         winLoss.output.includes("Final outcome as of the report time")
         winLoss.output.includes("Win rate")

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Reports › Audience growth (design-marketing §11 AudienceGrowth: AudiencePeriod, AudienceChanges, OptOutReasons; style-guide
+    §3.10 Report; impl-marketing P20): Mantle's mantle.marketing.MarketingReportServices.get#AudienceGrowth over each Marketing list of the
+    organization (or one), from its evidenced consent records: opening and closing subscribers, grants, a merge's carried grants apart,
+    withdrawals, expired requests, pending requests and members now; the reasons people gave for leaving; the reach across the lists
+    (each person once) and the suppressions in force, apart. A report reader's; Mantle checks again. CSV of each list; print. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Audience growth" default-menu-index="3" menu-image="sym_o_group_add" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="contactListId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)"/>
+        <set field="optionValues" from="{organizationPartyId, contactListId: contactListId || null, fromDate: fromDate || null, thruDate: thruDate || null}"/>
+        <set field="serviceValues" from="optionValues"/>
+        <set field="loadRefusal" value=""/>
+        <set field="report" from="null"/>
+        <if condition="marketing.capabilities.reportRead">
+            <service-call name="mantle.marketing.MarketingReportServices.get#AudienceGrowth" out-map="report" transaction="force-new" ignore-error="true" in-map="serviceValues"/>
+            <set field="loadRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
+            <if condition="loadRefusal"><set field="report" from="null"/></if>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="listRows" from="report?.listRows || []"/>
+        <set field="reasonRows" from="report?.reasonRows || []"/>
+        <set field="printUrl" from="'/apps/Marketing/Reports/AudienceGrowth?' + Object.entries(Object.assign({renderMode: 'html-print'},
+                optionValues)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '=' + encodeURIComponent(entry[1])).join('&amp;')"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Audience growth" type="h5"/></container>
+            <container style="col-auto">
+                <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" target-window="_blank" condition="report"/>
+            </container>
+        </container>
+        <form-single name="ReportOptions" transition="." map="optionValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'organizations', selected:organizationPartyId}"/></drop-down></default-field>
+            </field>
+            <field name="contactListId">
+                <default-field title="List"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'lists', organizationPartyId:organizationPartyId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="fromDate"><default-field title="From" tooltip="Empty: 30 days ago"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Through" tooltip="Empty: now"><date-time type="date"/></default-field></field>
+            <field name="submitButton"><default-field title=""><submit text="Run report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row><field-ref name="organizationPartyId"/><field-ref name="contactListId"/></field-row>
+                <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                <field-ref name="submitButton"/>
+            </field-layout>
+        </form-single>
+        <label text="${loadRefusal || 'This report is not available to you.'}" type="p" style="text-negative" condition="!report"/>
+        <section name="AudienceFound" condition="report">
+            <widgets>
+                <label text="${report.fromText} – ${report.thruText}, as of ${report.asOfText}. ${report.basis}" type="p" style="text-caption m-muted"/>
+                <label text="Reach at the end ${report.reachCount} people across these lists · Suppressions in force ${report.suppressedCount}" type="h6"/>
+                <label text="This organization has no Marketing list." type="p" style="m-muted" condition="!listRows.length"/>
+                <container-box condition="listRows.length">
+                    <box-header title="Changes by list"/>
+                    <box-body-nopad>
+                        <form-list name="AudienceChanges" list="listRows" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="listName"><default-field title="List"><display/></default-field></field>
+                            <field name="openingCount" align="right"><default-field title="Opening"><display/></default-field></field>
+                            <field name="grantCount" align="right"><default-field title="Grants"><display/></default-field></field>
+                            <field name="mergedCount" align="right"><default-field title="From merges" tooltip="Carried in by a list merge: a movement, not new people"><display/></default-field></field>
+                            <field name="withdrawalCount" align="right"><default-field title="Withdrawals"><display/></default-field></field>
+                            <field name="expiredCount" align="right"><default-field title="Expired requests"><display/></default-field></field>
+                            <field name="closingCount" align="right"><default-field title="Closing"><display/></default-field></field>
+                            <field name="pendingCount" align="right"><default-field title="Pending" tooltip="Requests not confirmed: not subscribers"><display/></default-field></field>
+                            <field name="membersNowCount" align="right"><default-field title="Members now"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="listName"/><field-ref name="openingCount"/></column>
+                                <column><field-ref name="closingCount"/><field-ref name="withdrawalCount"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box condition="reasonRows.length">
+                    <box-header title="Why people leave"/>
+                    <box-body-nopad>
+                        <form-list name="OptOutReasons" list="reasonRows" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="listName"><default-field title="List"><display/></default-field></field>
+                            <field name="count" align="right"><default-field title="Withdrawals"><display/></default-field></field>
+                            <field name="sharePercent" align="right"><default-field title="Share %"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="reason"/><field-ref name="listName"/></column>
+                                <column><field-ref name="count"/><field-ref name="sharePercent"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

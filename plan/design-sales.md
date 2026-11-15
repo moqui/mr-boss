@@ -1639,7 +1639,9 @@ its audit log (the old value of a field's first change after it, else its value 
 close cohort in the final-outcome mode (default, each deal once) or the event mode; win rate over won and lost opportunities, a lead
 closed Lost apart; amounts always by currency; past 2,000 deals refused. PipelineAnalysis shows the funnel panel of
 `report/boss-sales-pipeline.json` (now) beside the cohort's funnel, whose visit step reads Marketing's
-`mantle.marketing.MarketingReportServices.count#SalesVisits` once it exists (until then not available). Insights: catalog entries
+`mantle.marketing.MarketingReportServices.count#SalesVisits` (built in impl-marketing P20: the organization's visits of the period,
+a visitor key once, of the campaign or of the links whose UTM source Sales maps to the lead source; answered to a Sales report
+reader). Insights: catalog entries
 for SalesSummary, PipelineAnalysis, WinLoss, TargetAttainment and Forecast; metrics `Sales.OpenPipeline`, `Sales.WeightedPipeline`,
 `Sales.WonValue` and `Sales.WinRate`; flow targets `Sales.Leads`, `Sales.Opportunities`, `Sales.Quotes`, `Sales.Orders` and
 `Sales.OrderChanges` (the customer flow's quote step opens Quotes). Shipped definitions: the pipeline dashboard's panels by source,

@@ -49,6 +49,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="storeRows" from="answer?.rows || []"/>
         <set field="severalStores" from="!!answer?.severalStores"/>
         <set field="topProducts" from="answer?.topProducts || []"/>
+        <set field="trafficRows" from="answer?.trafficRows || []"/>
         <set field="countOptions" from="['3', '6', '12', '24'].map(value => ({value, label:value}))"/>
         <set field="intervalOptions" from="[{value:'d', label:'Day'}, {value:'w', label:'Week'}, {value:'M', label:'Month'},
                 {value:'q', label:'Quarter'}, {value:'y', label:'Year'}]"/>
@@ -129,6 +130,29 @@ along with this software (see the LICENSE.md file). If not, see
                             <columns type="mobile">
                                 <column><field-ref name="periodText"/><field-ref name="orderCount"/></column>
                                 <column><field-ref name="netText"/><field-ref name="invoicedText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <!-- impl-marketing P20: the stores' sites' visits and the orders a campaign is the primary attribution of (Marketing's counts) -->
+        <section name="TrafficSection" condition="reportFound &amp;&amp; trafficRows.length">
+            <widgets>
+                <container-box>
+                    <box-header title="Visits and campaign orders"/>
+                    <box-body-nopad>
+                        <label text="Visits of these stores' sites (a visitor key once), the orders placed and those whose primary attribution is a Marketing campaign, their value by currency." type="p" style="text-caption m-muted q-pa-sm"/>
+                        <form-list name="StoreTraffic" list="trafficRows" skip-form="true" paginate="false">
+                            <field name="periodText"><default-field title="${answer.intervalLabel}"><display/></default-field></field>
+                            <field name="visitCount" align="right"><default-field title="Visits"><display/></default-field></field>
+                            <field name="orderCount" align="right"><default-field title="Orders"><display/></default-field></field>
+                            <field name="conversionText" align="right"><default-field title="Orders per visit"><display/></default-field></field>
+                            <field name="attributedCount" align="right"><default-field title="From campaigns"><display/></default-field></field>
+                            <field name="attributedText" align="right"><default-field title="Campaign order value"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="periodText"/><field-ref name="visitCount"/></column>
+                                <column><field-ref name="orderCount"/><field-ref name="attributedCount"/></column>
                             </columns>
                         </form-list>
                     </box-body-nopad>

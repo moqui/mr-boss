@@ -421,4 +421,187 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_MARKETING_CHECKIN_DEVICE" appName="Marketing" description="Marketing event door tablet: checks in entry codes for one event occurrence on a shared device (display accounts only)" scopeDependency="organization; one event occurrence fixed by the device" sequenceNum="1690"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_CHECKIN_DEVICE" userPermissionId="MARKETING_CHECKIN" capabilityKindEnumId="CpkEdit"/>
     <!-- ===== end of Marketing P18 ===== -->
+
+    <!-- ===== Marketing P20: attribution, reports and Insights (impl-marketing P20; design-marketing §11, §15.3, §18, CX-OPS-REPORTS;
+        owner contracts with Insights, impl-insights §7) ===== -->
+    <!-- Reports (design §2: Reports and its four reports for the report readers, R): the area denies the root user group and gives the
+        analysts and readers an ALWAYS, with the root's filter sets; the administrator and ADMIN open it through their ALWAYS on the root; the
+        root's menu shows it to a holder of MARKETING_REPORT_VIEW, and the area's check asks the capability (reports). Mantle's
+        MarketingReportServices check the permission and the organization again. -->
+    <artifactGroups artifactGroupId="BOSS_MKT_REPORTS" description="Marketing reports">
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Reports.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MKT_REPORTS_DENY" userGroupId="BOSS_MARKETING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MKT_REPORTS_ANALYST" userGroupId="BOSS_MARKETING_ANALYST" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_REPORTS_READ" userGroupId="BOSS_MARKETING_READ" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Marketing's datasets (data/BossMarketingReportData.xml; report/boss-marketing-deliveries.json and boss-marketing-audience.json):
+        read by Marketing's report readers and the Insights groups (the steward updates and refreshes them), each row of the viewer's
+        Marketing report scope (the ReportScopePolicy MantleMarketingScope, Mantle's row filter); admitted by setup as BOSS's own
+        datasets are, operations data, with their index readiness and refresh. -->
+    <artifactGroups artifactGroupId="BOSS_MKT_DATASETS" description="Marketing: the delivery and audience datasets">
+        <artifacts artifactName="org.moqui.report.dataset.boss-marketing-deliveries" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-marketing-audience" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_MKT_DATASETS_MARKETING_ANALYST" userGroupId="BOSS_MARKETING_ANALYST" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MKT_DATASETS_MARKETING_READ" userGroupId="BOSS_MARKETING_READ" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MKT_DATASETS_MARKETING_ADMIN" userGroupId="BOSS_MARKETING_ADMIN" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MKT_DATASETS_INSIGHTS_READ" userGroupId="BOSS_INSIGHTS_READ" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MKT_DATASETS_INSIGHTS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MKT_DATASETS_INSIGHTS_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MKT_DATASETS_INSIGHTS_FLOW" userGroupId="BOSS_INSIGHTS_FLOW" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_MKT_DATASETS_INSIGHTS_DATA" userGroupId="BOSS_INSIGHTS_DATA" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingDelivery" userGroupId="BOSS_MARKETING_ANALYST"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingDelivery" userGroupId="BOSS_MARKETING_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingDelivery" userGroupId="BOSS_MARKETING_ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingDelivery" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingDelivery" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingDelivery" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingDelivery" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingDelivery" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingMembership" userGroupId="BOSS_MARKETING_ANALYST"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingMembership" userGroupId="BOSS_MARKETING_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingMembership" userGroupId="BOSS_MARKETING_ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingMembership" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingMembership" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingMembership" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingMembership" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingMembership" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.report.BusinessDataset datasetId="boss-marketing-deliveries" admittedDate="2026-11-15 00:00:00" versionNumber="1"/>
+    <ironstone.insights.DatasetClass datasetId="boss-marketing-deliveries" version="1" domainOwner="Marketing" classEnumId="InsDcOperations"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-marketing-deliveries" version="1" ownerApp="Insights"
+            title="Marketing deliveries index" description="The marketing deliveries dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-marketing-deliveries" expectedFrequencyMinutes="1440" sequenceNum="74"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-marketing-deliveries.index" version="1" ownerApp="Insights"
+            title="Rebuild the marketing deliveries index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-marketing-deliveries" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-marketing-deliveries"/>
+    <moqui.report.BusinessDataset datasetId="boss-marketing-audience" admittedDate="2026-11-15 00:00:00" versionNumber="1"/>
+    <ironstone.insights.DatasetClass datasetId="boss-marketing-audience" version="1" domainOwner="Marketing" classEnumId="InsDcOperations"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-marketing-audience" version="1" ownerApp="Insights"
+            title="Marketing memberships index" description="The marketing memberships dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-marketing-audience" expectedFrequencyMinutes="1440" sequenceNum="75"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-marketing-audience.index" version="1" ownerApp="Insights"
+            title="Rebuild the marketing memberships index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-marketing-audience" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-marketing-audience"/>
+    <!-- Marketing's reports in Insights' catalog (owner contract, impl-insights §7; design-insights §6.1), read through Marketing's
+        catalogue, mantle.marketing.MarketingReportServices.get#ReportCatalog (the app root Marketing, a report reader) -->
+    <ironstone.insights.ReportCatalogEntry entryId="Marketing.CampaignPerformance" version="1" ownerApp="Marketing" title="Campaign performance"
+            description="Each campaign's budget and cost, reach, accepted sends, visits, leads, orders and invoiced net by currency."
+            purpose="Marketing" basis="Deliveries accepted, visits, leads and placed orders in the period; amounts by currency"
+            routePath="Marketing/Reports/CampaignPerformance" parameterContract="organizationPartyId,marketingCampaignId,fromDate,thruDate,includeChildren"
+            sourceReference="mantle.marketing.MarketingReportServices.get#CampaignPerformance"
+            metricIds="Marketing.Visits,Marketing.AttributedOrders,Sales.Orders,Sales.OrderValue,Accounting.InvoicedRevenue"
+            catalogueService="mantle.marketing.MarketingReportServices.get#ReportCatalog" catalogueKey="Marketing.CampaignPerformance"
+            exportFormats="CSV" sequenceNum="262"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Marketing.DeliveryAnalysis" version="1" ownerApp="Marketing" title="Delivery analysis"
+            description="The sends of a period: accepted, delivered, failed, uncertain, bounces and complaints, opens and clicks with their denominators."
+            purpose="Marketing" basis="Sends released in the period, each recipient once"
+            routePath="Marketing/Reports/DeliveryAnalysis" parameterContract="organizationPartyId,marketingCampaignId,campaignSendId,fromDate,thruDate"
+            sourceReference="mantle.marketing.MarketingReportServices.get#DeliveryAnalysis"
+            catalogueService="mantle.marketing.MarketingReportServices.get#ReportCatalog" catalogueKey="Marketing.DeliveryAnalysis"
+            exportFormats="CSV" sequenceNum="264"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Marketing.AudienceGrowth" version="1" ownerApp="Marketing" title="Audience growth"
+            description="Each list's opening and closing subscribers, grants, withdrawals and expiries, and why people leave."
+            purpose="Marketing" basis="Evidenced consent records of each list, as of the period's boundaries"
+            routePath="Marketing/Reports/AudienceGrowth" parameterContract="organizationPartyId,contactListId,fromDate,thruDate"
+            sourceReference="mantle.marketing.MarketingReportServices.get#AudienceGrowth"
+            catalogueService="mantle.marketing.MarketingReportServices.get#ReportCatalog" catalogueKey="Marketing.AudienceGrowth"
+            exportFormats="CSV" sequenceNum="266"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Marketing.Attribution" version="1" ownerApp="Marketing" title="Attribution"
+            description="Placed orders and leads by their primary campaign, value and invoiced net by currency, unattributed apart."
+            purpose="Marketing" basis="Placed date in the period; each order's primary campaign decision"
+            routePath="Marketing/Reports/Attribution" parameterContract="organizationPartyId,marketingCampaignId,fromDate,thruDate"
+            sourceReference="mantle.marketing.MarketingReportServices.get#Attribution" metricIds="Marketing.AttributedOrders"
+            catalogueService="mantle.marketing.MarketingReportServices.get#ReportCatalog" catalogueKey="Marketing.Attribution"
+            exportFormats="CSV" sequenceNum="268"/>
+    <!-- Marketing's measures (owner contract, design-insights §6.2; design-marketing §11 metric owners, F34): visits on the authority and
+        the primary attribution of placed orders; orders and revenue stay Sales.Orders, Sales.OrderValue and Accounting.InvoicedRevenue -->
+    <ironstone.insights.MetricRegistration metricId="Marketing.Visits" version="1" ownerApp="Marketing" title="Visits"
+            description="Visits of an organization's tracking links and landing pages: each visitor key once, and each visit with no key."
+            serviceName="mantle.marketing.MarketingReportServices.count#Visits" catalogEntryId="Marketing.CampaignPerformance"
+            grain="Tracking event" recordKey="trackingEventId" dateBasis="Event time on the authority"
+            statusBasis="Link clicks and page visits; never an automated fetch (a scanner, a prefetch) or an open"
+            aggregation="count-distinct" numerator="Distinct visitor keys plus the events with no key" unitPolicy="count"
+            additiveDimensions="none (a visitor may visit under several campaigns)" nonAdditiveDimensions="campaign, link, source, period"
+            allowedDimensions="campaign, link, lead source, period"
+            supportedFilters="organizationPartyId, marketingCampaignId, dataSourceId, fromDate, thruDate"
+            exclusions="Automated fetches, opens; a key is set only where the organization's policy or the recipient's consent allows"
+            drillContract="The links of the campaign (Campaign performance, TrackingLinkDetail)" scopePolicy="A Marketing reader or a Sales report reader of the organization"
+            freshness="Live" sequenceNum="50"/>
+    <ironstone.insights.MetricRegistration metricId="Marketing.AttributedOrders" version="1" ownerApp="Marketing" title="Attributed orders"
+            description="Placed sales orders by their one primary campaign, each order once; value by currency is Sales.OrderValue over them."
+            serviceName="mantle.marketing.MarketingReportServices.get#Attribution" catalogEntryId="Marketing.Attribution"
+            grain="Order" recordKey="orderId" dateBasis="Placed date"
+            statusBasis="The decision in force of each placed sales order (a tracking event, the source opportunity or a staff correction); unattributed apart"
+            aggregation="count" numerator="Orders whose primary campaign is the campaign" unitPolicy="count"
+            additiveDimensions="campaign, organization, period" nonAdditiveDimensions="currency (values)"
+            allowedDimensions="campaign, basis, organization, period"
+            supportedFilters="organizationPartyId, marketingCampaignId, fromDate, thruDate"
+            exclusions="Purchase orders, templates and orders of an internal customer; an order is never attributed twice"
+            drillContract="The orders of the campaign, listed for a reader of each order in Sales or Commerce" scopePolicy="A Marketing report reader of the organization"
+            freshness="Live; decided after each placement, the attribution job retrying" sequenceNum="52"/>
+    <!-- Marketing's worklists on Insights' attention board (owner contract, design-insights §7): counts for a Marketing reader of the
+        organizations, each shown to the holder of the permission its list is for -->
+    <ironstone.insights.AttentionProvider providerKey="Marketing.SendsAwaitingApproval" version="1" ownerApp="Marketing" title="Sends awaiting approval"
+            description="Campaign sends waiting for an approver's decision."
+            countService="mantle.marketing.MarketingReportServices.get#AttentionCounts" countField="counts.sendsAwaitingApproval"
+            organizationParameter="organizationPartyId" routePath="Marketing/Campaigns/Approvals" requiredPermission="MARKETING_APPROVE"
+            organizationScope="Your organizations" sequenceNum="960"/>
+    <ironstone.insights.AttentionProvider providerKey="Marketing.FailedDeliveries" version="1" ownerApp="Marketing" title="Failed campaign deliveries"
+            description="Campaign deliveries of the last 30 days the ledger could not deliver."
+            countService="mantle.marketing.MarketingReportServices.get#AttentionCounts" countField="counts.failedDeliveries"
+            organizationParameter="organizationPartyId" routePath="Marketing/Sends/Sends" requiredPermission="MARKETING_DISPATCH"
+            organizationScope="Your organizations" sequenceNum="962"/>
+    <ironstone.insights.AttentionProvider providerKey="Marketing.UncertainDeliveries" version="1" ownerApp="Marketing" title="Uncertain campaign deliveries"
+            description="Campaign deliveries of the last 30 days whose outcome a dispatcher must reconcile; never resent blindly."
+            countService="mantle.marketing.MarketingReportServices.get#AttentionCounts" countField="counts.uncertainDeliveries"
+            organizationParameter="organizationPartyId" routePath="Marketing/Sends/Sends" requiredPermission="MARKETING_DISPATCH"
+            organizationScope="Your organizations" sequenceNum="964"/>
+    <ironstone.insights.AttentionProvider providerKey="Marketing.HeldRegistrations" version="1" ownerApp="Marketing" title="Registrations waiting"
+            description="Event registrations paid and waiting for the organizer, or paid after their hold ended and waiting for review."
+            countService="mantle.marketing.MarketingReportServices.get#AttentionCounts" countField="counts.heldRegistrations"
+            organizationParameter="organizationPartyId" routePath="Marketing/Events/Registrations" requiredPermission="MARKETING_EVENT_MANAGE"
+            organizationScope="Your organizations" sequenceNum="966"/>
+    <!-- Marketing's worklists for the flow maps (owner contract, design-insights §9): the customer flow's "Finds us" step opens the
+        campaigns (report/insights-flowmap-customer.json) -->
+    <ironstone.insights.FlowTarget targetId="Marketing.Campaigns" version="1" ownerApp="Marketing" title="Campaigns"
+            description="Marketing campaigns of your organizations, planned, running and completed."
+            routePath="Marketing/Campaigns/Campaigns" parameterContract='{"organizationPartyId":{"type":"organization"}}'
+            sequenceNum="400"/>
+    <ironstone.insights.FlowTarget targetId="Marketing.Sends" version="1" ownerApp="Marketing" title="Campaign sends"
+            description="Campaign sends: drafts, awaiting approval, scheduled, sending and sent."
+            routePath="Marketing/Sends/Sends" parameterContract='{"organizationPartyId":{"type":"organization"}}'
+            sequenceNum="402"/>
+    <!-- Assist's tool (design §1.3 CX-ASSIST; Admin's rows): Campaign performance's aggregates for the Assistant, a read of the user's own
+        Marketing report scope; nothing for dispatch, consent or addresses, none on MCP. A tool runs as the user outside Marketing's
+        screens, so the report readers are granted the one service (it checks MARKETING_REPORT_VIEW and the organization itself). -->
+    <artifactGroups artifactGroupId="BOSS_MKT_ASSIST_TOOLS" description="Marketing: the report service Assist's tool calls">
+        <artifacts artifactName="mantle.marketing.MarketingReportServices.get#CampaignPerformance" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MKT_ASSIST_TOOLS_ANALYST" userGroupId="BOSS_MARKETING_ANALYST" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_ASSIST_TOOLS_READ" userGroupId="BOSS_MARKETING_READ" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_ASSIST_TOOLS_ADMIN" userGroupId="BOSS_MARKETING_ADMIN" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.agent.AgentToolExposure toolName="marketing_campaign_performance" serviceName="mantle.marketing.MarketingReportServices.get#CampaignPerformance"
+            title="Marketing campaign performance"
+            description="get#CampaignPerformance: for an organization of the user's Marketing report scope (organizationPartyId), the campaigns whose window meets a period (fromDate, thruDate, yyyy-MM-dd; the last 30 days by default) or one campaign (marketingCampaignId, with its children when includeChildren is true): budget and actual cost, accepted sends, reach, visits, leads, qualified leads, registrations, orders and their value and invoiced net by currency (never added across currencies) and ROI where one currency allows it. Aggregates only: no person or address."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <!-- ===== end of Marketing P20 ===== -->
 </entity-facade-xml>

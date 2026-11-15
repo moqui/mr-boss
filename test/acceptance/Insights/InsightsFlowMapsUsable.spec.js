@@ -192,7 +192,9 @@ feature("a reader of every app sees the step's count, Commerce's own, and opens 
         // the Sales and Marketing steps, whose apps are not built
         quote.stateText == "Information"
         quote.url == null
-        findUs.stateText == "Information"
+        // Marketing P20: the step opens Marketing's campaigns
+        findUs.stateText == ""
+        findUs.url.includes("/Marketing/Campaigns/Campaigns")
         page.status == 200
         page.errors == ""
         page.output.includes("Manager approves the order")

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Reports › Campaign performance (design-marketing §11 CampaignPerformance: PerformanceFind, Performance; style-guide §3.10
+    Report; impl-marketing P20): Mantle's mantle.marketing.MarketingReportServices.get#CampaignPerformance for the campaigns of the
+    organization whose window meets the period, or one campaign, each with its children counted once when asked: budget, estimate and
+    actual cost, accepted sends and reach, visits, leads and qualified leads, registrations, and its attributed orders' value, invoiced,
+    returns and net by currency (never one total across currencies), ROI only over one currency, and the summarized numSent with its
+    time. A report reader's (MARKETING_REPORT_VIEW); Mantle checks again. CSV of the list; print. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Campaign performance" default-menu-index="1" menu-image="sym_o_campaign" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="marketingCampaignId"/>
+    <parameter name="includeChildren"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <actions>
+        <set field="organizationPartyId" from="organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)"/>
+        <set field="optionValues" from="{organizationPartyId, marketingCampaignId: marketingCampaignId || null, includeChildren: includeChildren || null, fromDate: fromDate || null, thruDate: thruDate || null}"/>
+        <set field="serviceValues" from="optionValues"/>
+        <set field="loadRefusal" value=""/>
+        <set field="report" from="null"/>
+        <if condition="marketing.capabilities.reportRead">
+            <service-call name="mantle.marketing.MarketingReportServices.get#CampaignPerformance" out-map="report" transaction="force-new" ignore-error="true" in-map="serviceValues"/>
+            <set field="loadRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
+            <if condition="loadRefusal"><set field="report" from="null"/></if>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="campaignRows" from="report?.campaignRows || []"/>
+        <set field="campaignPath" from="sharedLinks['Campaigns/CampaignDetail'] || null"/>
+        <set field="printUrl" from="'/apps/Marketing/Reports/CampaignPerformance?' + Object.entries(Object.assign({renderMode: 'html-print'},
+                optionValues)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '=' + encodeURIComponent(entry[1])).join('&amp;')"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Campaign performance" type="h5"/></container>
+            <container style="col-auto">
+                <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" target-window="_blank" condition="report"/>
+            </container>
+        </container>
+        <form-single name="ReportOptions" transition="." map="optionValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'organizations', selected:organizationPartyId}"/></drop-down></default-field>
+            </field>
+            <field name="marketingCampaignId">
+                <default-field title="Campaign"><drop-down allow-empty="true">
+                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                            parameter-map="{choice:'reportCampaigns', organizationPartyId:organizationPartyId, selected:marketingCampaignId}"><depends-on field="organizationPartyId"/></dynamic-options>
+                </drop-down></default-field>
+            </field>
+            <field name="includeChildren">
+                <default-field title="Children" tooltip="Each campaign with its child campaigns, each counted once"><check><option key="true" text="Include child campaigns"/></check></default-field>
+            </field>
+            <field name="fromDate"><default-field title="From" tooltip="Empty: 30 days ago"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Through" tooltip="Empty: now"><date-time type="date"/></default-field></field>
+            <field name="submitButton"><default-field title=""><submit text="Run report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row><field-ref name="organizationPartyId"/><field-ref name="marketingCampaignId"/><field-ref name="includeChildren"/></field-row>
+                <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                <field-ref name="submitButton"/>
+            </field-layout>
+        </form-single>
+        <label text="${loadRefusal || 'This report is not available to you.'}" type="p" style="text-negative" condition="!report"/>
+        <section name="PerformanceFound" condition="report">
+            <widgets>
+                <label text="${report.fromText} – ${report.thruText}, as of ${report.asOfText}. ${report.basis}" type="p" style="text-caption m-muted"/>
+                <label text="Campaign summaries last computed ${report.aggregation.lastRunText}." type="p" style="text-caption m-muted" condition="report.aggregation"/>
+                <label text="No campaign of this organization runs in the period." type="p" style="m-muted" condition="!campaignRows.length"/>
+                <form-list name="Performance" list="campaignRows" skip-form="true" paginate="false" show-csv-button="true" condition="campaignRows.length">
+                    <field name="campaignName">
+                        <conditional-field title="Campaign" condition="campaignPath">
+                            <link url="${campaignPath}" url-type="plain" text="${campaignName}" link-type="anchor" parameter-map="{marketingCampaignId:marketingCampaignId}"/>
+                        </conditional-field>
+                        <default-field title="Campaign"><display/></default-field>
+                    </field>
+                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                    <field name="budgetedText" align="right"><default-field title="Budget"><display/></default-field></field>
+                    <field name="actualText" align="right"><default-field title="Actual cost"><display/></default-field></field>
+                    <field name="acceptedCount" align="right"><default-field title="Accepted sends" tooltip="Promotional messages the transport accepted in the period"><display/></default-field></field>
+                    <field name="reachCount" align="right"><default-field title="Reach" tooltip="The people of those messages, each once"><display/></default-field></field>
+                    <field name="visitCount" align="right"><default-field title="Visits"><display/></default-field></field>
+                    <field name="leadCount" align="right"><default-field title="Leads"><display/></default-field></field>
+                    <field name="qualifiedLeadCount" align="right"><default-field title="Qualified"><display/></default-field></field>
+                    <field name="registrationCount" align="right"><default-field title="Registrations"><display/></default-field></field>
+                    <field name="orderCount" align="right"><default-field title="Orders" tooltip="Sales.Orders, by their primary campaign"><display/></default-field></field>
+                    <field name="orderValueText" align="right"><default-field title="Order value" tooltip="Sales.OrderValue, by currency"><display/></default-field></field>
+                    <field name="netText" align="right"><default-field title="Invoiced net" tooltip="Accounting.InvoicedRevenue less returns, by currency"><display/></default-field></field>
+                    <field name="roiText" align="right"><default-field title="ROI"><display/></default-field></field>
+                    <field name="numSentText" align="right"><default-field title="Sent (summary)"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="campaignName"/><field-ref name="statusText"/></column>
+                        <column><field-ref name="acceptedCount"/><field-ref name="orderValueText"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
