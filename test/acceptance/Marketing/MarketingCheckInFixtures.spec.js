@@ -162,3 +162,43 @@ feature("cancelling an event stops its pending reminders", {
         r.deliveries == 0
     }
 })
+
+// The Marketing client walks (MarketingCheckInWalk's kept codes, MarketingCalendarWalk's demo send and webinar days) read records as
+// john.doe over entity REST, which grants no entity by default (docs/security/Attack-Surface.md: AT_ENTITY): this test database
+// gives the instance administrators a view of those entities alone.
+const READ_GROUP = prefix + "_RECORDS"
+const readEntities = ["moqui.basic.Enumeration", "mantle.marketing.campaign.CampaignSend", "mantle.work.effort.WorkEffort"]
+feature("the Marketing client walks' record reader: the instance administrators view the walks' entities over entity REST", {
+    when() {
+        if (!one("moqui.security.ArtifactGroup", {artifactGroupId: READ_GROUP})) {
+            make("moqui.security.ArtifactGroup", {
+                artifactGroupId: READ_GROUP,
+                description: "Marketing client walks: records read over entity REST"
+            })
+            for (const artifactName of readEntities)
+                make("moqui.security.ArtifactGroupMember", {
+                    artifactGroupId: READ_GROUP,
+                    artifactName,
+                    artifactTypeEnumId: "AT_ENTITY",
+                    nameIsPattern: "N"
+                })
+            make("moqui.security.ArtifactAuthz", {
+                artifactAuthzId: READ_GROUP + "_ADMIN",
+                userGroupId: "ADMIN",
+                artifactGroupId: READ_GROUP,
+                authzTypeEnumId: "AUTHZT_ALLOW",
+                authzActionEnumId: "AUTHZA_VIEW"
+            })
+        }
+        return {
+            members: ec.entity
+                .find("moqui.security.ArtifactGroupMember")
+                .condition("artifactGroupId", READ_GROUP)
+                .disableAuthz()
+                .count()
+        }
+    },
+    then({members}) {
+        members == readEntities.length
+    }
+})

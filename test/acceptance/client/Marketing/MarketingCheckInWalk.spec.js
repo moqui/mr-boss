@@ -18,6 +18,8 @@ spec({
         }
         page = browser.newPage({user: "marketing.events", viewport: {width: 390, height: 844}, timeout: 30})
         page.allowProblems(/userPhoto\?userId=/)
+        // a refused code (Owen's cancelled ticket) answers the scan with its refusal, a 400, which the page shows
+        page.allowProblems(/\/CheckIn\/scanResolve/)
     }
 })
 function waitForText(text) {
@@ -66,7 +68,8 @@ feature("Pia is found by name and checked in with a reason on the phone", {
         const dialog = page.getByRole("dialog")
         dialog.getByLabel("Why").fill("Her phone is flat")
         dialog.getByRole("button", {name: "Check in"}).click()
-        page.getByRole("button", {name: "OK"}).click()
+        // the framework's confirmation of the action
+        page.getByRole("button", {name: "Confirm"}).click()
         waitForText("Pia Gardener: checked in")
         noSideScroll()
     }
