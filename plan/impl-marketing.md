@@ -7746,7 +7746,7 @@ the walk's story has them, asserting the unlinked item. Branch `mkt/fix9` in mr-
   31, 9.0 s; client MarketingSendWalk 1 of 1 (8.5 s); acceptance MarketingCalendarWalk 4 of 4 (7.5 s; re-run as changed: its send steps
   are the events manager's again, the click on the send staying on the calendar, Home with no SendDetail link, the palette finding the
   campaign and no send); screen lint: nothing in the touched screens. Not run: test-apps, test-framework, the rest of acceptance.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F462 to F463 in order:
   - Calendar.qvue (Commons) keeps the pointer cursor on a read-only item with no url, so the events manager's send looks clickable though
     a click does nothing (low; left as is, it is Commons' shared component).
   - the same pattern holds for the other restricted areas' route keys (`marketingApprovals`, `marketingAutomation`): linked by placeOf for
@@ -7778,7 +7778,7 @@ the walk's story has them, asserting the unlinked item. Branch `mkt/fix9` in mr-
   - R2 (low): placeOf linked `marketingApprovals` and `marketingAutomation` for anyone; routeCapabilities now asks `approvals` and
     `automations` (each area's own check), and Home's approvals place asks `can.approvals`. Only those areas' users receive such rows
     today, so no one saw a broken link; a MarketingShell check (placesFor as the events manager and the author) covers it.
-- Provisional findings (for the lead to number):
+- Finding, numbered by the lead F464:
   - a user given the Sends area as a template reader only (MESSAGE_TEMPLATE_VIEW, no send, approve or dispatch permission) could open
     SendDetail (Sends.xml asks sendsRead, check#Record any Marketing reader) but gets no send link; no seeded group is such a user, and
     the Sends list's menu already hides sends from them, so SendDetail's admission is the looser of the two (low; not changed).
@@ -8353,6 +8353,9 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F459 | Follow-up 7 (Review Nov 15): Consent's registry chips were satisfied by the filter's options (R2, low, fixed here) | Follow-up 7: as its Review note says |
 | F460 | Follow-up 7 (Review Nov 15): SendDetail's Delivery fix had no server check (R3, low, fixed here) | Follow-up 7: as its Review note says |
 | F461 | Follow-up 8 (Built Nov 15): a spec that reads what a tx-commit SECA writes must wait for it (the service worker runs it after the commit); this one read at once (fixed here, low). The other attribution specs call handle#OrderPlaced directly and are not affected | Follow-up 8: as its Built note says |
+| F462 | Follow-up 9 (Built Nov 15): Calendar.qvue (Commons) keeps the pointer cursor on a read-only item with no url, so the events manager's send looks clickable though a click does nothing (low; left as is, it is Commons' shared component) | Follow-up 9: as its Built note says |
+| F463 | Follow-up 9 (Built Nov 15): the same pattern holds for the other restricted areas' route keys (`marketingApprovals`, `marketingAutomation`): linked by placeOf for anyone, though only their readers receive such rows today (low; not changed) | Follow-up 9: as its Built note says |
+| F464 | Follow-up 9 (Review Nov 15): a user given the Sends area as a template reader only (MESSAGE_TEMPLATE_VIEW, no send, approve or dispatch permission) could open SendDetail (Sends.xml asks sendsRead, check#Record any Marketing reader) but gets no send link; no seeded group is such a user, and the Sends list's menu already hides sends from them, so SendDetail's admission is the looser of the two (low; not changed) | Follow-up 9: as its Review note says |
 
 ## 7. Later
 
