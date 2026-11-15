@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Events area of IronStone Marketing (design-marketing §9 Events, EventDetail, RegistrationSetup, §1.2 "Events"; impl-marketing
+    P16): Events (the registration events of the user's organizations, the default, with NewEvent), EventDetail (Commons' EventDetail
+    mounted, the event under the calendar's own rules, with Marketing's links above its tabs) and RegistrationSetup (one event's
+    offers, tickets, questions and notices, the events managers'). Every Marketing reader reads the events (design §2: the app's);
+    MARKETING_EVENT_MANAGE sets up their registration. Every read and write is mantle.work.EventRegistrationServices or the calendar's
+    mantle.work.EventServices, which check the permission, the organization and the calendar's rule again. P17 adds Registrations and
+    RegistrationDetail, P18 CheckIn. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Events" default-menu-index="7" menu-image="sym_o_event" menu-image-type="icon">
+    <always-actions>
+        <script>if(!marketing.capabilities.eventRead)throw new Error('PERMISSION_DENIED: Events are for Marketing readers')</script>
+        <!-- EventDetail's Marketing links (Commons' EventDetail shows eventAppLinks, mount data and never a right): Registration setup
+            for a registration event of the user's organizations; each screen checks again -->
+        <set field="eventAppLinks" from="[]"/>
+        <if condition="ec.web?.parameters?.workEffortId">
+            <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="eventCheck" transaction="force-new" ignore-error="true"
+                    in-map="{appRoot:appRoot, recordType:'event', recordId:String(ec.web.parameters.workEffortId)}"/>
+            <script><![CDATA[
+                ec.message.clearErrors()
+                if (eventCheck?.recordId && marketing.capabilities.eventSetupRead)
+                    eventAppLinks = [{label: 'Registration setup', icon: 'sym_o_how_to_reg',
+                        url: marketing.webBase + '/Events/RegistrationSetup?workEffortId=' + encodeURIComponent(eventCheck.recordId)}]
+            ]]></script>
+        </if>
+    </always-actions>
+    <subscreens default-item="Events" always-use-full-path="true">
+        <subscreens-item name="Events" location="component://mr-boss/screen/Marketing/Events/Events.xml" menu-title="Events" menu-index="1"/>
+        <subscreens-item name="EventDetail" location="component://mr-boss/screen/Commons/Calendar/EventDetail.xml" menu-include="false"/>
+        <subscreens-item name="RegistrationSetup" location="component://mr-boss/screen/Marketing/Events/RegistrationSetup.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MarketingEventsPanel" type="tab"/>
+    </widgets>
+</screen>

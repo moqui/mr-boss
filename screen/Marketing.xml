@@ -25,7 +25,9 @@ along with this software (see the LICENSE.md file). If not, see
     Automations (the drip sequences, AutomationDetail and EnrollmentDetail; BOSS_MKT_AUTOMATIONS); P12 Surveys (the shared survey builder
     and responses with Marketing's registration, and SurveyDistribution; BOSS_MKT_SURVEYS); P13 LeadRules under Leads (the lead forms'
     routing to Sales and their handoffs, the authors'; BOSS_MKT_LEAD_RULES) and Sales' LeadSources in Settings; P14 Content (campaign
-    content, blog posts, the shared landing pages with Marketing's registration and Commons Knowledge; every Marketing reader's). -->
+    content, blog posts, the shared landing pages with Marketing's registration and Commons Knowledge; every Marketing reader's); P16
+    Events (the registration events, Commons' EventDetail mounted and RegistrationSetup; every Marketing reader's, set up by the events
+    managers). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
 
@@ -88,15 +90,20 @@ along with this software (see the LICENSE.md file). If not, see
             check the content grant, the organization and the wiki's rule again -->
         <subscreens-item name="Content" location="component://mr-boss/screen/Marketing/Content.xml" menu-index="6"
                 menu-include="ec.user.hasPermission('MARKETING_VIEW') || ec.user.hasPermission('MARKETING_AUDIENCE_VIEW') || ec.user.hasPermission('MARKETING_REPORT_VIEW')"/>
+        <!-- P16: Events (design §9): the registration events of the user's organizations, Commons' EventDetail (the calendar's own rules)
+            and RegistrationSetup (the events managers', MARKETING_EVENT_MANAGE), for every Marketing reader (design §2: the app's; no area
+            deny); Mantle's EventRegistrationServices check the permission and the organization again -->
+        <subscreens-item name="Events" location="component://mr-boss/screen/Marketing/Events.xml" menu-index="7"
+                menu-include="ec.user.hasPermission('MARKETING_VIEW') || ec.user.hasPermission('MARKETING_AUDIENCE_VIEW') || ec.user.hasPermission('MARKETING_REPORT_VIEW')"/>
         <!-- P12: Surveys (design §10): the survey builder's shared screens with Marketing's registration (SurveyApps.js), SurveyDistribution
             and the responses, for the authors, audience managers, analysts and the administrator (BOSS_MKT_SURVEYS denies the root user
             group); the builder's and Marketing's form services check the purposes' permissions and the organization again -->
-        <subscreens-item name="Surveys" location="component://mr-boss/screen/Marketing/Surveys.xml" menu-index="7"
+        <subscreens-item name="Surveys" location="component://mr-boss/screen/Marketing/Surveys.xml" menu-index="8"
                 menu-include="ec.user.hasPermission('MARKETING_CONTENT_EDIT') || ec.user.hasPermission('MARKETING_AUDIENCE_VIEW') || ec.user.hasPermission('MARKETING_REPORT_VIEW')"/>
         <!-- P3: Leads (design §10, F64): Sales' Leads and Accounts in Sales' context for this root, with the bulk "Add to list
             (evidenced)", for a user who reads Sales; Sales' own services decide what they read. P13: and LeadRules, the lead forms'
             routing to Sales, for a content author or the administrator -->
-        <subscreens-item name="Leads" location="component://mr-boss/screen/Marketing/Leads.xml" menu-index="8"
+        <subscreens-item name="Leads" location="component://mr-boss/screen/Marketing/Leads.xml" menu-index="9"
                 menu-include="ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW') || ec.user.hasPermission('MARKETING_CONTENT_EDIT') || ec.user.hasPermission('MARKETING_CONFIGURE')"/>
         <!-- P2: quick create's campaign form (QuickCampaign), hidden from the menu -->
         <subscreens-item name="QuickCreate" location="component://mr-boss/screen/Marketing/QuickCreate.xml" menu-include="false"/>
@@ -123,6 +130,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P3 (design §14.3 QuickList): the Lists screen's NewList; a user without audience edit is told so -->
         <quick-create kind="marketingList" label="Distribution list" icon="sym_o_contact_mail" screen="Marketing/QuickCreate/NewList"
                 sequence="93"/>
+        <!-- P16 (design §14.3 QuickEvent): the Events screen's NewEvent; a user without the events permission is told so -->
+        <quick-create kind="marketingEvent" label="Marketing event" icon="sym_o_event" screen="Marketing/QuickCreate/NewEvent"
+                sequence="94"/>
         <!-- P2: the approval topics (Mantle's MarketingSeedData; their links BossSetupMarketingData); sends' and automations' are sent
             from P8 and P11 -->
         <notification-topic topic="MarketingCampaignApproval"/>
@@ -155,6 +165,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g v" label="Surveys" screen="Marketing/Surveys/Surveys"/>
             <!-- P14 -->
             <key keys="g o" label="Content" screen="Marketing/Content/Content"/>
+            <!-- P16 -->
+            <key keys="g e" label="Events" screen="Marketing/Events/Events"/>
         </keymap>
     </shell-providers>
 

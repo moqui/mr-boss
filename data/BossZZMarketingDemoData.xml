@@ -711,4 +711,59 @@ along with this software (see the LICENSE.md file). If not, see
             destinationKindEnumId="TdkUrl" redirectUrl="https://shop.zizi.localhost/marketing/pages/spring-garden" utmSource="newsletter"
             utmMedium="email" disabled="N" fromDate="2026-10-01 09:00:00" createdByUserId="BOSS_MKT_AUTHOR"/>
     <!-- ===== end of Marketing P15 ===== -->
+
+    <!-- ===== Marketing P16: events and registration setup (impl-marketing P16; design-marketing §9 Events, RegistrationSetup) ===== -->
+    <!-- Two events of Ziziwork Retail, both organized by Marketing Events manager and linked to the spring campaign, each offered on
+        ZIZI_SHOP's Marketing mount (its Event page opens once the demo site is published): the spring planting webinar, free and online
+        (its video call link made by ironstone.marketing.DemoServices.load#EventDemo), 100 seats with a waitlist; and the rose pruning
+        workshop at the garden centre, twelve seats, two ticket types priced by their ticket products (Standard and Members, linked to the
+        event by WorkEffortProduct; no amount is kept on the offer). Payment is P17's (Retail's gateway TEST_APPROVE is bound,
+        BossCommerceDemoData). -->
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MKT_EV_WEBINAR" workEffortTypeEnumId="WetEvent" workEffortName="Spring planting webinar"
+            description="Online session for newsletter readers; Q&amp;A at the end." statusId="WeInPlanning" ownerPartyId="BOSS_MKT_EVENTS"
+            estimatedStartDate="2027-01-28 18:00:00" estimatedCompletionDate="2027-01-28 19:00:00" visibilityEnumId="WevAllUsers"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MKT_EV_WORKSHOP" workEffortTypeEnumId="WetEvent" workEffortName="Rose pruning workshop"
+            description="Hands-on morning in the garden centre; tools provided." statusId="WeInPlanning" ownerPartyId="BOSS_MKT_EVENTS"
+            location="Ziziwork garden centre, Orem" estimatedStartDate="2027-03-13 09:00:00" estimatedCompletionDate="2027-03-13 12:00:00"
+            visibilityEnumId="WevAllUsers"/>
+    <mantle.work.registration.RegistrationEvent workEffortId="BOSS_MKT_EV_WEBINAR" organizationPartyId="ORG_ZIZI_RETAIL"
+            createdByUserId="BOSS_MKT_EVENTS" createdDate="2026-11-01 10:00:00"/>
+    <mantle.work.registration.RegistrationEvent workEffortId="BOSS_MKT_EV_WORKSHOP" organizationPartyId="ORG_ZIZI_RETAIL"
+            createdByUserId="BOSS_MKT_EVENTS" createdDate="2026-11-01 10:00:00"/>
+    <mantle.marketing.campaign.CampaignAssociation campaignAssociationId="BOSS_MKT_CA_WEBINAR" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            associationKindEnumId="CakEvent" sourceId="BOSS_MKT_EV_WEBINAR" purpose="Event" fromDate="2026-11-01 10:00:00" createdByUserId="BOSS_MKT_EVENTS"/>
+    <mantle.marketing.campaign.CampaignAssociation campaignAssociationId="BOSS_MKT_CA_WORKSHOP" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            associationKindEnumId="CakEvent" sourceId="BOSS_MKT_EV_WORKSHOP" purpose="Event" fromDate="2026-11-01 10:00:00" createdByUserId="BOSS_MKT_EVENTS"/>
+    <mantle.product.Product productId="BOSS_MKT_TICKET_STD" pseudoId="MKT-ROSE-STD" productName="Rose pruning workshop: standard place"
+            productTypeEnumId="PtService" ownerPartyId="ORG_ZIZI_RETAIL" taxable="Y"/>
+    <mantle.product.Product productId="BOSS_MKT_TICKET_MEMBER" pseudoId="MKT-ROSE-MEM" productName="Rose pruning workshop: member place"
+            productTypeEnumId="PtService" ownerPartyId="ORG_ZIZI_RETAIL" taxable="Y"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_MKT_TICKET_STD_P" productId="BOSS_MKT_TICKET_STD" pricePurposeEnumId="PppPurchase"
+            priceTypeEnumId="PptCurrent" fromDate="2026-11-01 00:00:00" minQuantity="1" price="45.00" priceUomId="USD"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_MKT_TICKET_MEMBER_P" productId="BOSS_MKT_TICKET_MEMBER" pricePurposeEnumId="PppPurchase"
+            priceTypeEnumId="PptCurrent" fromDate="2026-11-01 00:00:00" minQuantity="1" price="30.00" priceUomId="USD"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MKT_EV_WORKSHOP" productId="BOSS_MKT_TICKET_STD" fromDate="2026-11-01 10:00:00" typeEnumId="WeptSales"/>
+    <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MKT_EV_WORKSHOP" productId="BOSS_MKT_TICKET_MEMBER" fromDate="2026-11-01 10:00:00" typeEnumId="WeptSales"/>
+    <mantle.work.registration.EventRegistrationPolicy registrationPolicyId="BOSS_MKT_OFFER_WEBINAR" workEffortId="BOSS_MKT_EV_WEBINAR"
+            occurrenceStart="2027-01-28 18:00:00" occurrenceEnd="2027-01-28 19:00:00" organizationPartyId="ORG_ZIZI_RETAIL" statusId="ErpPublished"
+            publicTitle="Spring planting webinar" publicDescription="An hour on what to plant this spring, with time for your questions."
+            timeZone="America/Denver" siteId="ZIZI_SHOP" totalSeats="100" holdMinutes="15" waitlistEnabled="Y" waitlistLimit="50"
+            termsText="Free. The link to join is sent with your confirmation." cancellationTerms="Cancel any time from your registration."
+            questionScopeEnumId="ErqAttendee" policyRevision="3" termsRevision="0" publishedDate="2026-11-02 09:00:00" publishedByUserId="BOSS_MKT_EVENTS"
+            createdByUserId="BOSS_MKT_EVENTS" createdDate="2026-11-01 10:00:00"/>
+    <mantle.work.registration.EventTicketType ticketTypeId="BOSS_MKT_TT_WEBINAR" registrationPolicyId="BOSS_MKT_OFFER_WEBINAR" ticketName="Free place"
+            priceSourceEnumId="EtpFree" perOrderLimit="1" sequenceNum="1" fromDate="2026-11-01 10:00:00" createdByUserId="BOSS_MKT_EVENTS"/>
+    <mantle.work.registration.EventRegistrationPolicy registrationPolicyId="BOSS_MKT_OFFER_WORKSHOP" workEffortId="BOSS_MKT_EV_WORKSHOP"
+            occurrenceStart="2027-03-13 09:00:00" occurrenceEnd="2027-03-13 12:00:00" organizationPartyId="ORG_ZIZI_RETAIL" statusId="ErpPublished"
+            publicTitle="Rose pruning workshop" publicDescription="A hands-on morning: how and when to prune climbing, shrub and hybrid tea roses. Tools and gloves provided."
+            timeZone="America/Denver" siteId="ZIZI_SHOP" totalSeats="12" holdMinutes="15" waitlistEnabled="Y" waitlistLimit="6"
+            closesDate="2027-03-12 17:00:00" termsText="Places are held for 15 minutes while you pay." cancellationTerms="Cancel up to two days before for a full refund."
+            questionScopeEnumId="ErqAttendee" policyRevision="4" termsRevision="0" publishedDate="2026-11-02 09:00:00" publishedByUserId="BOSS_MKT_EVENTS"
+            createdByUserId="BOSS_MKT_EVENTS" createdDate="2026-11-01 10:00:00"/>
+    <mantle.work.registration.EventTicketType ticketTypeId="BOSS_MKT_TT_STD" registrationPolicyId="BOSS_MKT_OFFER_WORKSHOP" ticketName="Standard"
+            priceSourceEnumId="EtpProduct" productId="BOSS_MKT_TICKET_STD" perOrderLimit="4" sequenceNum="1" fromDate="2026-11-01 10:00:00" createdByUserId="BOSS_MKT_EVENTS"/>
+    <mantle.work.registration.EventTicketType ticketTypeId="BOSS_MKT_TT_MEMBER" registrationPolicyId="BOSS_MKT_OFFER_WORKSHOP" ticketName="Members"
+            priceSourceEnumId="EtpProduct" productId="BOSS_MKT_TICKET_MEMBER" capacity="4" perOrderLimit="2" sequenceNum="2" fromDate="2026-11-01 10:00:00" createdByUserId="BOSS_MKT_EVENTS"/>
+    <ironstone.marketing.DemoServices.load-EventDemo/>
+    <!-- ===== end of Marketing P16 ===== -->
 </entity-facade-xml>

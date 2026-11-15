@@ -1,0 +1,448 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Events › RegistrationSetup (design-marketing §9 RegistrationSetup: RegistrationPolicy, TicketTypes, RegistrationQuestions,
+    EventCommunications, PublishRegistration; style-guide §3.3 Detail, §3.9 Settings; impl-marketing P16): one registration event of the
+    user's organizations (mantle.work.EventRegistrationServices.get#EventSetup; else "Not available", linking back), for an events
+    manager. The record header: the event, when in its zone, where, its organization and campaigns, the chosen offer's state; the primary
+    action by state (New offer while the event has none, Publish for a draft, View page once published), the rest under More (Edit offer,
+    Add video call, Open in the calendar, Close registration). A series has one offer per occurrence, chosen above the boxes. The boxes:
+    the offer (window, seats and places taken, hold, waitlist, site, store, terms), its readiness, its ticket types (free or a ticket
+    product's own price; capacity, sales dates, places an order may take), its questions (a published registration form of the
+    organization, whom they are for, the consent text) and its notices (trigger, template, whom, kind). Each write is Mantle's guarded
+    service at the revision read; the event itself is changed in the calendar, under the calendar's own rules. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Registration setup" default-menu-include="false">
+    <parameter name="workEffortId" required="true"/>
+    <parameter name="registrationPolicyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="storeOffer" location="component://mr-boss/template/MarketingEvents.xml"/>
+    <transition-include name="storeTicket" location="component://mr-boss/template/MarketingEvents.xml"/>
+    <transition-include name="storeQuestions" location="component://mr-boss/template/MarketingEvents.xml"/>
+    <transition-include name="storeNotice" location="component://mr-boss/template/MarketingEvents.xml"/>
+    <transition-include name="publishOffer" location="component://mr-boss/template/MarketingEvents.xml"/>
+    <transition-include name="closeOffer" location="component://mr-boss/template/MarketingEvents.xml"/>
+    <transition-include name="addVideoCall" location="component://mr-boss/template/MarketingEvents.xml"/>
+    <transition name="eventList"><default-response url="../Events"/></transition>
+    <actions>
+        <if condition="marketing.capabilities.eventSetupRead">
+            <service-call name="mantle.work.EventRegistrationServices.get#EventSetup" out-map="setup" transaction="force-new" ignore-error="true"
+                    in-map="{workEffortId:workEffortId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!setup?.event"/>
+        <script><![CDATA[
+            if (!recordFound) return
+            event = setup.event
+            offerList = Array.from(setup.offers || [])
+            occurrenceList = Array.from(setup.occurrences || [])
+            canManage = !!setup.canManage
+            offer = offerList.find(row => row.registrationPolicyId === registrationPolicyId) || offerList[0] || null
+            hasOffer = !!offer
+            ticketList = offer ? Array.from(offer.tickets || []) : []
+            scheduleList = offer ? Array.from(offer.schedules || []) : []
+            checkList = offer ? Array.from(offer.checks || []).map(check => Object.assign({}, check, {stateText: check.ready ? 'Ready' : 'Missing',
+                stateColor: check.ready ? 'positive' : 'negative'})) : []
+            missingCount = checkList.filter(check => !check.ready).length
+            captionText = [event.whenText, event.timeZone, event.location, event.organizationName, event.campaignText].filter(Boolean).join(' · ')
+            canAddOffer = canManage && (!event.repeats ? !hasOffer : occurrenceList.length > 0)
+            canAddCall = canManage && setup.canEditEvent && !event.online
+            detailPath = sharedLinks['Events/EventDetail']
+            campaignPath = sharedLinks['Campaigns/CampaignDetail']
+            offerOptions = offerList.map(row => ({registrationPolicyId: row.registrationPolicyId, label: row.occurrenceText + ' · ' + row.stateText}))
+            const offerId = offer?.registrationPolicyId || null
+            newOfferValues = {workEffortId, totalSeats: '', holdMinutes: 15, waitlistEnabled: 'N', publicTitle: event.eventName,
+                occurrenceStart: occurrenceList[0]?.occurrenceStart || null}
+            offerValues = offer ? {workEffortId, registrationPolicyId: offerId, expectedRevision: offer.revision, publicTitle: offer.publicTitle,
+                publicDescription: offer.publicDescription, timeZone: offer.timeZone, siteId: offer.siteId, productStoreId: offer.productStoreId,
+                opensDate: offer.opensDate, closesDate: offer.closesDate, totalSeats: offer.totalSeats, holdMinutes: offer.holdMinutes,
+                waitlistEnabled: offer.waitlistEnabled, waitlistLimit: offer.waitlistLimit, termsText: offer.termsText,
+                cancellationTerms: offer.cancellationTerms, sendingProfileId: offer.sendingProfileId, organizationPartyId: event.organizationPartyId} : {}
+            ticketValues = {workEffortId, registrationPolicyId: offerId, priceSourceEnumId: 'EtpFree', perOrderLimit: 10,
+                organizationPartyId: event.organizationPartyId}
+            questionValues = offer ? {workEffortId, registrationPolicyId: offerId, expectedRevision: offer.revision, formId: offer.formId,
+                questionScopeEnumId: offer.questionScopeEnumId, consentText: offer.consentText, organizationPartyId: event.organizationPartyId} : {}
+            noticeValues = {workEffortId, registrationPolicyId: offerId, triggerEnumId: 'EctConfirmed', recipientScopeEnumId: 'EcrAttendee',
+                purposeEnumId: 'MtpTransactional', organizationPartyId: event.organizationPartyId}
+            stateValues = offer ? {workEffortId, registrationPolicyId: offerId, expectedRevision: offer.revision} : {}
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="SetupNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Event ${workEffortId} is not available: it is not an event of your organizations, or its registration setup is for events managers."/>
+                <link url="eventList" text="Back to events" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="SetupFound" condition="recordFound"><widgets>
+            <context record-entity="mantle.work.effort.WorkEffort" record-id="${workEffortId}" title="${event.eventName}"/>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <container style="row items-center no-wrap">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${WebUtilities.encodeHtml(workEffortId)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "EventKey", style: "strong", text: workEffortId})}]]></text>
+                            </render-mode>
+                            <label text="${event.eventName}" type="h5"/>
+                        </container>
+                        <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${offer ? offer.stateColor : 'grey-6'}">${WebUtilities.encodeHtml(offer ? offer.stateText : 'No offer')}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "OfferState", text: offer ? offer.stateText : "No offer"})}]]></text>
+                            <text type="html">${offer ? offer.stateText : 'No offer'}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <label text="${event.confirmedCount} confirmed · ${event.heldCount} held · ${event.waitlistedCount} waitlisted${event.online ? ' · online' : ''}" type="span" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-xs m-record-actions">
+                        <container-dialog id="NewOfferDialog" button-text="New offer" icon="sym_o_add" type="${hasOffer ? 'default' : 'primary'}" width="760"
+                                title="New registration offer for ${event.eventName}" condition="canAddOffer">
+                            <form-single name="NewOffer" transition="storeOffer" map="newOfferValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="occurrenceStart">
+                                    <conditional-field condition="!event.repeats"><hidden/></conditional-field>
+                                    <default-field title="Occurrence">
+                                        <drop-down allow-empty="false"><list-options list="occurrenceList" key="${occurrenceStart}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="publicTitle"><default-field title="Public title"><text-line size="40" maxlength="255"/></default-field></field>
+                                <field name="totalSeats"><default-field title="Seats"><text-line size="8" input-type="number"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Add offer"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="PublishDialog" button-text="Publish" icon="sym_o_publish" type="primary" width="560"
+                                title="Publish the registration for ${event.eventName}" condition="offer &amp;&amp; offer.canPublish">
+                            <label type="p" text="${missingCount ? 'Before it opens: ' + checkList.filter(check =&gt; !check.ready).map(check =&gt; check.label).join('; ') : 'It is ready: its page opens on ' + offer.siteName + '.'}"/>
+                            <form-single name="PublishOffer" transition="publishOffer" map="stateValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Publish" confirmation="Publish the registration offer for ${offer.occurrenceText}?"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <link url="${offer.publicUrl}" url-type="plain" text="View page" icon="sym_o_open_in_new" link-type="anchor-button" btn-type="primary"
+                                target-window="_blank" condition="offer &amp;&amp; offer.publicUrl"/>
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="EditOfferDialog" button-text="Edit offer" icon="sym_o_edit" width="900"
+                                    title="Edit the registration offer" condition="offer &amp;&amp; offer.canChange">
+                                <form-single name="EditOffer" transition="storeOffer" map="offerValues">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="publicTitle"><default-field title="Public title"><text-line size="40" maxlength="255"/></default-field></field>
+                                    <field name="publicDescription"><default-field title="Public description" tooltip="Shown on the event's page, as text"><text-area rows="4" cols="60"/></default-field></field>
+                                    <field name="siteId">
+                                        <default-field title="Site">
+                                            <drop-down allow-empty="true"><dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'sites', selected:siteId}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="productStoreId">
+                                        <default-field title="Store" tooltip="Empty: a storeless order of the organization">
+                                            <drop-down allow-empty="true"><dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'eventStores', organizationPartyId:organizationPartyId, selected:productStoreId}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="opensDate"><default-field title="Opens"><date-time type="timestamp"/></default-field></field>
+                                    <field name="closesDate"><default-field title="Closes"><date-time type="timestamp"/></default-field></field>
+                                    <field name="timeZone"><default-field title="Time zone"><text-line size="24"/></default-field></field>
+                                    <field name="totalSeats"><default-field title="Seats"><text-line size="8" input-type="number"/></default-field></field>
+                                    <field name="holdMinutes"><default-field title="Hold (minutes)" tooltip="How long a place is held before it is completed"><text-line size="6" input-type="number"/></default-field></field>
+                                    <field name="waitlistEnabled"><default-field title="Waitlist"><check><option key="Y" text="Offer a waitlist when full"/></check></default-field></field>
+                                    <field name="waitlistLimit"><default-field title="Waitlist places"><text-line size="6" input-type="number"/></default-field></field>
+                                    <field name="sendingProfileId">
+                                        <default-field title="Notices sent from" tooltip="Empty: the organization's ready profile for transactional mail">
+                                            <drop-down allow-empty="true"><dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'eventProfiles', organizationPartyId:organizationPartyId, selected:sendingProfileId}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="termsText"><default-field title="Terms"><text-area rows="3" cols="60"/></default-field></field>
+                                    <field name="cancellationTerms"><default-field title="Cancellation terms"><text-area rows="2" cols="60"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Save offer"/></default-field></field>
+                                    <field-layout>
+                                        <field-ref name="publicTitle"/>
+                                        <field-ref name="publicDescription"/>
+                                        <field-row><field-ref name="siteId"/><field-ref name="productStoreId"/></field-row>
+                                        <field-row><field-ref name="opensDate"/><field-ref name="closesDate"/></field-row>
+                                        <field-row><field-ref name="totalSeats"/><field-ref name="holdMinutes"/></field-row>
+                                        <field-row><field-ref name="waitlistEnabled"/><field-ref name="waitlistLimit"/></field-row>
+                                        <field-row><field-ref name="timeZone"/><field-ref name="sendingProfileId"/></field-row>
+                                        <field-ref name="termsText"/>
+                                        <field-ref name="cancellationTerms"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="VideoCallDialog" button-text="Add video call" icon="sym_o_video_call" width="480"
+                                    title="Add a video call to ${event.eventName}" condition="canAddCall">
+                                <label type="p" text="The event gets a call link: registrants receive it with their confirmation, and its page says the event is online."/>
+                                <form-single name="AddVideoCall" transition="addVideoCall" map="{workEffortId:workEffortId}">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Add video call" confirmation="Add a video call to ${event.eventName}?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="${detailPath}" text="Open in the calendar" icon="sym_o_calendar_month" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                            <container-dialog id="CloseOfferDialog" button-text="Close registration" icon="sym_o_block" width="480"
+                                    title="Close the registration for ${offer.occurrenceText}" condition="offer &amp;&amp; offer.canClose">
+                                <form-single name="CloseOffer" transition="closeOffer" map="stateValues">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Close registration" type="danger"
+                                            confirmation="Close the registration for ${offer.occurrenceText}? Its page closes; the places taken stay."/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </button-menu>
+                    </container>
+                </container>
+            </container>
+
+            <section name="OfferChoice" condition="offerList.length &gt; 1"><widgets>
+                <container style="row q-gutter-sm q-mb-sm">
+                    <section-iterate name="OfferLinks" list="offerOptions" entry="choice"><widgets>
+                        <link url="." text="${choice.label}" link-type="anchor" parameter-map="{workEffortId:workEffortId, registrationPolicyId:choice.registrationPolicyId}"/>
+                    </widgets></section-iterate>
+                </container>
+            </widgets></section>
+            <label type="p" style="m-muted" condition="!hasOffer"
+                    text="No registration offer yet.${canAddOffer ? ' Add one with New offer: its seats, then its tickets, questions and notices.' : ''}"/>
+
+            <section name="OfferBoxes" condition="hasOffer"><widgets>
+                <container style="row q-col-gutter-sm">
+                    <container style="col-12 col-md-6">
+                        <container-box>
+                            <box-header title="Offer"/>
+                            <box-body>
+                                <label type="p" text="${offer.occurrenceText} (${offer.timeZone})"/>
+                                <label type="p" style="text-caption m-muted" text="Registration: ${offer.windowText} · seats ${offer.seatsText || 'not set'} · ${offer.waitlistedCount} waitlisted · hold ${offer.holdMinutes} minutes · waitlist ${offer.waitlistEnabled == 'Y' ? 'on' : 'off'}"/>
+                                <label type="p" style="text-caption m-muted" text="Site: ${offer.siteName || 'none'} · ${offer.storeName ? 'store ' + offer.storeName : 'storeless orders'} · terms revision ${offer.termsRevision}"/>
+                                <label type="p" style="text-caption m-muted" text="${offer.publishedText ? 'Published ' + offer.publishedText : 'Not published'}"/>
+                            </box-body>
+                        </container-box>
+                    </container>
+                    <container style="col-12 col-md-6">
+                        <container-box>
+                            <box-header title="Readiness"/>
+                            <box-body-nopad>
+                                <form-list name="ReadinessList" list="checkList" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Check"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Ticket types"/>
+                    <box-toolbar>
+                        <container-dialog id="NewTicketDialog" button-text="New ticket type" icon="sym_o_confirmation_number" width="640"
+                                title="New ticket type" condition="offer.canChange">
+                            <form-single name="NewTicket" transition="storeTicket" map="ticketValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                <field name="ticketName"><default-field title="Name"><text-line size="30" maxlength="255"/></default-field></field>
+                                <field name="priceSourceEnumId">
+                                    <default-field title="Price">
+                                        <radio><option key="EtpFree" text="Free"/><option key="EtpProduct" text="The ticket product's price"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="productId">
+                                    <default-field title="Ticket product" tooltip="Priced by the product's own prices in the organization's currency">
+                                        <drop-down allow-empty="true"><dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'ticketProducts', organizationPartyId:organizationPartyId, selected:productId}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="capacity"><default-field title="Places" tooltip="Empty: the offer's seats"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="perOrderLimit"><default-field title="Places an order may take"><text-line size="4" input-type="number"/></default-field></field>
+                                <field name="salesFromDate"><default-field title="On sale from"><date-time type="timestamp"/></default-field></field>
+                                <field name="salesThruDate"><default-field title="On sale until"><date-time type="timestamp"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Add ticket type"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="TicketList" list="ticketList" skip-form="true" paginate="false">
+                            <field name="ticketName"><default-field title="Ticket"><display/></default-field></field>
+                            <field name="priceText"><default-field title="Price"><display/></default-field></field>
+                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                            <field name="capacityText" align="right"><default-field title="Places"><display/></default-field></field>
+                            <field name="takenCount" align="right"><default-field title="Taken"><display format="#,##0"/></default-field></field>
+                            <field name="salesText"><default-field title="On sale"><display/></default-field></field>
+                            <field name="perOrderLimit" align="right"><default-field title="Per order"><display/></default-field></field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <container-dialog id="EditTicket_${ticketTypeId}" button-text="Edit" icon="sym_o_edit" width="560"
+                                            title="Edit ${ticketName}" condition="offer.canChange">
+                                        <form-single name="EditTicket" transition="storeTicket"
+                                                map="{workEffortId:workEffortId, registrationPolicyId:offer.registrationPolicyId, ticketTypeId:ticketTypeId,
+                                                    expectedRevision:revision, ticketName:ticketName, capacity:capacity, perOrderLimit:perOrderLimit,
+                                                    salesFromDate:salesFromDate, salesThruDate:salesThruDate}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                            <field name="ticketTypeId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="ticketName"><default-field title="Name"><text-line size="30"/></default-field></field>
+                                            <field name="capacity"><default-field title="Places"><text-line size="6" input-type="number"/></default-field></field>
+                                            <field name="perOrderLimit"><default-field title="Places an order may take"><text-line size="4" input-type="number"/></default-field></field>
+                                            <field name="salesFromDate"><default-field title="On sale from"><date-time type="timestamp"/></default-field></field>
+                                            <field name="salesThruDate"><default-field title="On sale until"><date-time type="timestamp"/></default-field></field>
+                                            <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="EndTicket_${ticketTypeId}" button-text="End" icon="sym_o_block" width="480"
+                                            title="End ${ticketName}" condition="offer.canChange">
+                                        <form-single name="EndTicket" transition="storeTicket"
+                                                map="{workEffortId:workEffortId, registrationPolicyId:offer.registrationPolicyId, ticketTypeId:ticketTypeId,
+                                                    expectedRevision:revision, action:'end'}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                            <field name="ticketTypeId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="action"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton"><default-field title=""><submit text="End" type="danger"
+                                                    confirmation="End ticket type ${ticketName}? Its places taken stay; it takes no new ones."/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="ticketName"/><field-ref name="priceText"/></column>
+                                <column><field-ref name="capacityText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No ticket type yet: add a free one, or one priced by a ticket product." type="p" style="m-muted q-pa-sm" condition="!ticketList.length"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Registration questions"/>
+                    <box-toolbar>
+                        <container-dialog id="QuestionsDialog" button-text="Choose questions" icon="sym_o_quiz" width="640"
+                                title="Registration questions" condition="offer.canChange">
+                            <form-single name="Questions" transition="storeQuestions" map="questionValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="formId">
+                                    <default-field title="Questions" tooltip="Registration questions built in Surveys, their questions published; empty for none">
+                                        <drop-down allow-empty="true"><dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'registrationForms', organizationPartyId:organizationPartyId, selected:formId}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="questionScopeEnumId">
+                                    <default-field title="Asked of"><radio><option key="ErqAttendee" text="Each attendee"/><option key="ErqBuyer" text="The buyer, once"/></radio></default-field>
+                                </field>
+                                <field name="consentText"><default-field title="Consent a registrant accepts"><text-area rows="2" cols="60"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Save questions"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label type="p" text="${offer.formName ? offer.formName + ', asked of ' + (offer.questionScopeEnumId == 'ErqBuyer' ? 'the buyer once' : 'each attendee') : 'No questions: a registration asks only the attendee details.'}"/>
+                        <label type="p" style="text-caption m-muted" text="Consent: ${offer.consentText}" condition="offer.consentText"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Notices"/>
+                    <box-toolbar>
+                        <container-dialog id="NewNoticeDialog" button-text="New notice" icon="sym_o_notifications" width="640"
+                                title="New notice" condition="offer.canChange">
+                            <form-single name="NewNotice" transition="storeNotice" map="noticeValues">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                <field name="triggerEnumId">
+                                    <default-field title="When">
+                                        <drop-down allow-empty="false">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration"><econdition field-name="enumTypeId" value="EventCommunicationTrigger"/><order-by field-name="sequenceNum"/></entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="offsetMinutes"><default-field title="Minutes before or after" tooltip="For before the start or after the end"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="messageTemplateId">
+                                    <default-field title="Template">
+                                        <drop-down allow-empty="false"><dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'eventTemplates', organizationPartyId:organizationPartyId, selected:messageTemplateId}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="recipientScopeEnumId">
+                                    <default-field title="To"><radio><option key="EcrAttendee" text="Each attendee"/><option key="EcrBuyer" text="The buyer"/><option key="EcrBoth" text="Both"/></radio></default-field>
+                                </field>
+                                <field name="purposeEnumId">
+                                    <default-field title="Kind" tooltip="A promotional notice goes only to those who consented to promotional mail">
+                                        <radio><option key="MtpTransactional" text="Transactional"/><option key="MtpPromotional" text="Promotional"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title=""><submit text="Add notice"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="NoticeList" list="scheduleList" skip-form="true" paginate="false">
+                            <field name="triggerText"><default-field title="When"><display/></default-field></field>
+                            <field name="offsetText"><default-field title="Offset"><display/></default-field></field>
+                            <field name="templateName"><default-field title="Template"><display/></default-field></field>
+                            <field name="recipientText"><default-field title="To"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <container-dialog id="EndNotice_${scheduleId}" button-text="End" icon="sym_o_block" width="480"
+                                            title="End notice ${triggerText}" condition="offer.canChange">
+                                        <form-single name="EndNotice" transition="storeNotice"
+                                                map="{workEffortId:workEffortId, registrationPolicyId:offer.registrationPolicyId, scheduleId:scheduleId,
+                                                    expectedRevision:revision, action:'end'}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                            <field name="scheduleId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="action"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton"><default-field title=""><submit text="End" type="danger" confirmation="End this notice? It is sent no more."/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="triggerText"/><field-ref name="templateName"/></column>
+                                <column><field-ref name="kindText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No notice yet: a confirmation notice tells each registrant their place." type="p" style="m-muted q-pa-sm" condition="!scheduleList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets></section>
+        </widgets></section>
+    </widgets>
+</screen>

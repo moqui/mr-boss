@@ -4483,6 +4483,153 @@ Design §9 Events, EventDetail and RegistrationSetup, §13 Event; MKT-EVENT (its
   campaign, sets two ticket types and questions, publishes it, and the PASS Event page shows the offer; the
   calendar's own permissions still decide who edits the event.
 
+**Built Nov 15 (P16).** mr-mantle, mr-pass and mr-boss on branch `mkt/p16` (hashes in the worker's reply), from master after gate 5;
+mr-moqui unchanged, no Rust built. Built beside the framework follow-up reserving `/trk` and `/trk-o`, whose files this phase does not touch.
+- Checked first (the code over the plan): P12's, P14's and P15's Built and Review notes, F28–F30, F33, F71, F80, F107, F146, F90–F307 and §4;
+  Commons' calendar as built (EventServices create#Event, check#EventAccess, get#EventInstances and the series' occurrences, EventManager,
+  WorkEffortRecurrence, WorkEffortProduct; Commons' EventDetail and People's mount of it; the framework's create#CallLink and Maintenance's
+  video call), FormPublication.js and FormDefinitions.js (the registration purpose DbfpRegistration, FppRegistration), MarketingPortal.js
+  (served, the one NotFound, the readiness, the page's embeds), the price resolver (get#ProductPrice), the gateway bindings
+  (PaymentGatewayOrganization, ProductStorePaymentGateway, PartyAcctgPreference invoicePayGatewayConfigId) and the attempt coordinator's
+  PapEventRegistration (P17's). People's projected calendar kind and the room booking are not used here: an event's rooms stay EventDetail's
+  (book#Resource under the calendar's rule), and the campaign calendar is P21's. The code over the plan:
+  - "a Commons event's owner may be a person" (F107): the event's organization is kept by a new `mantle.work.registration.RegistrationEvent`,
+    made once by `store#RegistrationEvent` for an events manager of the organization who may edit the event (the calendar's rule; another
+    organization later is ORGANIZATION_FIXED), which also makes the campaign link (CampaignAssociation CakEvent) to an open campaign of that
+    organization; CampaignServices' store#CampaignAssociation now admits CakEvent by that organization (CakPage stays KIND_UNAVAILABLE; P2's
+    Campaigns spec now checks the page kind). The events manager group holds no MARKETING_CAMPAIGN_EDIT, so the link is made by E, not by
+    C.store#CampaignAssociation as the design's NewEvent row reads;
+  - "EventRegistrationPolicy (one occurrence's dated offer)": one row per occurrence (unique event and occurrenceStart, the start a series'
+    rule gives the occurrence; an event that does not repeat has one, matched to its dates now), changed in place at the revision read with
+    its fields audit-logged and `policyRevision` counted, its terms' changes after publication counted in `termsRevision` (P17 keeps the one
+    a registration accepted), not a new dated row a change: the capacity domain is the occurrence's, so a row a change would split it.
+    Statuses ErpDraft, ErpPublished, ErpClosed with their transitions; `close#Registration` is added (the plan names no unpublish);
+  - "capacity below held and confirmed refused" needs the places: `EventRegistration` is defined now with only what the checks count (offer,
+    ticket type, attendee, buyer, state, hold end; statuses EvrHeld, EvrPending, EvrConfirmed, EvrWaitlisted, EvrExpired, EvrCancelled, no
+    transitions), every write P17's; a seat is taken by EvrHeld while its hold lasts, EvrPending and EvrConfirmed (`SEAT_STATES`);
+  - "its price source": a ticket type keeps no amount: EtpFree, or EtpProduct with a ticket product the organization owns (not inventoried,
+    sales allowed) priced by `get#ProductPrice` in the organization's currency (find#PartyAcctgPreference, its settings' when it has none)
+    and of the offer's store when it names one; a product with no price is "No price" and blocks publishing (readiness `prices`);
+  - "a payment gateway of the organization": the offer's store's (ProductStorePaymentGateway) when it names one, else the organization's
+    invoice gateway when it is bound, else its first binding in effect (P17 may choose otherwise; the readiness only asks that one exists);
+  - "the registration form (a publication of purpose registration, P12)": `store#RegistrationForm` names a published DbfpRegistration form
+    of the organization and writes its FormPublication (FppRegistration, anonymous, many, the offer's site, context the offer, open while the
+    offer is) itself after its checks: Commons' store#Publication asks the form's editor (MARKETING_CONTENT_EDIT), which an events manager is
+    not; a new form closes the earlier publication; the questions are asked of each attendee or the buyer once, with a consent text;
+  - "a ready profile for the notices": the offer's named transactional profile, else the organization's ready one (a promotional profile
+    never sends them); a notice's template is a Comms template of the organization in use, a promotional template never a transactional
+    notice;
+  - the PASS operation is camelCase, `getMarketingEvent` (GET `marketing/event`: siteId, registrationPolicyId), after P15's in both schema
+    copies and route lists (byte-identical), read only, in no TOKEN_WRITES list; the page is `Marketing/Event?offer={id}` (as SubmitForm's
+    `?publication=`), a 404 for every miss as Page's; a landing page embeds `[[event ID]]` as a card linking it (P14's embed table);
+  - "EventDetail, Commons' EventDetail included ... with the tabs Registration setup, Registrations and Check in": Commons' EventDetail is
+    mounted as it is (People's way) and gains a small owner-contract hook, `eventAppLinks` (links above its tabs, a list the mounting area sets,
+    data never a right, a request parameter left out); Marketing's Events area gives a registration event its Registration setup (P17 and
+    P18 add theirs). Its tabs still link Commons' own route, as under People;
+  - "the video link of an online occurrence through EventDetail's Add video call": `add#EventVideoCall` (a framework call link as the event's
+    `infoUrl`, once) on RegistrationSetup's More menu, not on Commons' screen; the public page says "online" and never shows the link;
+  - Events is every Marketing reader's (design §2: app) with no area deny; RegistrationSetup is the events managers' (`eventSetupRead`,
+    "Not available" otherwise); menu index 7 between Content and Surveys (Surveys 8, Leads 9), key `g e`, quick create `marketingEvent`;
+  - the Marketing app's readiness check is "published list, form, page or event".
+- Mantle:
+  - `entity/EventRegistrationEntities.xml` (new, `mantle.work.registration`): RegistrationEvent, EventRegistrationPolicy (statuses and
+    transitions, question scopes), EventTicketType (price sources), EventCommunicationSchedule (triggers, recipients), EventRegistration
+    (its states).
+  - `service/mantle/work/EventRegistrationServices.xml` over `EventRegistrations.js` (new, E): find#Events, get#EventSetup,
+    store#RegistrationEvent, store#RegistrationPolicy, store#TicketType, store#RegistrationForm, store#CommunicationSchedule,
+    publish#Registration, close#Registration, add#EventVideoCall; exports SEAT_STATES, seatsTaken, occurrenceOf, priceOf, gatewayOf,
+    readinessOf, publicView, liveOffersOf, organizationOfEvent for P17 and the portal.
+  - `MarketingCampaigns.js` (CakEvent), `MarketingPortal.js` (get#Event, the `[[event]]` embed, the readiness), `MarketingPortalServices.xml`
+    (get#Event), `ForumSchema.js` and `script/PassRoutes.js` (getMarketingEvent).
+- PASS: `screen/Marketing/Event.xml` and `.html.fancy` (new: PublicEvent, every value escaped, the description and terms as text
+  paragraphs), `Page.xml` and `Page.html.fancy` (the event card), `Schema.js` and `Routes.js` (copies), `screen/Marketing.xml`'s comment,
+  `docs/Deployment.md` (Marketing app: Events), README.
+- BOSS: `screen/Marketing/Events.xml` (new area) with `Events/Events.xml` (EventFind, EventList, NewEvent), `Events/RegistrationSetup.xml`
+  (the header with the primary by state and More, the offer choice of a series, Offer, Readiness, Ticket types, Registration questions,
+  Notices) and Commons' EventDetail mounted; `template/MarketingEvents.xml` (new: createEvent, storeOffer, storeTicket, storeQuestions,
+  storeNotice, publishOffer, closeOffer, addVideoCall; NewEventForm); `QuickCreate/NewEvent.xml` (new, QuickEvent); CampaignDetail's
+  Events box; `Commons/Calendar/EventDetail.xml` (the eventAppLinks hook); `Marketing.js` (eventRead, eventSetupRead, the P16 link paths,
+  the `event` record kind, the choices ticketProducts, registrationForms, eventStores, eventTemplates, eventProfiles, eventCalendars);
+  `screen/Marketing.xml` (Events, `g e`, the quick create), Surveys' and Leads' menu indexes; demo (`BossZZMarketingDemoData.xml`, a P16
+  block): Retail's spring planting webinar (free, online, 100 seats with a waitlist) and rose pruning workshop (twelve seats, Standard
+  $45.00 and Members $30.00 by their ticket products), both organized by Marketing Events manager, linked to the spring campaign and
+  published on ZIZI_SHOP; the webinar's call link by a second demo loader, `ironstone.marketing.DemoServices.load#EventDemo`
+  (MarketingDemo.js `loadEvents`, its token in no row).
+- Specs:
+  - Mantle `test/work/EventRegistrationSetup` (new, 3 features, about 1.3 s: an events manager who may edit the event offers it with a
+    campaign link once, a reader, another organization's manager and a manager who may not edit the event refused, the events of the
+    campaign listed; a series' occurrence required and checked, one offer an occurrence, the seats and a ticket's places never below the
+    places held or confirmed (an ended hold not counted), the other occurrence's seats apart; a ticket product of another organization
+    refused, a paid ticket NOT_READY without a gateway and published with one, a stale revision refused, the public view's allow-listed
+    keys, a draft, another site's and a closed offer NotFound); `test/marketing/Campaigns` (the association feature's kind is now CakPage).
+  - mr-pass `test/Marketing/MarketingEvents` (new, 2 features, about 0.05 s of features; fixtures `MarketingFixtures.js` events()): Event's
+    one html render (title, description escaped, dates, place, online without the link, prices from the product, a full ticket's waitlist,
+    terms; no internal name, note or call link), the answer's keys; a draft, closed, past, another site's, a site without the mount and an
+    unknown offer NotFound alike; the operation in both copies and route lists and in no TOKEN_WRITES list.
+  - mr-boss `MarketingEvents` (new, 2 features, about 0.5 s: RegistrationSetup's one qvt render for the events manager; the campaign's
+    events for a reader, the record kind, the ticket product choice, a reader's "Not available" setup and another organization's author
+    refused, the context's capabilities and link); `MarketingSpecLib` (the menus with Events, `g e`, the event ids).
+  - Acceptance, written and not run: mr-boss `test/acceptance/Marketing/MarketingEventSetupWalk` (4 features, stepwise: New event with the
+    campaign; the offer, two ticket types, questions an author published, Publish; the PASS Event page as a visitor; the calendar's rule on
+    who edits the event and the organization kept).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle EventRegistrationSetup, Campaigns, MarketingSubscriptions,
+  MarketingContent, SitePages, PassAuthority, CalendarServices (all passed); mr-pass MarketingEvents, MarketingPages, SubmitForm,
+  MarketingAccess, Transport, MarketingTracking (all passed); mr-boss MarketingEvents, MarketingAccess, MarketingCampaigns, EventDetail,
+  Calendar, PeopleRecruiting, MarketingContent (all passed); after Prettier the new specs and their neighbours again (91 of 91). A throwaway
+  copy of the acceptance walk and renders of Events (qvt, tui), RegistrationSetup (tui; html for the webinar), EventDetail under Marketing
+  (qvt, with the Registration setup link), CampaignDetail (html, the Events box) and QuickEvent (qvt, tui) passed and was not kept.
+  `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen; parse failures 0. Prettier (mr-moqui's
+  config) on the new and changed JavaScript. Not run: test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P16" table and the calendar services' Implemented in (Marketing/Events/EventDetail,
+  NewEvent); ss-inventory's EventDetail and MyCalendar NewEventForm rows.
+- Design edits: design-marketing §3 (CampaignDetail's event link), §9 Events, EventDetail and RegistrationSetup (as built), §13 Event (as
+  built), §14.1 RegistrationEvent; design-drawers-commons §7 (the EventDetail hook, an owner contract).
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: RegistrationEvent keeping the organization and the campaign link made by E, one offer row per occurrence
+    changed in place with its revisions, EventRegistration defined now with its seat states only, no amount on a ticket type, the gateway
+    rule, the question publication written by E, `close#Registration`, the camelCase operation and `?offer=`, the EventDetail hook, Add video
+    call on RegistrationSetup;
+  - an event that does not repeat has its offer matched to its dates now, so moving the event in the calendar moves the offer; a series'
+    occurrence is matched by the start its rule gives it, within 31 days of a changed instance's own start (a changed instance moved further
+    no longer matches, and the offer's readiness says "no longer an occurrence"); changed dates' notices are P17's job;
+  - EventDetail's tabs (Overview, Attendees, Reminders, Files, Chatter) link Commons' own route, as under People's mount, so a click there
+    leaves Marketing's menu;
+  - the demo's ZIZI_SHOP is unpublished (as P7's, P12's and P14's demos), so the two demo offers' pages are Not Found until it is
+    published; the webinar's call link lasts 90 days (the framework's most), shorter than a later event would need;
+  - the occurrence choice of a series lists the next 24 occurrences in 400 days; a later one cannot be offered yet;
+  - a time zone is typed (validated against the server's zones), not chosen from a list.
+- For the lead:
+  - budget share: mr-mantle about 1.3 s (EventRegistrationSetup); mr-pass server about 0.05 s of features (MarketingEvents; its fixtures in
+    setup); mr-boss server about 0.5 s (MarketingEvents; MarketingAccess unchanged); no client spec;
+  - merge hot spots (P17 next): mr-mantle `entity/EventRegistrationEntities.xml` and `EventRegistrations.js` (P17 adds the registration
+    writes), `service/mantle/forum/ForumSchema.js` and `script/PassRoutes.js` with mr-pass `Schema.js` and `Routes.js` (a P16 entry after
+    P15's), `MarketingPortal.js` (a P16 section, the embed pattern, the readiness), `MarketingPortalServices.xml`, `MarketingCampaigns.js`
+    (associationKinds), `test/marketing/Campaigns.spec.js`; mr-boss `screen/Marketing.xml` (Events, `g e`, quick create), `Surveys.xml` and
+    `Leads.xml` (menu indexes), `Marketing.js` (capabilities, linkPaths, recordKinds, choiceSources), `Campaigns/CampaignDetail.xml` (an
+    Events box after Tracking links), `screen/Commons/Calendar/EventDetail.xml` (the hook; any Commons calendar work), `MarketingDemo.js`
+    and `DemoServices.xml`, `data/BossZZMarketingDemoData.xml` (a P16 block at the end), `test/Marketing/MarketingSpecLib.js`,
+    `plan/usl-inventory.md`, `plan/ss-inventory.md`, `plan/design-marketing.md`, `plan/design-drawers-commons.md`, this file; mr-pass
+    `screen/Marketing/Page.xml` and `.html.fancy`, `test/Marketing/MarketingFixtures.js`, README, `docs/Deployment.md`;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, after PASS Marketing's tracking paragraph; no mr-moqui worktree): "PASS
+    Marketing's Event page (`mantle.marketing.MarketingPortalServices.get#Event`, `allow-remote="false"`, `authenticate="anonymous-all"`,
+    read only, reached only as the PASS operation `getMarketingEvent` of the authority's allowlist, in no TOKEN_WRITES list, rendered at
+    `/marketing/Event?offer={id}`) finds the organization from the site's `marketing` mount (a published site, an internal organization)
+    and answers an event registration offer (EventRegistrationPolicy) only when it is published, of that organization, on that site, for an
+    occurrence of an event not cancelled that has not ended; a site without the mount, a draft, closed, past or another site's or
+    organization's offer and an unknown or malformed id answer the same NotFound (a 404). The answer is allow-listed: the offer's public
+    title and description (never the event's own name or notes), the occurrence's dates in the offer's zone, its place or that it is online
+    (never the call link, which goes to registrants only), each ticket's name, its price text from the ticket product's own prices (no amount
+    is stored on the offer) and advisory availability, whether registration is open and the terms; no attendee, organizer, room, budget,
+    campaign, work effort or party id. The page escapes every value and shows the description and terms as text, under PASS's default
+    no-store headers, the shell's CSP and a same-origin referrer policy; a landing page shows an offer only through the same operation
+    (`[[event ID]]`). Staff set registration up through `mantle.work.EventRegistrationServices`, which asks MARKETING_EVENT_MANAGE in the
+    event's organization (kept by RegistrationEvent, made only by an events manager who may edit the event under the calendar's own rules)
+    for every write and a Marketing read for every read, another organization's event or offer answering as a missing one, each write at the
+    revision read; publishing asks a published site of the organization's Marketing mount, a ready transactional sending profile and, for a
+    priced ticket, a payment gateway of the organization or its store.";
+  - the user's call (none blocking): the events manager linking an event to a campaign without the campaign edit permission (the link changes
+    no plan); the offer changed in place with its revisions rather than a dated row a change; the eventAppLinks hook on Commons' EventDetail.
+
 ### P17 — Registrations, tickets and payment, with PASS Register and Registration
 
 Design §9 RegistrationSetup's order rules, Registrations and RegistrationDetail, §13 Register and Registration,
