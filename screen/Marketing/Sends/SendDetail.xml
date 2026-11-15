@@ -281,22 +281,25 @@ along with this software (see the LICENSE.md file). If not, see
                 </container>
 
                 <!-- P9: the delivery (design §5 SendDetail's Delivery): the release and the counts from the delivery ledger -->
-                <container-box condition="delivery.released">
-                    <box-header title="Delivery"/>
-                    <box-toolbar>
-                        <link url="${deliveryPath}" text="Delivery and recipients" link-type="anchor-button" icon="sym_o_outgoing_mail"
-                                parameter-map="{campaignSendId:campaignSendId}"/>
-                    </box-toolbar>
-                    <box-body>
-                        <label text="Released ${delivery.releasedDateText} by ${delivery.releasedByName}${delivery.selfDispatch ? ' (one-person team)' : ''} to ${delivery.releasedCount} recipients."
-                                type="p"/>
-                        <label text="${delivery.handedOffCount} handed off: ${delivery.sentCount} sent, ${delivery.inFlightCount} in flight, ${delivery.failedCount} failed, ${delivery.uncertainCount} uncertain, ${delivery.suppressedCount} suppressed · ${delivery.waitingCount} waiting · ${delivery.skippedCount} skipped at dispatch${delivery.cancelledCount ? ' · ' + delivery.cancelledCount + ' not sent: cancelled' : ''}${delivery.heldCount ? ' · ' + delivery.heldCount + ' held for the A/B winner' : ''}"
-                                type="p"/>
-                        <label text="${delivery.dispatchNote}" type="p" style="text-warning" condition="delivery.dispatchNote"/>
-                        <label text="Cancelled ${delivery.cancelledDateText}: ${delivery.cancelReason}" type="p" style="m-muted" condition="delivery.cancelledDateText"/>
-                        <label text="Completed ${delivery.completedDateText}" type="p" style="m-muted" condition="delivery.completedDateText"/>
-                    </box-body>
-                </container-box>
+                <!-- follow-up 7: a section, as a container-box condition is not read (the box showed "Released undefined" before the release) -->
+                <section name="SendDelivery" condition="delivery.released"><widgets>
+                    <container-box>
+                        <box-header title="Delivery"/>
+                        <box-toolbar>
+                            <link url="${deliveryPath}" text="Delivery and recipients" link-type="anchor-button" icon="sym_o_outgoing_mail"
+                                    parameter-map="{campaignSendId:campaignSendId}"/>
+                        </box-toolbar>
+                        <box-body>
+                            <label text="Released ${delivery.releasedDateText} by ${delivery.releasedByName}${delivery.selfDispatch ? ' (one-person team)' : ''} to ${delivery.releasedCount} recipients."
+                                    type="p"/>
+                            <label text="${delivery.handedOffCount} handed off: ${delivery.sentCount} sent, ${delivery.inFlightCount} in flight, ${delivery.failedCount} failed, ${delivery.uncertainCount} uncertain, ${delivery.suppressedCount} suppressed · ${delivery.waitingCount} waiting · ${delivery.skippedCount} skipped at dispatch${delivery.cancelledCount ? ' · ' + delivery.cancelledCount + ' not sent: cancelled' : ''}${delivery.heldCount ? ' · ' + delivery.heldCount + ' held for the A/B winner' : ''}"
+                                    type="p"/>
+                            <label text="${delivery.dispatchNote}" type="p" style="text-warning" condition="delivery.dispatchNote"/>
+                            <label text="Cancelled ${delivery.cancelledDateText}: ${delivery.cancelReason}" type="p" style="m-muted" condition="delivery.cancelledDateText"/>
+                            <label text="Completed ${delivery.completedDateText}" type="p" style="m-muted" condition="delivery.completedDateText"/>
+                        </box-body>
+                    </container-box>
+                </widgets></section>
 
                 <container-box>
                     <box-header title="Summary"/>

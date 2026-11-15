@@ -57,7 +57,9 @@ spec({
 
 feature("the registry: one row per contact with consent data, the chips of its lists and purposes, the last change; the demo's states", {
     when() {
-        return { shown: list({}) }
+        // the demo's News list holds all five demo contacts: the registry's first page of every contact (twenty, the newest change
+        // first) holds them only on a fresh database, where the specs of a worker before this one add contacts with newer changes
+        return { shown: list({ contactListId: LIST_NEWS }) }
     },
     then({ shown }) {
         shown.status == 200

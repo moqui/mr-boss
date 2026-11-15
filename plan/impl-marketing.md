@@ -7530,6 +7530,69 @@ reads those dates is updated. Branch `mkt/fix6` in mr-boss (mr-mantle if a Mantl
   - merge hot spots: as the Built note's, plus the review commit in `test/Marketing/MarketingDelivery.spec.js` and this file;
   - the user's calls: whether the December send and the holiday guide get names that do not name a month (low); none other new.
 
+### Follow-up 7 — The final suites' failures
+
+The end-of-build `./moq test-apps --release --nobuild` (after P21 to P23 and follow-ups 4 to 6) failed on three mr-boss specs: Consent's
+registry feature, MarketingAccess's registries feature and the client MarketingSendWalk ("1 sent" not shown, the walk 16.22 s, over the
+15 s limit; mr-boss's client feature time 98.8 s of 90). A fix branch, `mkt/fix7` in mr-mantle and mr-boss (mr-pass unchanged).
+
+**Built Nov 15 (follow-up 7): Final suites fixes.**
+- Checked first (the code over the plan): each failure's root cause before any test change. Both server failures pass alone; the
+  suite's worker logs (`runtime/tmp/test-workers-81088`) show each ran after specs of other components in the same worker database,
+  so each is a spec's state met by a later spec, not a Marketing code change:
+  - MarketingAccess (worker 1, after mr-mantle's EventCheckIn): EventCheckIn (P18) makes a door-tablet group MKCI_DISPLAY with a
+    `CapabilityBundle` of appName Marketing and gives MKCI_DISPLAY and its check-in user's group MKCI_CHECKIN MARKETING_CHECKIN, and
+    its cleanup left them. MarketingAccess then found an extra Marketing bundle and two extra holders of MARKETING_CHECKIN. The seed
+    and §4 are right (nine role bundles, the launcher bundle and the door group's, MARKETING_CHECKIN the door group's alone), so the
+    leak was fixed, not the expectation; reproduced by running EventCheckIn before MarketingAccess in one run (fails before, passes
+    after);
+  - Consent (worker 3, after 112 specs that add contacts with consent data): the registry is a page of twenty, newest change first
+    (find#Consents, unchanged since M11). The demo's changes are 1 to 35 days old, and Bob Acme's last is 4 days old, so any twenty
+    newer contacts from earlier specs push a demo contact off the first page. The code is right; the feature's expectation held only on
+    a fresh database. It now renders the registry narrowed to the demo's News list, which all five demo contacts are on, and keeps
+    every check on that one render (status, rows, the chips of the other lists, the purposes, the toolbar);
+  - MarketingSendWalk: the final suite ran at 04:33 Chicago time. Retail's demo profile (P6) has quiet hours 21:00 to 07:00
+    America/Chicago, under which a delivery waits, untried (MessageSendingProfiles forDelivery, Mantle's SendingProfiles spec): the
+    Delivery box showed "1 handed off: 0 sent, 1 in flight" through all twenty reloads of the poll, which is what made the walk slow.
+    Not P22's ledger branch, P21's SendDetail or follow-up 6's dates: the walk held by day only since P9. Reproduced at 04:54 Chicago
+    time. The quiet hours are right, and the demo keeps them; the walk's server sets them aside.
+- Built:
+  - mr-mantle `test/work/EventCheckIn.spec.js`: cleanupSpec also deletes the spec's MARKETING_CHECKIN grants (groups MKCI_*) and its
+    door group's CapabilityBundle with any bundle permission and artifact rows;
+  - mr-boss `test/Comms/Consent.spec.js`: the registry feature renders `contactListId` BOSS_DEMO_LIST_NEWS;
+  - mr-boss `test/Marketing/MarketingClientFixtures.spec.js` (new, one feature): Retail's profile without quiet hours on the walk's
+    --serve server, added to `test/client/suite.js`'s server specs; the walk's header says why. It also runs in the server regression
+    suite, where it only clears the demo profile's quiet hours (no regression spec reads them; Mantle's SendingProfiles tests quiet
+    hours on its own profile);
+  - mr-boss `screen/Marketing/Sends/SendDetail.xml`: the Delivery box inside a section with the condition `delivery.released`. The
+    walk's failure screenshots showed "Released undefined by undefined to undefined recipients" on a send not yet released: a
+    `container-box` condition is not read by the framework (no condition in the XSD, none in ScreenQvt.js's containerBoxMacro), so the
+    box showed on every send. The walk's `waitForText(dispatcher, "Released")` now waits for the release itself.
+- Tests run (release, `--nobuild`, this worktree's runtime): EventCheckIn, MarketingAccess, Consent, MarketingClientFixtures,
+  MarketingSends and MarketingDelivery in one run (mr-mantle then mr-boss, so EventCheckIn before MarketingAccess and Consent): 46 of
+  46, 6.8 s of feature time; the client walk `./moq test-client mr-boss --serve --spec MarketingSendWalk` at 05:04 Chicago time, inside
+  the quiet hours: passed, 8.02 s (was 13.40 s failed in the suite, 13.81 s here before the fix), under the approved 9 s. Screen lint
+  clean (exit 0, the same advisory list). Not run: test-apps, test-framework, acceptance.
+- Findings (provisional, numbered by the lead):
+  - a `container-box` `condition` attribute is ignored by the framework's renderers (qvt at least: containerBoxMacro), and mr-boss
+    uses it on about fifty boxes (Sales Settings, Shared MessageTemplateDetail and SendingProfiles, Marketing Home, CampaignDetail,
+    ExperimentDetail, Reports, RegistrationDetail, SalesOrderDetail and others): each shows its box when its condition is false,
+    often with empty or undefined values. Only SendDetail's Delivery box is fixed here. Either the framework honours the condition
+    (as it does on labels, dialogs and the other widgets) or screen lint flags it and the screens move to sections (medium; the user's
+    call, framework work);
+  - EventCheckIn left a Marketing bundle and MARKETING_CHECKIN grants behind for any later spec of its worker (fixed here, low);
+  - Consent's registry feature depended on a fresh database's first page (fixed here, low);
+  - the walk proved delivery by day only (the demo profile's quiet hours, fixed here for the walk). The acceptance
+    MarketingDispatchScenario sends through the same profile with run#Deliveries and is likely to wait the same way at night; not run
+    (the brief), not changed (low).
+- For the lead:
+  - budget share: mr-boss client about 5.4 s less than the final suite's run (MarketingSendWalk 8.0 s against 13.4 s), so mr-boss's
+    client feature time about 93 s of 90 before any other change: still over by about 3 s, which this follow-up cannot close without
+    cutting another app's walk; the new fixture feature adds about 0.01 s to the server and client runs;
+  - merge hot spots: mr-boss `screen/Marketing/Sends/SendDetail.xml` (the Delivery box), `test/client/suite.js`,
+    `test/Comms/Consent.spec.js`; mr-mantle `test/work/EventCheckIn.spec.js`; this file;
+  - the user's call: the container-box condition finding above, and the client budget (about 93 s measured against 90).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into

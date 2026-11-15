@@ -3,7 +3,8 @@
 // approves it; the dispatcher releases it and sees it delivered (the Delivery box's one sent, the server's mail capture holding it).
 // The rules (the release's separation, the dispatch's checks and idempotency, the ledger's consent) are mr-mantle's Sends and Dispatch
 // and mr-boss's MarketingSends and MarketingDelivery; the "usable when" scenarios are the acceptance MarketingComposeWalk and
-// MarketingDispatchScenario.
+// MarketingDispatchScenario. Retail's profile has no quiet hours on the walk's server (MarketingClientFixtures, follow-up 7), so the
+// delivery does not wait for the morning when the suite runs at night.
 let pages = {}
 const name = "Walk: garden news " + String(Date.now()).slice(-6)
 spec({
