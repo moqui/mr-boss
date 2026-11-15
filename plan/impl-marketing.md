@@ -3829,8 +3829,7 @@ master had nothing newer to merge. Read against the phase text, §2, §4, design
   - Attack-Surface: the worker's paragraph is accurate with one correction for R1: replace "the team (a current sales team of that
     organization, checked when the rule is saved and by Sales at each handoff)" with "the team (a current sales team of that
     organization chosen by a sales manager, SALES_TEAM_MANAGE, or else Sales' own default team, checked when the rule is saved and by
-    Sales at each handoff)"; and after "a content author's of the publication's organization: MARKETING_CONTENT_EDIT" nothing else
-    changes;
+    Sales at each handoff)"; the rest stands;
   - the user's call: answered (R1).
 
 ### P14 — Content, blog posts and landing pages
