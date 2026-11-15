@@ -6944,7 +6944,7 @@ follow-up 4's merge; mr-moqui unchanged, no Rust built. Built beside P21's revie
   MarketingRetention 1 of 1 (0.1 s); mr-pass MarketingRegistration 5 of 5 (0.3 s; the new feature 0.01 s), ShopCheckout 4 of 4
   (0.5 s), MarketingTracking 4 of 4 (0.9 s), Forum 13 of 13 (0.7 s). Screen lint (Register.xml changed): no parse failure, Register
   not flagged. Not run: test-apps, any acceptance test (none changed).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F419 to F421 in order:
   - the key is forwarded with `startRegistrationPayment`, not `completeRegistration` as the section names (the order is made at the
     payment's start; above); the lead or the user may confirm;
   - Register's pay transition is not driven by a spec with headers and a cookie (the helper it calls is: the PASS feature above), as
@@ -7001,7 +7001,7 @@ section, follow-up 4's Built and Review notes, §2 and design-marketing §11 and
   - ForumSchema.js and PASS Schema.js byte-identical (`cmp`); follow-up 4's retention clearing applies to ticket orders too (OrderPart
     vendor).
 - Fixed: nothing.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F422 to F423 in order:
   - a staff `start#RegistrationPayment` replacing a buyer's declined remote payment writes no digest, so it clears one the buyer's
     Pay kept (consistent with "a start replacing a payment writes that Pay's digest or none" and the privacy-conservative choice;
     the ticket order is then attributed by recipient only; low, left as is);
@@ -7530,6 +7530,11 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F416 | P21 (Review Nov 15): a third copy of the phone matching (`partiesOfNumber`, as SalesComms.js and Maintenance's Stack.js): confirmed, a Mantle helper for the three belongs to a cross-app follow-up, not this phase | P21: as its Review note says |
 | F417 | P21 (Review Nov 15): a moved event's notification links Commons' EventDetail, as Projects' calendar does (the worker's): acceptable, the event is the calendar's | P21: as its Review note says |
 | F418 | P21 (Review Nov 15): Today's Marketing feature in MarketingShell checks the group is present but not that the dispatcher gets an item (the demo has no send due today); Mantle's MarketingCalendar covers the sends-due source | P21: as its Review note says |
+| F419 | Follow-up 5 (Built Nov 15): the key is forwarded with `startRegistrationPayment`, not `completeRegistration` as the section names (the order is made at the payment's start; above); the lead or the user may confirm | Follow-up 5: as its Built note says |
+| F420 | Follow-up 5 (Built Nov 15): Register's pay transition is not driven by a spec with headers and a cookie (the helper it calls is: the PASS feature above), as follow-up 4's review found for Shop's submit (low) | Follow-up 5: as its Built note says |
+| F421 | Follow-up 5 (Built Nov 15): deployment order, as for follow-up 4: a PASS with this change against an authority without it refuses every Register Pay that carries a key ("Unsupported operation or input"); deploy the authority first | Follow-up 5: as its Built note says |
+| F422 | Follow-up 5 (Review Nov 15): a staff `start#RegistrationPayment` replacing a buyer's declined remote payment writes no digest, so it clears one the buyer's Pay kept (consistent with "a start replacing a payment writes that Pay's digest or none" and the privacy-conservative choice; the ticket order is then attributed by recipient only; low, left as is) | Follow-up 5: as its Review note says |
+| F423 | Follow-up 5 (Review Nov 15): no spec drives a replacement start after a declined payment (digest rewritten) or Register's pay transition with headers and a cookie (the worker's second finding; the helper is covered) (low) | Follow-up 5: as its Review note says |
 
 ## 7. Later
 
