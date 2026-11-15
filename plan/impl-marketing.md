@@ -6563,6 +6563,145 @@ schema gains the parameter (the byte-identical copies kept equal). `record#Order
 visit's keys, the recipient check still applying. Branch `mkt/fix4` in mr-mantle and mr-pass (mr-boss for the plan and the acceptance
 scenario).
 
+**Built Nov 15 (follow-up 4).** mr-mantle, mr-pass and mr-boss on branch `mkt/fix4` (hashes in the worker's reply), from master after
+P20's merge; mr-moqui unchanged, no Rust built. Built beside P21 (`mkt/p21`) and P22 (`mkt/p22`).
+- Checked first (the code over the plan): this section, P20's Review note "For the lead" (the user's call 1), §4's Nov 15 rows (the
+  visitor key as built in P15; the remote PASS frontend), P15's MarketingTracking.js (`recordEvent`'s digest, `trackingAllowed`,
+  `visitorKeyPattern`, the policy's `visitorKeys`), P20's MarketingAttribution.js (`identityEvents`, R2's `trackingWithdrawn` and
+  recipient check), Shop's ShopCheckout.js (submit, freeze, place) and PASS's Shop/ShopCheckout.js and TrackingLib.js (`mkt_vk`,
+  `heldKey`, `doNotTrack`). The code over the plan:
+  - "in the placement's own transaction before `place#Order`": the key arrives with `submitCheckout`, while a paid order is placed
+    later (the provider's return, the webhook, the reconciliation job), with no frontend request. Built in two places: the submit
+    computes the digest where allowed and the freeze step commits it on the order with the snapshot (before any provider call); the
+    placement step reads the consent and the policy again in its own transaction before `place#Order` and clears the digest when it
+    may no longer be kept (a customer who withdrew tracking since, a policy turned off);
+  - "stores only the key's digest with the order": `OrderHeader.marketingVisitorKeyHash` (an extend-entity in MarketingEntities.xml,
+    a follow-up 4 block at the end), the review's first suggestion; no new entity;
+  - "only where P15 would have recorded the key": `MarketingTracking.js visitorKeyAllowed(customer, seller)`: never for a customer who
+    has withdrawn tracking with the seller (`trackingWithdrawn`, moved here from MarketingAttribution.js, which now calls it), else the
+    seller's MarketingPolicy `visitorKeys` Y or the customer allowing tracking with the seller; `orderVisitorKeyHash(key, customer,
+    seller)` adds the key's form (`^[A-Za-z0-9_-]{16,64}$`, else dropped) and answers the digest; `visitorKeyHash(key)` is the one
+    digest (`digest("mkt-visitor:" + key)`, now used by `recordEvent` too), exported;
+  - "PASS's checkout operation sends the frontend's first-party key": PASS `Shop/ShopCheckout.js submit` sends the `mkt_vk` cookie
+    the browser holds (TrackingLib `heldKey`, of the key's form) unless it sends Do Not Track or Global Privacy Control, as
+    Marketing/Page.xml does for a landing page's visit; a local frontend sends it too (its order also has its local visit). The key is
+    not part of the submit's request identity (a retry with another cookie is the same submit) and never refuses it; a failure of the
+    consent read keeps nothing and is logged;
+  - the facade's schema: `submitCheckout` gains `visitorKey` in PASS `service/pass/Schema.js` and Mantle's `forum/ForumSchema.js`
+    (byte-identical), and in `Contracts.d.ts`; the route (`POST shop/checkout/submission`) and the three TOKEN_WRITES lists are
+    unchanged (submitCheckout is already a token write);
+  - `record#OrderAttribution` reads events by the stored digest (identity "visitorKey") beside the visit's keys; the withdrawn
+    customer's early return and R2's recipient check apply to it as to every path;
+  - not built: Register's ticket checkout (PASS Marketing `completeRegistration`) does not forward the key, as the section names Shop's
+    checkout only; a ticket order through a remote frontend is attributed by recipient only (a finding). The digest stays on the
+    order after the decision (the retry job and a later reader need nothing of it; retention does not clear it: a finding).
+- mr-mantle: `entity/MarketingEntities.xml` (the follow-up 4 block at the end), `service/mantle/marketing/MarketingTracking.js`
+  (`trackingWithdrawn`, `visitorKeyHash`, `visitorKeyAllowed`, `orderVisitorKeyHash` after `trackingAllowed`, exported),
+  `MarketingAttribution.js` (the header, `identityEvents`), `service/mantle/order/ShopCheckout.js` (the header, `visitorKeyHashOf`
+  before the steps, the freeze's write, `keptVisitorKey` in `placeStep`), `ShopCheckoutServices.xml` (submit#Checkout's description),
+  `service/mantle/forum/ForumSchema.js`.
+- mr-pass: `screen/Shop/ShopCheckout.js` (`visitorKeyInput`, the submit), `service/pass/Schema.js`, `service/pass/Contracts.d.ts`,
+  `plan/design-shop.md` (§13's checkout operations row).
+- mr-boss: `test/acceptance/Marketing/MarketingReportsScenario.spec.js` (the events carry the key's real digest; a new feature after
+  the reports: an order placed through a remote PASS, no local visit, keeps the digest Retail's policy allows and is attributed by
+  it; the reports' counts unchanged), `plan/design-marketing.md` (§11's as built), this note.
+- Tests: mr-mantle Attribution gains "follow-up 4: a checkout's visitor key is kept as its digest only where allowed, and the order
+  is attributed by it" (a consenting customer's key kept, a customer without consent and a guest not; malformed keys dropped; with
+  the seller's policy on a guest and a customer without consent kept, a withdrawn customer never; the digest the events' and never
+  the raw key; an order with no visit attributed by its stored digest, a withdrawn customer's and an unknown key's unattributed),
+  run against the unfixed attribution first and seen to fail; mr-pass ShopCheckout's remote-frontend feature sends a key under a
+  spec-local policy (removed after) and finds the digest on the order at the freeze and after the return's placement.
+  Run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Attribution 4 of 4 (feature time 0.9 s; the new feature
+  0.14 s), ShopCheckout, Tracking, MarketingReports, Experiments, MarketingRetention 23 of 23 (9.1 s); mr-pass ShopCheckout 4 of 4
+  (0.6 s), Forum, MarketingTracking, ShopSubscriptions, MarketingPages 21 of 21 (2.0 s). No screen changed (no lint). Not run:
+  test-apps, the acceptance scenario (changed, not run).
+- Findings (provisional, numbered by the lead):
+  - Register's ticket checkout does not forward the visitor key: a ticket order through a remote PASS is attributed by recipient
+    only (a follow-up like this one if wanted: `completeRegistration` and EventRegistrationPlaces' placement);
+  - the order keeps the digest after its decision and past the organization's statistics retention (the events it matches are
+    removed by retention unless an attribution names them); retention could clear it on orders older than the retention days.
+- For the lead:
+  - budget share: mr-mantle about +0.15 s (Attribution's new feature); mr-pass about +0.05 s (ShopCheckout's remote feature);
+    no client spec;
+  - merge hot spots: mr-mantle `entity/MarketingEntities.xml` (a block at the end, after P20's), `MarketingTracking.js` (after
+    `trackingAllowed`, the export list), `MarketingAttribution.js`, `ShopCheckout.js`, `ForumSchema.js`/PASS `Schema.js` (the
+    submitCheckout entry; P22's SMS schema entries may meet them); mr-boss `MarketingReportsScenario.spec.js`, `design-marketing.md`
+    §11, this file; mr-pass `Contracts.d.ts`, `design-shop.md`;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`; no mr-moqui worktree): in the attribution paragraph, replace "the
+    order's local visit and the visitor-key digests that visit's events carried, or its customer as a recipient who allows tracking
+    (PcpTracking)," with "the order's local visit and the visitor-key digests that visit's events carried, the visitor-key digest
+    its Shop checkout kept (`OrderHeader.marketingVisitorKeyHash`: a frontend's `submitCheckout` `visitorKey`, of the cookie's form
+    or dropped, kept only as its digest and only where an event would have kept the key, the seller's MarketingPolicy visitorKeys
+    or the customer allowing tracking, never for a customer who withdrew tracking, read again before place#Order; the raw key is
+    never stored), or its customer as a recipient who allows tracking (PcpTracking),";
+  - the user's calls: none.
+
+**Review Nov 15 (follow-up 4).** A fresh review of `mkt/fix4` (mr-mantle 60670635, mr-pass 436dea9, mr-boss 0060b0a5) against this
+section, P20's Review note "the user's call 1", §4's Nov 15 row, §2 and design-marketing §11.
+- Checked and sound:
+  - the raw key is never stored or logged: it reaches `submitCheckout` in the POST body (PASS's facade and Mantle's `Forum.js execute`
+    both admit only the schema's fields, and a refused field is named, not echoed), is no part of the submit's request hash (the
+    `request` object of `replayOf`; PostingOperation keeps the hash and the answer, never the input), and only its digest is passed to
+    the freeze step (`run#Step`'s input) and written on `OrderHeader.marketingVisitorKeyHash`; the two warnings log the checkout or
+    order id and the error's first line, never the key; PASS's Transport logs no input;
+  - kept only where consent or policy allows: `visitorKeyAllowed` refuses a withdrawn customer before the policy is read, then the
+    seller's active MarketingPolicy `visitorKeys` Y or the customer's PcpTracking with the seller; a read failure keeps nothing at
+    the submit and clears the digest at placement (fail closed); `keptVisitorKey` runs in `placeStep`'s transaction before
+    `place#Order`, after the ORDER_CHANGED check, and the freeze's write changes no `orderRevision` (bumped only explicitly), so the
+    placement's revision check is unaffected; every Shop placement (the return, the webhook, the job) goes through `placeStep`;
+  - request identity: the key is not in the request hash, never refuses the submit (a malformed key is dropped; a failure logged);
+    an "already" freeze (two tabs) keeps the first submit's digest; a REVIEW_REQUIRED freeze writes nothing;
+  - Do Not Track and GPC: PASS's `visitorKeyInput` sends `heldKey` (the cookie, of the key's form) only when `doNotTrack` (`sec-gpc`
+    or `dnt` = 1) is false, as Marketing/Page.xml does; the authority re-checks consent and policy whatever a frontend sends;
+  - the schema copies: PASS `service/pass/Schema.js` and Mantle `forum/ForumSchema.js` are byte-identical (`cmp`); `Contracts.d.ts`
+    gains the optional field; the route and the TOKEN_WRITES lists unchanged;
+  - attribution: the digest path runs after `identityEvents`' withdrawn early return and its events pass the same recipient filter
+    (an event of a recipient who no longer allows tracking is dropped), the window, the organization and the automated/kind
+    conditions are `eventsWhere`'s; `trackingWithdrawn` moved to MarketingTracking.js unchanged; `recordEvent` uses the one digest;
+  - the specs: Attribution's new feature tests the helper's allow/deny matrix, malformed keys and attribution by a stored digest
+    (withdrawn and unknown keys unattributed); PASS ShopCheckout's remote feature sends the key through the facade and finds the
+    digest at the freeze and after placement; the acceptance scenario's new feature reads soundly (not run).
+- Fixed:
+  - R1 (low, test gap): nothing tested the re-check before `place#Order`, that a retry with another key is the same submit, or that
+    a malformed key is never refused through the checkout. mr-mantle ShopCheckout gains "a checkout's visitor key: its digest kept
+    at the freeze, not the submit's identity, read again before the placement" (the seller's policy on at the submit, a retry with
+    another key `alreadyApplied` and the digest unchanged, the policy ended before the provider's return and the placed order's
+    digest cleared, a free item's submit with a malformed key completed with no digest); seen to fail with `keptVisitorKey`
+    removed.
+  - R2 (low, retention; the worker's second finding): the digest stayed on the order forever, past the statistics retention that
+    removes the events it would match, and after a customer's later withdrawal. `run#MarketingRetention` (MarketingReports.js) now
+    clears it on the organization's orders (OrderPart vendor) placed before its `statisticsRetentionDays`, each order on its own (a
+    failure named, the rest done); an organization without the setting keeps it as long as it keeps the events. MarketingRetention
+    covers it (A's 40-day-old order cleared, A's recent one and another seller's kept); seen to fail without the change.
+    design-marketing §11's retention sentence says so.
+- Provisional findings (for the lead to number):
+  - Register's ticket checkout (PASS Marketing `completeRegistration`) does not forward the key (the worker's first finding): it
+    stands; not fixed now. The section names Shop's checkout only, a ticket order through a remote PASS is still attributed through
+    its customer as a consenting recipient, and the change crosses EventRegistrationPlaces' placement (P17's code), so it is a
+    follow-up like this one if the user wants ticket orders attributed by the key (the user's call);
+  - after placement a customer's withdrawal leaves the digest on the order until retention (or forever without
+    `statisticsRetentionDays`); attribution ignores it (its withdrawn early return), so it is never used, but it is kept; clearing
+    it on withdrawal would need a hook in the consent write (left as is, low);
+  - PASS's `visitorKeyInput` (Do Not Track / GPC, the cookie's form) is reviewed but not exercised by a spec (the remote feature
+    passes `visitorKey` to the facade directly; no spec drives the Shop submit transition with headers); TrackingLib's
+    `doNotTrack` and `heldKey` are covered by MarketingTracking (low);
+  - deployment order: both facades refuse an input field the schema does not list, so a PASS with this change against an authority
+    without it refuses every Shop submit that carries a key ("Unsupported field"); deploy the authority first (a note for release,
+    nothing to fix in one repository set).
+- Tests (release binary, `--nobuild`, this worktree's runtime): mr-mantle ShopCheckout 9 of 9 (the new feature 0.68 s; 5.2 s feature
+  time), MarketingRetention 1 of 1 (0.06 s), Attribution 4 of 4 (0.8 s), Tracking 4 of 4 (1.4 s), MarketingReports 7 of 7 (0.8 s);
+  mr-pass ShopCheckout 4 of 4 (0.6 s), Forum 13 of 13 (0.8 s), MarketingTracking 4 of 4 (0.9 s). Not run: test-apps, the acceptance
+  scenario. No screen changed (no lint).
+- For the lead:
+  - budget share: mr-mantle about +0.7 s more (ShopCheckout's new feature; the retention check adds nothing measurable), so about
+    +0.85 s with the worker's; mr-pass unchanged from the Built note;
+  - merge hot spots: add mr-mantle `MarketingReports.js runMarketingRetention` (the events' policy loop) and
+    `test/marketing/MarketingRetention.spec.js` (setup and checks), `test/order/ShopCheckout.spec.js` (a feature at the end);
+    mr-boss `design-marketing.md` §11's retention sentence;
+  - Attack-Surface: the Built note's replacement stands; add to the retention sentence (if it names the purged kinds) "and the
+    visitor-key digest of an organization's orders placed before its statistics retention";
+  - the user's calls: whether Register's ticket checkout should forward the key too (a follow-up).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into

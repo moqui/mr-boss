@@ -1854,11 +1854,13 @@ and `get#Attribution` (each placed order once by its primary campaign, unattribu
 an order's own row only for a reader who may see it in Sales or Commerce). Nothing past a limit is cut: TOO_MANY_RECORDS. The decision
 is `TrackingServices.record#OrderAttribution`, called by `handle#OrderPlaced` after each placement (MarketingOutcomeLink, one in force
 an order, with its basis, evidence and evidence time; TrackingCodeOrder beside a tracking event, never billable); the order's identity
-is its local visit and the visitor key that visit's events carried, or its customer as a recipient who allows tracking now, never
-inferred across devices; a staff correction (MARKETING_CONFIGURE) is a successor with its reason. The visits metric is `count#Visits`
+is its local visit and the visitor key that visit's events carried, the visitor key's digest a Shop checkout kept with the order
+(`OrderHeader.marketingVisitorKeyHash`: a remote PASS frontend sends its first-party key with `submitCheckout`, kept only where an
+event would have kept it and never for a customer who withdrew tracking; impl-marketing follow-up 4), or its customer as a recipient
+who allows tracking now, never inferred across devices; a staff correction (MARKETING_CONFIGURE) is a successor with its reason. The visits metric is `count#Visits`
 (and Sales' `count#SalesVisits`). Retention (`run#MarketingRetention`, nightly): a purged import's row names and masked addresses,
 unconfirmed public requests a week past their expiry, tracking events past the organization's statistics retention (never one an
-attribution names) and expired link tokens, each on its own. Insights: the catalog entries, the metrics `Marketing.Visits` and
+attribution names) and the visitor-key digest of its orders placed before then (follow-up 4 review), and expired link tokens, each on its own. Insights: the catalog entries, the metrics `Marketing.Visits` and
 `Marketing.AttributedOrders`, the datasets `boss-marketing-deliveries` and `boss-marketing-audience` (their row filter Marketing's
 scope, `MantleMarketingScope`), the dashboard `boss-marketing-campaigns`, the alert templates for complaints, hard bounces and the
 uncertain backlog, the weekly campaign digest, four attention providers, the flow targets `Marketing.Campaigns` and `Marketing.Sends`
