@@ -128,6 +128,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="editing" from="!!form"/>
         <set field="can" from="{policyEdit: !!survey?.canEdit &amp;&amp; form?.canEdit !== false}"/>
         <set field="rating" from="!!survey?.rating"/>
+        <!-- impl-marketing P12: a registration with option scores (Marketing's) shows each option's score -->
+        <set field="scores" from="!!survey?.scores"/>
         <set field="words" from="survey?.words || {}"/>
         <set field="formFields" from="editing ? form.editFields || [] : []"/>
         <set field="formRules" from="editing ? form.conditions || [] : []"/>
@@ -135,7 +137,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="fieldOptions" from="formFields.map((row) =&gt; ({value: row.fieldName, label: row.title + (row.draft ? ' (draft)' : '')}))"/>
         <set field="optionRows" from="formFields.filter((row) =&gt; row.choice).flatMap((row) =&gt; row.options.map((option) =&gt;
                 ({fieldName: row.fieldName, fieldTitle: row.title, sequenceNum: option.sequenceNum, keyValue: option.keyValue,
-                    text: option.text, scoreText: form.rating?.fieldName == row.fieldName ? option.keyValue : '',
+                    text: option.text, scoreText: scores ? (option.scoreValue == null ? '' : String(option.scoreValue)) : form.rating?.fieldName == row.fieldName ? option.keyValue : '',
                     stateText: option.draft ? 'Draft' : 'Published', draft: option.draft})))"/>
         <set field="ruleRows" from="formRules.map((row) =&gt; Object.assign({}, row, {formId: formId, saveLabel: 'Save'}))
                 .concat(editing &amp;&amp; can.policyEdit &amp;&amp; formFields.length &gt; 1 ? [{formId: formId, dependencySeqId: '',
@@ -148,6 +150,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="newField" from="{formId: formId, fieldTypeEnumId: 'DBFFT_radio', isRequired: 'N'}"/>
         <set field="previewFormId" from="editing ? formId : ''"/>
         <set field="formsLink" from="survey ? sharedLinks?.[survey.links.forms] : null"/>
+        <set field="distributionLink" from="survey?.links?.distribution ? sharedLinks?.[survey.links.distribution] : null"/>
     </actions>
     <widgets>
         <section name="SurveyFormUnavailable" condition="!editing">
@@ -208,6 +211,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                 </container>
                 <link url="${formsLink}" text="${words.formsLink}" link-type="anchor" condition="formsLink"/>
+                <link url="${distributionLink}" text="${words.distributionLink || 'Distribution'}" link-type="anchor" parameter-map="{formId:formId}"
+                        condition="distributionLink"/>
                 <section name="FormProblems" condition="formProblems.length">
                     <widgets>
                         <container-box type="warning">
@@ -253,7 +258,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <default-field title="Order" tooltip="Lower comes first; empty: last"><text-line size="4" input-type="number"/></default-field>
                                 </field>
                                 <field name="optionText">
-                                    <default-field title="Options" tooltip="${rating ? 'For a choice: one a line, as value | label. A rating\'s values are its scores (1 | 1 - Poor)' : 'For a choice: one a line, as value | label (1 | No hire)'}">
+                                    <default-field title="Options" tooltip="${rating ? 'For a choice: one a line, as value | label. A rating\'s values are its scores (1 | 1 - Poor)' : scores ? 'For a choice: one a line, as value | label, or value | label | score for a scored single choice (yes | Yes | 2)' : 'For a choice: one a line, as value | label (1 | No hire)'}">
                                         <text-area rows="5" cols="40"/>
                                     </default-field>
                                 </field>
@@ -317,13 +322,13 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-box>
                 <!-- FieldOptions -->
                 <container-box>
-                    <box-header title="${rating ? 'Options and scores' : 'Options'}"/>
+                    <box-header title="${rating || scores ? 'Options and scores' : 'Options'}"/>
                     <box-body-nopad>
                         <form-list name="FieldOptions" list="optionRows" skip-form="true" paginate="false">
                             <field name="fieldTitle"><default-field title="Question"><display/></default-field></field>
                             <field name="keyValue"><default-field title="Value"><display/></default-field></field>
                             <field name="text"><default-field title="Label"><display/></default-field></field>
-                            <field name="scoreText" hide="!rating"><default-field title="Score" tooltip="The rating's value is the score"><display/></default-field></field>
+                            <field name="scoreText" hide="!rating &amp;&amp; !scores"><default-field title="Score" tooltip="${scores ? 'The option\'s score in a summary' : 'The rating\'s value is the score'}"><display/></default-field></field>
                             <field name="stateText"><default-field title="State"><display/></default-field></field>
                             <field name="endLink">
                                 <conditional-field title="" condition="can.policyEdit">

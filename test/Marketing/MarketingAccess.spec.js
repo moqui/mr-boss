@@ -166,10 +166,13 @@ feature("the Marketing menu and keys follow the groups; the launcher shows Marke
         if (JSON.stringify(sendsTabs.names) !== JSON.stringify(ids.sendsMenu))
             problems.push(`the author's Sends tabs: ${sendsTabs.status} ${sendsTabs.names}`)
         if (!author.apps.includes("Marketing")) problems.push(`the author's launcher has no Marketing: ${author.apps}`)
-        for (const user of [users.events, users.analyst, users.reader]) {
+        for (const user of [users.events, users.reader]) {
             const names = shell(user, true).names
             if (JSON.stringify(names) !== JSON.stringify(ids.staffMenu)) problems.push(`${user}'s menu: ${names}`)
         }
+        // P12: the analyst opens Surveys (the responses)
+        const analystNames = shell(users.analyst, true).names
+        if (JSON.stringify(analystNames) !== JSON.stringify(ids.analystMenu)) problems.push(`the analyst's menu: ${analystNames}`)
         // P8: the approver and the dispatcher open Sends, its Sends tab and not the templates
         for (const user of [users.approver, users.dispatch]) {
             const names = shell(user, true).names
@@ -250,7 +253,10 @@ const capabilityNames = [
     "sendRead",
     // P11: the automations' read (a Marketing reader who writes, approves or dispatches sends or reads audiences) and their area
     "automationRead",
-    "automations"
+    "automations",
+    // P12: the surveys' read (a Marketing reader who edits content or reads audiences or reports) and their area
+    "surveyRead",
+    "surveys"
 ]
 const audienceGrants = ["audienceView", "audienceEdit", "audienceImport", "audienceExport", "consentEdit"]
 // design §1.1's table; every user in BOSS_MARKETING holds view
@@ -273,7 +279,9 @@ const capabilityUsers = [
             "sends",
             "sendRead",
             "automationRead",
-            "automations"
+            "automations",
+            "surveyRead",
+            "surveys"
         ]
     },
     {
@@ -287,7 +295,9 @@ const capabilityUsers = [
             "previewRead",
             "audiencePreview",
             "automationRead",
-            "automations"
+            "automations",
+            "surveyRead",
+            "surveys"
         ]
     },
     {
@@ -311,8 +321,9 @@ const capabilityUsers = [
         ]
     },
     {user: users.events, granted: ["view", "eventManage", "anyRead"]},
-    {user: users.analyst, granted: ["view", "reportView", "anyRead", "reportRead"]},
-    {user: users.reader, granted: ["view", "reportView", "anyRead", "reportRead"]},
+    // P12: the analyst reads surveys and opens their area; the reader reads them by permission but the area denies its groups
+    {user: users.analyst, granted: ["view", "reportView", "anyRead", "reportRead", "surveyRead", "surveys"]},
+    {user: users.reader, granted: ["view", "reportView", "anyRead", "reportRead", "surveyRead"]},
     {
         // no approval, dispatch or template edit (design §1.1); suppression review since P3 and sending configuration since P6 (the
         // user's call of Nov 13)

@@ -12,11 +12,13 @@ const ids = {
     approverSendsMenu: ["Sends"],
     // P3: Audiences for the audience managers and the administrator; Leads for a user who reads Sales (the instance administrator)
     // P11: Automations for the authors, approvers, dispatchers, audience managers and the administrator
-    audienceMenu: ["Home", "Campaigns", "Audiences", "Automations"],
-    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Settings"],
-    systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Leads", "Settings"],
+    // P12: Surveys for the authors, audience managers, analysts and the administrator
+    audienceMenu: ["Home", "Campaigns", "Audiences", "Automations", "Surveys"],
+    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Surveys", "Settings"],
+    systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Surveys", "Leads", "Settings"],
+    analystMenu: ["Home", "Campaigns", "Surveys"],
     // P6: Sends (Comms' templates) for the authors and the administrator
-    authorMenu: ["Home", "Campaigns", "Sends", "Automations"],
+    authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Surveys"],
     sendsMenu: ["Sends", "MessageTemplates"],
     // P5: Segments and AudiencePreview join the Audiences tabs
     audiencesMenu: ["Lists", "Segments", "Consent", "Suppressions", "AudiencePreview"],
@@ -27,7 +29,8 @@ const ids = {
     // the keys of the screens a user may open: Lists' (g l, P3) an audience manager's
     keys: ["g m", "g c"],
     // P6: an author opens the templates (g t); P8 the sends (g n); P11 the automations (g a)
-    authorKeys: ["g m", "g c", "g t", "g n", "g a"],
+    // P12: and the surveys (g v)
+    authorKeys: ["g m", "g c", "g t", "g n", "g a", "g v"],
     // P2's demo campaigns (data/BossZZMarketingDemoData.xml): Retail's running one (approved at revision 1, with a planned child),
     // Retail's planned one, and Services' own
     runningCampaignId: "BOSS_MKT_CMP_SPRING",
@@ -66,7 +69,15 @@ const ids = {
     // P11's demo automation: Retail's garden newsletter welcome (active; Maya in its wait, Olive stopped at her request)
     welcomeAutomationId: "BOSS_MKT_AUTO_WELCOME",
     waitingEnrollmentId: "BOSS_MKT_ENR_MAYA",
-    stoppedEnrollmentId: "BOSS_MKT_ENR_OLIVE"
+    stoppedEnrollmentId: "BOSS_MKT_ENR_OLIVE",
+    // P12's demo survey: Retail's garden centre visit survey (its "good" option relabelled on 5 November), published to anyone on
+    // ZIZI_SHOP and by invitation to the garden newsletter, with an anonymous response before the change and Maya's invited one after
+    surveyFormId: "BOSS_MKT_FORM_VISIT",
+    surveyPublicationId: "BOSS_MKT_PUB_VISIT",
+    invitedPublicationId: "BOSS_MKT_PUB_VISIT_INVITED",
+    surveySendId: "BOSS_MKT_SEND_SURVEY",
+    anonymousResponseId: "BOSS_MKT_FR_VISIT_1",
+    invitedResponseId: "BOSS_MKT_FR_VISIT_2"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's

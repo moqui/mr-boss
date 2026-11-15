@@ -323,4 +323,30 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.user.NotificationTopic topic="MarketingAutomationApproval"
             linkTemplate="/qapps/Marketing/Automations/AutomationDetail?marketingAutomationId=${marketingAutomationId}"/>
     <!-- ===== end of Marketing P11 ===== -->
+
+    <!-- ===== Marketing P12: surveys and form publication (impl-marketing P12; design-marketing §2, §10) ===== -->
+    <!-- Surveys (design §2: Surveys and SurveyDetail for survey readers and editors, SurveyDistribution for the authors, Responses and
+        ResponseDetail for the audience managers and analysts): the area denies the root user group and gives the authors, audience
+        managers and analysts an ALWAYS, with the root's filter sets; the administrator and ADMIN open it through their ALWAYS on the
+        root; the root's menu shows it to a reader who edits content or reads audiences or reports, and the area's check asks the
+        capability (surveys). The survey builder's and Marketing's form services check the purposes' permissions and the organization
+        again. -->
+    <artifactGroups artifactGroupId="BOSS_MKT_SURVEYS" description="Marketing surveys">
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Surveys.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MKT_SURVEYS_DENY" userGroupId="BOSS_MARKETING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MKT_SURVEYS_AUTHOR" userGroupId="BOSS_MARKETING_AUTHOR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_SURVEYS_AUDIENCE" userGroupId="BOSS_MARKETING_AUDIENCE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_SURVEYS_ANALYST" userGroupId="BOSS_MARKETING_ANALYST" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- ===== end of Marketing P12 ===== -->
 </entity-facade-xml>
