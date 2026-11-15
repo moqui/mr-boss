@@ -195,11 +195,14 @@ feature("a note without a record goes in john.doe's notes space, made on first u
         const created = post("createNote", { title: "Gift ideas", noteText: "A shared calendar for the family." })
         const again = post("createNote", { title: "Gift ideas", noteText: "A second note with the same title." })
         const chinese = post("createNote", { title: "礼物 想法!", noteText: "Letters of any script name the page." })
+        // a decomposed (NFD) Thai and accented title is saved composed; a mark with no letter before it is left out
+        const marks = post("createNote", { title: "\u0301ภาษาไทย cafe\u0301", noteText: "Combining marks name the page." })
         return { created, again, page: one("moqui.resource.wiki.WikiPage", { wikiPageId: created.json.wikiPageId }),
             secondPage: one("moqui.resource.wiki.WikiPage", { wikiPageId: again.json.wikiPageId }),
-            chinese, chinesePage: one("moqui.resource.wiki.WikiPage", { wikiPageId: chinese.json.wikiPageId }) }
+            chinese, chinesePage: one("moqui.resource.wiki.WikiPage", { wikiPageId: chinese.json.wikiPageId }),
+            marks, marksPage: one("moqui.resource.wiki.WikiPage", { wikiPageId: marks.json.wikiPageId }) }
     },
-    then({ created, again, page, secondPage, chinese, chinesePage }) {
+    then({ created, again, page, secondPage, chinese, chinesePage, marks, marksPage }) {
         created.errors == ""
         message(created) == "Note saved in your notes: Gift ideas"
         page.wikiSpaceId == "NOTES_EX_JOHN_DOE"
@@ -209,6 +212,7 @@ feature("a note without a record goes in john.doe's notes space, made on first u
         secondPage.pagePath != "Gift ideas"
         secondPage.pagePath.startsWith("Gift ideas (")
         chinese.errors == "" && chinesePage.pagePath.startsWith("礼物 想法!")
+        marks.errors == "" && marksPage.pagePath.startsWith("ภาษาไทย café")
     },
 })
 
