@@ -175,7 +175,33 @@ function load() {
         return {complete: errors.length === 0, errors}
     })
 }
-const operations = {load}
+// P16: the spring planting webinar's video call (a call link of the framework, its token in no row), once
+function webinarCall() {
+    const workEffortId = "BOSS_MKT_EV_WEBINAR"
+    const event = one("mantle.work.effort.WorkEffort", {workEffortId})
+    if (!event || event.infoUrl) return
+    const link = call("org.moqui.call.CallServices.create#CallLink", {
+        name: "Spring planting webinar",
+        policy: "lobby",
+        video: true,
+        expiryHours: 2160
+    })
+    if (!link.path) throw new Error("No call link: " + (link.reasonCode || "refused"))
+    call("update#mantle.work.effort.WorkEffort", {workEffortId, infoUrl: link.path})
+}
+function loadEvents() {
+    return asDemoAdministrator(() => {
+        try {
+            webinarCall()
+            return {complete: true, errors: []}
+        } catch (error) {
+            ec.message.clearErrors()
+            ec.logger.error("Marketing event demo was not loaded: " + error.message)
+            return {complete: false, errors: ["webinarCall: " + error.message]}
+        }
+    })
+}
+const operations = {load, loadEvents}
 ;({
     execute(op, parameters) {
         if (!Object.hasOwn(operations, op)) throw new Error("Unknown marketing demo operation " + op)

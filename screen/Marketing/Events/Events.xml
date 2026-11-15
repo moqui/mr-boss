@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Events (design-marketing §9 Events: EventFind, EventList, NewEvent; style-guide §3.2 List; impl-marketing P16): the
+    registration events of the user's organizations, each with when (in its zone), where, its campaigns, its places against its seats
+    and its offers' state, by text, campaign, dates and state, a page at a time (mantle.work.EventRegistrationServices.find#Events,
+    scoped in the query). New event is the primary action (MARKETING_EVENT_MANAGE): a calendar event the user organizes, with its
+    organization and campaign. A row opens the event's registration setup for an events manager, else the event. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Events" default-menu-index="1">
+    <parameter name="marketingCampaignId"/>
+    <parameter name="term"/>
+    <parameter name="statusId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="createEvent" location="component://mr-boss/template/MarketingEvents.xml"/>
+    <actions>
+        <service-call name="mantle.work.EventRegistrationServices.find#Events" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{marketingCampaignId:(marketingCampaignId || null), term:(term || null), statusId:(statusId || null),
+                    fromDate:(fromDate || null), thruDate:(thruDate || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="events" from="found?.eventList || []"/>
+        <set field="eventsCount" from="found?.eventListCount || 0"/>
+        <set field="eventsPageIndex" from="found?.eventListPageIndex || 0"/>
+        <set field="eventsPageSize" from="found?.eventListPageSize || 20"/>
+        <set field="eventsPageMaxIndex" from="found?.eventListPageMaxIndex || 0"/>
+        <set field="eventsPageRangeLow" from="found?.eventListPageRangeLow || 0"/>
+        <set field="eventsPageRangeHigh" from="found?.eventListPageRangeHigh || 0"/>
+        <set field="canCreate" from="!!found?.canCreate"/>
+        <set field="eventPath" from="marketing.capabilities.eventSetupRead ? sharedLinks['Events/RegistrationSetup'] : sharedLinks['Events/EventDetail']"/>
+        <set field="findValues" from="{marketingCampaignId:marketingCampaignId, term:term, statusId:statusId, fromDate:fromDate, thruDate:thruDate}"/>
+        <set field="newEventValues" from="{organizationPartyId:marketing.activeOrganizationPartyId || (marketing.organizationPartyIds || [])[0],
+                marketingCampaignId:(marketingCampaignId || null), campaignFixed:false}"/>
+        <set field="filtered" from="!!(marketingCampaignId || term || statusId || fromDate || thruDate)"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Events" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none"
+                        text="Campaign events and their registration: seats, tickets, questions and notices, published to your sites."/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="NewEventDialog" button-text="New event" icon="sym_o_event" type="primary" width="760"
+                        title="New event" condition="canCreate">
+                    <section-include name="NewEventForm" location="component://mr-boss/template/MarketingEvents.xml"/>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="EventFind" transition="." map="findValues">
+            <field name="term"><default-field title="Find"><text-line size="20"/></default-field></field>
+            <field name="marketingCampaignId">
+                <default-field title="Campaign">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'campaigns', selected:marketingCampaignId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="statusId">
+                <default-field title="Registration">
+                    <drop-down allow-empty="true">
+                        <option key="ErpPublished" text="Published"/>
+                        <option key="ErpDraft" text="Draft"/>
+                        <option key="none" text="No offer"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Until"><date-time type="date"/></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="term"/>
+                    <field-ref name="marketingCampaignId"/>
+                    <field-ref name="statusId"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="EventList" list="events" skip-form="true" select-columns="true">
+                    <field name="eventName">
+                        <default-field title="Event">
+                            <link url="${eventPath}" text="${eventName}" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="whenText"><default-field title="When"><display/></default-field></field>
+                    <field name="timeZone"><default-field title="Zone"><display/></default-field></field>
+                    <field name="location"><default-field title="Where"><display/></default-field></field>
+                    <field name="campaignText"><default-field title="Campaigns"><display/></default-field></field>
+                    <field name="confirmedCount" align="right"><default-field title="Confirmed"><display format="#,##0"/></default-field></field>
+                    <field name="heldCount" align="right"><default-field title="Held"><display format="#,##0"/></default-field></field>
+                    <field name="waitlistedCount" align="right"><default-field title="Waitlisted"><display format="#,##0"/></default-field></field>
+                    <field name="seatCount" align="right"><default-field title="Seats"><display format="#,##0"/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="Registration">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="eventName"/><field-ref name="whenText"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="seatCount"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <label text="${filtered ? 'No event matches these filters.' : 'No event yet.' + (canCreate ? ' Make one with New event, then set up its registration.' : '')}"
+                type="p" style="text-caption m-muted" condition="!events.length"/>
+    </widgets>
+</screen>

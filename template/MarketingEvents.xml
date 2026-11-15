@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The event transitions and forms of the IronStone Marketing screens (impl-marketing P16; design-marketing §9 Events, EventDetail,
+    RegistrationSetup): each transition calls the calendar's or Mantle's guarded service (mantle.work.EventServices.create#Event,
+    mantle.work.EventRegistrationServices), which checks MARKETING_EVENT_MANAGE, the event's organization and, for the event itself, the
+    calendar's own rule, so a screen that includes one adds no authority. A screen includes each transition it uses by name.
+    - createEvent: NewEvent (Events, CampaignDetail, QuickEvent): the calendar event (create#Event: its organizer the user, in the
+      calendar chosen) and its registration organization and campaign (store#RegistrationEvent; the campaign only for a user who
+      also edits campaigns, the link being the campaign's change); it opens RegistrationSetup.
+    - storeOffer, storeTicket, storeQuestions, storeNotice, publishOffer, closeOffer, addVideoCall: RegistrationSetup's.
+    - NewEventForm: over the map newEventValues (campaignFixed keeps the campaign). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="createEvent">
+        <actions>
+            <!-- the organization and permission first, so no calendar event is made for someone who cannot offer it -->
+            <if condition="!marketing.capabilities.eventManage">
+                <return error="true" message="Making a Marketing event needs the events manager's permission"/>
+            </if>
+            <if condition="!organizationPartyId || !Array.from(marketing.organizationPartyIds || []).includes(organizationPartyId)">
+                <return error="true" message="Choose an organization of yours"/>
+            </if>
+            <!-- the campaign link is a change of the campaign (its edit permission, Mantle's store#RegistrationEvent asks again) -->
+            <if condition="marketingCampaignId &amp;&amp; !marketing.capabilities.campaignEdit">
+                <return error="true" message="Linking the event to a campaign needs the campaign's edit permission; make the event and ask the campaign's author to link it"/>
+            </if>
+            <service-call name="mantle.work.EventServices.create#Event" out-map="created"
+                    in-map="{workEffortName:workEffortName, description:(description || null), location:(location || null),
+                        estimatedStartDate:startDate, estimatedCompletionDate:endDate, calendarId:(calendarId || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <service-call name="mantle.work.EventRegistrationServices.store#RegistrationEvent" out-map="adopted"
+                        in-map="{workEffortId:created.workEffortId, organizationPartyId:organizationPartyId,
+                            marketingCampaignId:(marketingCampaignId || null)}"/>
+            </if>
+            <set field="setupPath" from="sharedLinks?.['Events/RegistrationSetup'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Event created; set up its registration</message></if>
+        </actions>
+        <conditional-response url="${setupPath}"><condition><expression>setupPath &amp;&amp; adopted?.workEffortId</expression></condition>
+            <parameter name="workEffortId" from="adopted.workEffortId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeOffer">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.store#RegistrationPolicy" out-map="stored"
+                    in-map="{registrationPolicyId:(registrationPolicyId || null), expectedRevision:(expectedRevision || null),
+                        workEffortId:(registrationPolicyId ? null : workEffortId), occurrenceStart:(occurrenceStart ? new Date(Number(occurrenceStart)) : null),
+                        publicTitle:(publicTitle ?? null), publicDescription:(publicDescription ?? null), timeZone:(timeZone || null),
+                        siteId:(siteId ?? null), productStoreId:(productStoreId ?? null), opensDate:(opensDate || null),
+                        closesDate:(closesDate || null), totalSeats:(totalSeats ?? null), holdMinutes:(holdMinutes || null),
+                        waitlistEnabled:(waitlistEnabled || 'N'), waitlistLimit:(waitlistLimit ?? null), termsText:(termsText ?? null),
+                        cancellationTerms:(cancellationTerms ?? null), sendingProfileId:(sendingProfileId ?? null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${registrationPolicyId ? 'Offer saved' : 'Offer added'}</message></if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/><parameter name="registrationPolicyId" from="stored?.registrationPolicyId || registrationPolicyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeTicket">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.store#TicketType"
+                    in-map="{ticketTypeId:(ticketTypeId || null), registrationPolicyId:(ticketTypeId ? null : registrationPolicyId),
+                        expectedRevision:(expectedRevision || null), action:(action || null), ticketName:(ticketName || null),
+                        priceSourceEnumId:(priceSourceEnumId || null), productId:(productId || null), capacity:(capacity ?? null),
+                        salesFromDate:(salesFromDate || null), salesThruDate:(salesThruDate || null), perOrderLimit:(perOrderLimit || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${action == 'end' ? 'Ticket type ended' : 'Ticket type saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="registrationPolicyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeQuestions">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.store#RegistrationForm"
+                    in-map="{registrationPolicyId:registrationPolicyId, expectedRevision:(expectedRevision || null), formId:(formId ?? ''),
+                        questionScopeEnumId:(questionScopeEnumId || null), consentText:(consentText ?? null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Registration questions saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="registrationPolicyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeNotice">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.store#CommunicationSchedule"
+                    in-map="{scheduleId:(scheduleId || null), registrationPolicyId:(scheduleId ? null : registrationPolicyId),
+                        expectedRevision:(expectedRevision || null), action:(action || null), triggerEnumId:(triggerEnumId || null),
+                        offsetMinutes:(offsetMinutes ?? null), messageTemplateId:(messageTemplateId || null),
+                        recipientScopeEnumId:(recipientScopeEnumId || null), purposeEnumId:(purposeEnumId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${action == 'end' ? 'Notice ended' : 'Notice saved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="registrationPolicyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="publishOffer">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.publish#Registration" out-map="published"
+                    in-map="{registrationPolicyId:registrationPolicyId, expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Registration published${published?.publicUrl ? ': ' + published.publicUrl : ''}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="registrationPolicyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="closeOffer">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.close#Registration"
+                    in-map="{registrationPolicyId:registrationPolicyId, expectedRevision:(expectedRevision || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Registration closed</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="registrationPolicyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="addVideoCall">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.add#EventVideoCall" in-map="{workEffortId:workEffortId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Video call added; registrants get its link with their confirmation</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="registrationPolicyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="NewEventForm">
+            <widgets>
+                <label type="p" style="text-caption m-muted"
+                        text="The event is a calendar event: you organize it, and its calendar's editors may change it. Its registration is set up next."/>
+                <form-single name="NewEvent" transition="createEvent" map="newEventValues">
+                    <field name="workEffortName"><default-field title="Title"><text-line size="40" maxlength="255"/></default-field></field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="marketingCampaignId">
+                        <conditional-field condition="newEventValues.campaignFixed"><hidden/></conditional-field>
+                        <conditional-field condition="!marketing.capabilities.campaignEdit"><ignored/></conditional-field>
+                        <default-field title="Campaign" tooltip="An open campaign of the organization; optional">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'campaigns', selected:marketingCampaignId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="calendarId">
+                        <default-field title="Calendar" tooltip="A calendar you edit; optional">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'eventCalendars', selected:calendarId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="startDate"><default-field title="Starts"><date-time type="timestamp"/></default-field></field>
+                    <field name="endDate"><default-field title="Ends"><date-time type="timestamp"/></default-field></field>
+                    <field name="location"><default-field title="Where" tooltip="A place, or leave empty for an online event"><text-line size="40"/></default-field></field>
+                    <field name="description"><default-field title="Internal notes"><text-area rows="3" cols="60"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Create event"/></default-field></field>
+                    <field-layout>
+                        <field-ref name="workEffortName"/>
+                        <field-row><field-ref name="organizationPartyId"/><field-ref name="marketingCampaignId"/></field-row>
+                        <field-row><field-ref name="startDate"/><field-ref name="endDate"/></field-row>
+                        <field-row><field-ref name="location"/><field-ref name="calendarId"/></field-row>
+                        <field-ref name="description"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

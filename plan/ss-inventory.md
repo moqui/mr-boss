@@ -198,14 +198,14 @@ is unchanged.
 | Account | CreateUserAuthcFactorEmail | Commons/Settings/Account | Commons/Settings/Account |
 | Account | CreateUserAuthcFactorSms | Commons/Settings/Account | Commons/Settings/Account |
 | Account | UserAuthcFactorList | Commons/Settings/Account | Commons/Settings/Account |
-| EventDetail | UpdateEvent | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail |
-| EventDetail | NewNoteForm | Commons/Calendar/EventDetail; Shared/Chatter; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Shared/Chatter |
-| EventDetail | UpdateNoteForm | Commons/Calendar/EventDetail; Shared/Chatter; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Shared/Chatter |
-| EventDetail | AddPartyAssignForm | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail |
-| EventDetail | UpdateAssignForm | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail |
-| EventDetail | AddEquipment | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail |
-| EventDetail | EquipmentList | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail |
-| MyCalendar | NewEventForm | Commons/Calendar; Commons/QuickCreate; Marketing/Calendar; Marketing/Events; Marketing/QuickCreate | Commons/Calendar; Commons/QuickCreate |
+| EventDetail | UpdateEvent | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Marketing/Events/EventDetail (Commons' EventDetail mounted, Marketing P16) |
+| EventDetail | NewNoteForm | Commons/Calendar/EventDetail; Shared/Chatter; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Shared/Chatter; Marketing/Events/EventDetail (Commons' EventDetail mounted, Marketing P16) |
+| EventDetail | UpdateNoteForm | Commons/Calendar/EventDetail; Shared/Chatter; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Shared/Chatter; Marketing/Events/EventDetail (Commons' EventDetail mounted, Marketing P16) |
+| EventDetail | AddPartyAssignForm | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Marketing/Events/EventDetail (Commons' EventDetail mounted, Marketing P16) |
+| EventDetail | UpdateAssignForm | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Marketing/Events/EventDetail (Commons' EventDetail mounted, Marketing P16) |
+| EventDetail | AddEquipment | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Marketing/Events/EventDetail (Commons' EventDetail mounted, Marketing P16) |
+| EventDetail | EquipmentList | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Marketing/Events/EventDetail (Commons' EventDetail mounted, Marketing P16) |
+| MyCalendar | NewEventForm | Commons/Calendar; Commons/QuickCreate; Marketing/Calendar; Marketing/Events; Marketing/QuickCreate | Commons/Calendar; Commons/QuickCreate; Marketing/Events (NewEvent), Marketing/QuickCreate/NewEvent, Marketing/Campaigns/CampaignDetail (Events box) (Marketing P16) |
 | UpdateContactInfo | ShippingInfo | Commons/Settings/Account | Commons/Settings/Account |
 | GitAccess | CreateAccessTokenForm | Projects/Code/GitAccess | Projects/Code/GitAccess |
 | GitAccess | AccessTokenList | Projects/Code/GitAccess | Projects/Code/GitAccess |

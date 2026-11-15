@@ -143,6 +143,11 @@ function scope() {
     // P14: the content (campaign content, blog posts, landing pages, Knowledge) is every Marketing reader's (design §2: Content,
     // BlogPosts and LandingPages the app's), edited with MARKETING_CONTENT_EDIT; the wiki's own rules decide each page
     capabilities.contentRead = !!capabilities.anyRead
+    // P16: the events are every Marketing reader's (design §2 Events: the app's); their registration setup the events managers'
+    // (design §2 RegistrationSetup: E), MARKETING_EVENT_MANAGE, as Mantle's EventRegistrationServices ask; the event itself stays the
+    // calendar's (its organizer and its calendars' editors)
+    capabilities.eventRead = !!capabilities.anyRead
+    capabilities.eventSetupRead = !!capabilities.anyRead && !!capabilities.eventManage
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
@@ -252,7 +257,13 @@ const linkPaths = [
     "Content/Knowledge",
     // P15: the tracking links
     "Content/TrackingLinks",
-    "Content/TrackingLinkDetail"
+    "Content/TrackingLinkDetail",
+    // P16: the events, one event (Commons' EventDetail), its registration setup and quick create's event (design §9)
+    "Events",
+    "Events/Events",
+    "Events/EventDetail",
+    "Events/RegistrationSetup",
+    "QuickCreate/NewEvent"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -399,6 +410,23 @@ const recordKinds = {
                 organizationPartyId,
                 label: "Tracking link " + trackingCodeId + " · " + (row.description || row.publicCode || ""),
                 detail: row.redirectUrl || ""
+            }
+        }
+    },
+    // P16: a registration event (mantle.work.registration.RegistrationEvent), by the organization that offers it: RegistrationSetup
+    event: {
+        name: "Event",
+        icon: "sym_o_event",
+        destination: {path: "Events/RegistrationSetup", parameter: "workEffortId"},
+        read: (userScope, workEffortId) => {
+            if (!userScope.capabilities.anyRead) return null
+            const row = one("mantle.work.registration.RegistrationEvent", {workEffortId})
+            const event = row ? one("mantle.work.effort.WorkEffort", {workEffortId}) : null
+            if (!event || !covers(userScope, row.organizationPartyId)) return null
+            return {
+                organizationPartyId: row.organizationPartyId,
+                label: "Event " + workEffortId + " · " + (event.workEffortName || ""),
+                detail: event.location || ""
             }
         }
     },
@@ -973,6 +1001,136 @@ const choiceSources = {
         )
     },
     // P3: the email templates a list's policy or binding may name (Comms' templates arrive in P6), by id or description
+    // P16 review: the registration events of the organization named, by name, for a campaign author's "Link an event" (the link is
+    // C.store#CampaignAssociation's, which checks the campaign's edit and the event's organization again)
+    registrationEvents: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.campaignEdit) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const eventIds = Array.from(
+            find("mantle.work.registration.RegistrationEvent")
+                .condition("organizationPartyId", "in", ids)
+                .orderBy("-createdDate")
+                .limit(500)
+                .list()
+        ).map(row => row.workEffortId)
+        if (!eventIds.length) return []
+        let query = find("mantle.work.effort.WorkEffort")
+            .condition("workEffortId", "in", eventIds)
+            .condition("statusId", "not-equals", "WeCancelled")
+            .orderBy("-estimatedStartDate")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["workEffortId", "workEffortName"], term))
+        return Array.from(query.list()).map(row => ({
+            value: row.workEffortId,
+            label:
+                (row.workEffortName || row.workEffortId) +
+                (row.estimatedStartDate ? " · " + lib.dateText(row.estimatedStartDate) : "")
+        }))
+    },
+    // P16: the ticket products an event's organization sells (not kept in inventory), by name
+    ticketProducts: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.eventManage) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.Product")
+            .condition("ownerPartyId", "in", ids)
+            .condition(factory.makeCondition("salesAllowed", "not-equals", "N", true))
+            .condition(factory.makeCondition("requireInventory", "not-equals", "Y", true))
+            .orderBy("^productName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["productId", "pseudoId", "productName"], term))
+        const label = row => (row.productName || row.productId) + " (" + (row.pseudoId || row.productId) + ")"
+        const options = Array.from(query.list()).map(row => ({value: row.productId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => ids.includes(one("mantle.product.Product", {productId: id})?.ownerPartyId),
+            id => label(one("mantle.product.Product", {productId: id}) || {productId: id})
+        )
+    },
+    // P16: the registration questions (forms of purpose registration) of an event's organization, by name
+    registrationForms: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.eventManage) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        let query = find("moqui.screen.form.DbForm")
+            .condition("purposeEnumId", "DbfpRegistration")
+            .condition("ownerPartyId", "in", ids)
+            .orderBy("^description")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["formId", "description"], term))
+        return Array.from(query.list()).map(row => ({value: row.formId, label: row.description || row.formId}))
+    },
+    // P16: the stores of an event's organization (a store order), by name
+    eventStores: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.eventManage) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        let query = find("mantle.product.store.ProductStore")
+            .condition("organizationPartyId", "in", ids)
+            .orderBy("^storeName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["productStoreId", "storeName"], term))
+        return Array.from(query.list()).map(row => ({value: row.productStoreId, label: row.storeName || row.productStoreId}))
+    },
+    // P16: the email templates of an event's organization in use, for its notices, by name
+    eventTemplates: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.eventManage) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.party.MessageTemplate")
+            .condition("organizationPartyId", "in", ids)
+            .condition("channelEnumId", "MdcEmail")
+            .condition(factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp, true))
+            .orderBy("^templateName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["messageTemplateId", "templateName"], term))
+        return Array.from(query.list()).map(row => ({
+            value: row.messageTemplateId,
+            label: row.templateName || row.messageTemplateId
+        }))
+    },
+    // P16: the transactional sending profiles of an event's organization, for its notices, by name
+    eventProfiles: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.eventManage) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.party.MessageSendingProfile")
+            .condition("organizationPartyId", "in", ids)
+            .condition("channelEnumId", "MdcEmail")
+            .condition(factory.makeCondition("purposeEnumId", "not-equals", "MtpPromotional", true))
+            .condition(factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp, true))
+            .orderBy("^profileName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["sendingProfileId", "profileName"], term))
+        return Array.from(query.list()).map(row => ({
+            value: row.sendingProfileId,
+            label: row.profileName || row.sendingProfileId
+        }))
+    },
+    // P16: the calendars the user may add an event to (edit or manage, not a subscription), by name
+    eventCalendars: (userScope, term, selected) => {
+        let query = find("mantle.work.calendar.Calendar")
+            .condition(ec.entity.conditionFactory.makeCondition("calendarKindEnumId", "not-equals", "CalkSubscription", true))
+            .orderBy("^calendarName")
+            .limit(200)
+        if (term) query = query.condition(textCondition(["calendarId", "calendarName"], term))
+        const calendars = Array.from(query.list())
+        if (!calendars.length) return []
+        const access = ec.service
+            .sync()
+            .name("mantle.work.CalendarServices.check#CalendarAccess")
+            .parameters({calendarIdList: calendars.map(row => row.calendarId)})
+            .call()
+        return calendars
+            .filter(row => ["CalpEdit", "CalpManage"].includes(access?.permissionMap?.[row.calendarId]))
+            .slice(0, choiceLimit)
+            .map(row => ({value: row.calendarId, label: row.calendarName || row.calendarId}))
+    },
     emailTemplates: (userScope, term, selected) => {
         let query = find("moqui.basic.email.EmailTemplate").orderBy("^description").limit(choiceLimit)
         if (term) query = query.condition(textCondition(["emailTemplateId", "description"], term))

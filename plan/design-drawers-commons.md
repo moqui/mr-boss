@@ -983,6 +983,11 @@ delegates, CalDAV), and an event an app keeps (`EventManager`: People's training
 Manufacturing's production runs) changes only in that app; EventDetail shows it read-only, saying where, and CalDAV refuses its
 writes (403).
 
+**An app's links on EventDetail (Nov 15, 2026; impl-marketing P16).** An app that mounts EventDetail may show its own links above
+its tabs: a list `eventAppLinks` ({label, url, icon}, a path on the server) its own area sets in its always-actions, data and never a
+right (a request parameter is text and is left out), each target checking again. Marketing's Events area gives a registration event
+its Registration setup; an event a mount names nothing for shows as before.
+
 **Who books for an event (Nov 12, 2026; impl-maintenance F356, F357).** A booking changes no event, so the rooms and equipment of
 an event are booked, cancelled and rechecked by whoever may change it and, for a meeting an app keeps (People's interview or training session; not leave or a production
 run, which stay with their apps), by its organizer

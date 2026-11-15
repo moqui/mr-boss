@@ -24,8 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
     guarded service at the revision read; a material change (organization, parent, dates, budget, managers) returns an approved plan
     to review. Sends lists its sends with QuickSend (P8), Automations its automations (P11), Results the lead forms' handoffs to Sales
     (P13, any Marketing reader), Content its planned content with Link content (P14: blog posts, landing pages and files; linking
-    publishes nothing), Tracking links its links with New link (P15); the Audience, Promotions and Events boxes join with their
-    phases. -->
+    publishes nothing), Tracking links its links with New link (P15), Events its events with New event (P16: an events manager who also edits
+    campaigns) and Link an event (the campaign's editor); the Audience and Promotions boxes join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Campaign" default-menu-include="false">
     <parameter name="marketingCampaignId" required="true"/>
@@ -43,6 +43,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="createAutomation" location="component://mr-boss/template/MarketingAutomations.xml"/>
     <transition-include name="storeContent" location="component://mr-boss/template/MarketingContent.xml"/>
     <transition-include name="storeTrackingLink" location="component://mr-boss/template/MarketingTracking.xml"/>
+    <transition-include name="createEvent" location="component://mr-boss/template/MarketingEvents.xml"/>
     <actions>
         <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="campaignCheck" transaction="force-new" ignore-error="true"
                 in-map="{appRoot:appRoot, recordType:'campaign', recordId:marketingCampaignId}"/>
@@ -128,6 +129,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="campaignLinkList" from="linksFound?.trackingLinkList || []"/>
         <set field="linkDetailPath" from="sharedLinks['Content/TrackingLinkDetail'] || null"/>
         <set field="linkValues" from="{marketingCampaignId:marketingCampaignId, destinationKindEnumId:'TdkSitePage', campaignFixed:true}"/>
+        <!-- P16: the campaign's events (design §3 CampaignDetail's Events: the Events list fixed to the campaign, with New event) -->
+        <if condition="recordFound">
+            <service-call name="mantle.work.EventRegistrationServices.find#Events" out-map="eventsFound" transaction="force-new"
+                    ignore-error="true" in-map="{marketingCampaignId:marketingCampaignId, pageSize:20}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="campaignEventList" from="eventsFound?.eventList || []"/>
+        <set field="eventPath" from="marketing.capabilities.eventSetupRead ? sharedLinks['Events/RegistrationSetup'] : sharedLinks['Events/EventDetail']"/>
+        <set field="newEventValues" from="{organizationPartyId:campaign.organizationPartyId, marketingCampaignId:marketingCampaignId, campaignFixed:true}"/>
     </actions>
     <widgets>
         <section name="CampaignNotFound" condition="!recordFound">
@@ -667,6 +677,53 @@ along with this software (see the LICENSE.md file). If not, see
                             <columns type="mobile">
                                 <column><field-ref name="label"/><field-ref name="destinationText"/></column>
                                 <column><field-ref name="stateText"/><field-ref name="clickCount"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <!-- P16: the campaign's events -->
+                <container-box>
+                    <box-header title="Events"/>
+                    <box-toolbar>
+                        <container-dialog id="NewEventDialog" button-text="New event" icon="sym_o_event" title="New event for ${campaign.campaignName}"
+                                width="760" condition="marketing.capabilities.eventManage &amp;&amp; marketing.capabilities.campaignEdit &amp;&amp; ['MKTG_CAMP_PLANNED', 'MKTG_CAMP_APPROVED', 'MKTG_CAMP_INPROGRESS'].includes(campaign.statusId)">
+                            <section-include name="NewEventForm" location="component://mr-boss/template/MarketingEvents.xml"/>
+                        </container-dialog>
+                        <!-- P16 review: the link is a change of the campaign (C.store#CampaignAssociation, CakEvent): its editor links a
+                            registration event of the organization an events manager made -->
+                        <container-dialog id="LinkEventDialog" button-text="Link an event" icon="sym_o_link" title="Link an event to ${campaign.campaignName}"
+                                width="560" condition="can.canEdit">
+                            <form-single name="LinkEvent" transition="storeAssociation"
+                                    map="{marketingCampaignId:marketingCampaignId, associationKindEnumId:'CakEvent', purpose:'Event'}">
+                                <field name="marketingCampaignId"><default-field><hidden/></default-field></field>
+                                <field name="associationKindEnumId"><default-field><hidden/></default-field></field>
+                                <field name="purpose"><default-field><hidden/></default-field></field>
+                                <field name="sourceId">
+                                    <default-field title="Event">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'registrationEvents', organizationPartyId:campaign.organizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title=""><submit text="Link"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="No event yet." type="p" style="m-muted" condition="!campaignEventList.length"/>
+                        <form-list name="CampaignEventList" list="campaignEventList" skip-form="true" paginate="false" condition="campaignEventList.length">
+                            <field name="eventName">
+                                <default-field title="Event">
+                                    <link url="${eventPath}" text="${eventName}" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                                </default-field>
+                            </field>
+                            <field name="whenText"><default-field title="When"><display/></default-field></field>
+                            <field name="capacityText" align="right"><default-field title="Places"><display/></default-field></field>
+                            <field name="stateText"><default-field title="Registration"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="eventName"/><field-ref name="whenText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="capacityText"/></column>
                             </columns>
                         </form-list>
                     </box-body>

@@ -27,7 +27,8 @@ along with this software (see the LICENSE.md file). If not, see
     event asks which events (this, this and following, all) and whether to tell the attendees. An event the user may not see
     is "not available" (ironstone.commons.CalendarServices.get#EventAccessInfo: IronStone R5, R28); one the user may not change shows
     the same layout read-only, and one an application keeps (a People training session or interview) says where it is changed
-    (Commons calendar editors, Nov 12, 2026). -->
+    (Commons calendar editors, Nov 12, 2026). A mounting app's own links show above the tabs (eventAppLinks: Marketing's Registration
+    setup, impl-marketing P16). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Event" default-menu-include="false">
 
@@ -237,6 +238,11 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></if>
         <service-call name="ironstone.commons.EventServices.get#EventDetail" in-map="{workEffortId:workEffortId, instanceStart:instanceStart}" out-map="detail"/>
         <set field="recordFound" from="!!detail.visible"/>
+        <!-- the mounting app's links above the tabs (impl-marketing P16: Marketing's Registration setup): eventAppLinks, a list its own area
+            sets in its always-actions, data and never a right (a request carrying eventAppLinks, text or a JSON body's list, shows none);
+            each target checks again -->
+        <set field="appLinkList" from="(ec.context.eventAppLinks &amp;&amp; typeof ec.context.eventAppLinks !== 'string' &amp;&amp; ec.web?.parameters?.eventAppLinks == null ? Array.from(ec.context.eventAppLinks) : [])
+                .filter((link) =&gt; link &amp;&amp; typeof link === 'object' &amp;&amp; link.label &amp;&amp; /^\/(?!\/)/.test(String(link.url || '')))"/>
         <script><![CDATA[
             if (!recordFound) return
             const L = (text) => ec.l10n.localize(text)
@@ -440,6 +446,13 @@ along with this software (see the LICENSE.md file). If not, see
                 </container>
             </container>
 
+            <section name="AppLinks" condition="appLinkList.length"><widgets>
+                <container style="row q-gutter-sm q-mb-sm m-event-app-links">
+                    <section-iterate name="AppLinkItems" list="appLinkList" entry="appLink"><widgets>
+                        <link url="${appLink.url}" url-type="plain" text="${appLink.label}" icon="${appLink.icon || 'sym_o_open_in_new'}" link-type="anchor-button"/>
+                    </widgets></section-iterate>
+                </container>
+            </widgets></section>
             <render-mode><text type="qvt"><![CDATA[${tabsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(tabsTui)}]]></text></render-mode>
 
             <!-- ===== Overview ===== -->

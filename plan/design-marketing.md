@@ -397,7 +397,7 @@ organization; PAYABLE_VIEW or ACCOUNTING_VIEW) or one posted ledger debit (ACCOU
 organization, counted once by a campaign and within
 the line's amount over every campaign, in the campaign's currency (no conversion: CURRENCY_MISMATCH), corrected by a negative
 reversal row; `actualCost` is the sum of the rows. CampaignAssociation links a list (not a mailbox), a segment, a store promotion
-or a form publication of the campaign's organization; an event and a page wait for their phases to keep an organization.
+or a form publication of the campaign's organization; an event by the organization that offers its registration (RegistrationEvent, impl-marketing P16); a page is campaign content (P14).
 
 ### Approvals — Context passed
 
@@ -1263,6 +1263,14 @@ placement the attribution writer of §11 reads these events. **Needs:** MKT-TRAC
 
 **Actions:** New, Registration setup, Attendees and Check in. **Needs:** MKT-EVENT, MKT-CAMPAIGN.
 
+As built (impl-marketing P16): an event's organization is kept by `mantle.work.registration.RegistrationEvent` (a Commons event's
+owner is a person, F107), made once by E.`store#RegistrationEvent` for an events manager of the organization who may edit the event
+under the calendar's rule; NewEvent calls `create#Event` (the user its organizer, in a calendar they edit) and then it. The campaign
+link stays C.`store#CampaignAssociation`'s (CakEvent, now a kind it admits by that organization), called through E for a user who
+also holds MARKETING_CAMPAIGN_EDIT: an events manager without it makes the event with no campaign (NewEvent shows no campaign field)
+and the campaign's author links it (P16 review). Events is every Marketing reader's; a row opens RegistrationSetup for an events
+manager, else EventDetail.
+
 **Source:** research §7; Odoo Events and Commons Calendar/MyCalendar NewEventForm.
 
 ### EventDetail — Context passed
@@ -1285,6 +1293,11 @@ stays the attendance fact. Crosscut §3.13 row for this mount at `Marketing/Even
 | Marketing | Event, occurrences, location or video link, plus Registration setup, Registrations and Check in tabs | WetEvent linked to an authorized campaign | Commons event actions under their permissions; registration actions under MARKETING_EVENT_MANAGE | capacity and attendance |
 
 **Needs:** MKT-EVENT, MKT-COLLAB.
+
+As built (impl-marketing P16): Commons' EventDetail is mounted as it is at `Marketing/Events/EventDetail`, and shows the mounting
+app's links above its tabs (`eventAppLinks`, a list the app's own area sets, data and never a right: Marketing's Registration setup;
+Registrations and Check in join with P17 and P18). "Add video call" (E.`add#EventVideoCall`: a framework call link as the event's
+join address) is on RegistrationSetup's More menu, beside Open in the calendar.
 
 ### RegistrationSetup
 
@@ -1343,6 +1356,20 @@ capacity below held+confirmed is refused. Payment acceptance confirms exactly th
 a late success after expiry enters paid-unallocated review/refund, never oversells the event.
 Changes to sold terms preserve the accepted effective policy; materially changed event dates notify
 registrants and offer the configured cancellation path. **Needs:** MKT-EVENT, MKT-FORMS, MKT-PUBLIC.
+
+As built (impl-marketing P16): an offer is an EventRegistrationPolicy per occurrence (a series names its occurrence by the start
+its rule gives it; unique per event and occurrence), draft until `publish#Registration` finds it ready (an occurrence still to come
+of an event not cancelled, seats, a ticket type, each paid ticket priced, a window that closes after it opens and by the
+occurrence's end, a published site with the organization's Marketing mount, a ready transactional sending profile, a payment
+gateway of the organization or of the offer's store when a ticket has a price, the questions' form published), then published
+until `close#Registration`; policyRevision counts every change, termsRevision the terms' after publication. A ticket type keeps
+no amount: free (EtpFree) or a ticket product of the organization (EtpProduct, not inventoried, WorkEffortProduct WeptSales)
+priced by `get#ProductPrice` in the organization's currency (of the store when named). Capacity is never set below the places
+held, pending or confirmed (EventRegistration, whose writes are P17's). The questions are a published DbfpRegistration form of
+the organization, kept as the offer's FormPublication of purpose registration (anonymous, the offer's site, open with it),
+written by E after its checks since Commons' publication services ask the form's editor. A notice is an
+EventCommunicationSchedule (trigger and offset, an email template of the organization, recipients, transactional or
+promotional; a promotional template is never a transactional notice).
 
 **Source:** research §7; Odoo tickets/questions/mail schedulers, Frappe LMS batch and native event/product/order joins.
 
@@ -1971,6 +1998,13 @@ handed to Sales on the server after the request commits (§10 LeadRules), the re
 No staff attendee list, private calendar resources or internal campaign budget is public. Availability
 is advisory until reservation. **Needs:** MKT-EVENT, MKT-PUBLIC.
 
+As built (impl-marketing P16): `getMarketingEvent` (GET `marketing/event`: siteId, registrationPolicyId; read only, in no
+TOKEN_WRITES list) over P.`get#Event`, rendered at `Marketing/Event?offer={id}`: a published offer of the site's organization on
+that site for an occurrence still to come, its public title and description (as text, never the event's own name or notes),
+dates in the offer's zone, where or "online" (the call link goes to registrants only), each ticket's price text and advisory
+availability, whether registration is open and the terms; anything else the one NotFound (404). A landing page embeds it by
+`[[event OFFER_ID]]` as a card linking the page.
+
 **Source:** research §7; Odoo website_event and Frappe LMS published batches.
 
 ### Register
@@ -2050,6 +2084,7 @@ there is no parallel Marketing version/snapshot system for configuration history
 | CampaignAsset / CampaignSendContent / EventRegistrationContent | host ID plus content ID/type, resource reference, from/thru and audit fields | Native-style host file associations for shared RecordFiles (CampaignAsset is the campaign's, named apart from CampaignContent); campaign asset planning stays CampaignContent |
 | TrackingCode, extended; MarketingTrackingEvent | Native redirect/campaign/type/lifetimes, typed UTM fields and organization; event ID, code, opaque visitor key, recipient when permitted, site, timestamp, observed kind and automation evidence | Captured on the authority through the PASS facade (X10); native visit/order/return joins retained; consent-aware observations are distinct from confirmed outcomes |
 | MarketingOutcomeLink | organization/outcome type/native key/model key, primary campaign, evidence source/time, decision/correction metadata | One primary credit per outcome; source allocations and native order/invoice links prevent duplicate revenue |
+| RegistrationEvent (impl-marketing P16, F107) | event, organization, who and when | The organization that offers an event's registration, kept once; the event stays the calendar's |
 | EventRegistrationPolicy / EventTicketType | event occurrence, effective offer/terms, site, registration window, capacity/hold/waitlist, ticket product and pricing source | One authoritative capacity domain per occurrence and per ticket; accepted terms referenced by registrations |
 | EventRegistration | registration ID, occurrence/ticket, attendee/buyer party, hold expiry/state, native order/item/payment references, source campaign, response ID, entry credential digest/revision | Attendee identity separate from payer/order; unique source/request allocation; financial facts remain in native records |
 | EventRegistrationAction / EventCommunicationSchedule | action ID, registration, action/actor/time/reason; event effective trigger/offset/template/purpose | Check-in/correction/cancellation evidence and one notice per registration/schedule/trigger, sent as a delivery-ledger source; no duplicate event store |

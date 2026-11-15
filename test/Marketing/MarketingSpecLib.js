@@ -6,21 +6,21 @@ const ids = {
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SERVICES",
     // the menu of design §1.2 built so far: every Marketing user's, and with Settings the administrator's; P14: Content every
-    // Marketing reader's
-    staffMenu: ["Home", "Campaigns", "Content"],
+    // Marketing reader's; P16: Events every Marketing reader's
+    staffMenu: ["Home", "Campaigns", "Content", "Events"],
     // P8: Sends for the approvers and dispatchers too (its Sends tab; the templates stay their readers'); P11 Automations too
-    sendsStaffMenu: ["Home", "Campaigns", "Sends", "Automations", "Content"],
+    sendsStaffMenu: ["Home", "Campaigns", "Sends", "Automations", "Content", "Events"],
     approverSendsMenu: ["Sends"],
     // P3: Audiences for the audience managers and the administrator; Leads for a user who reads Sales (the instance administrator)
     // P11: Automations for the authors, approvers, dispatchers, audience managers and the administrator
     // P12: Surveys for the authors, audience managers, analysts and the administrator
-    audienceMenu: ["Home", "Campaigns", "Audiences", "Automations", "Content", "Surveys"],
+    audienceMenu: ["Home", "Campaigns", "Audiences", "Automations", "Content", "Events", "Surveys"],
     // P13: Leads (its lead rules) for the authors and the administrator too
-    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Surveys", "Leads", "Settings"],
-    systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Surveys", "Leads", "Settings"],
-    analystMenu: ["Home", "Campaigns", "Content", "Surveys"],
+    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Events", "Surveys", "Leads", "Settings"],
+    systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Events", "Surveys", "Leads", "Settings"],
+    analystMenu: ["Home", "Campaigns", "Content", "Events", "Surveys"],
     // P6: Sends (Comms' templates) for the authors and the administrator
-    authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Content", "Surveys", "Leads"],
+    authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Content", "Events", "Surveys", "Leads"],
     // P13: the Leads tabs of an author who reads no Sales
     authorLeadsMenu: ["LeadRules"],
     // P14: Content's tabs
@@ -35,8 +35,8 @@ const ids = {
     // the keys of the screens a user may open: Lists' (g l, P3) an audience manager's
     keys: ["g m", "g c"],
     // P6: an author opens the templates (g t); P8 the sends (g n); P11 the automations (g a)
-    // P12: and the surveys (g v); P14 the content (g o)
-    authorKeys: ["g m", "g c", "g t", "g n", "g a", "g v", "g o"],
+    // P12: and the surveys (g v); P14 the content (g o); P16 the events (g e, every Marketing reader's)
+    authorKeys: ["g m", "g c", "g t", "g n", "g a", "g v", "g o", "g e"],
     // P2's demo campaigns (data/BossZZMarketingDemoData.xml): Retail's running one (approved at revision 1, with a planned child),
     // Retail's planned one, and Services' own
     runningCampaignId: "BOSS_MKT_CMP_SPRING",
@@ -99,7 +99,12 @@ const ids = {
     contentLinkId: "BOSS_MKT_CC_ROSES",
     // P15's demo links of the running campaign on ZIZI_SHOP: the poster's QR code to the spring landing page, the newsletter's link
     trackingLinkId: "BOSS_MKT_TRK_POSTER",
-    newsLinkId: "BOSS_MKT_TRK_NEWS"
+    newsLinkId: "BOSS_MKT_TRK_NEWS",
+    // P16's demo events of the running campaign, offered on ZIZI_SHOP: the free online webinar and the paid workshop (twelve seats, two
+    // ticket types priced by their products)
+    webinarEventId: "BOSS_MKT_EV_WEBINAR",
+    workshopEventId: "BOSS_MKT_EV_WORKSHOP",
+    workshopOfferId: "BOSS_MKT_OFFER_WORKSHOP"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's

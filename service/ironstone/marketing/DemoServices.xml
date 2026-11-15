@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- IronStone Marketing's demo loader (impl-marketing P14; MarketingDemo.js), called from data/BossZZMarketingDemoData.xml: what demo
-    data cannot write as rows, the wiki pages of the content demo, through the wiki services. Data, not a business service: only data
+    data cannot write as rows, the wiki pages of the content demo, through the wiki services, and (P16) the webinar's call link. Data, not a business service: only data
     loading or a system administrator runs it. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="load" noun="ContentDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
@@ -28,6 +28,20 @@ along with this software (see the LICENSE.md file). If not, see
         </out-parameters>
         <actions>
             <set field="demoResult" from="ec.resource.script('component://mr-boss/service/ironstone/marketing/MarketingDemo.js').execute('load', context)"/>
+            <set field="complete" from="demoResult.complete"/>
+            <set field="errors" from="demoResult.errors"/>
+        </actions>
+    </service>
+    <service verb="load" noun="EventDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
+        <description>Idempotent Marketing event demo (impl-marketing P16): the spring planting webinar's video call, a call link of the
+            framework (lobby, video) made through org.moqui.call.CallServices.create#CallLink as the webinar's join address, when it has
+            none. Only data loading or a system administrator may run it.</description>
+        <out-parameters>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="errors" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="demoResult" from="ec.resource.script('component://mr-boss/service/ironstone/marketing/MarketingDemo.js').execute('loadEvents', context)"/>
             <set field="complete" from="demoResult.complete"/>
             <set field="errors" from="demoResult.errors"/>
         </actions>
