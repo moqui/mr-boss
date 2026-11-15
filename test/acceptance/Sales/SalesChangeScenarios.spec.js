@@ -40,10 +40,6 @@ function approvedOrder(name, quantity) {
     )
     return orderId
 }
-// the order part ships from Retail's warehouse: a Sales order part names no facility, and Warehouse picks only a shipment with an
-// origin of its scope (the dispatcher's choice, made here as the system)
-const fromWarehouse = orderId =>
-    system(() => invoke("update#mantle.order.OrderPart", {orderId, orderPartSeqId: "01", facilityId: "ZIRET_WH"}))
 const state = {}
 
 spec({
@@ -123,7 +119,8 @@ feature("a price change filed in Customer Service is approved in Sales and appli
 feature("a change against a picked line waits with its conflict", {
     when() {
         const orderId = approvedOrder("Picked change " + run, 3)
-        fromWarehouse(orderId)
+        // follow-up 5: the part ships from Retail's default facility, so Warehouse picks its shipment (an origin of its scope)
+        const facilityId = one("mantle.order.OrderPart", {orderId, orderPartSeqId: "01"}).facilityId
         const shipment = system(() =>
             invoke("mantle.shipment.ShipmentServices.create#OrderPartShipment", {orderId, orderPartSeqId: "01"})
         )
@@ -155,9 +152,10 @@ feature("a change against a picked line waits with its conflict", {
             confirmed: "Y",
             operationKey: "sca-apply-pick-" + run
         })
-        return {preview, applied, item: one("mantle.order.OrderItem", {orderId, orderItemSeqId: "01"})}
+        return {facilityId, preview, applied, item: one("mantle.order.OrderItem", {orderId, orderItemSeqId: "01"})}
     },
-    then({preview, applied, item}) {
+    then({facilityId, preview, applied, item}) {
+        facilityId == "ZIRET_WH"
         preview.conflicts.some(row => row.code == "ACTIVE_PICK")
         applied.errors.some(text => text.includes("ACTIVE_PICK"))
         item.requiredByDate == null

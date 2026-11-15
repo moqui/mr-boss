@@ -105,7 +105,8 @@ along with this software (see the LICENSE.md file). If not, see
             reader of People's directory); P4: pipelines and stages (an organization's), owners (its people), sources (offered to it),
             lostReasons, recurringPlans, competitors (organizations of the scope) and dealContacts (an account's contacts); P18: salesPeriods (an organization's
             sales and fiscal periods), forecastSubjects (the parties whose forecasts the user sees), forecastParents (a period's
-            forecasts the user sees) and productCategories. Later phases add theirs. None for a user who reads nothing of Sales. Refuses a user without Sales and an unknown choice.</description>
+            forecasts the user sees) and productCategories; follow-up 5: facilities (the warehouses, stores and plants an organization
+            owns, for one who sets the defaults or changes a quote or order). Later phases add theirs. None for a user who reads nothing of Sales. Refuses a user without Sales and an unknown choice.</description>
         <implements service="ironstone.sales.ContextServices.define#Parameters"/>
         <in-parameters>
             <parameter name="choice" required="true"/>

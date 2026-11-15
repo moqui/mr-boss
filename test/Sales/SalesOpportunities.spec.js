@@ -10,6 +10,28 @@ const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, system, page} = lib
 const {deals} = ids
 
+// a deal's revision as the list's row carries it (Mantle's read, as the rep, its grant aside)
+const revisionOf = salesOpportunityId =>
+    asUser(users.rep, () =>
+        system(
+            () =>
+                ec.service.sync().name("mantle.sales.OpportunityServices.get#Opportunity").parameters({salesOpportunityId}).call()
+                    .opportunity.revision
+        )
+    )
+// a transition of Opportunities posted as the rep, answered as JSON (the qvt client's request): its errors and the list's
+// parameters it goes back to (screenParameters)
+const post = (name, parameters) =>
+    asUser(users.rep, () => {
+        const result = ec.screen
+            .makeTest()
+            .rootScreen("component://mr-boss/screen/Sales.xml")
+            .header("Accept", "application/json")
+            .render("Pipeline/Opportunities/" + name, parameters, "POST")
+        const errors = Array.from(result.errorMessages || [])
+        ec.message.clearErrors()
+        return {errors, back: result.jsonObject?.screenParameters || {}}
+    })
 const stageOf = salesOpportunityId =>
     system(() =>
         ec.entity.find("mantle.sales.opportunity.SalesOpportunity").condition("salesOpportunityId", salesOpportunityId).one()
@@ -103,5 +125,33 @@ feature("Leads lists the rep's leads and their team's queue, not another team's;
         leads.output.includes("Shelving for three stores")
         leads.output.includes("Came by")
         leads.output.includes("Unverified")
+    }
+})
+
+feature("Change stage and the batch move go back to the list with its own filters, not the stage the deal moved to", {
+    when() {
+        // the list filtered by Proposal and a name, its filters posted with the row's Change stage (listFilters)
+        const listFilters = JSON.stringify({text: "Wingtip", opportunityStageId: "SalesProposal", statusId: null})
+        const changed = post("changeStage", {
+            salesOpportunityId: deals.wingtipPlan,
+            expectedRevision: revisionOf(deals.wingtipPlan),
+            opportunityStageId: "SalesNegotiation",
+            listFilters
+        })
+        const afterChange = stageOf(deals.wingtipPlan)
+        // the unfiltered list's batch move: no stage filter after it
+        const moved = post("applyBatch", {
+            batch: "move",
+            selectedKeys: deals.wingtipPlan + "@" + revisionOf(deals.wingtipPlan),
+            opportunityStageId: "SalesDiscovery",
+            listFilters: JSON.stringify({text: null, opportunityStageId: null})
+        })
+        return {changed, afterChange, moved, afterMove: stageOf(deals.wingtipPlan)}
+    },
+    then({changed, afterChange, moved, afterMove}) {
+        changed.errors.length == 0 && afterChange == "SalesNegotiation"
+        changed.back.opportunityStageId == "SalesProposal" && changed.back.text == "Wingtip"
+        moved.errors.length == 0 && afterMove == "SalesDiscovery"
+        moved.back.opportunityStageId == null
     }
 })

@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     OrderDetail), applyOrderBatch (OrderBatch on Orders' selection: approve or close remainders, each order on its own), and
     OrderDetail's sales-order context: salesStoreOrderLine and salesDeleteOrderLine (a direct draft's lines), salesPlaceOrder,
     salesApproveOrder (with an operation key the form makes, so a double submit answers the first), salesHoldOrder and
-    salesReleaseHold (a Manual or a Change hold), salesCancelRemainder and salesCloneOrder. NewSalesOrderForm is the dialog's form,
+    salesReleaseHold (a Manual or a Change hold), salesCancelRemainder and salesCloneOrder; follow-up 5's salesUpdateOrderFacility (the
+    facility a quote draft or an order ships from, its quote context's too). NewSalesOrderForm is the dialog's form,
     reading newOrderDefaults. A screen includes each transition and section it uses by name. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="createSalesOrder">
@@ -79,6 +80,17 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.order.SalesOrderServices.place#SalesOrder" out-map="placed"
                     in-map="{orderId:orderId, orderRevision:orderRevision}"/>
             <if condition="!ec.message.hasError()"><message type="success">Order ${orderId} ${placed.outcome}</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <!-- follow-up 5: the facility a quote draft or a sales order ships from (Mantle checks the right, the seller's facility and that
+        nothing is reserved or shipped yet) -->
+    <transition name="salesUpdateOrderFacility">
+        <actions>
+            <service-call name="mantle.order.SalesOrderServices.update#SalesOrderFacility"
+                    in-map="{orderId:orderId, orderRevision:orderRevision, facilityId:(facilityId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${orderId} ships from the facility chosen</message></if>
         </actions>
         <default-response url="."><parameter name="orderId"/></default-response>
         <error-response url="."><parameter name="orderId"/></error-response>

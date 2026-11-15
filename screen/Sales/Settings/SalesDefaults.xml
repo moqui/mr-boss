@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     purchase order and the reminder days (the daily reminder job sends none while they are empty); the templates and the stored
     text locations are set through store#SalesPolicy; P13 adds the acceptance threshold of a currency (above it a customer's
     quote link alone cannot accept: PASS sign-in as an invited contact; empty: none), the other currencies' kept; P20's review adds
-    whether a request for quote made from mail is acknowledged to its sender (off by default); the approval
+    whether a request for quote made from mail is acknowledged to its sender (off by default); follow-up 5 adds the facility a new
+    quote's or order's part ships from (a warehouse, store or plant of the organization; changeable on the order); the approval
     setting and the net-terms option join this form with the phase that reads them.
     SALES_CONFIGURE, which Mantle checks with the organization. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -41,7 +42,7 @@ along with this software (see the LICENSE.md file). If not, see
             </if>
             <service-call name="mantle.order.SalesApprovalServices.store#SalesPolicy" out-map="stored"
                     in-map="{organizationPartyId:organizationPartyId, revision:(revision || null), fromDate:(fromDate || null),
-                        defaultTeamPartyId:(defaultTeamPartyId ?? ''), quoteValidityDays:(quoteValidityDays ?? ''),
+                        defaultTeamPartyId:(defaultTeamPartyId ?? ''), defaultFacilityId:(defaultFacilityId ?? ''), quoteValidityDays:(quoteValidityDays ?? ''),
                         intakeRetentionDays:(intakeRetentionDays ?? ''), responsePoRequired:(responsePoRequired ?? ''),
                         reminderDays:(reminderDays ?? ''), rfqAcknowledge:(rfqAcknowledge ?? ''), acceptanceThresholds:(acceptanceThresholds ?? null),
                         changeReason:(changeReason || null), previewOnly:(previewOnly == 'Y' ? 'Y' : null)}"/>
@@ -82,12 +83,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="policy" from="found?.policy || null"/>
         <set field="findValues" from="{organizationPartyId: organizationPartyId}"/>
         <set field="publishValues" from="{organizationPartyId: organizationPartyId, revision: policy?.revision || null,
-                defaultTeamPartyId: policy?.defaultTeamPartyId || null, quoteValidityDays: policy?.quoteValidityDays ?? null,
+                defaultTeamPartyId: policy?.defaultTeamPartyId || null, defaultFacilityId: policy?.defaultFacilityId || null, quoteValidityDays: policy?.quoteValidityDays ?? null,
                 intakeRetentionDays: policy?.intakeRetentionDays ?? null, responsePoRequired: policy?.responsePoRequired || 'N',
                 reminderDays: policy?.reminderDays ?? null, rfqAcknowledge: policy?.rfqAcknowledge || 'N', thresholdCurrencyUomId: policy?.thresholds?.[0]?.currencyUomId || 'USD',
                 thresholdAmount: policy?.thresholds?.[0]?.thresholdAmount ?? null}"/>
         <set field="revisionValues" from="{organizationPartyId: organizationPartyId, commercialRevisionOnly: found?.commercialRevisionOnly ? 'N' : 'Y'}"/>
         <set field="policyRows" from="policy ? [['Default team', policy.teamName || 'None: the author\'s only team, else none'],
+                ['Orders ship from', policy.facilityName || 'None: a quote or order names no facility until one is chosen on it'],
                 ['Quote validity', policy.quoteValidityDays ? policy.quoteValidityDays + ' days' : 'No end set'],
                 ['Unverified intakes kept', (policy.intakeRetentionDays || 30) + ' days'],
                 ['Acceptance needs the customer\'s PO', policy.responsePoRequired == 'Y' ? 'Yes' : 'No'],
@@ -119,6 +121,15 @@ along with this software (see the LICENSE.md file). If not, see
                                 <drop-down allow-empty="true">
                                     <dynamic-options transition="choices" server-search="true" min-length="0"
                                             parameter-map="{choice:'teams', organizationPartyId:organizationPartyId, selected:defaultTeamPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <!-- follow-up 5: the facility a new quote's or order's part ships from -->
+                        <field name="defaultFacilityId">
+                            <default-field title="Orders ship from" tooltip="The warehouse, store or plant of the organization a new quote or order ships from; it can be changed on the order">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'facilities', organizationPartyId:organizationPartyId, selected:defaultFacilityId}"/>
                                 </drop-down>
                             </default-field>
                         </field>
@@ -160,6 +171,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field-layout>
                             <field-row><field-ref name="defaultTeamPartyId"/><field-ref name="quoteValidityDays"/></field-row>
                             <field-row><field-ref name="intakeRetentionDays"/><field-ref name="fromDate"/></field-row>
+                            <field-ref name="defaultFacilityId"/>
                             <!-- P13: P10's two fields were in no row, so the dialog did not show them; the threshold beside them -->
                             <field-row><field-ref name="responsePoRequired"/><field-ref name="reminderDays"/></field-row>
                             <field-row><field-ref name="thresholdAmount"/><field-ref name="thresholdCurrencyUomId"/></field-row>

@@ -1139,6 +1139,25 @@ Object.assign(choiceSources, {
     }
 })
 // ===== end of impl-marketing P13 =====
+// ===== impl-sales follow-up 5: the facility a Sales order part ships from =====
+// The warehouses, stores and plants an organization of the scope owns (Mantle's SalesApprovals.js facilityOptions, the same rule as
+// store#SalesPolicy's default and update#SalesOrderFacility), for one who sets the defaults or changes a quote or an order.
+const salesPolicies = () => ec.resource.script("component://mr-mantle/service/mantle/order/SalesApprovals.js")
+Object.assign(choiceSources, {
+    facilities: (userScope, term, selected, p) => {
+        const organizationPartyId = choiceOrganization(userScope, p)
+        const caps = userScope.capabilities
+        if (!organizationPartyId || !(caps.configure || caps.orderEdit || caps.quoteEdit)) return []
+        const options = Array.from(salesPolicies().facilityOptions(organizationPartyId, term, choiceLimit))
+        return withSelected(
+            options,
+            selected,
+            facilityId => !salesPolicies().facilityRefusal(organizationPartyId, facilityId),
+            facilityId => salesPolicies().facilityName(facilityId)
+        )
+    }
+})
+// ===== end of impl-sales follow-up 5 =====
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(

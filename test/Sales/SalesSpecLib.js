@@ -439,31 +439,6 @@ function captureSystemMail() {
         if (!before.smtpHost) store(before)
     }
 }
-// Stock of a product for a seller with no facility of its own (Ziziwork Sales in the demo): a spec warehouse it owns and an available
-// receipt there, so a storeless order's placement reserves it (place#Order's reservation reads the seller's assets; with none it makes
-// an ad hoc asset, which needs the order part's facility, and a Sales order part names none).
-function sellerStock(organizationPartyId, productId, quantity) {
-    return system(() => {
-        const facilityId = "SAL_SPEC_WH_" + organizationPartyId
-        if (!ec.entity.find("mantle.facility.Facility").condition("facilityId", facilityId).one())
-            ec.service
-                .sync()
-                .name("create#mantle.facility.Facility")
-                .parameters({
-                    facilityId,
-                    facilityTypeEnumId: "FcTpWarehouse",
-                    ownerPartyId: organizationPartyId,
-                    facilityName: "Sales spec warehouse"
-                })
-                .call()
-        return ec.service
-            .sync()
-            .name("mantle.product.AssetServices.receive#Asset")
-            .parameters({productId, quantity, facilityId, ownerPartyId: organizationPartyId})
-            .call()
-    })
-}
-
 ;({
     ids,
     users,
@@ -482,6 +457,5 @@ function sellerStock(organizationPartyId, productId, quantity) {
     sweepRecords,
     sweepParameters,
     sweepExtras,
-    captureSystemMail,
-    sellerStock
+    captureSystemMail
 })

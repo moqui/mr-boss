@@ -54,6 +54,18 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{salesOpportunityId:salesOpportunityId, opportunityStageId:opportunityStageId, expectedRevision:expectedRevision,
                         probabilityModeEnumId:(probabilityModeEnumId || null), estimatedProbability:(estimatedProbability || null), note:(note || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">Stage changed</message></if>
+            <!-- follow-up 5: back to the list with its own filters (listFilters: the list's filter values as JSON, posted with the
+                form), not the stage or owner the form chose; a form without them (OpportunityDetail's) goes back as before -->
+            <script><![CDATA[
+                if (listFilters) {
+                    let kept = {}
+                    try { kept = JSON.parse(String(listFilters)) || {} } catch (_) { kept = {} }
+                    for (const name of ['text', 'organizationPartyId', 'ownerPartyId', 'mine', 'teamPartyId', 'salesPipelineId',
+                            'opportunityStageId', 'statusId', 'closeFrom', 'closeThru', 'accountPartyId', 'dataSourceId',
+                            'marketingCampaignId', 'orderByField', 'pageIndex', 'pageSize'])
+                        ec.context.put(name, kept[name] == null || kept[name] === '' ? null : String(kept[name]))
+                }
+            ]]></script>
         </actions>
         <default-response url="."/>
         <error-response url="."/>
@@ -72,6 +84,18 @@ along with this software (see the LICENSE.md file). If not, see
                             + batchOut.results.filter(row => row.ok).map(row => row.salesOpportunityId).join(', '), 'success')
                     for (const row of batchOut.results.filter(row => !row.ok))
                         ec.message.addMessage('Not done ' + row.salesOpportunityId + ': ' + String(row.message || '').replace(/^(Error: )?([A-Z_]+: )/, ''), 'warning')
+                }
+            ]]></script>
+            <!-- follow-up 5: back to the list with its own filters (listFilters: the list's filter values as JSON, posted with the
+                form), not the stage or owner the form chose; a form without them (OpportunityDetail's) goes back as before -->
+            <script><![CDATA[
+                if (listFilters) {
+                    let kept = {}
+                    try { kept = JSON.parse(String(listFilters)) || {} } catch (_) { kept = {} }
+                    for (const name of ['text', 'organizationPartyId', 'ownerPartyId', 'mine', 'teamPartyId', 'salesPipelineId',
+                            'opportunityStageId', 'statusId', 'closeFrom', 'closeThru', 'accountPartyId', 'dataSourceId',
+                            'marketingCampaignId', 'orderByField', 'pageIndex', 'pageSize'])
+                        ec.context.put(name, kept[name] == null || kept[name] === '' ? null : String(kept[name]))
                 }
             ]]></script>
         </actions>

@@ -35,7 +35,8 @@ along with this software (see the LICENSE.md file). If not, see
     and refuse nothing); Overview; Items with shipped and billed quantities (Add line and Remove on a direct draft); Fulfillment
     (shipments) and Invoices and payments for a finance reader (P14: each row opens ShipmentDetail or InvoiceDetail under Sales; a
     Changes box lists the order's changes and More offers New change, opening OrderChangeDetail), each without a link until P14 mounts ShipmentDetail and
-    InvoiceDetail; History; Chatter and Files. -->
+    InvoiceDetail; History; Chatter and Files. Follow-up 5: Overview's Ships from (the part's facility, the seller's default when it was
+    made) and More's Change ships from, on a quote draft and on an order while nothing is reserved or shipped. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="salesChoices" read-only="true">
         <actions>
@@ -96,7 +97,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <set field="stateActions" from="{orderId:orderId, orderRevision:sq.orderRevision}"/>
                         <set field="overviewRows" from="[['Customer', sq.customerName], ['Contact', sq.contactName], ['Seller', sq.organizationName],
                                 ['Store', sq.storeless ? ec.l10n.localize('None: taxed through the seller') : sq.storeName], ['Owner', sq.ownerName],
-                                ['Team', sq.teamName], ['Opportunity', sq.opportunityName], ['Entered', sq.entryText], ['Ship to', sq.addressText],
+                                ['Team', sq.teamName], ['Opportunity', sq.opportunityName], ['Entered', sq.entryText], ['Ship to', sq.addressText], ['Ships from', sq.facilityName],
                                 ['Currency', sq.currencyUomId], ['Revision', String(sq.orderRevision)]]
                                 .filter(pair =&gt; pair[1]).map(pair =&gt; ({label: ec.l10n.localize(pair[0]), value: pair[1]}))"/>
                     </actions>
@@ -245,6 +246,24 @@ along with this software (see the LICENSE.md file). If not, see
                                         </form-single>
                                         <label type="p" style="text-caption m-muted"
                                                 text="Freight is a charge you enter; it is taxed with the quote where the seller's tax gateway taxes shipping."/>
+                                    </container-dialog>
+                                    <!-- follow-up 5: the facility the part ships from (the seller's default when it was made) -->
+                                    <container-dialog id="SalesQuoteFacility" button-text="Change ships from" icon="sym_o_warehouse" width="520"
+                                            title="Change where quote ${orderId} ships from" condition="sq.canEdit">
+                                        <form-single name="SalesQuoteFacilityForm" transition="salesUpdateOrderFacility"
+                                                map="{orderId:orderId, orderRevision:sq.orderRevision, facilityId:sq.facilityId}">
+                                            <field name="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                            <field name="facilityId">
+                                                <default-field title="Ships from" tooltip="A warehouse, store or plant of the seller">
+                                                    <drop-down allow-empty="false" required-manual-select="true">
+                                                        <dynamic-options transition="salesChoices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'facilities', organizationPartyId:sq.organizationPartyId, selected:facilityId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
                                     </container-dialog>
                                     <container-dialog id="SalesQuoteEdit" button-text="Edit quote" icon="sym_o_edit" width="640"
                                             title="Edit quote ${orderId}" condition="sq.canEdit">
@@ -579,7 +598,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 ['Seller', so.organizationName], ['Store', so.storeless ? ec.l10n.localize('None: taxed through the seller') : so.storeName],
                                 ['Kind', so.kindText], ['Quote', so.acceptedText], ['Owner', so.ownerName], ['Team', so.teamName],
                                 ['Opportunity', so.opportunityName], ['Entered', so.entryText], ['Placed', so.placedText], ['Approved', so.approvedText],
-                                ['Required by', so.requiredText], ['Currency', so.currencyUomId], ['Revision', String(so.orderRevision)]]
+                                ['Required by', so.requiredText], ['Ships from', so.facilityName], ['Currency', so.currencyUomId], ['Revision', String(so.orderRevision)]]
                                 .filter(pair =&gt; pair[1]).map(pair =&gt; ({label: ec.l10n.localize(pair[0]), value: pair[1]}))"/>
                     </actions>
                     <widgets>
@@ -660,6 +679,24 @@ along with this software (see the LICENSE.md file). If not, see
                                             confirmation="Cancel what is left to ship of order ${orderId}? What was shipped and billed stays."/>
                                     <link url="${soChangePath}" url-type="plain" text="New change" icon="sym_o_edit_note"
                                             parameter-map="{orderId:orderId}" condition="soCanChange"/>
+                                    <!-- follow-up 5: the facility the part ships from (the seller's default when it was made) -->
+                                    <container-dialog id="SalesOrderFacility" button-text="Change ships from" icon="sym_o_warehouse" width="520"
+                                            title="Change where order ${orderId} ships from" condition="soCan.changeFacility">
+                                        <form-single name="SalesOrderFacilityForm" transition="salesUpdateOrderFacility"
+                                                map="{orderId:orderId, orderRevision:so.orderRevision, facilityId:so.facilityId}">
+                                            <field name="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                            <field name="facilityId">
+                                                <default-field title="Ships from" tooltip="A warehouse, store or plant of the seller">
+                                                    <drop-down allow-empty="false" required-manual-select="true">
+                                                        <dynamic-options transition="salesChoices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'facilities', organizationPartyId:so.organizationPartyId, selected:facilityId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
                                     <link url="salesCloneOrder" link-type="hidden-form" text="Copy as a new order" icon="sym_o_content_copy"
                                             condition="soCan.clone" parameter-map="{orderId:orderId}" confirmation="Copy order ${orderId} into a new draft?"/>
                                     <!-- P16: an approved order repeated on a schedule, in Recurring orders (a keeper of recurrence's) -->

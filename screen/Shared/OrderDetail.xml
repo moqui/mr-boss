@@ -142,6 +142,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="salesStoreOrderLine" location="component://mr-boss/template/SalesOrders.xml"/>
     <transition-include name="salesDeleteOrderLine" location="component://mr-boss/template/SalesOrders.xml"/>
     <transition-include name="salesPlaceOrder" location="component://mr-boss/template/SalesOrders.xml"/>
+    <transition-include name="salesUpdateOrderFacility" location="component://mr-boss/template/SalesOrders.xml"/>
     <transition-include name="salesApproveOrder" location="component://mr-boss/template/SalesOrders.xml"/>
     <transition-include name="salesHoldOrder" location="component://mr-boss/template/SalesOrders.xml"/>
     <transition-include name="salesReleaseHold" location="component://mr-boss/template/SalesOrders.xml"/>

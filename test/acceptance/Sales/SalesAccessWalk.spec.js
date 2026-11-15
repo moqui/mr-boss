@@ -369,8 +369,6 @@ spec({
     setupSpec() {
         login("john.doe")
         state.setupErrors = []
-        // Ziziwork Sales holds no stock in the demo: its side's orders reserve this
-        lib.sellerStock(ids.otherOrganizationId, "DEMO_1_1", 20)
         for (const s of Object.values(sides)) makeRecords(s)
     },
     cleanupSpec() {
