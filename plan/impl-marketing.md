@@ -7752,6 +7752,8 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | The promotional SMS day limit stays one VoicePolicy value for every sending number (smsMaxPromotionalPerNumber); a per-number override, with a deployment-wide promotional cap beside it, is later (§7) | The user's call (P22's review) |
 | Nov 15, 2026 | PASS Email preferences may leave a text message topic but not join one; a join confirmed by the number itself ("Reply YES") needs an inbound keyword hook and is later (§7); joining is through an import or staff with evidence | The user's call (P22's review) |
 | Nov 15, 2026 | The demo's campaign sends get dates relative to the load, as follow-up 3 did for events, so the calendar walk's projected collection holds them on any run day; follow-up 6 | The user's call (P21's review) |
+| Nov 15, 2026 | A container-box's `condition` is honoured by the framework (the XSD and every renderer), so the 58 mr-boss boxes and the base tools' one that rely on it work as written; a framework follow-up (fix/boxcond) before the acceptance run (follow-up 7's review) | The user's call |
+| Nov 15, 2026 | mr-boss's client budget is raised to the measured time of the re-run after the final suites' fixes (about 93 s; MarketingSendWalk 8 s within the approved Marketing estimate) | The user's call |
 
 ## 5. Open questions
 
