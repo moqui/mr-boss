@@ -205,7 +205,7 @@ is unchanged.
 | EventDetail | UpdateAssignForm | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Marketing/Events/EventDetail (Commons' EventDetail mounted, Marketing P16) |
 | EventDetail | AddEquipment | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Marketing/Events/EventDetail (Commons' EventDetail mounted, Marketing P16) |
 | EventDetail | EquipmentList | Commons/Calendar/EventDetail; Marketing/Events/EventDetail | Commons/Calendar/EventDetail; Marketing/Events/EventDetail (Commons' EventDetail mounted, Marketing P16) |
-| MyCalendar | NewEventForm | Commons/Calendar; Commons/QuickCreate; Marketing/Calendar; Marketing/Events; Marketing/QuickCreate | Commons/Calendar; Commons/QuickCreate; Marketing/Events (NewEvent), Marketing/QuickCreate/NewEvent, Marketing/Campaigns/CampaignDetail (Events box) (Marketing P16) |
+| MyCalendar | NewEventForm | Commons/Calendar; Commons/QuickCreate; Marketing/Calendar; Marketing/Events; Marketing/QuickCreate | Commons/Calendar; Commons/QuickCreate; Marketing/Events (NewEvent), Marketing/QuickCreate/NewEvent, Marketing/Campaigns/CampaignDetail (Events box) (Marketing P16); Marketing/Calendar shows and moves the events, creating none (Marketing P21) |
 | UpdateContactInfo | ShippingInfo | Commons/Settings/Account | Commons/Settings/Account |
 | GitAccess | CreateAccessTokenForm | Projects/Code/GitAccess | Projects/Code/GitAccess |
 | GitAccess | AccessTokenList | Projects/Code/GitAccess | Projects/Code/GitAccess |

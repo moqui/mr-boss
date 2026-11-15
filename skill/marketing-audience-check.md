@@ -3,7 +3,7 @@ name: marketing-audience-check
 title: Explaining a segment or an audience
 description: Use when the user asks who a segment finds and why, or who a send to a list would reach and why people are left out.
 kind: procedure
-aliases: [explain this segment, who is in this segment, why is this person not in the segment, audience preview, who will receive this, why were recipients excluded, how many people can we email]
+aliases: [explain this segment, who is in this segment, why is this person not in the segment, audience preview, who will receive this, why were recipients excluded, how many people can we email, who on this list can we email, how many on the list can we reach]
 screens: [/qapps/Marketing/Audiences/SegmentDetail, /qapps/Marketing/Audiences/AudiencePreview, /qapps/Marketing/Audiences/Segments]
 risk: reversible
 ---

@@ -318,6 +318,18 @@ crosscut §3.13 row:
 
 **Source:** research §§1, 11; Commons §7. **Needs:** MKT-SHELL, MKT-SYNC.
 
+As built (impl-marketing P21): Commons' Calendar.qvue in its resource mode (no rail, no New), at `Marketing/Calendar`, hidden from
+the menu and opened by Home's Calendar and the key g k (§1.2's shortcut), every Marketing reader's. One W service,
+`get#CalendarItems`, answers every row by source, a failing one named: campaign windows (all day, not cancelled), sends with a
+schedule (not cancelled, not an automation's step), automation milestones (activation and end, for a reader of automations),
+approved publication dates (a campaign's blog post whose page has a published version, on its publish date; its landing page live
+or with a version scheduled) and the events Marketing offers (a registration event of the user's organizations or an event linked
+to one of their campaigns, series expanded by `get#EventInstances`), rather than `get#FullCalendarData`, which reads calendars and
+parties, not a campaign's events. Only an event drags, after `W.check#CalendarEvent` (an event the scope's calendar holds) and
+Commons' edit rule; a send opens SendDetail. The terminal twin is `CalendarTui`, four weeks. The projected collection is
+`get#CampaignCalendar` over the same sources (CalendarProjection `MarketingCampaigns`, MARKETING_VIEW), events and publication
+dates included.
+
 ### Campaigns
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
@@ -2342,6 +2354,14 @@ Independent shell providers fail visibly by name while other sources continue.
 
 These are shell provider mounts of the original forms, not independently maintained copies.
 **Source:** Commons QuickCreate; research §§1, 11. **Needs:** MKT-SHELL.
+
+As built (impl-marketing P21): QuickSend is `Marketing/QuickCreate/NewSend` over the Sends list's NewSend form, the campaign fixed
+when opened from a campaign Marketing shows the user (the shell's recordEntity and recordId, check#Record), else chosen. Today's
+source is `ironstone.marketing.ContextServices.get#TodayItems` over `W.get#TodayItems` (sends due, approvals, failed or uncertain
+deliveries, registrations to review), a source that could not be read an item naming it; the Comms hooks are
+`ContextServices.lookup#Records` (campaign, send, registration: never an attendee's name) and `get#CallContext` (the caller's
+upcoming registrations, an events manager's); "Log as note" files on the page's campaign or send, "Send as message" is Comms'
+internal message. These are "shell registrations" of §14.2's ContextServices row.
 
 ## 15. Automation and operations
 

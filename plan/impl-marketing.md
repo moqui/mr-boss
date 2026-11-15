@@ -5995,6 +5995,186 @@ MKT-SHELL, MKT-SYNC, MKT-ASSIST; gate 7.
   scheduled send and an event; dragging the event moves it and the send cannot be dragged; a phone subscribed to the
   collection lists the same items read only; the palette finds a campaign and a send by name.
 
+**Built Nov 15 (P21).** mr-mantle and mr-boss on branch `mkt/p21` (hashes in the worker's reply), from master after P20's merge and
+follow-up 3; mr-moqui and mr-pass unchanged, no Rust built. Built beside follow-up 4 (`mkt/fix4`) and P22 (`mkt/p22`; the hot spots below).
+- Checked first (the code over the plan): P16's to P20's Built and Review notes, §4 (every user's call), F47, F71, F86; Commons'
+  Calendar.qvue and its mounts (Projects' Plan/Calendar, People's TeamCalendar, Manufacturing's ResourceCalendar), Mantle's
+  `get#EventInstances`, `define#ProjectionOwner` and its owners (People's, Maintenance's), the Today contract (`get#UserTodayItems`),
+  the record-lookup and call-context interfaces (`org.moqui.comms.ProviderInterfaces`), Sales' providers (SalesComms.js, LogNote,
+  SendMessage), Marketing's root providers as P2–P20 left them. The code over the plan:
+  - most of the shell was already there: the palette (campaigns, segments, lists, sends, automations), QuickCampaign, QuickList,
+    QuickEvent and the three `assist-prompt`s (SendDetail's "Why were recipients excluded?" since P8), the three skills and Assist's
+    exposures over Mantle's user-facts provider (`mantle.party.UserFactServices`, Sales P6; P20's two tools). P21 adds the rest;
+  - "the read-only items of `MarketingWorkspaceServices.get#CalendarItems`" and "the events of authorized campaigns" through
+    `get#FullCalendarData`: one W service answers both (`get#CalendarItems`, MarketingCalendar.js, each source on its own and named when
+    it fails): campaign windows, scheduled sends, automation milestones (activation and end; a reader of automations), approved
+    publication dates (a campaign's blog post whose page has a published version, on its publish date; its landing page live or with a
+    scheduled version) and the events Marketing offers (registration events of the scope and events linked to its campaigns by
+    CakEvent), expanded by `get#EventInstances`: `get#FullCalendarData` reads calendars, parties and resources, not a campaign's events;
+  - "only an event is dragged": the screen's moveEvent (and cancelEvent) first asks the new `W.check#CalendarEvent` (an event the
+    scope's calendar holds, an instance through its series; anything else, a send among them, RECORD_UNAVAILABLE), then Commons'
+    `get#EventAccessInfo` edit rule and `update#EventOccurrence`; an event's canEdit is Commons' check, every other item read only;
+  - Calendar is Commons' component in its resource mode (no rail, no New), with four item kinds added to Calendar.qvue (campaign, send,
+    automation, publication: their colors and icons; Commons' owner contract, its comment says so); hidden from the menu: design §1.2's
+    "calendar shortcut" is Home's Calendar button and the key g k; the terminal twin is CalendarTui (four weeks);
+  - "the event maps of the authorized campaigns' windows, sends and milestones" (F71): `get#CampaignCalendar` answers the same sources
+    as the screen, events and publication dates included (design §19 MKT-SYNC names them), 30 days back to 180 ahead; admitted for
+    MARKETING_VIEW, so a report-only reader reads the screen (any Marketing read) and gets no collection;
+  - "Mantle `test/work/CalendarDav` gains the projected collection": no such spec exists; the collection's features are in the new
+    `test/marketing/MarketingCalendar`;
+  - "record-lookup", "call-context" and Today: `ironstone.marketing.ContextServices` gains `get#TodayItems`, `lookup#Records` and
+    `get#CallContext`, design §14.2's "shell registrations" of the ContextServices row (§2's "only" list of four predates them); Today's
+    sources are Mantle's (`W.get#TodayItems`: sends due by the end of the day or sending, approvals awaiting the approver, sends with a
+    failed or uncertain delivery in 30 days, offers still to come with registrations to review, each with a route key), and a source of
+    Mantle's that fails is an item naming it ("… could not be read just now"), so Today names it and shows the rest, besides the
+    framework naming a failing provider; a registration is found and carded by its id and offer, never its attendee;
+  - "the Today and palette sources complete": the palette gains the registration events (opening RegistrationSetup) and a registration
+    by its id (an events manager's); each find already fails alone, logged by name;
+  - "the 'Log as note' and 'Send as message' response actions": `Marketing/LogNote` (a campaign or a send: the record panel's hosts) and
+    `Marketing/SendMessage` (Comms' internal message, filed on the page's campaign or send when Marketing admits the user), as Sales';
+  - "`skill/aliases.json` (campaign, send, list, segment)": campaign, send and segment were there; list added; the campaign summary
+    skill reads the calendar (its screens and a step); two retrieval cases (a list's reach, the campaign's schedule on the Calendar).
+- Mantle:
+  - `service/mantle/marketing/MarketingCalendar.js` (new) under `MarketingWorkspaceServices.xml` (a P21 block at the end):
+    `get#CalendarItems`, `check#CalendarEvent`, `get#CampaignCalendar` (define#ProjectionOwner) and `get#TodayItems`, all
+    `allow-remote="false"`, read only.
+  - `data/MarketingSeedData.xml` (a P21 block at the end): the CalendarProjection `MarketingCampaigns`, "Campaign calendar".
+- BOSS:
+  - Screens: `Marketing/Calendar.xml` (Calendar.qvue; calendarSetup, calendarEvents, eventSummary, moveEvent, cancelEvent, respond) and
+    `Marketing/CalendarTui.xml` (new); `Marketing/QuickCreate/NewSend.xml`, `Marketing/LogNote.xml`, `Marketing/SendMessage.xml` (new);
+    `Marketing.xml` (a P21 block at the end of the subscreens; the quick create's send, today-source, record-lookup, call-context and
+    the two response actions before the keymap; the key g k at the keymap's end; the header comments); `Marketing/Home.xml` (the
+    Calendar shortcut); `Commons/Calendar.qvue` (the four kinds).
+  - `Marketing.js` (the P21 link paths at the end of linkPaths; the event and registration finds at the end of searchFinds; a P21 block
+    before the operations: routePaths and placeOf, lookup, partiesOfNumber, callContext, today; the operations and the export);
+    `ContextServices.xml` (a P21 block at the end; the header comment).
+  - Assist: `skill/aliases.json` (list), `skill/marketing-campaign-summary.md` (the calendar), `skill/marketing-audience-check.md` (two
+    aliases), `test/skill-retrieval.json` (two cases).
+- Specs:
+  - Mantle `test/marketing/MarketingCalendar` (new, 4 features, about 0.7 s: the organization's campaign window, scheduled send and
+    registration event and nothing of another organization (refused by name), a backwards range refused, a report reader's read; only an
+    event of the calendar is one a drag may move, a send and another organization's event refused; the Campaign calendar collection
+    listed for MARKETING_VIEW and not for a report-only reader, read only, holding the campaign, send and event and nothing of the other
+    organization, no address, a device PUT refused 403; Today's sends due for an author and none for a reader).
+  - mr-boss `test/Marketing/MarketingShell` (new, 4 features, about 1.7 s: Calendar's one qvue render and its calendarEvents transition
+    with the demo running campaign's window, its December send opening SendDetail and its webinar, another organization's campaign
+    absent, the send's drag refused (RECORD_UNAVAILABLE), CalendarTui's one html render; the root's providers (quick create's send, Today,
+    the answer actions, g k) and NewSend's one render with the campaign fixed, a reader told they write no sends; Today with a failing
+    provider named and Marketing's answered, no address or token, another app's user nothing; the palette's send, record-lookup's info,
+    links and a registration's card (never its attendee), call-context's upcoming registration for an events manager and none for a
+    reader, another organization's author shown nothing). Changed: `MarketingSpecLib` (the author's keys with g k).
+  - Acceptance, written and not run: `test/acceptance/client/Marketing/MarketingCalendarWalk` (4 features, stepwise, as the webinar's
+    organizer: the calendar from Home's shortcut with the campaign's window, its December send and the webinar; the webinar dragged to the
+    next day and moved, the send dragged and not moved, then opening SendDetail; an app password made on Sync and the Campaign calendar
+    listed over CalDAV with the campaign and send, the send's object read and its PUT refused 403; the palette finding the campaign and
+    the send; the webinar moved back in cleanupSpec).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle MarketingCalendar, MarketingScope, Dav, MaintenanceStack,
+  CommonsToday (39 of 39); mr-boss MarketingShell, MarketingAccess, MarketingCampaigns, MarketingSends, MarketingEvents, Schedules,
+  PublishedCalendar, TodayPanel (all passing); `moqui test mr-boss --skills` recall@3 1.00 (56 of 56), no strong false match (the
+  people-policy-question description warning as before). `moqui lint --screens` (release): 143 flagged sites as after P20, none in a new
+  or changed screen; parse failures 0. Prettier (mr-moqui's config) clean on the new and changed JavaScript. Not run: test-apps, the
+  acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P21" table; ss-inventory's MyCalendar NewEventForm row (the calendar moves the events,
+  creating none).
+- Design edits: design-marketing §3 Calendar and §14.3 QuickCreate (as built).
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: one W service for the calendar's items and events (get#EventInstances, not get#FullCalendarData);
+    `check#CalendarEvent` before a drag; the resource mode with four new kinds in Commons' Calendar.qvue; Calendar hidden from the menu
+    (Home's shortcut and g k); the collection with events and publication dates; no test/work/CalendarDav (the new MarketingCalendar);
+    three more ContextServices (§2's list of four is stale); a failing Today source of Mantle's as a named item;
+  - Home's Upcoming still answers its events and publication-date sources "Not available" (since P1; MarketingAccess reads that text):
+    get#CalendarItems' sources could now answer them; left as they are (P23, or a follow-up, changes the spec with them);
+  - a third copy of the phone matching (`partiesOfNumber`: SalesComms.js, Maintenance's Stack.js, now Marketing.js): a Mantle helper
+    would serve all three;
+  - design §14.3 names EventRegistration a record-panel host, but the root admits only the campaign, the send and the contact (P17 did
+    not add it), so "Log as note" files on a campaign or a send, and a registration's page offers no note;
+  - a moved event's notification links Commons' EventDetail (as Projects' calendar does), not Marketing's mount;
+  - the demo's December send keeps a fixed date (2026-12-01, not load-relative): MarketingShell reads its range from the row, so it
+    passes on any day; the walk's collection holds it only while it is within 180 days of the run.
+- For the lead:
+  - budget share: mr-mantle about 0.7 s (MarketingCalendar); mr-boss server about 1.7 s (MarketingShell; MarketingAccess unchanged in
+    time); no client spec in the regression suite;
+  - merge hot spots (follow-up 4 and P22 beside): mr-boss `screen/Marketing.xml` (the P21 subscreens block at the end, the P21 providers
+    block before the keymap, g k at the keymap's end, both header comments), `service/ironstone/marketing/Marketing.js` (the end of
+    linkPaths and of searchFinds, the P21 block before `const operations`, the operations and export lines), `ContextServices.xml` (the
+    block at the end), `test/Marketing/MarketingSpecLib.js` (authorKeys), `screen/Marketing/Home.xml` (the header's actions),
+    `screen/Commons/Calendar.qvue`, `skill/*`, `test/skill-retrieval.json`, `plan/usl-inventory.md` (after P20's table),
+    `plan/ss-inventory.md`, `plan/design-marketing.md` (§3, §14.3), this file; mr-mantle `MarketingWorkspaceServices.xml` and
+    `data/MarketingSeedData.xml` (P21 blocks at the ends). SendDetail and BossSetupMarketingData.xml are untouched;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`; no mr-moqui worktree), beside Marketing's paragraphs: "Marketing's
+    campaign calendar (`mantle.marketing.MarketingWorkspaceServices` get#CalendarItems, check#CalendarEvent, get#TodayItems,
+    get#CampaignCalendar, all `allow-remote="false"`): dates and names of the campaigns, sends, automations, published content and
+    events of a Marketing reader's organizations, no recipient, attendee, address or token; a calendar drag moves only an event the
+    scope's calendar holds, through Commons' edit rule. The projected CalDAV collection `projected-MarketingCampaigns` ("Campaign
+    calendar") is read only (a device write refused 403) and admits a holder of MARKETING_VIEW. The shell's record-lookup and
+    call-context (ironstone.marketing.ContextServices) answer a campaign, send or registration only to a user Marketing shows it to,
+    a registration by its id, never its attendee.";
+  - nothing needs the user's call; gate 7 is yours.
+
+**Review Nov 15 (P21).** mr-mantle and mr-boss on `mkt/p21`, read line by line against the phase text, §2, §4 and design §3 Calendar,
+§1.3 and §14.3; no Rust, no framework change.
+- Checked and sound:
+  - organization scope on every item: each calendar source (campaign windows, sends, automation milestones, publication dates, events)
+    reads only the organizations of the caller's Marketing scope, a named organization outside it refused (ORGANIZATION_DENIED); the
+    events are the scope's registration events and its campaigns' CakEvent links, and a CakEvent link is made only to a registration
+    event of the campaign's own organization (MarketingCampaigns.js `associationKinds.CakEvent`), so no other organization's event
+    reaches a calendar; automations only for an automation reader, as AutomationServices ask; the reads mirror the record services
+    (anyRead for campaigns, sends, content and events);
+  - no attendee, address or token in any shell row: calendar items and the projection's event maps carry names, states and dates (the
+    projection leaves out an event's location); Today counts deliveries and registrations, never a recipient; the registration card,
+    palette row and call-context row name the registration by id and offer; record-lookup answers only a reader of the record's
+    organization (an events manager for a registration) and leaves the rest to other providers;
+  - only an event moves: Calendar's moveEvent and cancelEvent call `check#CalendarEvent` (an event the scope holds, an instance
+    through its series) before Commons' `get#EventAccessInfo` edit rule and `update#EventOccurrence`; a send, an automation or another
+    organization's event is RECORD_UNAVAILABLE and every non-event item is canEdit false; moving a registration event keeps its
+    offers right (a single event's occurrence is its own start; the notices job tells registrants of a moved occurrence);
+  - the projection: `admitted` only for MARKETING_VIEW (a report-only reader gets none), read only (a device PUT 403), its window 30
+    days back to 180 ahead bounded at 400 days; every P21 service `allow-remote="false"`;
+  - each provider fails by name alone: calendar and Today sources each in their own pushErrors block, a failure logged and named
+    (failedSources; Today's a "could not be read just now" item) while the rest answer; the palette's and lookup's finds each in a
+    try; Today answers another user's Today and a non-reader nothing;
+  - LogNote, SendMessage and NewSend re-check the record through `check#Record` in the transition (the form's hidden fields are the
+    client's), and Mantle's services check again; nothing is filed or sent before the user submits;
+  - the screens: Calendar has one qvue render and CalendarTui one html render in the regression suite; no route fixture; specs well
+    under 15 s.
+- Fixed:
+  - R1 (medium; the worker's provisional finding): Home's Upcoming still answered its events and publication-date sources "Not
+    available" seven phases after both were built, while P21's calendar reads exactly those sources. Mantle `MarketingCalendar.js`
+    exports `upcomingRows` (one calendar source from now through the next days as Upcoming rows) and `MarketingWorkspace.js`'s
+    `events` and `publications` sources run it over Upcoming's 60 days (a failure named as any source's); Home's places gain
+    `marketingEvent` (EventDetail) and `marketingContent` (ContentDetail). MarketingCalendar gains a feature (Upcoming's four sources
+    available, the organization's event listed with its route, another organization's absent; it fails on the unfixed code, where
+    the two sources are notAvailable) and MarketingAccess now reads that the author's Home shows no "Not available".
+  - R2 (low; tests): MarketingShell checked another organization only through record-lookup's info, and its `!send.movable` read a
+    field no item has. It now also checks that Services' author's calendarEvents over the send's and the webinar's days hold none of
+    Retail's campaign, send or webinar, and that their palette does not find Retail's December send; the empty check is gone.
+- Provisional findings (for the lead to number):
+  - the demo's December send keeps a fixed 2026-12-01 date (the worker's finding, confirmed): MarketingShell reads its range from the
+    row and passes on any day, but the acceptance MarketingCalendarWalk's CalDAV feature finds the send only while it is within the
+    projection's default window (30 days back, 180 ahead), so from 2026-12-31 on its listing and object checks fail (the campaign's
+    window from about 2027-01-30), while its month views and drags, which read the row's date, keep working; the answer is the demo's send dates relative to the load, as follow-up 3 made the events',
+    which touches every spec that reads the December send (MarketingSends, MarketingApprovals and others): not this phase's, left;
+  - EventRegistration is not a notes-and-files record (design §14.3 names it a record-panel host; P17 did not add it), so "Log as
+    note" serves a campaign or a send: confirmed; the record host is P17's owner-contract work, not P21's, left for a follow-up;
+  - a third copy of the phone matching (`partiesOfNumber`, as SalesComms.js and Maintenance's Stack.js): confirmed, a Mantle helper
+    for the three belongs to a cross-app follow-up, not this phase;
+  - a moved event's notification links Commons' EventDetail, as Projects' calendar does (the worker's): acceptable, the event is the
+    calendar's;
+  - Today's Marketing feature in MarketingShell checks the group is present but not that the dispatcher gets an item (the demo has no
+    send due today); Mantle's MarketingCalendar covers the sends-due source.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle MarketingCalendar (5 of 5, about 0.7 s), MarketingScope
+  (6 of 6); mr-boss MarketingShell (4 of 4, about 1.5 s), MarketingAccess (8 of 8). `moqui lint --screens` (release): Home.xml's
+  sites as before (none flagged new). Prettier clean on the changed JavaScript. Skills untouched by the review (no `--skills` run).
+  Not run: test-apps, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle MarketingCalendar about 0.7 s (one feature added, 0.04 s); mr-boss MarketingShell about 1.5 s;
+  - merge hot spots beside the Built note's: mr-mantle `MarketingWorkspace.js` (Upcoming's events and publications sources) and
+    `MarketingWorkspaceServices.xml` (get#Upcoming's description); mr-boss `screen/Marketing/Home.xml` (the header comment and the
+    places map), `test/Marketing/MarketingAccess.spec.js` (the Home assertion);
+  - the Attack-Surface paragraph the Built note gives stands as written; Home's Upcoming now adds the calendar's events and
+    publication dates (names and dates only) to a Marketing reader's Home;
+  - the user's call: whether the demo's sends get load-relative dates (the walk's collection feature depends on it).
+
 ### P22 — SMS
 
 Design §5 (the SMS channel of Sends and Compose), §6 (the Send SMS step), §12 SendingProfiles (SMS readiness), §13

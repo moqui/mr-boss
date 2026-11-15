@@ -327,7 +327,12 @@ const linkPaths = [
     "Promotions/PromoCodeDetail",
     "Customers",
     "Customers/Customer360",
-    "Contacts/ContactDetail"
+    "Contacts/ContactDetail",
+    // P21: the campaign calendar, quick create's send and Assist's answer actions (design §3 Calendar, §14.3 QuickCreate, §1.3)
+    "Calendar",
+    "QuickCreate/NewSend",
+    "LogNote",
+    "SendMessage"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -1629,6 +1634,58 @@ const searchFinds = [
                 recordId: row.marketingAutomationId
             }))
         }
+    },
+    // P21: the registration events of the scope by id or name, every Marketing reader's (their RegistrationSetup)
+    {
+        kind: "event",
+        rows: (userScope, text, limit) => {
+            if (!userScope.capabilities.anyRead) return []
+            const ids = organizationIds(userScope)
+            if (!ids.length) return []
+            const offered = Array.from(
+                find("mantle.work.registration.RegistrationEvent")
+                    .condition("organizationPartyId", "in", ids)
+                    .selectField("workEffortId")
+                    .limit(1000)
+                    .list()
+            ).map(row => row.workEffortId)
+            if (!offered.length) return []
+            const path = sharedPath("Marketing", "Events/RegistrationSetup")
+            return Array.from(
+                find("mantle.work.effort.WorkEffort")
+                    .condition("workEffortId", "in", offered)
+                    .condition(textCondition(["workEffortId", "workEffortName"], text))
+                    .orderBy("-estimatedStartDate")
+                    .limit(limit)
+                    .list()
+            ).map(row => ({
+                title: row.workEffortName || row.workEffortId,
+                subtitle: "Event" + (row.estimatedStartDate ? " · " + ec.l10n.format(row.estimatedStartDate, "yyyy-MM-dd") : ""),
+                icon: recordKinds.event.icon,
+                url: path + "?workEffortId=" + encodeURIComponent(row.workEffortId),
+                recordEntity: "mantle.work.effort.WorkEffort",
+                recordId: row.workEffortId
+            }))
+        }
+    },
+    // P21: a registration by its id, for an events manager of its offer's organization (never by an attendee's name)
+    {
+        kind: "registration",
+        rows: (userScope, text, limit) => {
+            if (!userScope.capabilities.eventManage || !/^[A-Za-z0-9_.-]{3,}$/.test(text)) return []
+            const found = recordKinds.registration.read(userScope, text)
+            if (!found) return []
+            return [
+                {
+                    title: found.label,
+                    subtitle: "Registration · " + organizationName(found.organizationPartyId),
+                    icon: recordKinds.registration.icon,
+                    url: sharedPath("Marketing", "Events/RegistrationDetail") + "?registrationId=" + encodeURIComponent(text),
+                    recordEntity: REGISTRATION,
+                    recordId: text
+                }
+            ].slice(0, limit)
+        }
     }
 ]
 // The web path of a Marketing screen under a root.
@@ -1668,7 +1725,284 @@ function search(p) {
     return {rows: Array.from(found.values()).slice(0, limit)}
 }
 
-const operations = {sharedContext, checkRecord, choices, search}
+// ===== Marketing P21: Today, the Comms hooks and their links (design §1.3 Comms hooks, §14.3 Today; impl-marketing P21) =====
+const REGISTRATION = "mantle.work.registration.EventRegistration"
+const L = value => ec.l10n.localize(value)
+// The places of the route keys Mantle's workspace rows name (MarketingWorkspaceServices get#TodayItems, get#CalendarItems), as paths
+// under Marketing with the record's parameter.
+const routePaths = {
+    marketingCampaign: "Campaigns/CampaignDetail",
+    marketingSend: "Sends/SendDetail",
+    marketingAutomation: "Automations/AutomationDetail",
+    marketingContent: "Content/ContentDetail",
+    marketingEvent: "Events/EventDetail",
+    marketingApprovals: "Campaigns/Approvals",
+    marketingDelivery: "Sends/CampaignDelivery",
+    marketingRegistrations: "Events/Registrations"
+}
+function placeOf(appRoot, route, recordParameter, recordId) {
+    const path = route && Object.hasOwn(routePaths, route) ? routePaths[route] : null
+    if (!path) return null
+    return (
+        sharedPath(appRoot || "Marketing", path) +
+        (recordParameter && recordId ? "?" + recordParameter + "=" + encodeURIComponent(recordId) : "")
+    )
+}
+// The record kinds the Comms hooks answer, by entity: a campaign, a send and an event registration (design §1.3 Comms hooks).
+const lookupKinds = {
+    "mantle.marketing.campaign.MarketingCampaign": "campaign",
+    "mantle.marketing.campaign.CampaignSend": "send",
+    [REGISTRATION]: "registration"
+}
+const lookupKindOf = entityName => {
+    const name = String(entityName || "")
+    if (Object.hasOwn(lookupKinds, name)) return lookupKinds[name]
+    return Object.entries(lookupKinds).find(([entity]) => entity.endsWith("." + name))?.[1] || null
+}
+// A record's card for the user, or null when Marketing does not show it to them (left to the other providers).
+function lookupCard(userScope, kind, recordId) {
+    const definition = recordKinds[kind]
+    let found = null
+    try {
+        found = definition.read(userScope, recordId)
+    } catch (error) {
+        if (!["RECORD_UNAVAILABLE", "PERMISSION_DENIED", "ORGANIZATION_DENIED"].includes(lib.reasonCode(error))) throw error
+    }
+    if (!found) return null
+    const status =
+        kind === "registration" ? statusName(one(REGISTRATION, {registrationId: recordId})?.statusId) : found.detail || ""
+    return {
+        entity: Object.entries(lookupKinds).find(([, value]) => value === kind)[0],
+        title: found.label,
+        typeLabel: L(definition.name),
+        status,
+        icon: definition.icon,
+        url:
+            sharedPath("Marketing", definition.destination.path) +
+            "?" +
+            definition.destination.parameter +
+            "=" +
+            encodeURIComponent(recordId),
+        lines: [organizationName(found.organizationPartyId)].filter(Boolean)
+    }
+}
+// record-lookup (lookup#Records, org.moqui.comms.ProviderInterfaces.record#Lookup): a campaign's, a send's or a registration's card,
+// search and links for a user Marketing shows it to; never an address, a token or an attendee's name.
+function lookup(p) {
+    const empty = {recordList: [], card: null, optionList: []}
+    const userScope = scope()
+    if (!userScope.read || !userScope.capabilities.anyRead) return empty
+    if (p.operation === "info") {
+        const recordList = []
+        for (const wanted of Array.from(p.records || [])) {
+            const kind = lookupKindOf(wanted.recordEntityName)
+            const card = kind && wanted.recordId ? lookupCard(userScope, kind, String(wanted.recordId)) : null
+            if (!card) continue
+            recordList.push({
+                recordEntityName: wanted.recordEntityName,
+                recordId: wanted.recordId,
+                entity: card.entity,
+                visible: true,
+                title: card.title,
+                typeLabel: card.typeLabel,
+                url: card.url,
+                icon: card.icon
+            })
+        }
+        return Object.assign(empty, {recordList})
+    }
+    if (p.operation === "card") {
+        const kind = lookupKindOf(p.recordEntityName)
+        const card = kind && p.recordId ? lookupCard(userScope, kind, String(p.recordId)) : null
+        return card
+            ? Object.assign(empty, {
+                  card: {
+                      entityName: card.entity,
+                      id: p.recordId,
+                      title: card.title,
+                      status: card.status,
+                      url: card.url,
+                      lines: card.lines
+                  }
+              })
+            : empty
+    }
+    if (p.operation === "search") {
+        const term = String(p.text || "").trim()
+        if (term.length < 2) return empty
+        const limit = Math.max(1, Math.min(20, Number(p.limit || 10)))
+        const optionList = []
+        for (const definition of searchFinds.filter(find => ["campaign", "send", "registration"].includes(find.kind))) {
+            let found = []
+            try {
+                found = definition.rows(userScope, term, limit)
+            } catch (error) {
+                ec.logger.error("Marketing record lookup " + definition.kind + " search failed: " + error.message)
+            }
+            for (const row of found)
+                optionList.push({value: row.recordEntity + "|" + row.recordId, label: row.title + " (" + row.subtitle + ")"})
+        }
+        return Object.assign(empty, {optionList: optionList.slice(0, limit)})
+    }
+    if (p.operation === "links") {
+        const patterns = [
+            [
+                /\/qapps\/[A-Za-z]+\/Campaigns\/CampaignDetail\?marketingCampaignId=([A-Za-z0-9_.%-]+)/g,
+                "mantle.marketing.campaign.MarketingCampaign"
+            ],
+            [
+                /\/qapps\/[A-Za-z]+\/Sends\/SendDetail\?campaignSendId=([A-Za-z0-9_.%-]+)/g,
+                "mantle.marketing.campaign.CampaignSend"
+            ],
+            [/\/qapps\/[A-Za-z]+\/Events\/RegistrationDetail\?registrationId=([A-Za-z0-9_.%-]+)/g, REGISTRATION]
+        ]
+        const seen = new Set()
+        const recordList = []
+        for (const [pattern, entity] of patterns)
+            for (const match of String(p.body || "").matchAll(pattern)) {
+                const id = decodeURIComponent(match[1])
+                if (seen.has(entity + "|" + id) || recordList.length >= 5) continue
+                seen.add(entity + "|" + id)
+                recordList.push({entity, id})
+            }
+        return Object.assign(empty, {recordList})
+    }
+    throw new Error("Unknown record lookup " + p.operation)
+}
+// The parties with a phone number like the one ringing (its last seven digits in the stored number, checked against the whole number
+// when it has a country code), as Sales' and Maintenance's call contexts read them.
+function partiesOfNumber(number) {
+    const wanted = String(number || "").replace(/[^0-9+]/g, "")
+    const digits = wanted.replace(/\D/g, "")
+    if (digits.length < 7) return []
+    const factory = ec.entity.conditionFactory
+    const last7 = digits.slice(-7)
+    const written = [last7, ...["-", " ", "."].map(separator => last7.slice(0, 3) + separator + last7.slice(3))]
+    const partyIds = new Set()
+    for (const row of Array.from(
+        find("mantle.party.contact.PartyContactMechTelecomNumber")
+            .condition(
+                factory.makeCondition(
+                    written.map(form => factory.makeCondition("contactNumber", "like", "%" + form + "%")),
+                    "or"
+                )
+            )
+            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+            .limit(60)
+            .list()
+    )) {
+        const local = String(row.areaCode || "") + String(row.contactNumber || "")
+        const countryCode = String(row.countryCode || "").replace(/\D/g, "")
+        const e164 = countryCode ? "+" + countryCode + local.replace(/\D/g, "") : null
+        if (!e164 || e164 === wanted || e164.replace(/\D/g, "").endsWith(digits.slice(-10))) partyIds.add(row.partyId)
+    }
+    return Array.from(partyIds)
+}
+// call-context (get#CallContext, org.moqui.comms.ProviderInterfaces.call#Context): the caller's upcoming registrations (as attendee or
+// buyer) of the offers of the user's organizations, for an events manager, each with its RegistrationDetail link, at most 20; Comms' own
+// provider answers who the caller is. No address, token or payment.
+function callContext(p) {
+    const empty = {contactList: [], recordList: []}
+    const userScope = scope()
+    if (!userScope.read || !userScope.capabilities.eventManage) return empty
+    const ids = organizationIds(userScope)
+    const partyIds = partiesOfNumber(p.number)
+    if (!ids.length || !partyIds.length) return empty
+    const factory = ec.entity.conditionFactory
+    const registrations = Array.from(
+        find(REGISTRATION)
+            .condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("attendeePartyId", "in", partyIds),
+                        factory.makeCondition("buyerPartyId", "in", partyIds)
+                    ],
+                    "or"
+                )
+            )
+            .condition("statusId", "not-in", ["EvrCancelled", "EvrExpired"])
+            .orderBy("-createdDate")
+            .limit(100)
+            .list()
+    )
+    const policyIds = Array.from(new Set(registrations.map(row => row.registrationPolicyId).filter(Boolean)))
+    const policies = {}
+    if (policyIds.length)
+        for (const row of Array.from(
+            find("mantle.work.registration.EventRegistrationPolicy")
+                .condition("registrationPolicyId", "in", policyIds)
+                .condition("organizationPartyId", "in", ids)
+                .condition("occurrenceEnd", "greater-than", ec.user.nowTimestamp)
+                .list()
+        ))
+            policies[row.registrationPolicyId] = row
+    const recordList = []
+    for (const row of registrations) {
+        const policy = policies[row.registrationPolicyId]
+        if (!policy || recordList.length >= 20) continue
+        recordList.push({
+            title:
+                L("Registration") +
+                " " +
+                row.registrationId +
+                ": " +
+                (policy.publicTitle || policy.registrationPolicyId) +
+                (policy.occurrenceStart ? " · " + ec.l10n.format(policy.occurrenceStart, "yyyy-MM-dd HH:mm") : ""),
+            status: statusName(row.statusId),
+            url:
+                sharedPath("Marketing", "Events/RegistrationDetail") + "?registrationId=" + encodeURIComponent(row.registrationId)
+        })
+    }
+    return {contactList: [], recordList}
+}
+// The Marketing today-source (get#TodayItems; Commons' get#UserTodayItems calls it): Mantle's sources (MarketingWorkspaceServices
+// get#TodayItems) as Today's items, each opening its Marketing screen; a source of Mantle's that could not be read is an item that says so
+// by name, so the others still show. Another user's Today, and a user who reads nothing of Marketing, get none.
+function today(p) {
+    const label = "Marketing"
+    if (p.userId && p.userId !== ec.user.userId) return {items: [], label}
+    const userScope = scope()
+    if (!userScope.read || !userScope.capabilities.anyRead) return {items: [], label}
+    const found =
+        ec.service
+            .sync()
+            .name("mantle.marketing.MarketingWorkspaceServices.get#TodayItems")
+            .parameters({thruDate: p.thruDate || null})
+            .call() || {}
+    if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
+    const item = (fields, url, record) =>
+        Object.assign(
+            {
+                workEffortId: null,
+                requestId: null,
+                startDate: null,
+                endDate: null,
+                allDay: true,
+                priority: null,
+                statusId: null,
+                assignees: [],
+                canUpdate: false,
+                hasCallLink: false
+            },
+            fields,
+            {url, record}
+        )
+    const items = Array.from(found.items || []).map(row =>
+        item(
+            {kind: row.kind, title: row.title, dueDate: row.dueDate || null},
+            placeOf("Marketing", row.route, row.recordParameter, row.recordId),
+            row.recordEntity ? {recordEntityName: row.recordEntity, recordId: row.recordId, recordName: row.recordName} : null
+        )
+    )
+    for (const title of Array.from(found.failedSources || []))
+        items.push(
+            item({kind: "marketingUnavailable", title: title + ": " + L("could not be read just now"), dueDate: null}, null, null)
+        )
+    return {items, label}
+}
+// ===== end of Marketing P21 =====
+
+const operations = {sharedContext, checkRecord, choices, search, today, lookup, callContext}
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown Marketing operation " + op)
     return operations[op](p || {})
@@ -1680,4 +2014,4 @@ function promotionsShown() {
     const userScope = scope()
     return !!userScope.read && !!userScope.capabilities.promotions
 }
-;({execute: run, recordLink, promotionsShown})
+;({execute: run, recordLink, promotionsShown, placeOf})

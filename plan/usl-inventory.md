@@ -1121,6 +1121,18 @@ built screens, the order SECA, jobs and Insights' registries:
 | party/BusinessEventServices | record#BusinessEvent (CampaignSent) | design-insights §4 business annotations (F85) | CampaignSendServices release#Send and release#ExperimentWinner, after their commit (Marketing P20) |
 | marketing/SegmentServices | count#Audience | Assist (CX-ASSIST; the user's call of Nov 15) | the AgentToolExposure marketing_audience_counts (Assistant only; the P20 review) |
 
+Added in Marketing P21 (Nov 15, 2026; the campaign schedule, its projected CalDAV collection and Today in
+`mantle.marketing.MarketingWorkspaceServices` over MarketingCalendar.js, impl-marketing P21), called by built screens, the shell and the
+CalDAV server:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/MarketingWorkspaceServices | get#CalendarItems | Marketing/Calendar (W.get#CalendarItems: campaign windows, send schedules, sequence milestones, publication dates) | Marketing/Calendar (calendarEvents), Marketing/CalendarTui (Marketing P21) |
+| marketing/MarketingWorkspaceServices | check#CalendarEvent | Marketing/Calendar (only an event drags) | Marketing/Calendar (moveEvent, cancelEvent) (Marketing P21) |
+| marketing/MarketingWorkspaceServices | get#CampaignCalendar | design §1.3 CX-SYNC, §19 MKT-SYNC (the "Campaign calendar" projected collection) | the CalendarProjection MarketingCampaigns (mantle.work.CalendarDavServices' projected kind) (Marketing P21) |
+| marketing/MarketingWorkspaceServices | get#TodayItems | design §14.3 Today (W providers) | ironstone.marketing.ContextServices get#TodayItems, Marketing's today-source (Marketing P21) |
+| work/EventServices | update#EventOccurrence | Marketing/Calendar (event drag/resize) | Marketing/Calendar (moveEvent, after check#CalendarEvent) (Marketing P21) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |
