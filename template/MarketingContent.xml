@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The content transitions and forms of the IronStone Marketing screens (impl-marketing P14; design-marketing §8 Content,
+    ContentDetail, BlogPosts, BlogPostDetail): each transition calls Mantle's guarded service (mantle.marketing.MarketingContentServices),
+    which checks MARKETING_CONTENT_EDIT, the organization and, for a post, the wiki's own write rule, so a screen that includes one adds
+    no authority. A screen includes each transition it uses by name (transition-include); links go through the root's sharedLinks.
+    - LinkContentForm: Content's, CampaignDetail's and BlogPostDetail's LinkContent (design §8: campaign, kind, source, use, intended
+      date), over the map linkContentValues (campaignFixed keeps the campaign, kindFixed and sourceFixed the post).
+    - ContentSendForm: ContentDetail's and BlogPostDetail's "create draft send" (topic, name, the newsletter's category), over the map
+      contentSendValues. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- a new content link, its use changed, or ended; a new link opens its ContentDetail -->
+    <transition name="storeContent">
+        <actions>
+            <service-call name="mantle.marketing.MarketingContentServices.store#CampaignContent" out-map="stored"
+                    in-map="{campaignContentId:(campaignContentId || null), action:(action || null), marketingCampaignId:(marketingCampaignId || null),
+                        contentKindEnumId:(contentKindEnumId || null), sourceId:(sourceId || null), useText:(useText ?? null),
+                        intendedDate:(intendedDate || null), expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null)}"/>
+            <set field="contentDetailPath" from="sharedLinks?.['Content/ContentDetail'] || null"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${action == 'end' ? 'The link ended; the content itself is unchanged' : stored?.created ? 'Linked to the campaign; linking publishes nothing' : 'Saved'}</message>
+            </if>
+        </actions>
+        <conditional-response url="${contentDetailPath}"><condition><expression>contentDetailPath &amp;&amp; stored?.created</expression></condition>
+            <parameter name="campaignContentId" from="stored.campaignContentId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- a draft send from a content link: its Compose -->
+    <transition name="createContentSend">
+        <actions>
+            <service-call name="mantle.marketing.MarketingContentServices.create#ContentSend" out-map="created"
+                    in-map="{campaignContentId:campaignContentId, contactListId:contactListId, sendName:(sendName || null),
+                        postCategoryId:(postCategoryId || null)}"/>
+            <set field="composePath" from="sharedLinks?.['Sends/Compose'] || null"/>
+            <if condition="!ec.message.hasError()"><message type="success">Send ${created.campaignSendId} started as a draft; it takes the approved posts when it is prepared</message></if>
+        </actions>
+        <conditional-response url="${composePath}"><condition><expression>composePath &amp;&amp; created?.campaignSendId</expression></condition>
+            <parameter name="campaignSendId" from="created.campaignSendId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- a new post (its text, or a page of the space) opens its BlogPostDetail; a post's metadata saved -->
+    <transition name="storeBlogPost">
+        <actions>
+            <service-call name="mantle.marketing.MarketingContentServices.store#BlogPost" out-map="stored"
+                    in-map="{wikiBlogId:(wikiBlogId || null), wikiSpaceId:(wikiSpaceId || null), wikiPageId:(wikiPageId || null), title:title,
+                        author:author, summary:summary, publishDate:(publishDate || null), metaKeywords:metaKeywords,
+                        metaDescription:metaDescription, blogText:(blogText || null), expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null)}"/>
+            <set field="postDetailPath" from="sharedLinks?.['Content/BlogPostDetail'] || null"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${stored?.created ? 'Post ' + title + ' started; write and publish its page in Knowledge' : 'Post saved'}</message>
+            </if>
+        </actions>
+        <conditional-response url="${postDetailPath}"><condition><expression>postDetailPath &amp;&amp; stored?.created</expression></condition>
+            <parameter name="wikiBlogId" from="stored.wikiBlogId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="addBlogCategory">
+        <actions>
+            <service-call name="mantle.marketing.MarketingContentServices.add#BlogCategory"
+                    in-map="{wikiBlogId:wikiBlogId, wikiPageCategoryId:wikiPageCategoryId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">The post is in the category</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="removeBlogCategory">
+        <actions>
+            <service-call name="mantle.marketing.MarketingContentServices.remove#BlogCategory"
+                    in-map="{wikiBlogId:wikiBlogId, wikiPageCategoryId:wikiPageCategoryId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">The post is out of the category</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="LinkContentForm">
+            <widgets>
+                <label type="p" style="text-caption m-muted" text="Linking plans the content for the campaign; it publishes nothing and the content stays with its owner."/>
+                <form-single name="LinkContent" transition="storeContent" map="linkContentValues">
+                    <field name="action"><default-field><hidden default-value="add"/></default-field></field>
+                    <field name="marketingCampaignId">
+                        <conditional-field condition="linkContentValues.campaignFixed"><hidden/></conditional-field>
+                        <default-field title="Campaign">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'campaigns', selected:marketingCampaignId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="contentKindEnumId">
+                        <conditional-field condition="linkContentValues.kindFixed"><hidden/></conditional-field>
+                        <default-field title="Kind">
+                            <drop-down allow-empty="false">
+                                <option key="CckBlogPost" text="Blog post"/>
+                                <option key="CckSitePage" text="Landing page"/>
+                                <option key="CckFile" text="Campaign file"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="sourceId">
+                        <conditional-field condition="linkContentValues.sourceFixed"><hidden/></conditional-field>
+                        <default-field title="Content">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'contentSources', selected:sourceId}">
+                                    <depends-on field="contentKindEnumId"/>
+                                    <depends-on field="marketingCampaignId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="useText"><default-field title="Use" tooltip="What the campaign uses it for, such as the landing page or a newsletter article"><text-line size="40"/></default-field></field>
+                    <field name="intendedDate"><default-field title="Intended date" tooltip="A plan, not a release: publishing stays with the content's owner"><date-time type="date"/></default-field></field>
+                    <field name="submitButton"><default-field title="Link content"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="marketingCampaignId"/><field-ref name="contentKindEnumId"/></field-row>
+                        <field-ref name="sourceId"/>
+                        <field-row><field-ref name="useText"/><field-ref name="intendedDate"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+        <section name="ContentSendForm">
+            <widgets>
+                <label type="p" style="text-caption m-muted" text="${contentSendValues.helpText}"/>
+                <form-single name="ContentSend" transition="createContentSend" map="contentSendValues">
+                    <field name="campaignContentId"><default-field><hidden/></default-field></field>
+                    <field name="contactListId">
+                        <default-field title="Topic" tooltip="The Marketing list whose consenting members receive it">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'lists', organizationPartyId:contentSendValues.organizationPartyId, selected:contactListId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="sendName"><default-field title="Send name"><text-line size="40"/></default-field></field>
+                    <field name="postCategoryId">
+                        <conditional-field condition="contentSendValues.newsletter" title="Blog category"
+                                tooltip="Its approved posts as of the send's preparation; empty: the list's newsletter category, else the post's first">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'blogCategories', selected:postCategoryId}"/>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Create draft send"><submit/></default-field></field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

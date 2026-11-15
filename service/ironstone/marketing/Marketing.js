@@ -140,6 +140,9 @@ function scope() {
     // P13: the lead rules are read by a content author or the administrator (design §2 LeadRules: A, S), as Mantle's find#LeadRules
     // asks; a lead's own pipeline stays Sales' (the user's Sales read, Leads' mount)
     capabilities.leadRuleRead = !!capabilities.anyRead && !!(capabilities.contentEdit || capabilities.configure)
+    // P14: the content (campaign content, blog posts, landing pages, Knowledge) is every Marketing reader's (design §2: Content,
+    // BlogPosts and LandingPages the app's), edited with MARKETING_CONTENT_EDIT; the wiki's own rules decide each page
+    capabilities.contentRead = !!capabilities.anyRead
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
@@ -236,7 +239,17 @@ const linkPaths = [
     // P13: the lead rules and one rule (design §10 LeadRules), and Sales' LeadSources mounted in Settings (design §12)
     "Leads/LeadRules",
     "Leads/LeadRuleDetail",
-    "Settings/LeadSources"
+    "Settings/LeadSources",
+    // P14: the content, one content link, the blog posts, one post, the landing pages (Shared/Pages), one page (Shared/PageDetail) and
+    // Commons Knowledge (design §8)
+    "Content",
+    "Content/Content",
+    "Content/ContentDetail",
+    "Content/BlogPosts",
+    "Content/BlogPostDetail",
+    "Content/LandingPages",
+    "Content/PageDetail",
+    "Content/Knowledge"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -362,6 +375,23 @@ const recordKinds = {
                 organizationPartyId: row.organizationPartyId,
                 label: "Enrollment " + automationEnrollmentId + " · " + (automation?.automationName || row.marketingAutomationId),
                 detail: statusName(row.statusId)
+            }
+        }
+    },
+    // P14: a campaign's content link (CampaignContent), by its organization: ContentDetail
+    content: {
+        name: "Content",
+        icon: "sym_o_article",
+        destination: {path: "Content/ContentDetail", parameter: "campaignContentId"},
+        read: (userScope, campaignContentId) => {
+            if (!userScope.capabilities.anyRead) return null
+            const row = one("mantle.marketing.campaign.CampaignContent", {campaignContentId})
+            if (!row || !covers(userScope, row.organizationPartyId)) return null
+            const campaign = one(CAMPAIGN, {marketingCampaignId: row.marketingCampaignId})
+            return {
+                organizationPartyId: row.organizationPartyId,
+                label: "Content " + campaignContentId + " · " + (campaign?.campaignName || row.marketingCampaignId),
+                detail: row.useText || ""
             }
         }
     }
@@ -741,6 +771,149 @@ const choiceSources = {
         const automation = p.marketingAutomationId ? one(AUTOMATION, {marketingAutomationId: p.marketingAutomationId}) : null
         if (!automation || !userScope.capabilities.audienceRead || !covers(userScope, automation.organizationPartyId)) return []
         return topicMembers(automation.contactListId, term, selected)
+    },
+    // P14: the sites whose Marketing mount serves an organization of the scope (Shared/Pages' site choice), by name
+    sites: (userScope, term, selected) => {
+        const ids = organizationIds(userScope)
+        if (!ids.length) return []
+        const siteIds = Array.from(
+            find("mantle.public.PublicSiteApp")
+                .condition("app", "marketing")
+                .condition("targetId", "in", ids)
+                .selectField("siteId")
+                .list()
+        ).map(row => row.siteId)
+        if (!siteIds.length) return []
+        let query = find("mantle.public.PublicSite").condition("siteId", "in", siteIds).orderBy("^name").limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["siteId", "name"], term))
+        const options = Array.from(query.list()).map(row => ({value: row.siteId, label: row.name || row.siteId}))
+        return withSelected(
+            options,
+            selected,
+            siteId => siteIds.includes(siteId),
+            siteId => one("mantle.public.PublicSite", {siteId})?.name || siteId
+        )
+    },
+    // P14: the wiki spaces the user may write a post in (the wiki's update right), by description
+    blogSpaces: (userScope, term, selected) => {
+        const spaces = Array.from(
+            ec.service
+                .sync()
+                .name("org.moqui.resource.WikiServices.get#UserWikiSpaces")
+                .parameters({userId: ec.user.userId})
+                .call()?.wikiSpaceAndUserList || []
+        )
+        const writable = spaces.filter(
+            space =>
+                ec.service
+                    .sync()
+                    .name("org.moqui.resource.WikiServices.get#WikiPageAccess")
+                    .parameters({wikiSpaceId: space.wikiSpaceId})
+                    .call()?.canUpdate
+        )
+        const options = writable
+            .map(space => ({value: space.wikiSpaceId, label: space.description || space.wikiSpaceId}))
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()) || option.value.includes(term))
+            .sort((a, b) => a.label.localeCompare(b.label))
+            .slice(0, choiceLimit)
+        return withSelected(
+            options,
+            selected,
+            id => writable.some(space => space.wikiSpaceId === id),
+            id => id
+        )
+    },
+    // P14: the blog categories (WikiPageCategory), by name
+    blogCategories: (userScope, term, selected) => {
+        let query = find("moqui.resource.wiki.WikiPageCategory").orderBy("^categoryName").limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["wikiPageCategoryId", "categoryName"], term))
+        const options = Array.from(query.list()).map(row => ({
+            value: row.wikiPageCategoryId,
+            label: row.categoryName || row.wikiPageCategoryId
+        }))
+        return withSelected(
+            options,
+            selected,
+            id => !!one("moqui.resource.wiki.WikiPageCategory", {wikiPageCategoryId: id}),
+            id => one("moqui.resource.wiki.WikiPageCategory", {wikiPageCategoryId: id})?.categoryName || id
+        )
+    },
+    // P14: the pages of a space the user may view (a post from a page), by path
+    spacePages: (userScope, term, selected, p) => {
+        if (!p.wikiSpaceId) return []
+        const access = ec.service
+            .sync()
+            .name("org.moqui.resource.WikiServices.get#WikiPageAccess")
+            .parameters({wikiSpaceId: p.wikiSpaceId})
+            .call()
+        if (!access?.canView) return []
+        let query = find("moqui.resource.wiki.WikiPage", {wikiSpaceId: p.wikiSpaceId}).orderBy("pagePath").limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["pagePath"], term))
+        return Array.from(query.list())
+            .filter(row => row.restrictView !== "Y")
+            .map(row => ({value: row.wikiPageId, label: row.pagePath || row.wikiPageId}))
+    },
+    // P14: the content a campaign may link, of a kind (Mantle's store#CampaignContent checks each again): the blog posts the user may
+    // view, the landing pages of the campaign's organization, the campaign's files
+    contentSources: (userScope, term, selected, p) => {
+        const kind = p.contentKindEnumId
+        const campaign = p.marketingCampaignId ? one(CAMPAIGN, {marketingCampaignId: p.marketingCampaignId}) : null
+        if (kind === "CckBlogPost") {
+            const out = ec.service
+                .sync()
+                .name("mantle.marketing.MarketingContentServices.find#BlogPosts")
+                .parameters({term: term || null, pageSize: choiceLimit})
+                .call()
+            return Array.from(out?.posts || []).map(post => ({
+                value: post.wikiBlogId,
+                label: post.title + " · " + post.spaceName
+            }))
+        }
+        if (!campaign || !covers(userScope, campaign.organizationPartyId)) return []
+        if (kind === "CckSitePage") {
+            const mounts = Array.from(
+                find("mantle.public.PublicSiteApp", {app: "marketing", targetId: campaign.organizationPartyId}).list()
+            )
+            if (!mounts.length) return []
+            const factory = ec.entity.conditionFactory
+            let query = find("mantle.public.PublicSitePage")
+                .condition(
+                    factory.makeCondition(
+                        mounts.map(mount =>
+                            factory.makeCondition(
+                                [
+                                    factory.makeCondition("siteId", "equals", mount.siteId),
+                                    factory.makeCondition("appMountId", "equals", mount.appMountId)
+                                ],
+                                "and"
+                            )
+                        ),
+                        "or"
+                    )
+                )
+                .orderBy("^title")
+                .limit(choiceLimit)
+            if (term) query = query.condition(textCondition(["title", "routePath"], term))
+            return Array.from(query.list()).map(row => ({
+                value: row.sitePageId,
+                label: (row.title || row.routePath) + " · /pages/" + row.routePath
+            }))
+        }
+        if (kind === "CckFile")
+            return Array.from(
+                find("mantle.marketing.campaign.CampaignAsset", {marketingCampaignId: campaign.marketingCampaignId}).list()
+            )
+                .map(row => ({
+                    value: row.campaignAssetId,
+                    label:
+                        row.description ||
+                        String(row.contentLocation || "")
+                            .split("/")
+                            .pop()
+                }))
+                .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+                .slice(0, choiceLimit)
+        return []
     },
     // P3: the email templates a list's policy or binding may name (Comms' templates arrive in P6), by id or description
     emailTemplates: (userScope, term, selected) => {

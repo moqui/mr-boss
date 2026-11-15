@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <default-field title="Title"><display/></default-field>
                     </field>
                     <field name="routePath">
-                        <conditional-field condition="canEdit" title="Route" tooltip="The address under the shop's pages/, such as returns or help/shipping">
+                        <conditional-field condition="canEdit" title="Route" tooltip="${pagesWords.routeTip}">
                             <text-line size="30"/>
                         </conditional-field>
                         <default-field title="Route"><display/></default-field>
@@ -71,6 +71,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <default-field title="Locale"><display/></default-field>
                     </field>
                     <field name="pageRole">
+                        <conditional-field condition="!storePages" title="Policy"><ignored/></conditional-field>
                         <conditional-field condition="canEdit" title="Policy" tooltip="A policy page checkout links to; a site has one of each">
                             <drop-down allow-empty="true">
                                 <option key="delivery" text="Delivery"/>
@@ -82,6 +83,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <default-field title="Policy"><display text="${sitePage.roleText}"/></default-field>
                     </field>
                     <field name="templateKey">
+                        <conditional-field condition="!storePages" title="Template"><ignored/></conditional-field>
                         <conditional-field condition="canEdit" title="Template" tooltip="The theme's page template; empty for its default">
                             <text-line size="30"/>
                         </conditional-field>

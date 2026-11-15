@@ -16,10 +16,12 @@ along with this software (see the LICENSE.md file). If not, see
     the store and policy pages of the sites the user's stores sell on. PageFind (site, title or route, locale, role and
     publication state), PageList (title, route under the Shop's pages/, locale, role, template, published version and its
     window, a scheduled or failed publication) and NewPage (title, route, locale, template and policy role; a designer's,
-    COMMERCE_THEME_EDIT), each row opening PageDetail. Commerce's context only (Marketing mounts it later with its own):
-    ironstone.commerce.ContextServices.get#SharedContext, then mantle.public.ThemeServices.find#SitePages and
-    store#SitePage, which check the permission and the site's store again. The Forum's guidelines and about pages are the
-    site's own (PASS Sites) and are not listed. -->
+    COMMERCE_THEME_EDIT), each row opening PageDetail. The context is the mounting app's registration
+    (service/ironstone/shared/PageApps.js; impl-marketing P14, F22): Commerce's (its Website area: the store pages, its context
+    service, themeEdit and publish) and Marketing's (Content's LandingPages: the storeless landing pages of the sites whose
+    Marketing mount serves the user's organizations, no policy role or template, its contentEdit both editing and publishing);
+    mantle.public.ThemeServices.find#SitePages and store#SitePage, with the registration's app, check the permission and the
+    site's store or organization again. The Forum's guidelines and about pages are the site's own (PASS Sites) and are not listed. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Pages" default-menu-index="1">
     <parameter name="siteId"/>
@@ -28,17 +30,25 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="pageRole"/>
     <parameter name="state"/>
     <always-actions>
-        <!-- the mounting app's context: Commerce's alone for now (design-commerce §5's per-app table) -->
-        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="pagesContext"/>
-        <set field="pagesCan" from="pagesContext.capabilities"/>
+        <!-- the mounting app's registration and context (design-commerce §5's per-app table; PageApps.js) -->
+        <set field="pagesContext" from="ec.resource.script('component://mr-boss/service/ironstone/shared/PageApps.js').context(appRoot)"/>
+        <set field="pagesCan" from="pagesContext.can"/>
         <set field="sharedLinks" from="pagesContext.sharedLinks"/>
     </always-actions>
-    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <!-- the mounting app's drop-downs (its sites: Commerce's of the user's stores, Marketing's of their organizations) -->
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="${pagesContext.choicesService}" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:(term || null), selected:(selected || null)}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
     <transition name="createPage">
         <actions>
             <service-call name="mantle.public.ThemeServices.store#SitePage" out-map="created"
-                    in-map="{siteId:siteId, title:title, routePath:routePath, locale:(locale || null), templateKey:(templateKey || null),
-                        pageRole:(pageRole || null), changeReason:(changeReason || null)}"/>
+                    in-map="{app:pagesContext.pageApp, siteId:siteId, title:title, routePath:routePath, locale:(locale || null),
+                        templateKey:(templateKey || null), pageRole:(pageRole || null), changeReason:(changeReason || null)}"/>
             <if condition="!ec.message.hasError()">
                 <set field="sitePageId" from="created.sitePageId"/>
                 <message type="success">Page ${title} is a draft; write it, then publish it.</message>
@@ -51,8 +61,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the locale choices are read here, not in the widget (server-static: a widget sees only part of ec) -->
         <set field="localeOptions" from="ec.l10n.getAvailableLocales()"/>
         <service-call name="mantle.public.ThemeServices.find#SitePages" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{siteId:(siteId || null), term:(term || null), locale:(locale || null), pageRole:(pageRole || null),
-                    state:(state || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+                in-map="{app:pagesContext.pageApp, siteId:(siteId || null), term:(term || null), locale:(locale || null),
+                    pageRole:(pageRole || null), state:(state || null), pageIndex:pageIndex, pageSize:pageSize}"/>
         <set field="foundError" from="ec.message.hasError()"/>
         <script>ec.message.clearErrors()</script>
         <set field="pages" from="found?.pages || []"/>
@@ -64,7 +74,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="pagesPageRangeHigh" from="found?.pagesPageRangeHigh || 0"/>
         <set field="findValues" from="{siteId:siteId, term:term, locale:locale, pageRole:pageRole, state:state}"/>
         <set field="newPageValues" from="{siteId:siteId, title:'', routePath:'', locale:'', templateKey:'', pageRole:''}"/>
-        <set field="pageDetailUrl" from="sharedLinks['Website/PageDetail']"/>
+        <set field="pageDetailUrl" from="pagesContext.detailUrl"/>
+        <set field="storePages" from="pagesContext.storePages"/>
+        <set field="pagesWords" from="pagesContext.words"/>
     </actions>
     <widgets>
         <container style="row items-center q-col-gutter-sm q-mb-sm">
@@ -83,7 +95,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </field>
                         <field name="title"><default-field title="Title"><text-line size="40"/></default-field></field>
                         <field name="routePath">
-                            <default-field title="Route" tooltip="The address under the shop's pages/, such as returns or help/shipping">
+                            <default-field title="Route" tooltip="${pagesWords.routeTip}">
                                 <text-line size="30"/>
                             </default-field>
                         </field>
@@ -95,19 +107,21 @@ along with this software (see the LICENSE.md file). If not, see
                             </default-field>
                         </field>
                         <field name="pageRole">
-                            <default-field title="Policy" tooltip="A policy page checkout links to; a site has one of each">
+                            <conditional-field condition="storePages" title="Policy" tooltip="A policy page checkout links to; a site has one of each">
                                 <drop-down allow-empty="true">
                                     <option key="delivery" text="Delivery"/>
                                     <option key="returns" text="Returns"/>
                                     <option key="privacy" text="Privacy"/>
                                     <option key="terms" text="Terms"/>
                                 </drop-down>
-                            </default-field>
+                            </conditional-field>
+                            <default-field><ignored/></default-field>
                         </field>
                         <field name="templateKey">
-                            <default-field title="Template" tooltip="The theme's page template; empty for its default">
+                            <conditional-field condition="storePages" title="Template" tooltip="The theme's page template; empty for its default">
                                 <text-line size="30"/>
-                            </default-field>
+                            </conditional-field>
+                            <default-field><ignored/></default-field>
                         </field>
                         <field name="submitButton"><default-field title="Create page"><submit/></default-field></field>
                         <field-layout>
@@ -132,14 +146,15 @@ along with this software (see the LICENSE.md file). If not, see
             <field name="term"><default-field title="Title or route"><text-line size="24"/></default-field></field>
             <field name="locale"><default-field title="Locale"><text-line size="8"/></default-field></field>
             <field name="pageRole">
-                <default-field title="Policy">
+                <conditional-field condition="storePages" title="Policy">
                     <drop-down allow-empty="true">
                         <option key="delivery" text="Delivery"/>
                         <option key="returns" text="Returns"/>
                         <option key="privacy" text="Privacy"/>
                         <option key="terms" text="Terms"/>
                     </drop-down>
-                </default-field>
+                </conditional-field>
+                <default-field><ignored/></default-field>
             </field>
             <field name="state">
                 <default-field title="Publication">
@@ -199,7 +214,6 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-list>
             </box-body-nopad>
         </container-box>
-        <label text="No pages match. A page is on a site one of your stores sells on." type="p" style="text-caption m-muted"
-                condition="!pages.length"/>
+        <label text="${pagesWords.empty}" type="p" style="text-caption m-muted" condition="!pages.length"/>
     </widgets>
 </screen>

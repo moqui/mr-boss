@@ -235,9 +235,9 @@ Shared forms have one definition at the cited owner; each mounted route is count
 | Content | Marketing/Content | list | xml | Plan campaign assets and publication links | N CampaignContent | own | app | new | campaign/type filters |
 | ContentDetail | Marketing/Content/ContentDetail | detail | xml | Link approved content to campaign outputs | N CampaignContent; WikiPage/WikiBlog | own | A | new | content association ID |
 | BlogPosts | Marketing/Content/BlogPosts | list | xml | Find and start blog posts | WikiBlog | own | app; A to create | parity | wiki space, category and date filters |
-| BlogPostDetail | Marketing/Content/BlogPosts/BlogPostDetail | detail | xml | Maintain one post's metadata, categories and campaign use | WikiBlog | own | A | parity | wikiBlogId |
+| BlogPostDetail | Marketing/Content/BlogPostDetail | detail | xml | Maintain one post's metadata, categories and campaign use | WikiBlog | own | A | parity | wikiBlogId |
 | LandingPages | Marketing/Content/LandingPages | list | xml | Find campaign landing pages | PublicSitePage, extended (X14) | Commerce §5 Pages (Shared, X14) | content readers | new | site and campaign |
-| PageDetail | Marketing/Content/LandingPages/PageDetail | editor | xml | Author a campaign landing page | PublicSitePage, extended (X14); WikiPage | Commerce §5 PageDetail (Shared, X14) | content editors | new | site/page ID |
+| PageDetail | Marketing/Content/PageDetail | editor | xml | Author a campaign landing page | PublicSitePage, extended (X14); WikiPage | Commerce §5 PageDetail (Shared, X14) | content editors | new | site/page ID |
 | Knowledge | Marketing/Content/Knowledge | editor | qvue | Author/review the linked wiki page | WikiPage | Commons §10 | content editors | parity | authorized wiki page |
 | TrackingLinks | Marketing/Content/TrackingLinks | list | xml | Find campaign links and QR targets | TrackingCode | own | app | new | campaign/source filters |
 | TrackingLinkDetail | Marketing/Content/TrackingLinks/TrackingLinkDetail | detail | xml | Maintain and inspect a tracking link | TrackingCode | own | A, R | new | tracking code ID |
@@ -1122,6 +1122,13 @@ page is what a public blog shows.
 | Categories | list | Show and remove categories | category, sent date | remove with confirmation | T.remove#BlogCategory over `delete#moqui.resource.wiki.WikiBlogCategory` | Wiki/EditWikiBlog CategoriesForm |
 | CampaignUse | list | Link the post to campaigns and sends | campaign, use, intended date, linked send and its state | create draft send from the post | T.store#CampaignContent; D.create#Send | ContentDetail LinkContent and Distribution |
 
+As built (impl-marketing P14): BlogPostDetail is `Marketing/Content/BlogPostDetail`, a sibling of BlogPosts; posts are written
+through T.store#BlogPost, which checks MARKETING_CONTENT_EDIT and the wiki's write right to the space and then calls
+`create#WikiBlog` or `update#WikiBlog` as built (a post from a page is checked too, which `create#WikiBlog` itself does not);
+BlogPostBody is the Knowledge mount opened on the post's page (Write in Knowledge) with the page's published and newest versions
+and its latest review shown; CampaignUse lists the post's links and their sends, a link's ContentDetail drafting the newsletter
+(T.create#ContentSend: a draft send naming the blog category whose approved posts its preparation adds). BlogPosts lists the
+posts over a view of WikiBlog and its page (WikiBlogFindView joins every category and leaves out a post with none).
 The T category services check write access to the post's wiki space before the entity write,
 which the baseline's raw entity transitions did not. Public listings (the space's blog URL now,
 PASS Publishing later) show a post only from its publish date, and the page's review decides which
@@ -1145,6 +1152,17 @@ editing stays Commerce-owned and needs its own grant. Crosscut row:
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
 | Marketing | Pages of permitted sites with a campaign link; page body, SEO, route and window | permitted sites; campaign when opened from one | create, edit, preview, request review, publish with the content grant; no theme edits | storeless campaign pages that convert |
+
+As built (impl-marketing P14): LandingPages and PageDetail are Content's tabs (PageDetail a sibling,
+`Marketing/Content/PageDetail`, as ListDetail is), the shared screens reading Marketing's registration in
+`service/ironstone/shared/PageApps.js`; every Marketing reader lists the pages of the sites whose Marketing mount serves their
+organizations, and MARKETING_CONTENT_EDIT both edits and publishes (no separate approval: a page's publication is its own
+dated, audited act, as Commerce's is). A landing page takes no policy role and no template (the site's default page template);
+its text is kept in the organization's page space (MarketingPageSpace, restrictUpdate, written only by the site page
+services). A component is embedded by a paragraph of its own, `[[subscribe LIST_ID]]` or `[[form PUBLICATION_ID]]` (at most
+five a page); PASS renders a list offered on the site as a subscribe box posting to Subscribe and an open form publication as a
+card linking SubmitForm, and anything else as nothing. A campaign's link to a page is its CampaignContent; CampaignAssociation's
+page kind stays unavailable. The Event component arrives with P16.
 
 **Source:** research §6; Commerce §5. **Needs:** MKT-CONTENT, MKT-PUBLIC.
 
@@ -1788,7 +1806,9 @@ Proposed operations are `marketing.getPublication`, `marketing.requestSubscripti
 Marketing operations: the one PASS Account Email preferences page serves them (X15). The payment
 result is read through `marketing.getRegistration`, which reports the attempt's state from
 Accounting's coordinator; there is no Marketing payment-result operation (X9). Marketing
-landing-page rendering uses the shared registered page renderer. Tracking redirect/pixel and
+landing-page rendering uses the shared registered page renderer (as built in impl-marketing P14: the read-only operation
+`getMarketingPage` over the site page services' `get#SitePage` for the mount, rendered on the Marketing app's Page at
+`pages/{route}`, its clean HTML sanitized again, its embedded components rendered through their own operations). Tracking redirect/pixel and
 signed provider callbacks are web scripts (the framework's mechanism; the scripts are mr-pass's,
 registered by a conf of mr-pass's own, impl-marketing F55, F79) calling K, not BOSS screens or operations a
 page offers (§8). A remote frontend has no Mantle, so a script reaches K through PASS's transport as
@@ -1991,7 +2011,7 @@ there is no parallel Marketing version/snapshot system for configuration history
 | CampaignExperiment / CampaignExperimentVariant | experiment ID/send, sample %, measure/window, chosen variant/release; variant ID, approved content reference | One assignment per recipient and one winner release; variant content uses the same send/template history rules |
 | MarketingAutomation / MarketingAutomationStep | automation ID/campaign/topic, effective admission/goal/reentry policy; step order, kind and typed payload with dates | Ordered bounded steps; no scripts, cycles or arbitrary branches; activation approved at an effective time |
 | AutomationEnrollment / AutomationStepExecution | enrollment ID/party/source-event/effective definition, current step/state; unique enrollment+step execution and send-recipient link | Independent runs and effects survive restart; once-per-source admission and no repeat completed step |
-| CampaignContent | campaign-content ID, campaign, typed WikiPage/WikiBlog/page/file reference, use, intended date, from/thru | Content body and publication stay with their owner (WikiBlog posts authored in §8); distribution joins to actual CampaignSend |
+| CampaignContent | campaign-content ID, campaign and its organization, kind (blog post, landing or site page, wiki page, campaign file) with its reference, use, intended date, from/thru | Content body and publication stay with their owner (WikiBlog posts authored in §8); distribution joins to actual CampaignSend (`CampaignSend.campaignContentId`; a newsletter's `postCategoryId` and the posts each preparation took with their page versions, `CampaignSendPost`) |
 | CampaignAsset / CampaignSendContent / EventRegistrationContent | host ID plus content ID/type, resource reference, from/thru and audit fields | Native-style host file associations for shared RecordFiles (CampaignAsset is the campaign's, named apart from CampaignContent); campaign asset planning stays CampaignContent |
 | TrackingCode, extended; MarketingTrackingEvent | Native redirect/campaign/type/lifetimes, typed UTM fields and organization; event ID, code, opaque visitor key, recipient when permitted, site, timestamp, observed kind and automation evidence | Captured on the authority through the PASS facade (X10); native visit/order/return joins retained; consent-aware observations are distinct from confirmed outcomes |
 | MarketingOutcomeLink | organization/outcome type/native key/model key, primary campaign, evidence source/time, decision/correction metadata | One primary credit per outcome; source allocations and native order/invoice links prevent duplicate revenue |

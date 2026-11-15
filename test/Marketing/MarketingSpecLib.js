@@ -5,23 +5,26 @@ const ids = {
     // the Marketing users' organization (Retail) and the second demo organization, which marketing.author2 works alone
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SERVICES",
-    // the menu of design §1.2 built so far: every Marketing user's, and with Settings the administrator's
-    staffMenu: ["Home", "Campaigns"],
+    // the menu of design §1.2 built so far: every Marketing user's, and with Settings the administrator's; P14: Content every
+    // Marketing reader's
+    staffMenu: ["Home", "Campaigns", "Content"],
     // P8: Sends for the approvers and dispatchers too (its Sends tab; the templates stay their readers'); P11 Automations too
-    sendsStaffMenu: ["Home", "Campaigns", "Sends", "Automations"],
+    sendsStaffMenu: ["Home", "Campaigns", "Sends", "Automations", "Content"],
     approverSendsMenu: ["Sends"],
     // P3: Audiences for the audience managers and the administrator; Leads for a user who reads Sales (the instance administrator)
     // P11: Automations for the authors, approvers, dispatchers, audience managers and the administrator
     // P12: Surveys for the authors, audience managers, analysts and the administrator
-    audienceMenu: ["Home", "Campaigns", "Audiences", "Automations", "Surveys"],
+    audienceMenu: ["Home", "Campaigns", "Audiences", "Automations", "Content", "Surveys"],
     // P13: Leads (its lead rules) for the authors and the administrator too
-    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Surveys", "Leads", "Settings"],
-    systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Surveys", "Leads", "Settings"],
-    analystMenu: ["Home", "Campaigns", "Surveys"],
+    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Surveys", "Leads", "Settings"],
+    systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Surveys", "Leads", "Settings"],
+    analystMenu: ["Home", "Campaigns", "Content", "Surveys"],
     // P6: Sends (Comms' templates) for the authors and the administrator
-    authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Surveys", "Leads"],
+    authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Content", "Surveys", "Leads"],
     // P13: the Leads tabs of an author who reads no Sales
     authorLeadsMenu: ["LeadRules"],
+    // P14: Content's tabs
+    contentMenu: ["Content", "BlogPosts", "LandingPages", "Knowledge"],
     sendsMenu: ["Sends", "MessageTemplates"],
     // P5: Segments and AudiencePreview join the Audiences tabs
     audiencesMenu: ["Lists", "Segments", "Consent", "Suppressions", "AudiencePreview"],
@@ -32,8 +35,8 @@ const ids = {
     // the keys of the screens a user may open: Lists' (g l, P3) an audience manager's
     keys: ["g m", "g c"],
     // P6: an author opens the templates (g t); P8 the sends (g n); P11 the automations (g a)
-    // P12: and the surveys (g v)
-    authorKeys: ["g m", "g c", "g t", "g n", "g a", "g v"],
+    // P12: and the surveys (g v); P14 the content (g o)
+    authorKeys: ["g m", "g c", "g t", "g n", "g a", "g v", "g o"],
     // P2's demo campaigns (data/BossZZMarketingDemoData.xml): Retail's running one (approved at revision 1, with a planned child),
     // Retail's planned one, and Services' own
     runningCampaignId: "BOSS_MKT_CMP_SPRING",
@@ -86,7 +89,14 @@ const ids = {
     leadPublicationId: "BOSS_MKT_PUB_QUOTE",
     leadRuleId: "BOSS_MKT_LRULE_QUOTE",
     failedCaptureId: "BOSS_MKT_LCAP_QUOTE_1",
-    eastTeamId: "BOSS_SAL_TEAM_EAST"
+    eastTeamId: "BOSS_SAL_TEAM_EAST",
+    // P14's demo content: Retail's garden blog space with three posts in its garden news category (two published), the first linked to
+    // the running campaign, and the spring landing page on ZIZI_SHOP's Marketing mount with an embedded subscribe box
+    blogSpaceId: "MKTBLOG",
+    blogCategoryId: "BOSS_MKT_BLOGCAT_GARDEN",
+    blogPostId: "BOSS_MKT_BLOG_ROSES",
+    landingPageId: "BOSS_MKT_PAGE_SPRING",
+    contentLinkId: "BOSS_MKT_CC_ROSES"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's

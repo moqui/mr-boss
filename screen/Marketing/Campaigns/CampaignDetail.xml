@@ -22,8 +22,9 @@ along with this software (see the LICENSE.md file). If not, see
     segments it plans with), Decisions (requests and decisions, a self-approval marked, those ended by a later change) and Activity
     (the native notes, read only, the conversation and the files: the campaign is a Chatter and files host). Every change is Mantle's
     guarded service at the revision read; a material change (organization, parent, dates, budget, managers) returns an approved plan
-    to review. Sends lists its sends with QuickSend (P8); Results the lead forms' handoffs to Sales (P13, any Marketing reader); the
-    Audience, Automation, Content, Tracking links, Promotions and Events boxes join with their phases. -->
+    to review. Sends lists its sends with QuickSend (P8), Automations its automations (P11), Results the lead forms' handoffs to Sales
+    (P13, any Marketing reader), Content its planned content with Link content (P14: blog posts, landing pages and files; linking
+    publishes nothing); the Audience, Tracking links, Promotions and Events boxes join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Campaign" default-menu-include="false">
     <parameter name="marketingCampaignId" required="true"/>
@@ -39,6 +40,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="duplicateCampaign" location="component://mr-boss/template/MarketingCampaigns.xml"/>
     <transition-include name="createSend" location="component://mr-boss/template/MarketingSends.xml"/>
     <transition-include name="createAutomation" location="component://mr-boss/template/MarketingAutomations.xml"/>
+    <transition-include name="storeContent" location="component://mr-boss/template/MarketingContent.xml"/>
     <actions>
         <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="campaignCheck" transaction="force-new" ignore-error="true"
                 in-map="{appRoot:appRoot, recordType:'campaign', recordId:marketingCampaignId}"/>
@@ -105,6 +107,15 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <set field="leadHandoffs" from="handoffsFound?.handoffs || null"/>
         <set field="leadRulesPath" from="marketing.capabilities.leadRules ? (sharedLinks['Leads/LeadRules'] || null) : null"/>
+        <!-- P14: the campaign's content (design §3 CampaignDetail's Content, §8), with Link content (the campaign fixed) -->
+        <if condition="recordFound">
+            <service-call name="mantle.marketing.MarketingContentServices.find#CampaignContent" out-map="contentFound" transaction="force-new"
+                    ignore-error="true" in-map="{marketingCampaignId:marketingCampaignId, pageSize:20}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="campaignContentList" from="contentFound?.contents || []"/>
+        <set field="contentDetailPath" from="sharedLinks['Content/ContentDetail'] || null"/>
+        <set field="linkContentValues" from="{marketingCampaignId:marketingCampaignId, contentKindEnumId:'CckBlogPost', campaignFixed:true}"/>
     </actions>
     <widgets>
         <section name="CampaignNotFound" condition="!recordFound">
@@ -588,6 +599,35 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="${leadHandoffs?.captured} answers captured · ${leadHandoffs?.handedOff} handed to Sales" type="p" style="text-caption m-muted"
                                 condition="leadHandoffs?.captured"/>
                         <link url="${leadRulesPath}" text="Lead rules" link-type="anchor" condition="leadRulesPath"/>
+                    </box-body>
+                </container-box>
+
+                <!-- P14: the campaign's content -->
+                <container-box>
+                    <box-header title="Content"/>
+                    <box-toolbar>
+                        <container-dialog id="LinkContentDialog" button-text="Link content" icon="sym_o_add_link" title="Link content to ${campaign.campaignName}"
+                                width="640" condition="marketing.capabilities.contentEdit &amp;&amp; ['MKTG_CAMP_PLANNED', 'MKTG_CAMP_APPROVED', 'MKTG_CAMP_INPROGRESS'].includes(campaign.statusId)">
+                            <section-include name="LinkContentForm" location="component://mr-boss/template/MarketingContent.xml"/>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="No content planned yet." type="p" style="m-muted" condition="!campaignContentList.length"/>
+                        <form-list name="CampaignContentList" list="campaignContentList" skip-form="true" paginate="false" condition="campaignContentList.length">
+                            <field name="title">
+                                <default-field title="Content">
+                                    <link url="${contentDetailPath}" text="${title}" link-type="anchor" parameter-map="{campaignContentId:campaignContentId}"/>
+                                </default-field>
+                            </field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="useText"><default-field title="Use"><display/></default-field></field>
+                            <field name="intendedDateText"><default-field title="Intended"><display/></default-field></field>
+                            <field name="stateText"><default-field title="Publication"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="kindText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="intendedDateText"/></column>
+                            </columns>
+                        </form-list>
                     </box-body>
                 </container-box>
 

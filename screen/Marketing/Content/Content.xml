@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Content › Content (design-marketing §8 Content: ContentFind, CampaignContent, LinkContent; style-guide §3.2 List;
+    impl-marketing P14): the current content links of the campaigns of the user's organizations (blog posts, landing pages and campaign
+    files), each with the owner's publication state read only, by campaign, kind and use, a page at a time
+    (mantle.marketing.MarketingContentServices.find#CampaignContent, scoped in the query). Link content is the primary action
+    (MARKETING_CONTENT_EDIT); each row opens ContentDetail. Linking publishes nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Content" default-menu-index="1">
+    <parameter name="marketingCampaignId"/>
+    <parameter name="contentKindEnumId"/>
+    <parameter name="term"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="storeContent" location="component://mr-boss/template/MarketingContent.xml"/>
+    <actions>
+        <service-call name="mantle.marketing.MarketingContentServices.find#CampaignContent" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{marketingCampaignId:(marketingCampaignId || null), contentKindEnumId:(contentKindEnumId || null), term:(term || null),
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="contents" from="found?.contents || []"/>
+        <set field="contentsCount" from="found?.contentsCount || 0"/>
+        <set field="contentsPageIndex" from="found?.contentsPageIndex || 0"/>
+        <set field="contentsPageSize" from="found?.contentsPageSize || 20"/>
+        <set field="contentsPageMaxIndex" from="found?.contentsPageMaxIndex || 0"/>
+        <set field="contentsPageRangeLow" from="found?.contentsPageRangeLow || 0"/>
+        <set field="contentsPageRangeHigh" from="found?.contentsPageRangeHigh || 0"/>
+        <set field="canEdit" from="!!marketing.capabilities.contentEdit"/>
+        <set field="detailPath" from="sharedLinks['Content/ContentDetail']"/>
+        <set field="campaignPath" from="sharedLinks['Campaigns/CampaignDetail']"/>
+        <set field="findValues" from="{marketingCampaignId:marketingCampaignId, contentKindEnumId:contentKindEnumId, term:term}"/>
+        <set field="linkContentValues" from="{marketingCampaignId:(marketingCampaignId || null), contentKindEnumId:'CckBlogPost', campaignFixed:false}"/>
+        <set field="filtered" from="!!(marketingCampaignId || contentKindEnumId || term)"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Campaign content" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none"
+                        text="What each campaign plans to use: blog posts, landing pages and files. Their writing, review and publication stay with their owner."/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="LinkContentDialog" button-text="Link content" icon="sym_o_add_link" type="primary" width="640"
+                        title="Link content to a campaign" condition="canEdit">
+                    <section-include name="LinkContentForm" location="component://mr-boss/template/MarketingContent.xml"/>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="ContentFind" transition="." map="findValues">
+            <field name="marketingCampaignId">
+                <default-field title="Campaign">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'campaigns', selected:marketingCampaignId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="contentKindEnumId">
+                <default-field title="Kind">
+                    <drop-down allow-empty="true">
+                        <option key="CckBlogPost" text="Blog post"/>
+                        <option key="CckSitePage" text="Landing page"/>
+                        <option key="CckWikiPage" text="Wiki page"/>
+                        <option key="CckFile" text="File"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Use"><text-line size="24"/></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="marketingCampaignId"/>
+                    <field-ref name="contentKindEnumId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="CampaignContent" list="contents" skip-form="true" select-columns="true">
+                    <field name="title">
+                        <default-field title="Content">
+                            <link url="${detailPath}" text="${title}" link-type="anchor" parameter-map="{campaignContentId:campaignContentId}"/>
+                        </default-field>
+                    </field>
+                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                    <field name="campaignName">
+                        <default-field title="Campaign">
+                            <link url="${campaignPath}" text="${campaignName}" link-type="anchor" parameter-map="{marketingCampaignId:marketingCampaignId}"/>
+                        </default-field>
+                    </field>
+                    <field name="useText"><default-field title="Use"><display/></default-field></field>
+                    <field name="intendedDateText"><default-field title="Intended"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="Publication">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="publicText"><default-field title="Public"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="campaignName"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="kindText"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <label text="${filtered ? 'No content matches these filters.' : 'No campaign plans content yet.' + (canEdit ? ' Link a blog post, a landing page or a file with Link content.' : '')}"
+                type="p" style="text-caption m-muted" condition="!contents.length"/>
+    </widgets>
+</screen>

@@ -3870,6 +3870,244 @@ post); MKT-CONTENT, MKT-COLLAB, MKT-PUBLIC.
   category, links it to a campaign and drafts a newsletter from it; a storeless landing page is published and a
   visitor subscribes from it; a private draft linked to a campaign is not public.
 
+**Built Nov 14 (P14).** mr-mantle, mr-boss and mr-pass on branch `mkt/p14` (hashes in the worker's reply), from master after P12's merge;
+mr-moqui unchanged, no Rust built. Built beside P13 (leads, `mkt/p13`) and Sales follow-up 4.
+- Checked first (the code over the plan): P6's, P7's and P12's Built and Review notes, F22, F23, F40, F47, F63, F107, F90–F268 and §4;
+  Commerce's site page services (SitePages.js: every staff read and write bound to the Shop mount's store and `COMMERCE_*`), the
+  shared Pages and PageDetail screens and their tabs (Commerce's context service called directly, Commerce's choices), Shop's page
+  read (ShopCatalog getPage over get#SitePage, `$richText` sanitized on the page), the framework's WikiServices (create#WikiBlog,
+  update#WikiBlog, get#UserWikiSpaces, get#WikiPageAccess; WikiBlogFindView), P8's create#Send, store#SendContent and prepare#Send,
+  P3's list template binding (ContactListEmail.wikiPageCategoryId), Customer Service's Knowledge mount, MarketingPortal.js (P7's and
+  P12's public pattern: `served`, one NotFound) and mr-pass resolve#Route. The code over the plan:
+  - the PASS operation is camelCase, `getMarketingPage` (GET `marketing/page`, read only, in no TOKEN_WRITES list), after P12's
+    block in both schema copies and route lists (byte-identical);
+  - "create#WikiBlog and update#WikiBlog are called as built": Marketing's writes go through a T service of its own,
+    `store#BlogPost`, which checks MARKETING_CONTENT_EDIT and the wiki's write right to the space (and that a page named is the
+    space's and readable) and then calls them as built; create#WikiBlog from an existing page checks nothing itself;
+  - "find#BlogPosts over WikiBlogFindView": that view joins every category (a row a category, a post with none left out), so the
+    list is over `mantle.marketing.content.BlogPostView` (WikiBlog and its page), in the spaces get#UserWikiSpaces answers and the
+    pages restricted on their own only for a user they admit;
+  - the detail screens are siblings, `Content/BlogPostDetail` and `Content/PageDetail` (as ListDetail and MessageTemplateDetail),
+    not the design's nested paths; design §2 says so;
+  - Content is every Marketing reader's (design §2: the app's): no area deny group; the capability `contentRead` (anyRead) and the
+    menu entry (index 6) and key `g o`;
+  - the storeless mount: a page's app is its mount's; Marketing's pages are worked through the mount's organization
+    (MarketingAccess.js's scope), MARKETING_CONTENT_EDIT edits and publishes (no separate approval or review: Commerce's page editor,
+    which the shared PageContent tab is, offers no Request review, and publication is a dated, audited act with an operation key),
+    the text in the organization's page space (new `mantle.marketing.content.MarketingPageSpace`, restrictUpdate, as a store's
+    ProductStoreWikiSpace); a landing page takes no policy role and no template (ROLE_RESERVED, TEMPLATE_UNKNOWN); find#SitePages and
+    a new page's store#SitePage take `app` (shop by default, so Commerce is unchanged); a page read by sitePageId is read in its own
+    mount's app; a missing or out-of-scope page now answers RECORD_UNAVAILABLE before a missing edit or publish permission
+    (Commerce's specs pass unchanged);
+  - "Shared/Pages and Shared/PageDetail take their context from the mounting app (F22)": a registry, mr-boss
+    `service/ironstone/shared/PageApps.js` (Commerce's and Marketing's rows: context and choices services, the site page app, the
+    capabilities that show edit and publish, the PageDetail route, store pages or not, words), as SurveyApps.js is for the survey
+    builder; the screens' own `choices` transition calls the registration's choices service (Marketing's gains `sites`);
+  - "a page embeds a published list, form or event by its registered ID": a paragraph of its own `[[subscribe LIST_ID]]` or
+    `[[form PUBLICATION_ID]]` (at most five); getMarketingPage answers the page in parts and PASS renders a list offered on the site
+    as a subscribe box posting to Subscribe (its request, consent box and receipt) and an open form publication as a card linking
+    SubmitForm (not its questions inline), anything else as nothing; the Event component is P16's;
+  - newsletter assembly: a send names a blog category (`CampaignSend.postCategoryId`), chosen when ContentDetail's Create draft send
+    makes it (`create#ContentSend`: the category given, else the topic list's newsletter category of P3's template binding, else the
+    post's first); prepare#Send takes the category's approved posts as of then (a publish date reached and a published page
+    version, newest ten), records each with the version it read (`CampaignSendPost`) and appends them to the prepared body and
+    text, escaped (no `$` or `#` reaches the locked renderer); POSTS_NONE when there is none; a post's link is its space's
+    `publicBlogUrl` plus its id (PASS Publishing renders blogs later). A landing page's Create draft send is a send with the
+    page's public link (a published page only);
+  - a campaign's link to a page is its CampaignContent; CampaignAssociation's page kind (CakPage) stays KIND_UNAVAILABLE (F107);
+  - the demo's wiki pages cannot be rows (their text is a versioned file), so a demo loader, `ironstone.marketing.DemoServices
+    .load#ContentDemo` over MarketingDemo.js, called from BossZZMarketingDemoData.xml in its transaction (data, as Customer Service's
+    and Knowledge's demo loaders are; §4 names ContextServices as Marketing's only ironstone service);
+  - the readiness check "published list or form" is "published list, form or page".
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P14 block): CampaignContent (CampaignContentKind: blog post, landing page, wiki page, file),
+    MarketingPageSpace, CampaignSend `postCategoryId` and `campaignContentId`, CampaignSendPost, the view BlogPostView.
+  - `MarketingContentServices.xml` over `MarketingContent.js` (new, T): find#, get#, store#CampaignContent, find#BlogPosts,
+    get#BlogPost, store#BlogPost, add#BlogCategory, remove#BlogCategory, create#ContentSend; `postsFor` and `recordPosts` for
+    `MarketingSends.js` prepare#Send.
+  - Owner contract (Commerce, F23): `public/SitePages.js` (pageApps, appScope, siteOf with the mount's app, scopeMounts, pageOf by
+    the page's mount, organizationSpaceOf, landingOnly), `ThemeServices.xml` (`app` on find# and store#SitePage),
+    `SiteServices.xml` (publish#SitePage's comment).
+  - `MarketingPortal.js` get#Page (pageParts, the readiness's live pages) and `MarketingPortalServices.xml`; `ForumSchema.js` and
+    `script/PassRoutes.js` (getMarketingPage).
+- PASS: `screen/Marketing/Page.xml` and `.html.fancy` (the page, its text sanitized again, its components), resolve#Route's
+  `pages/{route}` for a marketing mount, `Schema.js` and `Routes.js` (copies of Mantle's), `screen/Marketing.xml`'s comment,
+  `docs/Deployment.md` (Marketing app: Landing pages), README.
+- BOSS: `screen/Marketing/Content.xml` (the area, menu 6) with Content, ContentDetail, BlogPosts, BlogPostDetail (new), LandingPages
+  and PageDetail (Shared/Pages and Shared/PageDetail), Knowledge and KnowledgeTui (Commons'); `template/MarketingContent.xml`
+  (storeContent, createContentSend, storeBlogPost, add/removeBlogCategory; LinkContentForm, ContentSendForm); CampaignDetail's Content
+  box; `Shared/Pages.xml`, `Shared/PageDetail.xml`, `PageDetail/PageRoute.xml` over PageApps.js; `Marketing.js` (contentRead, the P14
+  link paths, the content record kind, the choices sites, blogSpaces, blogCategories, spacePages, contentSources),
+  `ContextServices.xml` and `template/MarketingParts.xml` (the choices' parameters), `screen/Marketing.xml` (Content, `g o`);
+  demo: `DemoServices.xml` and `MarketingDemo.js` (new), BossZZMarketingDemoData.xml's P14 block: Retail's garden blog (Marketing
+  Author writes it; public at the shop's blog address) with three posts in "Garden news" (two published, one draft), the roses post
+  linked to the spring campaign as a newsletter article, and the spring garden landing page on ZIZI_SHOP's Marketing mount with an
+  embedded subscribe box for the garden newsletter, published and linked to the campaign.
+- Specs:
+  - Mantle `test/marketing/MarketingContent` (new, 3 features, about 0.8 s: a draft post's link publishes nothing, a reader, another
+    organization's author and another's private post refused; a category write refused without the space's write right and without
+    MARKETING_CONTENT_EDIT; a newsletter drafted from the post takes the category's approved post at preparation with the version
+    it read, leaving its publish date, its page's published version and the sent date alone); `test/public/SitePages` (one feature
+    added, about 0.65 s: a Marketing author's landing page on the marketing mount in the organization's page space, no template,
+    another organization's mount and author refused, a Commerce designer neither edits nor publishes it, the author edits no Shop
+    page, published and read at `/marketing/pages/spring`, each app's list without the other's pages).
+  - mr-pass `test/Marketing/MarketingPages` (new, 2 features, about 0.1 s): Page's one html render (no store, its text sanitized: no
+    script or event handler, the subscribe box for the offered list only, nothing for an unoffered list or an unknown form),
+    resolve#Route's `pages/spring`; a draft, an unknown route and a site without the mount NotFound alike; the operation in both
+    copies and route lists and in no TOKEN_WRITES list.
+  - mr-boss `MarketingContent` (new, 2 features, about 0.7 s): BlogPostDetail's one qvt render for the author; the shared screens'
+    Marketing registration on PageApps.js and the context and choices services (no render of Shared/Pages), the demo landing page
+    listed for a reader, another organization's author refused; `MarketingAccess` (contentRead per group, Content in the menus, `g o`)
+    and `MarketingSpecLib` (menus, keys, the content demo's ids).
+  - Acceptance, written and not run: mr-boss `test/acceptance/Marketing/MarketingContentWalk` (4 features: scenario 10's page half
+    and 19 through the screens' transitions); mr-pass `test/acceptance/client/MarketingPagesHttp` (a visitor subscribes from the
+    published page's box, a draft and an unknown page 404) with `test/acceptance/MarketingPagesFixtures` on PASS_HTTP, in
+    `client/suite.js`.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle SitePages, ThemeAuthoring, ShopCatalog, MarketingContent,
+  Sends, Dispatch, Experiments, MarketingSubscriptions, MarketingForms, Campaigns, PassAuthority, ShopCheckout (72 of 72); mr-pass
+  MarketingPages, MarketingAccess, SubmitForm, Forum, Transport, Portals, Smithy, ShopPreview, ShopCart (61 of 61); mr-boss
+  MarketingContent, MarketingAccess, MarketingCampaigns, CommerceSitePages, CommerceAccess, MarketingSurveys, MarketingSends (34 of 34);
+  after Prettier MarketingContent, SitePages, Sends, MarketingSubscriptions; MarketingPages, Forum; MarketingContent, MarketingAccess
+  again (50 of 50). A throwaway walk of Content, ContentDetail (a post and a page), BlogPosts (qvt, html), LandingPages, PageDetail
+  with its Route and Text tabs (tui), Knowledge (tui), CampaignDetail and the tui of BlogPostDetail, ContentDetail and Content, and a
+  reader's Content without Link content, passed and was not kept. `moqui lint --screens` (release): 141 flagged sites, as before,
+  none in a new or changed screen; parse failures 0. Prettier (mr-moqui's config) on the new JavaScript and the changed files that
+  were clean (SitePages.js was not and is left as it was). Not run: test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P14" table; ss-inventory's Wiki rows (EditWikiBlog, WikiBlogs, EditWikiPage)
+  gain Marketing's Implemented in.
+- Design edits: design-marketing §2 (the two sibling paths), §8 LandingPages and BlogPostDetail (as built), §13.1
+  (getMarketingPage), §14.1 CampaignContent; design-commerce §5's per-app table and the owner contract (the registry, the
+  storeless mount).
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: the camelCase operation, store#BlogPost, BlogPostView, the sibling paths, Content for every
+    reader, the page registry, the embed syntax and the form card, the newsletter category on the send, CakPage unavailable, the
+    demo loader;
+  - a landing page is published by its author (MARKETING_CONTENT_EDIT edits and publishes), with no review or approval step;
+  - a send's posts are appended to its prepared body only: the draft preview and test message show the author's own text, and an
+    experiment's variants (P10) do not get them;
+  - the PASS landing page is no-store (its subscribe box carries the session token), so a shared cache never keeps it; there is no
+    sitemap or robots for the marketing mount;
+  - a Shop menu may link a landing page (an SdtPage destination of any enabled mount of the site), as built;
+  - a blog post's public link assumes the space's `publicBlogUrl` takes the post's id; the blog itself is PASS Publishing's, later;
+  - P15's hook: the landing page's campaign is its CampaignContent (CckSitePage), and Page.xml names where P15 records a tracking
+    code's visit; nothing tracking is built here.
+- For the lead:
+  - budget share: mr-mantle about 1.5 s (MarketingContent 0.8 s, SitePages +0.65 s); mr-pass server about 0.1 s (MarketingPages);
+    mr-boss server about 0.7 s (MarketingContent; MarketingAccess unchanged); no client spec;
+  - merge hot spots (P13 beside, P15 next): mr-mantle `entity/MarketingEntities.xml` (a P14 block after P12's), `ForumSchema.js` and
+    `script/PassRoutes.js` with mr-pass `Schema.js` and `Routes.js` (a P14 entry after P12's: P13's lead purpose may add beside it),
+    `service/mantle/marketing/MarketingPortal.js` (a P14 section before the readiness, the readiness check, the operations table),
+    `MarketingPortalServices.xml`, `MarketingSends.js` (prepare#Send), `service/mantle/public/SitePages.js` (Commerce's; the scope
+    section rewritten), `ThemeServices.xml`; mr-boss `screen/Marketing.xml` (the Content item, `g o`), `Marketing.js` (capabilities,
+    linkPaths, recordKinds, choiceSources), `ContextServices.xml` and `template/MarketingParts.xml` (the choices' parameters),
+    `screen/Marketing/Campaigns/CampaignDetail.xml` (a Content box after Automations; P13 adds handoff counts to Results),
+    `data/BossZZMarketingDemoData.xml` (a P14 block at the end), `test/Marketing/MarketingSpecLib.js` and `MarketingAccess.spec.js`
+    (menus, keys, capabilities), `screen/Shared/Pages.xml`, `PageDetail.xml`, `PageDetail/PageRoute.xml`, `plan/usl-inventory.md`,
+    `plan/ss-inventory.md`, `plan/design-marketing.md`, `plan/design-commerce.md`, this file; mr-pass `service/pass/RouteServices.xml`,
+    `test/Marketing/MarketingFixtures.js`, `test/acceptance/client/suite.js`, README, `docs/Deployment.md`. P15 adds TrackingLinks
+    under `screen/Marketing/Content.xml`'s subscreens;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, after PASS Marketing's forms paragraph; no mr-moqui worktree): "PASS
+    Marketing's landing pages (`mantle.marketing.MarketingPortalServices.get#Page`, `allow-remote="false"`,
+    `authenticate="anonymous-all"`, read only, reached only as the PASS operation `getMarketingPage` of the authority's allowlist, in
+    no TOKEN_WRITES list) find the organization from the site's `marketing` mount (a published site, an internal organization) and
+    a page only of that mount by its route, through the site page services' `get#SitePage`: the binding's exact published wiki
+    version in its window; a site without the mount and a draft, scheduled, withdrawn or unknown page answer the same NotFound (the
+    page a 404). The page's Markdown is made clean HTML by the authority (`cleanHtml`) and sanitized again on the page by the theme's
+    rich text rule (no script, event handler or style), under PASS's default no-store headers and the shell's CSP; no stored HTML
+    or expression runs. A component is embedded only by a paragraph naming an id (`[[subscribe ID]]`, `[[form ID]]`, at most five),
+    which the page renders through `getMarketingPublication` or `getMarketingForm`, so only a list offered or a form open on that
+    site shows and a draft or another organization's record shows nothing; a subscribe box posts Subscribe's own request with its
+    limits and neutral receipt. Staff write landing pages through `mantle.public.ThemeServices` and
+    `mantle.public.SiteServices.publish#SitePage`, which take a page's app from its mount: a Marketing mount's page needs
+    MARKETING_CONTENT_EDIT in the mount's organization (Marketing's scope), a Shop's its store and `COMMERCE_*`, so neither app's
+    users reach the other's pages; the text is a page of the organization's page space (restricted updates, written by those
+    services alone as the system after their checks). Blog posts are written through `mantle.marketing.MarketingContentServices`,
+    which checks MARKETING_CONTENT_EDIT and the wiki's own write right to the space before `create#WikiBlog`, `update#WikiBlog` and
+    a category's entity write; a campaign's link to content publishes nothing, and a newsletter send takes only posts with a
+    published page version and a reached publish date, escaped into the locked body.";
+  - the user's call (none blocking): a landing page published by its author with no review step; a blog post's public link built
+    from the space's blog address; the demo loader as a second ironstone.marketing service.
+
+**Review Nov 14 (P14).** A fresh review of `mkt/p14` (mr-mantle b0e796ad, mr-pass 4fdc402, mr-boss 5c29ce71) against P14, §2, §4 and
+design §8, §13.1, §14.1, judged as a public surface by P7's and P12's reviews; master (the P12 §4 row) merged into mr-boss (5d21ae61), no
+conflict; mr-mantle and mr-pass had nothing new. Fixes mr-mantle 6b58f7cf, mr-pass 55f6441.
+- Checked and sound:
+  - getMarketingPage and Marketing/Page: `served` first (a published site, an internal organization's marketing mount), the route
+    shape checked before the read, then get#SitePage by the enabled mount, route and locale: the binding's exact published wiki version
+    in its window, else one NotFound (a draft, scheduled, withdrawn or unknown page and a site without the mount answer the same words;
+    the page is a 404). The authority's body is ammonia's allow-list (`cleanHtml`) and every html part is cleaned again on the page
+    (`sanitizeRichText`, the same allow-list): no script, event attribute, style attribute, SVG or MathML, and no `javascript:` or `data:`
+    URL; a part split mid-element is closed by the parser. `.html.fancy` escapes the title and every component value. Headers: PASS's
+    default policy (Shared/Headers.js) is no-store, Referrer-Policy same-origin and the shell's CSP. The answer is the page's title, SEO,
+    route, URL, version and parts: nothing else of the organization. An embed shows only through getMarketingPublication (the list's
+    explicit offer on that site: `offerOf`, never the first topic of another list) or getMarketingForm (open on that site), so a draft,
+    unoffered or another organization's id renders nothing; at most five.
+  - The owner contract on SitePages.js: a page's app is its mount's (`pageOf` by the page's own mount row), never the caller's; a
+    Shop page still needs COMMERCE_VIEW and the store (StoreAdmin's scope), a Marketing one a Marketing reader of the mount's
+    organization, and edit or publish the app's permission; a new page takes `app` (shop by default) and is created only on the scope's
+    own mount (`siteOf` refuses a mount of another app or another organization); find#SitePages lists only the app's mounts' pages. A
+    Commerce designer cannot edit or publish a landing page, a Marketing author no Shop page or another organization's landing page
+    (SitePages spec). Landing pages refuse a template or policy role; the scheduled publication runs as its scheduler with the same
+    check. The organization's page space is made with restrictUpdate and no creator row, refused if it loses restrictUpdate, and written
+    only as the system after the services' checks, so neither Knowledge nor store#BlogPost reaches its pages.
+  - store#BlogPost, add# and remove#BlogCategory: MARKETING_CONTENT_EDIT and the wiki's write right before create#WikiBlog,
+    update#WikiBlog and the entity write, all `allow-remote="false"`; no BOSS screen or service calls create#WikiBlog, update#WikiBlog or
+    the WikiBlogCategory entity otherwise (the only other callers are mr-marble's SimpleScreens Wiki screens, outside BOSS, as before).
+    find#BlogPosts follows get#UserWikiSpaces and the page's own view rule; a link to content checks the source for the caller and the
+    campaign's organization (a site page by its mount's organization) and publishes nothing.
+  - Newsletter assembly: posts read as of preparation (a published page version, a reached publish date), each recorded with the
+    version read (CampaignSendPost); publishDate, the published version and sentDate untouched (spec). Preparation is only of a draft and
+    its body is a fixed file that approval covers (P8's prepared revision), so a post edited after approval changes nothing sent; a re-
+    preparation is a new revision needing approval again. Appended text is escaped (no `$`, `#` or markup reaches the locked renderer).
+  - The demo loader: `allow-remote="false"`, refused for a signed-in user who is not a system administrator, otherwise as john.doe with
+    authorization off (Customer Service's and Knowledge's pattern); demo rows and wiki pages only, idempotent by fixed id.
+  - Access: Content every Marketing reader's (`contentRead` = anyRead), edits gated on contentEdit in the services; the content record
+    kind by the link's organization; the choices (sites of the scope's organizations, writable spaces, viewable pages) checked again by
+    the services.
+- Fixed:
+  - R1 (high): a newsletter took every approved post of its blog category, including a post of a private space or a page restricted
+    on its own: its title and summary went into the prepared body (only the link was left out), to every recipient and to the author's
+    preview. WikiPageCategory is global, so any author could name a category another space's private posts are in. postsFor now takes only
+    posts in a space and on a page with no view restriction (design §8 Knowledge: Marketing cannot publish a private space by linking
+    it); POSTS_NONE says so. MarketingContent's newsletter feature puts a published private post in the category (it failed before).
+  - R2 (low): store#BlogPost's update, a post from an existing page and the category writes checked the space's write right only, not
+    the page's own (a page with restrictUpdate whose WikiPageUser rows leave the writer out), while get#BlogPost's canEdit asked both;
+    all three now need both. A new MarketingContent feature (failed before).
+  - The PASS spec's page text gains a `javascript:` link, a `data:` URL, an SVG with onload and a style attribute, none of which reaches
+    the page's article (it passed before: the hardening is sound; the check is new).
+- Provisional findings (for the lead to number):
+  - publication without approval (design §8): the design does not require a review or approval before a landing page or a blog post is
+    public. LandingPages' crosscut row gives "create, edit, preview, request review, publish with the content grant", and ContentDetail
+    says "Request review uses the existing wiki review flow; only the owner-approved version may be publicly bound". As built,
+    MARKETING_CONTENT_EDIT publishes a landing page's chosen version (the owner's binding, dated and audited, with an operation key), which
+    meets "owner-approved" read as the owner's publication; but the Request review action of the crosscut row is not built for landing
+    pages (the shared PageContent tab offers none, and the page space's restrictUpdate keeps the wiki review flow's reviewer from the
+    page). A blog post's public version is the page's published version, which any writer of the page sets in Knowledge, with or without
+    a review. The user's call: leave publication as the content grant's act (and drop "request review" from the crosscut row), add an
+    optional Request review to PageDetail, or require an approved review before publish#SitePage binds a landing page's version;
+  - blog categories are global (WikiPageCategory), so one organization's newsletter takes another organization's public posts in a
+    category of the same name, and create#ContentSend takes any category id; as the framework's model is, with no organization on a
+    wiki space;
+  - BlogPost's small image (design §8 NewBlogPost and BlogPost: image upload with thumbnail) is not built;
+  - the Built note's others stand as written (the preview and test message without the posts, experiments' variants without them, no
+    sitemap or robots for the marketing mount, a Shop menu linking a landing page, the blog link from `publicBlogUrl`, P15's hook).
+- Tests (release binary, `--nobuild`, this worktree's runtime): mr-mantle MarketingContent (4 of 4, about 1.0 s of features; both new
+  checks failed on the unfixed code first), SitePages (10), Sends (8), ThemeAuthoring (7), ShopCatalog (5); mr-pass MarketingPages (2 of 2,
+  0.1 s; the new check made to fail once to see it assert), MarketingAccess (3); mr-boss MarketingContent (2), CommerceSitePages (4),
+  CommerceAccess (15), MarketingAccess (7): 66 of 66. Prettier (mr-moqui's config) on the changed JavaScript. No screen changed (no lint);
+  no acceptance test run.
+- For the lead:
+  - budget share: mr-mantle MarketingContent about 1.0 s (one feature added, +0.2 s over the Built note); mr-pass and mr-boss as the
+    Built note;
+  - merge hot spots: as the Built note, plus `MarketingContent.js` (postsFor, requirePageWrite) and its spec;
+  - Attack-Surface: the Built note's paragraph is right with four changes: "sanitized again on the page by the theme's rich text rule
+    (no script, event handler or style)" becomes "(ammonia's allow-list: no script, event or style attribute, SVG, `javascript:` or
+    `data:` URL)"; "under PASS's default no-store headers and the shell's CSP" adds "and a same-origin referrer policy"; "checks
+    MARKETING_CONTENT_EDIT and the wiki's own write right to the space" becomes "to the space and the post's page"; and "a newsletter send
+    takes only posts with a published page version and a reached publish date" adds "in a space and on a page with no view restriction";
+  - the user's calls: publication without a review (above); the Built note's (a blog post's public link from the space's blog address,
+    the demo loader as a second ironstone.marketing service).
+
 ### P15 — Tracking links and capture
 
 Design §8 TrackingLinks and TrackingLinkDetail (with "Capture on the authority"), §18 (the tracking URL and QR);

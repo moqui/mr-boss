@@ -676,4 +676,13 @@ along with this software (see the LICENSE.md file). If not, see
             statusEnumId="MlcFailed" operationKey="mkt-lead:BOSS_MKT_LCAP_QUOTE_1" attemptCount="8" lastAttemptDate="2026-11-12 11:00:00"
             errorText="TEAM_UNAVAILABLE: Choose a current team of the organization as the queue" capturedDate="2026-11-10 11:00:00"/>
     <!-- ===== end of Marketing P13 ===== -->
+
+    <!-- ===== Marketing P14: content, blog posts and landing pages (impl-marketing P14; design-marketing §8) ===== -->
+    <!-- Retail's garden blog (a wiki space Marketing Author writes, its blog public at the shop's address) with three posts in the garden
+        news category, "Pruning roses" and "Starting tomatoes" with a published page version, "Summer bulbs" a draft; the roses post
+        linked to the spring campaign as a newsletter article; and the spring garden landing page on ZIZI_SHOP's Marketing mount
+        (Retail's page space, published, linked to the campaign as its landing page) with an embedded subscribe box for the garden
+        newsletter. The wiki pages are written through the wiki services (ironstone.marketing.DemoServices.load#ContentDemo). -->
+    <ironstone.marketing.DemoServices.load-ContentDemo/>
+    <!-- ===== end of Marketing P14 ===== -->
 </entity-facade-xml>

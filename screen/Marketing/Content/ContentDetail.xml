@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Content › ContentDetail (design-marketing §8 ContentDetail: ContentLink, PublicationReadiness, Distribution; style-guide
+    §3.3 Detail; impl-marketing P14): one content link of the user's organizations (check#Record content; else "Not available", linking
+    back). The record header: the content's title, kind, campaign, use and intended date, its publication as a chip; Create draft send
+    the primary action for an author who writes sends (a blog post's newsletter, a landing page's link), End link in More. ContentLink
+    (the use and intended date, at the link's stamp), PublicationReadiness (the owner's state, published version, latest review and
+    public binding, read only, with where its body is written: the post's BlogPostDetail, the page's PageDetail, Knowledge) and
+    Distribution (the sends drafted from it or prepared with it, the version each read). Every change is
+    mantle.marketing.MarketingContentServices'; linking and planning publish nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Content" default-menu-include="false">
+    <parameter name="campaignContentId" required="true"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="storeContent" location="component://mr-boss/template/MarketingContent.xml"/>
+    <transition-include name="createContentSend" location="component://mr-boss/template/MarketingContent.xml"/>
+    <transition name="contentList"><default-response url="../Content"/></transition>
+    <actions>
+        <service-call name="mantle.marketing.MarketingContentServices.get#CampaignContent" out-map="detail" transaction="force-new" ignore-error="true"
+                in-map="{campaignContentId:campaignContentId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!detail?.content"/>
+        <set field="content" from="detail?.content || {}"/>
+        <set field="distribution" from="detail?.distribution || []"/>
+        <set field="canEdit" from="!!content.canEdit &amp;&amp; !!content.current"/>
+        <set field="captionText" from="[content.kindText, content.campaignName, content.useText, content.intendedDateText ? 'intended ' + content.intendedDateText : null]
+                .filter(Boolean).join(' · ')"/>
+        <set field="campaignPath" from="sharedLinks['Campaigns/CampaignDetail']"/>
+        <set field="sendPath" from="sharedLinks['Sends/SendDetail']"/>
+        <set field="ownerPath" from="content.contentKindEnumId == 'CckBlogPost' ? sharedLinks['Content/BlogPostDetail']
+                : content.contentKindEnumId == 'CckSitePage' ? sharedLinks['Content/PageDetail']
+                : content.contentKindEnumId == 'CckWikiPage' ? sharedLinks['Content/Knowledge'] : null"/>
+        <set field="ownerParameters" from="content.contentKindEnumId == 'CckBlogPost' ? {wikiBlogId:content.wikiBlogId}
+                : content.contentKindEnumId == 'CckSitePage' ? {sitePageId:content.sitePageId} : {wikiPageId:content.wikiPageId}"/>
+        <set field="ownerText" from="content.contentKindEnumId == 'CckBlogPost' ? 'Open the post' : content.contentKindEnumId == 'CckSitePage'
+                ? 'Open the landing page' : 'Open in Knowledge'"/>
+        <set field="linkValues" from="{campaignContentId:campaignContentId, action:'update', useText:content.useText, expectedLastUpdatedStamp:content.lastUpdatedStamp,
+                intendedDate:content.intendedDate ? ec.l10n.format(content.intendedDate, 'yyyy-MM-dd') : null}"/>
+        <set field="contentSendValues" from="{campaignContentId:campaignContentId, organizationPartyId:content.organizationPartyId, sendName:content.title,
+                newsletter:content.contentKindEnumId == 'CckBlogPost', helpText:content.contentKindEnumId == 'CckBlogPost'
+                    ? 'A newsletter of the category\'s approved posts as of its preparation; approved and released as every send.'
+                    : 'A send with the page\'s public link; approved and released as every send.'}"/>
+    </actions>
+    <widgets>
+        <section name="ContentNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Content link ${campaignContentId} is not available: it does not exist or is not one of your organization's campaigns."/>
+                <link url="contentList" text="Back to campaign content" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="ContentFound" condition="recordFound"><widgets>
+            <context record-entity="mantle.marketing.campaign.CampaignContent" record-id="${campaignContentId}" title="${content.title}"/>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <container style="row items-center no-wrap">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${WebUtilities.encodeHtml(content.kindText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ContentKind", style: "strong", text: content.kindText})}]]></text>
+                            </render-mode>
+                            <label text="${content.title}" type="h5"/>
+                        </container>
+                        <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${content.stateColor}">${WebUtilities.encodeHtml(content.stateText)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ContentState", text: content.stateText})}]]></text>
+                            <text type="html">${content.stateText}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <link url="${campaignPath}" text="${content.campaignName}" link-type="anchor" parameter-map="{marketingCampaignId:content.marketingCampaignId}"/>
+                        <label text="Ended ${content.thruDateText}" type="span" style="text-caption m-muted q-ml-sm" condition="!content.current"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-xs m-record-actions">
+                        <container-dialog id="ContentSendDialog" button-text="Create draft send" icon="sym_o_forward_to_inbox" type="primary" width="560"
+                                title="Create a draft send from ${content.title}" condition="content.canDraftSend &amp;&amp; content.current">
+                            <section-include name="ContentSendForm" location="component://mr-boss/template/MarketingContent.xml"/>
+                        </container-dialog>
+                        <button-menu text="More" icon="more_horiz" condition="canEdit">
+                            <link url="storeContent" text="End link" icon="sym_o_link_off" link-type="hidden-form-link" btn-type="danger"
+                                    confirmation="End the link of ${content.title} to ${content.campaignName}? The content itself is unchanged."
+                                    parameter-map="{campaignContentId:campaignContentId, action:'end', expectedLastUpdatedStamp:content.lastUpdatedStamp}"/>
+                        </button-menu>
+                    </container>
+                </container>
+            </container>
+
+            <container-box>
+                <box-header title="Campaign use"/>
+                <box-body>
+                    <form-single name="ContentLink" transition="storeContent" map="linkValues">
+                        <field name="campaignContentId"><default-field><hidden/></default-field></field>
+                        <field name="action"><default-field><hidden/></default-field></field>
+                        <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                        <field name="useText">
+                            <conditional-field condition="canEdit" title="Use"><text-line size="40"/></conditional-field>
+                            <default-field title="Use"><display/></default-field>
+                        </field>
+                        <field name="intendedDate">
+                            <conditional-field condition="canEdit" title="Intended date" tooltip="A plan, not a release"><date-time type="date"/></conditional-field>
+                            <default-field title="Intended date"><display text="${content.intendedDateText}"/></default-field>
+                        </field>
+                        <field name="submitButton">
+                            <conditional-field condition="canEdit" title="Save"><submit/></conditional-field>
+                            <default-field><ignored/></default-field>
+                        </field>
+                        <field-layout>
+                            <field-row><field-ref name="useText"/><field-ref name="intendedDate"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </box-body>
+            </container-box>
+
+            <container-box>
+                <box-header title="Publication readiness"/>
+                <box-toolbar>
+                    <link url="${ownerPath}" text="${ownerText}" link-type="anchor-button" icon="sym_o_edit_document" condition="ownerPath &amp;&amp; content.sourceId"
+                            parameter-map="ownerParameters"/>
+                    <link url="${content.publicUrl}" url-type="plain" text="View it public" icon="sym_o_open_in_new" link-type="anchor"
+                            target-window="_blank" condition="content.publicUrl"/>
+                </box-toolbar>
+                <box-body>
+                    <label type="p" text="${content.stateText}${content.publishedVersionName ? ' · published version ' + content.publishedVersionName.substring(0, 10) : ''}${content.reviewText ? ' · review ' + content.reviewText.toLowerCase() : ''}"/>
+                    <label type="p" style="text-caption m-muted" text="${content.publicText}. Only the owner's published version is ever public; a campaign's planned date publishes nothing."/>
+                </box-body>
+            </container-box>
+
+            <container-box>
+                <box-header title="Distribution"/>
+                <box-body>
+                    <label text="No send carries it yet." type="p" style="m-muted" condition="!distribution.length"/>
+                    <form-list name="Distribution" list="distribution" skip-form="true" paginate="false" condition="distribution.length">
+                        <field name="sendName">
+                            <default-field title="Send">
+                                <link url="${sendPath}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
+                            </default-field>
+                        </field>
+                        <field name="topicName"><default-field title="Topic"><display/></default-field></field>
+                        <field name="categoryName"><default-field title="Blog category"><display/></default-field></field>
+                        <field name="statusText"><default-field title="State"><display/></default-field></field>
+                        <field name="scheduledDateText"><default-field title="Schedule"><display/></default-field></field>
+                        <field name="versionText"><default-field title="As prepared"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="sendName"/><field-ref name="topicName"/></column>
+                            <column><field-ref name="statusText"/><field-ref name="versionText"/></column>
+                        </columns>
+                    </form-list>
+                </box-body>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

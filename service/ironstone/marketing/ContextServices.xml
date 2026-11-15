@@ -66,14 +66,14 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="check" noun="Record" allow-remote="false" read-only="true">
         <description>A record a Marketing screen or mount was given: an organization, a campaign, a list (not a mailbox) or a segment
-            (Marketing.js recordKinds; later phases add the send and the event). Answers its kind's name, its organization in the
+            (Marketing.js recordKinds; later phases add the send, the automation and enrollment, P14 a content link, and the event). Answers its kind's name, its organization in the
             user's scope, a label and a short detail. Refuses a record that does not exist, one outside the scope and an unowned one
             (awaiting adoption) alike (RECORD_UNAVAILABLE), and any record for a user who reads nothing of Marketing. With a
             capability named (campaignEdit, audienceRead, ...), refuses a user without it (PERMISSION_DENIED). Refuses a user without
             Marketing (MARKETING_UNAVAILABLE).</description>
         <implements service="ironstone.marketing.ContextServices.define#Parameters"/>
         <in-parameters>
-            <parameter name="recordType" required="true"><description>organization, campaign, list or segment</description></parameter>
+            <parameter name="recordType" required="true"><description>organization, campaign, list, segment, send, automation, enrollment or content</description></parameter>
             <parameter name="recordId" required="true"/>
             <parameter name="capability"/>
         </in-parameters>
@@ -112,6 +112,10 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="excludeId"><description>P2: a campaign left out of the campaigns (its own parent choice)</description></parameter>
             <parameter name="campaignSendId"><description>P8: the send whose files sendFiles lists</description></parameter>
             <parameter name="marketingAutomationId"><description>P11: the automation whose topic automationMembers lists</description></parameter>
+            <parameter name="wikiSpaceId"><description>P14: the space whose pages spacePages lists</description></parameter>
+            <parameter name="contentKindEnumId"><description>P14: the kind of content contentSources lists</description></parameter>
+            <parameter name="marketingCampaignId"><description>P14: the campaign whose organization's pages and files contentSources
+                lists</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

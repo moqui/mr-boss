@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Content › BlogPosts (design-marketing §8 BlogPosts: BlogPostFind, BlogPostList, NewBlogPost, NewBlogPostFromPage;
+    style-guide §3.2 List; impl-marketing P14): the blog posts (the framework's WikiBlog) of the wiki spaces the user may view, newest
+    first, by title, author, space, category, publish period and the campaign that links them, a page at a time
+    (mantle.marketing.MarketingContentServices.find#BlogPosts). New post (its text, which becomes its wiki page) is the primary action
+    and New from page (an existing page of the space) beside it, for an author (MARKETING_CONTENT_EDIT) in a space the wiki lets them
+    write (store#BlogPost over create#WikiBlog, which refuses a title outside its characters: letters, digits and . , ' - _ : ( ) ! ?).
+    Each row opens BlogPostDetail; a post public on its space's blog links there. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Blog posts" default-menu-index="2">
+    <parameter name="term"/>
+    <parameter name="author"/>
+    <parameter name="wikiSpaceId"/>
+    <parameter name="wikiPageCategoryId"/>
+    <parameter name="marketingCampaignId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="storeBlogPost" location="component://mr-boss/template/MarketingContent.xml"/>
+    <actions>
+        <service-call name="mantle.marketing.MarketingContentServices.find#BlogPosts" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:(term || null), author:(author || null), wikiSpaceId:(wikiSpaceId || null), wikiPageCategoryId:(wikiPageCategoryId || null),
+                    marketingCampaignId:(marketingCampaignId || null), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="posts" from="found?.posts || []"/>
+        <set field="postsCount" from="found?.postsCount || 0"/>
+        <set field="postsPageIndex" from="found?.postsPageIndex || 0"/>
+        <set field="postsPageSize" from="found?.postsPageSize || 20"/>
+        <set field="postsPageMaxIndex" from="found?.postsPageMaxIndex || 0"/>
+        <set field="postsPageRangeLow" from="found?.postsPageRangeLow || 0"/>
+        <set field="postsPageRangeHigh" from="found?.postsPageRangeHigh || 0"/>
+        <set field="canEdit" from="!!marketing.capabilities.contentEdit"/>
+        <set field="detailPath" from="sharedLinks['Content/BlogPostDetail']"/>
+        <set field="findValues" from="{term:term, author:author, wikiSpaceId:wikiSpaceId, wikiPageCategoryId:wikiPageCategoryId,
+                marketingCampaignId:marketingCampaignId, fromDate:fromDate, thruDate:thruDate}"/>
+        <set field="newPostValues" from="{wikiSpaceId:(wikiSpaceId || null), publishDate:ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')}"/>
+        <set field="filtered" from="!!(term || author || wikiSpaceId || wikiPageCategoryId || marketingCampaignId || fromDate || thruDate)"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Blog posts" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none"
+                        text="Posts of the wiki spaces you may read. A post's body is its wiki page: write and review it in Knowledge; a public blog shows its published version from its publish date."/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <container-dialog id="NewBlogPost" button-text="New post" icon="sym_o_add" type="primary" width="760" title="New blog post"
+                        condition="canEdit">
+                    <form-single name="NewBlogPostForm" transition="storeBlogPost" map="newPostValues">
+                        <field name="wikiSpaceId">
+                            <default-field title="Wiki space" tooltip="A space the wiki lets you write">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'blogSpaces', selected:wikiSpaceId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="title"><default-field title="Title" tooltip="Letters, digits and . , ' - _ : ( ) ! ? only"><text-line size="60"/></default-field></field>
+                        <field name="author"><default-field title="Author"><text-line size="30"/></default-field></field>
+                        <field name="publishDate"><default-field title="Publish date" tooltip="A public blog shows it from this date, once its page has a published version"><date-time type="timestamp"/></default-field></field>
+                        <field name="summary"><default-field title="Summary"><text-area rows="2" cols="60"/></default-field></field>
+                        <field name="blogText"><default-field title="Text"><text-area rows="10" cols="80"/></default-field></field>
+                        <field name="submitButton"><default-field title="Start the post"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="wikiSpaceId"/><field-ref name="title"/></field-row>
+                            <field-row><field-ref name="author"/><field-ref name="publishDate"/></field-row>
+                            <field-ref name="summary"/>
+                            <field-ref name="blogText"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+                <container-dialog id="NewBlogPostFromPage" button-text="New from page" icon="sym_o_note_add" width="640"
+                        title="New blog post from a page" condition="canEdit">
+                    <form-single name="NewBlogPostFromPageForm" transition="storeBlogPost" map="newPostValues">
+                        <field name="wikiSpaceId">
+                            <default-field title="Wiki space">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'blogSpaces', selected:wikiSpaceId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="wikiPageId">
+                            <default-field title="Page">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'spacePages', selected:wikiPageId}">
+                                        <depends-on field="wikiSpaceId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="title"><default-field title="Title" tooltip="Letters, digits and . , ' - _ : ( ) ! ? only"><text-line size="60"/></default-field></field>
+                        <field name="author"><default-field title="Author"><text-line size="30"/></default-field></field>
+                        <field name="publishDate"><default-field title="Publish date"><date-time type="timestamp"/></default-field></field>
+                        <field name="summary"><default-field title="Summary"><text-area rows="2" cols="60"/></default-field></field>
+                        <field name="submitButton"><default-field title="Make the post"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="wikiSpaceId"/><field-ref name="wikiPageId"/></field-row>
+                            <field-row><field-ref name="title"/><field-ref name="author"/></field-row>
+                            <field-ref name="publishDate"/>
+                            <field-ref name="summary"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="BlogPostFind" transition="." map="findValues">
+            <field name="term"><default-field title="Title"><text-line size="24"/></default-field></field>
+            <field name="author"><default-field title="Author"><text-line size="16"/></default-field></field>
+            <field name="wikiPageCategoryId">
+                <default-field title="Category">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'blogCategories', selected:wikiPageCategoryId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="marketingCampaignId">
+                <default-field title="Campaign">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'campaigns', selected:marketingCampaignId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate"><default-field title="Published from"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Before"><date-time type="date"/></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="term"/>
+                    <field-ref name="author"/>
+                    <field-ref name="wikiPageCategoryId"/>
+                    <field-ref name="marketingCampaignId"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="BlogPostList" list="posts" skip-form="true" select-columns="true">
+                    <field name="title">
+                        <default-field title="Post">
+                            <link url="${detailPath}" text="${title}" link-type="anchor" parameter-map="{wikiBlogId:wikiBlogId}"/>
+                        </default-field>
+                    </field>
+                    <field name="publishDateText"><default-field title="Publish date"><display/></default-field></field>
+                    <field name="author"><default-field title="Author"><display/></default-field></field>
+                    <field name="categoriesText"><default-field title="Categories"><display/></default-field></field>
+                    <field name="spaceName"><default-field title="Wiki space"><display/></default-field></field>
+                    <field name="campaignUses" align="right"><default-field title="Campaign uses"><display format="#,##0"/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="Publication">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="publicUrl">
+                        <conditional-field condition="publicUrl" title="Public">
+                            <link url="${publicUrl}" url-type="plain" text="Open" link-type="anchor" target-window="_blank"/>
+                        </conditional-field>
+                        <default-field title="Public"><display text=""/></default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="spaceName"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="publishDateText"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <label text="${filtered ? 'No post matches these filters.' : 'No blog posts yet.' + (canEdit ? ' Start one with New post, or make one from a page with New from page.' : '')}"
+                type="p" style="text-caption m-muted" condition="!posts.length"/>
+    </widgets>
+</screen>

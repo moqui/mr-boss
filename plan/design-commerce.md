@@ -594,7 +594,16 @@ operations (MKT-CONTENT, MKT-PUBLIC). Neither mount is authority to publish priv
 | App | Mount | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
 | Commerce | `Commerce/Website/Pages`, `Commerce/Website/PageDetail` (one route per screen, Nov 6) | permitted sites with a Shop mount; store pages and policy roles | new, edit, preview, publish, schedule, withdraw, assign template | policy versions accepted at checkout; menu references |
-| Marketing | `Marketing/Content/LandingPages[/PageDetail]` | permitted sites; campaign landing pages (no policy roles) | new, edit, preview, publish, schedule, withdraw; campaign link | campaign association and tracking links |
+| Marketing | `Marketing/Content/LandingPages`, `Marketing/Content/PageDetail` (built in impl-marketing P14) | sites whose Marketing mount serves the user's organizations; storeless landing pages (no policy role, no template) | new, edit, publish, schedule, withdraw with MARKETING_CONTENT_EDIT; campaign link through Marketing's content (CampaignContent) | the campaign's content and, later, its tracking links |
+
+As built (owner contract, impl-marketing P14, F22, F23): the two screens read the mounting app's registration in mr-boss
+`service/ironstone/shared/PageApps.js` (its context and choices services, the site page app it works, the capabilities that show
+edit and publish, its PageDetail route, whether its pages take a policy role and a template, its words), never a branch on one
+app. The site page services take a page's app from its mount: a Shop mount's page through its store and `COMMERCE_*`, a Marketing
+mount's through the mount's organization (Marketing's scope), `MARKETING_CONTENT_EDIT` to edit and publish, its text in the
+organization's page space (`MarketingPageSpace`, restrictUpdate), so a Commerce designer cannot edit a landing page nor a Marketing
+author a store's page; `find#SitePages` and a new page's `store#SitePage` take `app` (shop by default, so Commerce is unchanged).
+Themes, policy roles, menus and redirects stay Commerce's.
 
 ### Themes
 
