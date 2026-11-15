@@ -5960,6 +5960,56 @@ mr-pass unchanged).
     `test/Sales/SalesQuotes.spec.js`, `test/People/PeopleLeave.spec.js`, this file. P19 and P20 touch none of these but this file;
   - the user's call, if wanted: whether the campaigns' and opportunities' dates follow the load too (no spec needs it).
 
+**Review Nov 15 (follow-up 3).** A fresh review of `mkt/fix3` (mr-boss 92cc9f91; master had nothing newer) against the follow-up's
+text, §2, §4 (the Nov 15 call) and follow-up 2's loader pattern.
+- Checked and sound:
+  - both loaders are internal (`allow-remote="false"`, anonymous-all for data loading) and refuse a signed-in non-ADMIN, as
+    load#ScheduledPriceDemo; fixed IDs only, nothing supplied is trusted; a missing row is logged and skipped;
+  - quote dates with entity ECA rules off: on OrderPart the only rule is OrderPartHandleChange (handle#OrderPartChange: retax on an
+    address or customer change, else increment#OrderRevision), so turning rules off skips only the revision count, as intended. The
+    data feed (`note_touch`, so the order and quote search documents and Insights' feeds) and the audit log are separate from the
+    rule switch (moqui-entity `load_feed/eca.rs` gates the rules only), so the indexes see the new date; the previous switch state is
+    restored in `finally`;
+  - the event loader writes the events with rules on: WorkEffort's rules (project update, request sync, shell counts) are harmless
+    for an event; EventRegistrationPolicy has none, and its policyRevision is a service's, not a rule's;
+  - day arithmetic: the windows of both new features allow a load just before midnight and a DST change between load and event
+    (the quote window 75–78 days against 77 days less up to a day; the webinar 68–79, the workshop 116–126); the workshop closes
+    Friday 17:00 to Saturday 09:00, which no US or EU DST change falls in, so the spec's 16 hours holds;
+  - the webinar's call link: a fresh load puts the webinar 70–77 days out, inside the link's 90 days (2160 hours);
+  - PeopleLeave: no holiday reaches the chosen days. Employer holidays are WepHoliday rows owned by the organization and the demo
+    has none (BOSS_PPL_HOL_* are on BOSS_PPL_HOL_RETAIL, the calendar of a schedule nobody follows; Mantle's US holidays are on
+    HolidayUsaFed/Bank, assigned to no one); a Tuesday and a Wednesday are always working days of the standard week, never a
+    weekend; the twin's Earlier and Later are the given date ±14 days, as before;
+  - the two new features check the loaders ran (a broken loader leaves 2099 and fails them).
+- Fixed:
+  - R1 (medium): the event loader counted days and hours in the server's local zone (the script engine's `Date`), while PASS shows
+    the occurrence in the offer's zone (America/Denver): on this machine (America/Chicago) the demo webinar read Thu 17:00 and the
+    workshop's closing Fri 16:00 on PASS (checked before the fix), and on a UTC server it would read 11:00. The loader now takes the
+    load day in each offer's zone (`ec.l10n.format`), counts calendar days in UTC and reads the wall-clock hour back in the zone
+    (`ec.l10n.parseTimestamp`), DST kept. MarketingEvents checks the occurrence as `Thu 18:00` and `Sat 09:00` formatted in the
+    offer's zone (it fails on the unfixed loader). The old fixed rows had the same seam;
+  - R2 (low): the quotes' rows carried a 2099 placeholder validThruDate, so a reload of BossZSalesDemoData over a loaded database
+    changed the stored date and OrderPartHandleChange counted revision 2 (the header row resets 1 just before; checked with a store
+    of the row: unchanged or omitted fields count nothing, the placeholder counts one), breaking the specs that act on revision 1.
+    The rows now name no validThruDate and load#QuoteDatesDemo writes it.
+- Provisional findings (for the lead to number):
+  - R1 and R2 above;
+  - the webinar's call link is made once (P16's webinarCall skips an event with an infoUrl), so a reload more than about two weeks
+    after the first load moves the webinar past the link's 90 days; a fresh load is always inside. Not fixed: telling an expired link
+    needs the CallLink row behind the path (its token is hashed); for the lead whether the demo loader should renew it;
+  - a quote loader failure: the two moves share the service's transaction, so a failing update rolls back both (fixed IDs, rare);
+    noted, not changed.
+- Tests run (release, `--nobuild`, this worktree's runtime): mr-boss MarketingEvents, SalesQuotes, SalesAccess, SalesApprovals,
+  PeopleLeave, MarketingAccess, MarketingRegistrations (7 specs, 38 of 38, 37.3 s); mr-mantle EventRegistrations (16 of 16, 29.3 s);
+  again after the fix commit MarketingEvents, SalesQuotes, PeopleLeave (9 of 9; the two new features 0.00 s each). Prettier (mr-moqui's
+  config) on the changed specs. Not run: test-apps, test-framework, acceptance.
+- For the lead:
+  - budget share: unchanged (one more `ec.l10n.format` per event in the new feature);
+  - merge hot spots: as the Built note's, plus the review commit in the same files (`data/BossZSalesDemoData.xml`,
+    `service/ironstone/marketing/DemoServices.xml`, `test/Marketing/MarketingEvents.spec.js`, `test/Sales/SalesQuotes.spec.js`);
+  - the user's calls: whether the demo should renew the webinar's call link on a reload; the Built note's (campaign and opportunity
+    dates) stands.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
