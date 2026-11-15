@@ -2,7 +2,7 @@
 // for Wingtip waits for approval (Retail approves as built: ORDER_APPROVE, its net-terms order never auto-approved); OrderDetail's
 // one qvt render as the sales approver shows it in the order context (the header with Approve, the approval box, the lines, the
 // fulfillment and the conversation and files), and Orders' one html render as the approver lists it under Awaiting approval with the
-// customer's reference. The rules are Mantle's SalesOrderApproval and StorelessOrderConfirmation. Demo data: Retail East's Wingtip Traders.
+// customer's reference; follow-up 5: the order ships from Retail's default facility. The rules are Mantle's SalesOrderApproval and StorelessOrderConfirmation. Demo data: Retail East's Wingtip Traders.
 // Run: ./moq test mr-boss --spec SalesOrders
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, invoke, page} = lib
@@ -61,8 +61,11 @@ feature(
             detail.output.includes("Nothing shipped yet")
             detail.output.includes("SalesOrderChatter")
             detail.output.includes("SalesOrderFiles")
+            // follow-up 5: the part ships from Retail's default facility
+            detail.output.includes("Ships from") && detail.output.includes("Ziziwork Retail Warehouse")
             // an approver sees the order to decide it, not to change it: no line editing or copy
             !detail.output.includes("Copy as a new order")
+            !detail.output.includes("Change ships from")
             !detail.output.includes("Propose")
             awaiting.errors.length == 0
             awaiting.output.includes("Wingtip direct shelving")

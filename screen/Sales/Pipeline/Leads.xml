@@ -75,6 +75,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="filtered" from="!!(text || organizationPartyId || ownerPartyId || mine || teamPartyId || (statusId &amp;&amp; statusId != 'SalesOppOpen')
                 || dataSourceId || marketingCampaignId)"/>
         <set field="emptyText" from="filtered ? 'No lead matches these filters.' : 'No open leads' + (canEdit ? ' · Capture one with New lead.' : '.')"/>
+        <!-- Sales follow-up 5: the list's own filters, posted with the batch, so the list keeps them after an assign -->
+        <set field="listFilters" from="JSON.stringify({text, organizationPartyId, ownerPartyId, mine, teamPartyId, statusId, dataSourceId,
+                marketingCampaignId, orderByField, pageIndex, pageSize})"/>
         <set field="newLeadDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId}"/>
     </actions>
     <widgets>
@@ -104,6 +107,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <action condition="canEdit">
                                     <form-single name="LeadAssign" transition="applyBatch">
                                         <field name="batch" from="'assign'"><default-field><hidden/></default-field></field>
+                                        <field name="listFilters"><default-field><hidden/></default-field></field>
                                         <field name="ownerPartyId">
                                             <default-field title="Owner">
                                                 <drop-down allow-empty="false">
@@ -122,6 +126,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <action condition="canEdit">
                                     <form-single name="LeadDisqualify" transition="applyBatch">
                                         <field name="batch" from="'lose'"><default-field><hidden/></default-field></field>
+                                        <field name="listFilters"><default-field><hidden/></default-field></field>
                                         <field name="lostReasonEnumId">
                                             <default-field title="Reason">
                                                 <drop-down allow-empty="false">

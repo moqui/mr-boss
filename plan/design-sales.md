@@ -391,6 +391,9 @@ Totals are computed over the authorized filtered result, not just the rendered p
 | OpportunityBatch | list, bulk | Assign or move independent deals | selection, operation, target, reason | count confirmation; per-row results | O.apply#OpportunityBatch | Frappe CRM bulk actions |
 | OpportunityImport | wizard step | Preview and import lead/deal rows | file/source, column mapping, duplicate strategy, preview, selected rows | per-row errors and confirmation | O.validate#OpportunityImportRow, O.apply#OpportunityImportRow | Admin Shared/DataImport with Admin §11's `opportunities` target (Z2); complete fields in §16 |
 
+After Change stage or a batch the list comes back with its own filters, not the stage or owner chosen as a filter (impl-sales
+follow-up 5: the forms post the list's filters with them).
+
 Import runs in Admin's Shared/DataImport (stage, configure, validate, apply, result) with Sales'
 registered target `opportunities` ([Admin §11](design-admin.md#111-shared-transfer-contract)); no
 Sales-only wizard (Z2). As built (impl-admin P15), such a target is a `moqui.server.TransferTarget`
@@ -1115,6 +1118,11 @@ a Manual hold with `ORDER_APPROVE` and a Change hold with `ORDER_CHANGE_HOLD_REL
 Credit, Purchase or Payment hold. Fulfillment and invoice creation remain capability-gated shared
 actions.
 
+Ships from (impl-sales follow-up 5): Overview shows the part's facility, its seller's default when it was made (§9), and More's
+Change ships from sets another warehouse, store or plant of the seller through Q.update#SalesOrderFacility, on a quote draft and on
+an order of Sales' own (direct, from a quote, a Sales recurring occurrence; a store's or another app's keeps its owner's
+facility) while nothing of it is reserved or shipped (a reservation is Warehouse's to move).
+
 Editing a placed/approved order's commercial facts opens OrderChangeDetail. No hidden direct-edit
 route bypasses that proposal. Existing Projects estimate approvals and project billing shares
 remain under their owning contract; merely linking an order to an opportunity does not convert a
@@ -1833,6 +1841,13 @@ with a preview, and the commercial revision on the seller's own preference; the 
 approval setting and the net-terms option join the form with P10, P11 and P13, which read them. Rules are bounded to four types
 (amount, discount, price floor, free line) of two purposes; the floor's cost is the approved standard cost, else the seller's average
 cost, read on the server only. Readiness adds `sales.defaults` and `sales.commercialRevision`, both fixed in SalesDefaults.
+
+As built (impl-sales follow-up 5, Nov 15, 2026, the user's call): SalesPolicy also holds the seller's default shipping facility
+(`defaultFacilityId`, "Orders ship from" on SalesDefaults): a warehouse, store or plant the organization owns, not closed. A Sales
+order part that names no facility takes it when the part is made (a quote or direct order, one from an RFQ or a template, a copy, a
+recurring order) and before it is placed (an older draft, an accepted quote), so reservation and the shipment's origin have one; a
+seller with no default leaves its parts as they were. OrderDetail shows it as Ships from and changes it with
+`Q.update#SalesOrderFacility` (§6).
 
 ## 10. PASS Sales customer access
 

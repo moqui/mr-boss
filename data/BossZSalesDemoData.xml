@@ -289,6 +289,25 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.product.ProductPrice productPriceId="BOSS_SAL_PRD_INSTALL_C" productId="BOSS_SAL_PRD_INSTALL" vendorPartyId="ORG_ZIZI_SALES"
             pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent" fromDate="2026-01-01 00:00:00" minQuantity="1" price="450"
             priceUomId="USD"/>
+    <!-- Sales follow-up 5 (impl-sales §4 Nov 15): Ziziwork Sales' warehouse in Salt Lake City, its Sales orders' default facility (its
+        SalesPolicy below), holding the stock its demo order needs: twelve line upgrade kits (Fabrikam's draft takes two). It holds no
+        Demo Product One-One (mr-mantle's AssetReservationMultipleThreads counts every asset of it): an order of it reserves there
+        with no stock, as Retail's warehouse allows, issuing over what is on hand -->
+    <mantle.party.contact.ContactMech contactMechId="BOSS_SAL_WH_ADDR" contactMechTypeEnumId="CmtPostalAddress"/>
+    <mantle.party.contact.PostalAddress contactMechId="BOSS_SAL_WH_ADDR" toName="Ziziwork Sales Warehouse" address1="2200 S. Industrial Rd."
+            city="Salt Lake City" stateProvinceGeoId="USA_UT" postalCode="84104" countryGeoId="USA"/>
+    <mantle.facility.Facility facilityId="BOSS_SAL_WH" pseudoId="SALWH" facilityTypeEnumId="FcTpWarehouse" ownerPartyId="ORG_ZIZI_SALES"
+            facilityName="Ziziwork Sales Warehouse" assetAllowIssueOverQoh="Y">
+        <contactMechs contactMechId="BOSS_SAL_WH_ADDR" contactMechPurposeId="PostalPrimary"/>
+        <contactMechs contactMechId="BOSS_SAL_WH_ADDR" contactMechPurposeId="PostalShippingOrigin"/>
+        <locations locationTypeEnumId="FltPick" locationSeqId="01010101" sequenceNum="1" areaId="01" aisleId="01" sectionId="01" levelId="01" positionId=""/>
+    </mantle.facility.Facility>
+    <mantle.product.asset.Asset assetId="BOSS_SAL_WH_UPGRADE" productId="BOSS_SAL_PRD_UPGRADE" assetTypeEnumId="AstTpInventory"
+            classEnumId="AsClsInventoryFin" statusId="AstAvailable" facilityId="BOSS_SAL_WH" locationSeqId="01010101"
+            ownerPartyId="ORG_ZIZI_SALES" acquireCost="700.00" acquireCostUomId="USD" receivedDate="2026-10-01 00:00:00">
+        <mantle.product.asset.AssetDetail assetDetailId="BOSS_SAL_WH_UPGRADE" effectiveDate="2026-10-01 00:00:00"
+                quantityOnHandDiff="12" availableToPromiseDiff="12"/>
+    </mantle.product.asset.Asset>
     <!-- Wingtip Traders' own price of Demo Product One-One from Retail (a customer price a rep reads through the quote) -->
     <mantle.product.ProductPrice productPriceId="BOSS_SAL_PRICE_WINGTIP" productId="DEMO_1_1" vendorPartyId="ORG_ZIZI_RETAIL"
             customerPartyId="BOSS_SAL_ACC_WINGTIP" pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent"
@@ -301,7 +320,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.order.OrderHeader orderId="BOSS_SAL_QTE_WINGTIP" orderName="Wingtip store refit" orderPurposeEnumId="OrpSalesQuote"
             statusId="OrderOpen" currencyUomId="USD" entryDate="2026-11-12 10:00:00" orderRevision="1"/>
     <mantle.order.OrderPart orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" statusId="OrderOpen" vendorPartyId="ORG_ZIZI_RETAIL"
-            customerPartyId="BOSS_SAL_ACC_WINGTIP" validFromDate="2026-11-12 00:00:00"/>
+            customerPartyId="BOSS_SAL_ACC_WINGTIP" validFromDate="2026-11-12 00:00:00" facilityId="ZIRET_WH"/>
     <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" partyId="BOSS_SAL_REP" roleTypeId="SalesRepresentative"/>
     <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" partyId="BOSS_SAL_TEAM_EAST" roleTypeId="SalesTeam"/>
     <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" partyId="BOSS_SAL_CON_DANA" roleTypeId="Contact"/>
@@ -321,7 +340,7 @@ along with this software (see the LICENSE.md file). If not, see
             statusId="OrderOpen" currencyUomId="USD" entryDate="2026-11-12 11:00:00" orderRevision="1"/>
     <mantle.order.OrderPart orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01" statusId="OrderOpen" vendorPartyId="ORG_ZIZI_SALES"
             customerPartyId="BOSS_SAL_ACC_FABRIKAM" postalContactMechId="BOSS_SAL_FABRIKAM_ADDR"
-            validFromDate="2026-11-12 00:00:00"/>
+            validFromDate="2026-11-12 00:00:00" facilityId="BOSS_SAL_WH"/>
     <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01" partyId="BOSS_SAL_REP3" roleTypeId="SalesRepresentative"/>
     <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01" partyId="BOSS_SAL_TEAM_DIRECT" roleTypeId="SalesTeam"/>
     <mantle.sales.opportunity.SalesOpportunityOrder salesOpportunityId="BOSS_SAL_OPP_FABRIKAM_LINE" orderId="BOSS_SAL_QTE_FABRIKAM"/>
@@ -377,10 +396,14 @@ along with this software (see the LICENSE.md file). If not, see
             description="Delivery and installation"/>
     <!-- ===== end of Sales P8 ===== -->
     <!-- ===== Sales P9 (impl-sales P9): Retail's Sales defaults and approval rules ===== -->
-    <!-- Retail's defaults: a quote is valid 30 days, unverified inquiries are kept 60 -->
+    <!-- Retail's defaults: a quote is valid 30 days, unverified inquiries are kept 60; follow-up 5: its quotes and orders ship from
+        Ziziwork Retail Warehouse. Ziziwork Sales' defaults: its quotes and orders ship from its own warehouse (above) -->
     <mantle.sales.policy.SalesPolicy salesPolicyId="BOSS_SAL_POLICY_RETAIL" organizationPartyId="ORG_ZIZI_RETAIL"
-            fromDate="2026-11-01 00:00:00" quoteValidityDays="30" intakeRetentionDays="60"
+            fromDate="2026-11-01 00:00:00" quoteValidityDays="30" intakeRetentionDays="60" defaultFacilityId="ZIRET_WH"
             changeReason="Retail's Sales defaults" changedByUserId="BOSS_SAL_ADMIN"/>
+    <mantle.sales.policy.SalesPolicy salesPolicyId="BOSS_SAL_POLICY_SALES" organizationPartyId="ORG_ZIZI_SALES"
+            fromDate="2026-11-01 00:00:00" defaultFacilityId="BOSS_SAL_WH" changeReason="Orders ship from the Salt Lake City warehouse"
+            changedByUserId="BOSS_SAL_ADMIN"/>
     <!-- Retail's quote rules: a discount of 5 % or more under the calculated price (the Wingtip draft's entered refit price is one) and
         a free line, each decided by a sales approver (BOSS_SALES_APPROVE) other than the quote's author. Ziziwork Sales sets none, so a
         manual price there needs an approver other than its author. -->

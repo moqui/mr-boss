@@ -1,14 +1,15 @@
 // Sales settings (impl-sales P2; design-sales §9 Settings, Stages, Teams, LeadSources, TypesAndReasons): the Settings area is the
 // administrator's, a manager keeps Teams and Targets (P18) and a representative none, and Admin's settings index lists Sales'
 // entry for its administrator only; TeamMembers' lookup offers the people who work for the manager's organization and nothing
-// of another's;
+// of another's; follow-up 5: Ships from's choice offers an organization's own warehouses to one who sets or changes it, and the
+// demo's defaults ship from each seller's warehouse;
 // Stages' one qvt render (the shared and West's pipelines, a pipeline's stages with their open deals) and Teams' one html render
 // (a team's dated members, the ended one among them). The setup rules themselves (retiring a stage in use, memberships ended, a
 // source offered to one organization, the refusals) are Mantle's SalesPipelineSetup. The usable-when walk is the acceptance
 // SalesSetupUsable.
 // Run: ./moq test mr-boss --spec SalesSettings
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
-const {ids, users, asUser, invoke, page, screenRefusal, shell} = lib
+const {ids, users, asUser, system, invoke, page, screenRefusal, shell} = lib
 const choices = "ironstone.sales.ContextServices.get#Choices"
 const unauthorized = message => /^40[13] |is not authorized|PERMISSION_DENIED/.test(message)
 
@@ -67,6 +68,41 @@ feature("TeamMembers' lookup offers the people who work for the manager's organi
         JSON.stringify(teams) == '["Retail East","Retail West"]'
     }
 })
+
+// follow-up 5: the default facility's choice (SalesDefaults and OrderDetail's Change ships from) and the demo's defaults
+feature(
+    "Ships from offers the organization's own warehouses to one who sets or changes it; each demo seller ships from its own",
+    {
+        when() {
+            const facilities = (user, organizationPartyId, selected = null) =>
+                asUser(user, () => invoke(choices, {choice: "facilities", organizationPartyId, selected}).options || []).map(
+                    option => option.value
+                )
+            const policy = organizationPartyId =>
+                asUser(users.admin, () =>
+                    system(() => invoke("mantle.order.SalesApprovalServices.get#SalesPolicy", {organizationPartyId}))
+                ).policy
+            return {
+                retail: facilities(users.admin, ids.organizationId),
+                sales: facilities(users.admin, ids.otherOrganizationId),
+                repOther: facilities(users.rep, ids.otherOrganizationId),
+                repSelected: facilities(users.rep, ids.organizationId, "BOSS_SAL_WH"),
+                reader: facilities(users.reader, ids.organizationId),
+                retailPolicy: policy(ids.organizationId),
+                salesPolicy: policy(ids.otherOrganizationId)
+            }
+        },
+        then({retail, sales, repOther, repSelected, reader, retailPolicy, salesPolicy}) {
+            retail.includes("ZIRET_WH") && !retail.includes("BOSS_SAL_WH")
+            sales.includes("BOSS_SAL_WH") && !sales.includes("ZIRET_WH")
+            repOther.length == 0
+            repSelected.includes("ZIRET_WH") && !repSelected.includes("BOSS_SAL_WH")
+            reader.length == 0
+            retailPolicy.defaultFacilityId == "ZIRET_WH"
+            salesPolicy.defaultFacilityId == "BOSS_SAL_WH" && salesPolicy.facilityName == "Ziziwork Sales Warehouse"
+        }
+    }
+)
 
 feature("Stages renders once in qvt and Teams once in html: pipelines, stages with their open deals, a team's dated members", {
     when() {

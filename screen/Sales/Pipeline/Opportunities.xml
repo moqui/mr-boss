@@ -74,6 +74,10 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="filtered" from="!!(text || organizationPartyId || ownerPartyId || mine || teamPartyId || salesPipelineId || opportunityStageId
                 || (statusId &amp;&amp; statusId != 'SalesOppOpen') || closeFrom || closeThru || accountPartyId || dataSourceId || marketingCampaignId)"/>
         <set field="emptyText" from="filtered ? 'No opportunity matches these filters.' : 'No open opportunities' + (canEdit ? ' · Create one with New opportunity.' : '.')"/>
+        <!-- follow-up 5: the list's own filters, posted with Change stage and the batch, so the list keeps them after the move -->
+        <set field="listFilters" from="JSON.stringify({text, organizationPartyId, ownerPartyId, mine, teamPartyId, salesPipelineId,
+                opportunityStageId, statusId, closeFrom, closeThru, accountPartyId, dataSourceId, marketingCampaignId, orderByField,
+                pageIndex, pageSize})"/>
         <set field="newDefaults" from="{typeEnumId: 'SotOpportunity', organizationPartyId: sales.defaultOrganizationPartyId}"/>
         <set field="savedFinds" from="[{key:'mine', text:'Mine', icon:'sym_o_person', parameters:{mine:'Y'}},
                 {key:'won', text:'Won', icon:'sym_o_emoji_events', parameters:{statusId:'SalesOppWon'}},
@@ -111,6 +115,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <action>
                                     <form-single name="BatchMove" transition="applyBatch">
                                         <field name="batch" from="'move'"><default-field><hidden/></default-field></field>
+                                        <field name="listFilters"><default-field><hidden/></default-field></field>
                                         <field name="opportunityStageId">
                                             <default-field title="Move to">
                                                 <drop-down allow-empty="false"><list-options list="stageOptions" key="${key}" text="${text}"/></drop-down>
@@ -126,6 +131,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <action>
                                     <form-single name="BatchAssign" transition="applyBatch">
                                         <field name="batch" from="'assign'"><default-field><hidden/></default-field></field>
+                                        <field name="listFilters"><default-field><hidden/></default-field></field>
                                         <field name="ownerPartyId">
                                             <default-field title="Owner">
                                                 <drop-down allow-empty="false">
@@ -144,6 +150,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <action>
                                     <form-single name="BatchLose" transition="applyBatch">
                                         <field name="batch" from="'lose'"><default-field><hidden/></default-field></field>
+                                        <field name="listFilters"><default-field><hidden/></default-field></field>
                                         <field name="lostReasonEnumId">
                                             <default-field title="Reason">
                                                 <drop-down allow-empty="false">
@@ -261,8 +268,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     <container-dialog id="ChangeStage_${salesOpportunityId}" button-text="Change stage" icon="sym_o_swap_horiz"
                                             title="Change the stage of ${opportunityName}" width="520" condition="canEdit &amp;&amp; statusId == 'SalesOppOpen'">
                                         <form-single name="ChangeStage" transition="changeStage"
-                                                map="{salesOpportunityId:salesOpportunityId, expectedRevision:revision, opportunityStageId:opportunityStageId}">
+                                                map="{salesOpportunityId:salesOpportunityId, expectedRevision:revision, opportunityStageId:opportunityStageId,
+                                                    listFilters:listFilters}">
                                             <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
+                                            <field name="listFilters"><default-field><hidden/></default-field></field>
                                             <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                             <field name="opportunityStageId">
                                                 <default-field title="Stage">
