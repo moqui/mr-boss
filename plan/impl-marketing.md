@@ -5516,6 +5516,90 @@ and mr-pass unchanged, no Rust built. Built beside P20 (`mkt/p20`): the hot spot
     Customer360 on one page with no tab bar; the Customers and Contacts areas the audience readers' alone (design §2's U), so an events
     manager without audience view sees registrations only through Registrations.
 
+**Review Nov 15 (P19).** A fresh review of `mkt/p19` (mr-mantle be65cde3, mr-boss c52e8f0b) against P19, §2, §4, F22, F64, F82, F91
+and design §2, §7, §10, X15; master (P18, follow-ups 1 and 2) merged into both first, clean. Fixes in mr-mantle and mr-boss (one
+"Marketing P19 review" commit each; this note and design §10's as-built paragraph in mr-boss's).
+- Checked and sound:
+  - the merge guards' coverage: every Marketing and registration entity with a party field (MarketingEntities, EventRegistrationEntities,
+    FormPublicationEntities, PartyConsent) is moved, refused or by design not the party's: tracking events and tokens name the
+    recipient or a visitor hash, lead captures the submission, ContactListCommStatus keeps no party in its key, the entry code is
+    derived from the registration and its revision (not the attendee, so a moved place's ticket still checks in),
+    MarketingDecision.decidedByPartyId is staff audit, MessageSuppression follows the address; contact-mechanism references
+    (preferred, recipient, reservation email) keep naming the shared ContactMech, and eligibility reads only the kept party's current
+    addresses, so a duplicate address the merge did not attach is never sent to through them. The refusals run in `rules()` before
+    anything changes, read with authorization and entity filters off (PartyMerge's `unfiltered`, Sales P3's R1 lesson), and fail
+    with their reason codes through EntityLib's convention; the moves run inside merge#Parties' disabled block. ENROLLMENT_CONFLICT is
+    practically unreachable (every source key names its record, `segment:` its party) and harmless. Commons' and Sales' merge specs
+    are unchanged (ContactBooks only appended to; SalesAccounts untouched);
+  - the promotion mounts: `appRoot` is the mounting root's always-actions value; probed with `appRoot=Accounting` sent to
+    Marketing's Customer360 and the Marketing branch still rendered, so a request value does not override the root's. PromotionApps.js
+    is data, never authority: Mantle's StorePromotionServices are unchanged and check COMMERCE_VIEW, COMMERCE_PROMOTION_EDIT and the
+    store scope; the link guard on `store#CampaignAssociation` (add and end) asks Commerce's edit and the store scope beside the
+    campaign's edit; Commerce's promotion specs and screens' behaviour unchanged (CommercePromotions passes);
+  - get#Engagement: organization scope (the caller's covered organizations, one named through requireOrganization), a missing party
+    and another user's personal contact alike RECORD_UNAVAILABLE, omitted sources named (never zero), a failing source named while the
+    rest answer, opens and clicks only while `trackingAllowed` holds now; promotion use reads the party's order items for promotion,
+    code, date and discount only and returns no order, which is Commerce's data under COMMERCE_VIEW and its store scope; no
+    opportunity, invoice or payment is read;
+  - the worker's five choices, none unsafe: (1) between live membership states the kept party's stands: no withdrawal is lost by it;
+    (2) RECIPIENT_PENDING refusing is the conservative side (dispatch's recheck would skip a merged party, but a moved recipient could
+    reach a kept party who is also selected); (3) a live registration of a past occurrence moves: nothing is checked in after the
+    occurrence, and its order moves with merge#Parties; an offer with no dates refuses; (4) Customer360 on one page avoids F91's tab bar;
+    (5) Customers and Contacts the audience readers' follows design §2's U (an events manager has Registrations).
+- Fixed:
+  - R1 (high, mr-mantle): the consent rule kept only the merged party's withdrawal; the kept party's own withdrawal was undone by the
+    merged party's later grant (combined history, newest row wins), so a person who had withdrawn on the kept record became sendable
+    after the merge. MarketingPartyMerge.js `moveConsents` now records a PcsMerge withdrawal wherever either party's withdrawal is
+    undone (the kept party's at its own key). ContactBooks' merge feature: the kept party's SMS withdrawal survives the merged party's
+    later grant;
+  - R2 (medium, mr-mantle): a moved list membership or campaign person whose key (fromDate) met a kept party's row was dropped (two
+    duplicates added in one transaction share the timestamp), so a current unsubscription met by an ended kept row was lost; a
+    segment member whose kept row had ended was dropped. Such a row now moves a millisecond later (`createMoved`), and a current
+    segment member replaces the kept party's ended one (an exclusion still wins). The feature's third list proves it (fails before);
+  - R3 (medium, mr-mantle): get#Engagement's campaigns source, MARKETING_VIEW's, listed the campaigns the person was sent, registered
+    for or answered with that fact ("sent, registered"), a person-level read that is MARKETING_AUDIENCE_VIEW's and
+    MARKETING_EVENT_MANAGE's (MarketingAccess `audienceRead`). A campaign now comes only from the sources the caller may read, and
+    the source is omitted for a campaign reader alone. Engagement's first feature: the reader gets no source, the events manager
+    "registered" only, the audience reader "sent" only;
+  - R4 (medium, mr-boss): the `contact` record kind admitted any directory party shared or owned by the scope's organizations, so an
+    audience reader opened Customer360, ContactDetail and the record's notes and files (the root's panel host) of every shared
+    person and organization in the directory, suppliers and staff included; Sales opens only its accounts and their contacts. It now
+    also asks that the party be in the scope's audiences (Marketing.js `audienceParty`: a list member of a non-mailbox list, a
+    subscription request, segment member, recipient, registrant or Marketing form submitter of an organization of the scope).
+    MarketingPromotions' Customer360 feature: a new shared person is refused, Maya admitted (fails before);
+  - R5 (low, mr-boss): Sales' Accounts under Marketing's Leads linked every account to Marketing's Customer360 and ContactDetail, which
+    refuse a user without MARKETING_AUDIENCE_VIEW (the worker's finding); Sales.js's Marketing mount row now gives the two links only
+    with that permission (`pathPermissions`), so the rows show unlinked otherwise, as before P19. SalesAccess: the rep without
+    audience read gets the three P3 links, the administrator the two P19 ones (fails before).
+- Provisional findings (for the lead to number):
+  - R1–R5 above;
+  - Marketing's Promotions list and PromoCodes list show every promotion of Commerce's store scope (find#Promotions takes one store or
+    all), not only the stores of the user's Marketing organizations that its choices offer; the two scopes coincide for a member of
+    their organizations and differ only for a COMMERCE_ALL_ORGANIZATIONS or MARKETING_ALL_ORGANIZATIONS holder, and Mantle still
+    decides every read, so it adds no right; a store filter in Mantle's find is Commerce's owner change;
+  - with R4, an account under Leads with no Marketing record (no list, send, registration or form) opens a "not available"
+    Customer360 for an audience reader; adding it to a list goes through Accounts' bulk Add to list (P3), not ContactDetail;
+  - the worker's withdrawal-by-address finding stands (a merged party's withdrawal at an address the kept party lacks stays on the moved
+    rows only, keyed by contact mechanism; a suppression by address is the durable stop);
+  - the worker's other findings (the registration, the Customer360 tab bar, the product choices) are as described; the notes and files
+    finding is R4, the Sales-reader link finding R5.
+- Tests run (release binary, `--nobuild`, this worktree's runtime, after the master merge and the fixes): mr-mantle Engagement,
+  ContactBooks (26 of 26 with the fixes' checks, about 31 s with startup), CampaignPromotions, SalesAccounts, ShopCustomer, Consent,
+  MarketingScope (38 of 38, 33 s); mr-boss MarketingPromotions, SalesAccess, MarketingAccess, CommercePromotions, MarketingLeads (33 of
+  33, 40 s), SalesAccounts, MarketingCampaigns, MarketingLists, AccountingReceivables, CustomerServiceAccess, CommerceOrders (30 of 30,
+  33 s). Each new check run against the unfixed code and failing (ContactBooks' memberships, MarketingPromotions' stranger,
+  SalesAccess' links). Prettier clean on the changed JavaScript (ContactBooks.spec.js excepted, as before). No screen changed, so no
+  lint. Not run: test-apps, the acceptance suite (MarketingPromotionsWalk unchanged by the fixes: Maya is a list member).
+- For the lead:
+  - budget share: about +0.05 s mr-mantle (Engagement's first feature calls three more users; ContactBooks' feature a send and a list
+    more), about +0.05 s mr-boss (one person and two record checks in MarketingPromotions, one context call in SalesAccess);
+  - merge hot spots beside P20: mr-mantle `MarketingPartyMerge.js`, `MarketingEngagement.js`, `MarketingWorkspaceServices.xml` (one
+    description), `test/party/ContactBooks.spec.js`, `test/marketing/Engagement.spec.js`; mr-boss `service/ironstone/marketing/Marketing.js`
+    (the contact kind and `audienceParty` before `const SEND`), `service/ironstone/sales/Sales.js` (the mount row and sharedContext),
+    `test/Sales/SalesAccess.spec.js`, `test/Marketing/MarketingPromotions.spec.js`, design-marketing §10, this file;
+  - the user's calls: whether Customer360 and ContactDetail under Marketing should also open a party Marketing has no record of (R4
+    narrowed them to the audiences, as the record's notes and files open on the same check); the worker's five choices stand.
+
 ### P20 — Attribution, reports and Insights
 
 Design §11, §15.3 (the attribution and reporting jobs), §18 (the reports, the digest and the alerts);

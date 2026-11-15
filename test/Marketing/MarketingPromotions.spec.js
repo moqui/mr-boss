@@ -101,11 +101,32 @@ feature("PromotionDetail in Marketing's context shows the promotion with its Cam
 
 // Customer360 in Marketing, rendered once (qvt): Maya's engagement for the audience manager, the lists and sends shown, the event
 // registrations and promotion use named as not shown, no Accounting box
+// P19 review: the contact record kind (Customer360, ContactDetail and the record's notes and files under Marketing) admits a party of
+// the scope's audiences, not any directory party: a shared person Marketing has no record of is not available
 feature("Customer360 in Marketing shows a contact's engagement and names the sources the user may not read", {
     when() {
-        return asUser(users.audience, () => page("Customers/Customer360", {customerPartyId: ids.acceptedPartyId}))
+        const strangerId = system(
+            () => invoke("mantle.party.PartyServices.create#Person", {firstName: "Stranger", lastName: "Nolist"}).partyId
+        )
+        const check = partyId =>
+            asUser(users.audience, () =>
+                invoke("ironstone.marketing.ContextServices.check#Record", {
+                    appRoot: "Marketing",
+                    recordType: "contact",
+                    recordId: partyId
+                })
+            )
+        const stranger = check(strangerId)
+        ec.message.clearErrors()
+        const maya = check(ids.acceptedPartyId)
+        const result = asUser(users.audience, () => page("Customers/Customer360", {customerPartyId: ids.acceptedPartyId}))
+        result.stranger = stranger?.recordId || null
+        result.maya = maya?.recordId || null
+        return result
     },
     then(result) {
+        result.stranger == null
+        result.maya == ids.acceptedPartyId
         result.status == 200
         result.errors == []
         result.output.includes("Maya Lindqvist")

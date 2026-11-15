@@ -521,14 +521,17 @@ const recordKinds = {
     },
     // P19: a person or organization of the scope's audiences (Customer360 and ContactDetail, design §10): an audience reader's, a
     // directory party (never another user's personal contact, an internal organization or a disabled one) shared or owned by an
-    // organization of the scope; each engagement source and the contact record check their own rights again
+    // organization of the scope, and (P19 review) one Marketing of the scope already knows: a list member, a subscription request,
+    // a segment member, a recipient, a registrant or a form submitter of an organization of the scope (audienceParty). The record's
+    // notes and files open under this root on this check, so it is no wider than the audiences, as Sales' are its accounts and
+    // their contacts; each engagement source and the contact record check their own rights again
     contact: {
         name: "Contact",
         icon: "sym_o_person",
         destination: {path: "Customers/Customer360", parameter: "customerPartyId"},
         read: (userScope, partyId) => {
             if (!userScope.capabilities.customerRead) return null
-            const party = directoryParty(userScope, partyId)
+            const party = directoryParty(userScope, partyId) && audienceParty(userScope, partyId)
             return party
                 ? {organizationPartyId: null, label: lib.partyNames([partyId])[partyId] || partyId, detail: "Contact"}
                 : null
@@ -558,6 +561,64 @@ function directoryParty(userScope, partyId) {
     if (one("mantle.party.PartyRole", {partyId, roleTypeId: "OrgInternal"})) return null
     if (party.ownerPartyId && party.ownerPartyId !== "_NA_" && !covers(userScope, party.ownerPartyId)) return null
     return party
+}
+// P19 review: whether a party is in the scope's audiences: a member (any state) of a list of an organization of the scope that is not
+// a mailbox, a subscription request, explicit segment member, recipient, registrant (attendee or buyer) or submitter to a Marketing
+// form of one.
+function audienceParty(userScope, partyId) {
+    const idsOf = (entityName, conditions, field) =>
+        Array.from(find(entityName, conditions).selectField(field).distinct(true).list())
+            .map(row => row[field])
+            .filter(Boolean)
+    const ownedIn = (entityName, keyField, keys, ownerField, also = () => true) =>
+        keys.length > 0 &&
+        Array.from(find(entityName).condition(keyField, "in", keys).list()).some(
+            row => also(row) && covers(userScope, row[ownerField])
+        )
+    const P = "mantle.marketing."
+    if (
+        ownedIn(
+            P + "contact.ContactList",
+            "contactListId",
+            idsOf(P + "contact.ContactListParty", {partyId}, "contactListId"),
+            "ownerPartyId",
+            row => row.contactListTypeEnumId !== "MAILBOX"
+        )
+    )
+        return true
+    if (idsOf(P + "contact.SubscriptionRequest", {partyId}, "organizationPartyId").some(id => covers(userScope, id))) return true
+    if (
+        ownedIn(
+            P + "segment.MarketSegment",
+            "marketSegmentId",
+            idsOf(P + "segment.MarketSegmentParty", {partyId}, "marketSegmentId"),
+            "ownerPartyId"
+        )
+    )
+        return true
+    if (
+        ownedIn(
+            SEND,
+            "campaignSendId",
+            idsOf(P + "campaign.CampaignRecipient", {partyId}, "campaignSendId"),
+            "organizationPartyId"
+        )
+    )
+        return true
+    const policyIds = idsOf(
+        "mantle.work.registration.EventRegistration",
+        {attendeePartyId: partyId},
+        "registrationPolicyId"
+    ).concat(idsOf("mantle.work.registration.EventRegistration", {buyerPartyId: partyId}, "registrationPolicyId"))
+    if (ownedIn("mantle.work.registration.EventRegistrationPolicy", "registrationPolicyId", policyIds, "organizationPartyId"))
+        return true
+    return ownedIn(
+        "mantle.party.FormPublication",
+        "publicationId",
+        idsOf("mantle.party.FormSubmission", {partyId}, "publicationId"),
+        "organizationPartyId",
+        row => ["FppSurvey", "FppLead", "FppRegistration"].includes(row.purposeEnumId)
+    )
 }
 const SEND = "mantle.marketing.campaign.CampaignSend"
 const AUTOMATION = "mantle.marketing.automation.MarketingAutomation"

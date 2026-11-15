@@ -468,14 +468,20 @@ feature(
             const marketing = asUser(users.rep, () => invoke(context, {appRoot: "Marketing"}))
             if (
                 JSON.stringify(Object.keys(marketing.sharedLinks || {}).sort()) !==
-                    '["Accounts/Accounts","Accounts/ContactDetail","Accounts/Customer360","Pipeline/Leads","Settings/LeadSources"]' ||
+                    '["Accounts/Accounts","Pipeline/Leads","Settings/LeadSources"]' ||
                 marketing.sharedLinks["Pipeline/Leads"] !== "//Marketing/Leads" ||
                 // impl-marketing P3: Accounts at Marketing/Leads/Accounts, for its bulk action
-                marketing.sharedLinks["Accounts/Accounts"] !== "//Marketing/Leads/Accounts" ||
-                // impl-marketing P19: an account opens Marketing's Customer360
-                marketing.sharedLinks["Accounts/Customer360"] !== "//Marketing/Customers/Customer360"
+                marketing.sharedLinks["Accounts/Accounts"] !== "//Marketing/Leads/Accounts"
             )
                 problems.push(`Marketing's links: ${JSON.stringify(marketing.sharedLinks)}`)
+            // impl-marketing P19 (review): an account opens Marketing's Customer360 and a contact its ContactDetail for a Marketing
+            // audience reader only (the administrator here); the rep above, who holds no audience read, sees them unlinked
+            const audienceLinks = asUser("john.doe", () => invoke(context, {appRoot: "Marketing"})).sharedLinks || {}
+            if (
+                audienceLinks["Accounts/Customer360"] !== "//Marketing/Customers/Customer360" ||
+                audienceLinks["Accounts/ContactDetail"] !== "//Marketing/Contacts/ContactDetail"
+            )
+                problems.push(`Marketing's links for an audience reader: ${JSON.stringify(audienceLinks)}`)
             const pipelineMenu = shell(users.rep, true, "Pipeline/Opportunities", "Pipeline").names
             if (JSON.stringify(pipelineMenu) !== JSON.stringify(ids.pipelineMenu))
                 problems.push(`the Pipeline menu: ${pipelineMenu}`)

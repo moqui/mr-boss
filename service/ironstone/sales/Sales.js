@@ -39,6 +39,12 @@ const mountRoots = {
             "Settings/LeadSources": "Settings/LeadSources",
             "Accounts/Customer360": "Customers/Customer360",
             "Accounts/ContactDetail": "Contacts/ContactDetail"
+        },
+        // P19 review: Marketing's Customers and Contacts are its audience readers' (design-marketing §2: U); for anyone else an account
+        // and a contact show unlinked, as before P19, rather than opening a refused page
+        pathPermissions: {
+            "Accounts/Customer360": "MARKETING_AUDIENCE_VIEW",
+            "Accounts/ContactDetail": "MARKETING_AUDIENCE_VIEW"
         }
     }
 }
@@ -217,7 +223,11 @@ function sharedContext(p) {
     const mount = mountRoots[appRoot]
     const linkBase = mount.linkBase
     const sharedLinks = mount.paths
-        ? Object.fromEntries(Object.entries(mount.paths).map(([path, own]) => [path, linkBase + "/" + own]))
+        ? Object.fromEntries(
+              Object.entries(mount.paths)
+                  .filter(([path]) => !mount.pathPermissions?.[path] || access.has(mount.pathPermissions[path]))
+                  .map(([path, own]) => [path, linkBase + "/" + own])
+          )
         : Object.fromEntries(linkPaths.map(path => [path, linkBase + "/" + path]))
     return {
         capabilities: userScope.capabilities,

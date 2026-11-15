@@ -1697,12 +1697,15 @@ Account privacy page. **Source:** research §11; crosscut §§3.1–3.2. **Needs
 
 As built (impl-marketing P19): Customer360 at `Marketing/Customers/Customer360` and ContactDetail at
 `Marketing/Contacts/ContactDetail`, both hidden from the menu and the audience readers' (an account under
-Leads, an engagement row and the palette open them); Sales' Accounts mounted under Leads opens them. The
-record check is a directory party (never another user's personal contact, an internal or disabled one)
-shared or owned by an organization of the scope. Customer360 is one page, as Commerce's, with no tab bar
+Leads, an engagement row and the palette open them); Sales' Accounts mounted under Leads opens them for an
+audience reader (unlinked for anyone else). The record check is a directory party (never another user's
+personal contact, an internal or disabled one) shared or owned by an organization of the scope and in its
+audiences (a list member, subscription request, segment member, recipient, registrant or form submitter of
+an organization of the scope; P19 review), which also bounds the record's notes and files under Marketing. Customer360 is one page, as Commerce's, with no tab bar
 (the shared tab bar lists every app's tabs, impl-sales F91): the header (Contact record; Consent history for
 a consent editor) and Engagement (`W.get#Engagement`), each source in its box only with its permission:
-campaigns (`MARKETING_VIEW`), lists and segments, sends with their delivery, opens and clicks (only while
+campaigns (`MARKETING_VIEW`, each from a source the user may read: a campaign reader alone learns nothing
+of the person), lists and segments, sends with their delivery, opens and clicks (only while
 the person allows tracking in the send's organization now), consent (`MARKETING_AUDIENCE_VIEW`), form
 answers without their text (`MARKETING_AUDIENCE_VIEW` or `MARKETING_REPORT_VIEW`), event registrations
 without order or payment (`MARKETING_EVENT_MANAGE`) and promotion use without the order (Commerce's
@@ -1713,8 +1716,8 @@ The merge guards (X15) as built: an active automation enrollment, a live registr
 that has not ended and a recipient waiting in an unfinished send refuse the merge, naming the record; list
 memberships move, a collision keeping the more restrictive state (a withdrawal wins) and moving the merged
 row ended; the consent history moves and a withdrawal is recorded for the kept party (source `PcsMerge`)
-wherever the merged party's withdrawal would be undone by the kept party's later grant, at each of its
-addresses that is the same address; explicit segment members move (an exclusion wins), and subscription
+wherever either party's withdrawal would be undone by the other's later grant (the merged party's at each of
+the kept party's addresses that is the same address); explicit segment members move (an exclusion wins), and subscription
 requests, import rows, recipients (their tracking events name the recipient), automation events and ended
 enrollments, campaign people, registrations, reservations, attendance and form submissions move. A
 suppression is by address and follows the address.
