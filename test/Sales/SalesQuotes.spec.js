@@ -30,7 +30,11 @@ feature(
             own.output.includes("Bundled with the refit")
             own.output.includes("Entered price")
             own.output.includes("Explain price")
-            own.output.includes("No tax: the seller has no tax gateway")
+            // Retail is taxed through Corp's gateway (Marketing follow-up 1); the demo quote has no address of its own yet, so it says
+            // where to choose Wingtip's (propose#Quote takes it and retaxes before an issue)
+            own.output.includes("Tax by the seller's gateway")
+            own.output.includes("the quote has no address: choose the customer's in Edit quote to tax at it")
+            !own.output.includes("No tax: the seller has no tax gateway")
             own.output.includes("SalesQuoteChatter")
             own.output.includes("SalesQuoteFiles")
             // P9: the Approval box, Retail's discount rule met by the entered refit price

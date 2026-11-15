@@ -294,8 +294,10 @@ along with this software (see the LICENSE.md file). If not, see
             customerPartyId="BOSS_SAL_ACC_WINGTIP" pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent"
             fromDate="2026-01-01 00:00:00" minQuantity="1" price="17.5" priceUomId="USD"/>
     <!-- Retail East's draft for Wingtip's refit (sales.rep, East; the Wingtip refit opportunity): ten of Demo Product One-One at
-        Wingtip's own price, and Demo Product One-Two entered below its price with the reason (the manual override); no store and
-        Retail names no gateway, so no tax -->
+        Wingtip's own price, and Demo Product One-Two entered below its price with the reason (the manual override); no store, and
+        no address of its own: Retail is taxed through Corp's LOCAL gateway in Utah (Marketing follow-up 1, loaded after this file), so
+        the quote is taxed at Wingtip's address when a rep chooses it in Edit quote or proposes it (propose#Quote takes the
+        customer's address and retaxes first); loaded as data it carries no tax line until then -->
     <mantle.order.OrderHeader orderId="BOSS_SAL_QTE_WINGTIP" orderName="Wingtip store refit" orderPurposeEnumId="OrpSalesQuote"
             statusId="OrderOpen" currencyUomId="USD" entryDate="2026-11-12 10:00:00" orderRevision="1"/>
     <mantle.order.OrderPart orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" statusId="OrderOpen" vendorPartyId="ORG_ZIZI_RETAIL"

@@ -392,8 +392,9 @@ feature("a price notice reaches a Products user who holds the price permission t
 feature("the unchanged price REST URLs guard reads, validate writes and expire instead of deleting", {
     when() {
         as("john.doe", () => product("B5_REST"))
+        // as of a fixed date: the demo's next price (BOSS_PRICE_NEXT) starts relative to the load
         const read = as("catalog.price.read", () =>
-            screenTest("rest").render("s1/mantle/products/BOSS_PRD_OWN/prices", {}, "get")
+            screenTest("rest").render("s1/mantle/products/BOSS_PRD_OWN/prices", {asOfDate: "2026-06-01 00:00:00"}, "get")
         )
         const denied = as("catalog.reader", () => screenTest("rest").render("s1/mantle/products/BOSS_PRD_OWN/prices", {}, "get"))
         const writes = as("catalog.price.edit", () => {
