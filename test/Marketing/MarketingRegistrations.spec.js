@@ -1,6 +1,7 @@
 // Marketing's registrations (impl-marketing P17; design-marketing §9 Registrations, RegistrationDetail): a staff registration of the
 // demo webinar's free place by its events manager confirms at once; RegistrationDetail's one qvt render shows it to the events manager
-// with all of its checks on that render (the header, its state, the terms it accepted, its history, the actions by state); a reader
+// with all of its checks on that render (the header, its state, the terms it accepted with their cancellation rule, its history, the
+// actions by state, a new entry code among them); a reader
 // gets "Not available"; the record kind, the event's Registrations link and another organization's author refused through the
 // services. The rules are Mantle's (test/work/EventRegistrations); the scenario is the acceptance MarketingRegistrationScenario.
 // Run: ./moq test mr-boss --spec MarketingRegistrations
@@ -51,7 +52,11 @@ feature("RegistrationDetail shows a confirmed staff registration, its terms and 
         // confirmed: the change actions under More, no Confirm
         detail.output.includes("CancelDialog") &&
             detail.output.includes("CorrectDialog") &&
-            detail.output.includes("NotifyDialog")
+            detail.output.includes("NotifyDialog") &&
+            detail.output.includes("ReissueDialog")
+        // follow-up 1: the accepted terms' cancellation rule in words, and the refund the terms give a cancellation now
+        detail.output.includes("You may cancel online until the event starts, for a full refund.")
+        detail.output.includes("refundPercent")
         !detail.output.includes("ConfirmDialog")
         detail.output.includes(registrationId)
     }

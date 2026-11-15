@@ -68,7 +68,8 @@ along with this software (see the LICENSE.md file). If not, see
                 publicDescription: offer.publicDescription, timeZone: offer.timeZone, siteId: offer.siteId, productStoreId: offer.productStoreId,
                 opensDate: offer.opensDate, closesDate: offer.closesDate, totalSeats: offer.totalSeats, holdMinutes: offer.holdMinutes,
                 waitlistEnabled: offer.waitlistEnabled, waitlistLimit: offer.waitlistLimit, termsText: offer.termsText,
-                cancellationTerms: offer.cancellationTerms, sendingProfileId: offer.sendingProfileId, organizationPartyId: event.organizationPartyId} : {}
+                cancellationTerms: offer.cancellationTerms, cancelDeadlineHours: offer.cancelDeadlineHours, refundPercent: offer.refundPercent,
+                lateCancelAllowed: offer.lateCancelAllowed, sendingProfileId: offer.sendingProfileId, organizationPartyId: event.organizationPartyId} : {}
             ticketValues = {workEffortId, registrationPolicyId: offerId, priceSourceEnumId: 'EtpFree', perOrderLimit: 10,
                 organizationPartyId: event.organizationPartyId}
             questionValues = offer ? {workEffortId, registrationPolicyId: offerId, expectedRevision: offer.revision, formId: offer.formId,
@@ -175,6 +176,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="termsText"><default-field title="Terms"><text-area rows="3" cols="60"/></default-field></field>
                                     <field name="cancellationTerms"><default-field title="Cancellation terms"><text-area rows="2" cols="60"/></default-field></field>
+                                    <field name="cancelDeadlineHours"><default-field title="Cancel online until (hours before)" tooltip="Hours before the start when online cancellation closes (a day is 24); empty: until the start"><text-line size="6" input-type="number"/></default-field></field>
+                                    <field name="refundPercent"><default-field title="Refund (%)" tooltip="Of a confirmed place's price and tax when cancelled before then; empty: 100"><text-line size="6" input-type="number"/></default-field></field>
+                                    <field name="lateCancelAllowed"><default-field title="After that"><check><option key="Y" text="Still allow online cancellation, with no refund"/></check></default-field></field>
                                     <field name="submitButton"><default-field title=""><submit text="Save offer"/></default-field></field>
                                     <field-layout>
                                         <field-ref name="publicTitle"/>
@@ -186,6 +190,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field-row><field-ref name="timeZone"/><field-ref name="sendingProfileId"/></field-row>
                                         <field-ref name="termsText"/>
                                         <field-ref name="cancellationTerms"/>
+                                        <field-row><field-ref name="cancelDeadlineHours"/><field-ref name="refundPercent"/></field-row>
+                                        <field-ref name="lateCancelAllowed"/>
                                         <field-ref name="submitButton"/>
                                     </field-layout>
                                 </form-single>
@@ -235,6 +241,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body>
                                 <label type="p" text="${offer.occurrenceText} (${offer.timeZone})"/>
                                 <label type="p" style="text-caption m-muted" text="Registration: ${offer.windowText} · seats ${offer.seatsText || 'not set'} · ${offer.waitlistedCount} waitlisted · hold ${offer.holdMinutes} minutes · waitlist ${offer.waitlistEnabled == 'Y' ? 'on' : 'off'}"/>
+                                <label type="p" style="text-caption" text="Cancellation: ${offer.cancelRuleText}"/>
                                 <label type="p" style="text-caption m-muted" text="Site: ${offer.siteName || 'none'} · ${offer.storeName ? 'store ' + offer.storeName : 'storeless orders'} · terms revision ${offer.termsRevision}"/>
                                 <label type="p" style="text-caption m-muted" text="${offer.publishedText ? 'Published ' + offer.publishedText : 'Not published'}"/>
                             </box-body>
