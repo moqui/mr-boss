@@ -444,7 +444,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P17 Registrations, tickets and payment | Mantle, BOSS, PASS | Registrations, RegistrationDetail; PASS Register, Registration | built and reviewed Nov 15, merged |
 | P18 Check-in | Mantle, BOSS | CheckIn | built and reviewed Nov 15, merged |
 | P19 Promotions, Customer360 and engagement | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail, Customer360, ContactDetail | built and reviewed Nov 15, merged |
-| P20 Attribution, reports and Insights | Mantle, BOSS | Reports, CampaignPerformance, DeliveryAnalysis, AudienceGrowth, Attribution | — |
+| P20 Attribution, reports and Insights | Mantle, BOSS | Reports, CampaignPerformance, DeliveryAnalysis, AudienceGrowth, Attribution | built and reviewed Nov 15, merged |
 | P21 Calendar, shell providers and Assist | Mantle, BOSS | Calendar, QuickCreate | — |
 | P22 SMS | Mantle, BOSS, PASS | the SMS channel of Sends, Compose, AutomationDetail, SendingProfiles; PASS EmailPreferences' SMS scope | — |
 | P23 Finish | all | the sweeps and the review walks (acceptance) | — |
@@ -5777,7 +5777,7 @@ unchanged, no Rust built. Built beside P19 (`mkt/p19`; the hot spots below).
 - Inventories: usl-inventory's "Added in Marketing P20" table; ss-inventory has no row for these screens.
 - Design edits: design-marketing §11 (as built, before §12); design-sales §8 (the funnel's visit step built); design-commerce §3
   (OnlineSales' Traffic list); design-crosscut §1.3's register (the handler's P20 part).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F386 to F397 in order:
   - the code over the plan above: the order's identity is its local visit, the key that visit carried and the customer as a consenting
     recipient; an unattributed decision recorded; amounts read from the attributed orders' own rows; the aggregation a whole recompute;
     the datasets' documents in mr-boss; counts, not rates, in the alert templates; one attention count service; Reports before Settings;
@@ -5912,7 +5912,7 @@ in one commit per repository ("Marketing P20 review: …"); the user's two calls
     reader could not see, and an audience reader can open the same people in Audience preview. Eligibility gains a feature (the buckets
     equal the preview's, no address or party id in the answer, an author and a report reader refused, another organization's reader
     RECORD_UNAVAILABLE).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F398 to F401 in order:
   - R1 to R6 above;
   - the worker's list stands (the order's identity by its local visit, its key and the consenting customer; the unattributed
     decision; amounts from the attributed orders' own rows; the aggregation a whole recompute; the datasets' documents in mr-boss; counts,
@@ -6489,7 +6489,7 @@ mr-pass unchanged).
   Insights and People spec (41 specs, 176 of 176); mr-pass MarketingEvents, MarketingRegistration, MarketingAccess (9 of 9); mr-mantle
   EventRegistrations, EventCheckIn, EventRegistrationSetup (22 of 22). Prettier (mr-moqui's config) on the changed specs. Not run:
   test-apps, test-framework, acceptance.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F381 to F382 in order:
   - the code over the plan above: no Mantle or PASS spec depended on the BOSS events, and moving a quote's validity through the
     entity service raises its revision, so the loader runs without entity ECA rules; Fabrikam's quote is moved too;
   - the dates left fixed (the campaigns', the opportunities', Retail's holidays): no spec depends on them; the spring campaign ends
@@ -6533,7 +6533,7 @@ text, §2, §4 (the Nov 15 call) and follow-up 2's loader pattern.
     changed the stored date and OrderPartHandleChange counted revision 2 (the header row resets 1 just before; checked with a store
     of the row: unchanged or omitted fields count nothing, the placeholder counts one), breaking the specs that act on revision 1.
     The rows now name no validThruDate and load#QuoteDatesDemo writes it.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F383 to F385 in order:
   - R1 and R2 above;
   - the webinar's call link is made once (P16's webinarCall skips an event with an infoUrl), so a reload more than about two weeks
     after the first load moves the webinar past the link's 90 days; a fresh load is always inside. Not fixed: telling an expired link
@@ -6624,6 +6624,7 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | The 2027 demo dates specs depend on become load-relative: the Marketing webinar and workshop (their events, offers' occurrences and the workshop's closing, together), the Sales demo quotes' validity, and PeopleLeave's request days; built in follow-up 3 | The user's call (Nov 15), after follow-up 2's F366 and F369 |
 | Nov 15, 2026 | A remote PASS frontend forwards the consented visitor key with the checkout, so an order placed through it is attributed like a local one; a follow-up the lead runs in mr-pass and mr-mantle after P20's review (what record#OrderAttribution needs: P20's Review note, For the lead) | The user's call (P20) |
 | Nov 15, 2026 | Assist gets an aggregate-only audience tool: counts per bucket and reason only (classify#Recipients' buckets), never names, addresses or party ids; Assistant only, not MCP; the reader's audience permission and organization scope. Built in P20's review (SegmentServices count#Audience, marketing_audience_counts) | The user's call (P20) |
+| Nov 15, 2026 | Customer360 and ContactDetail under Marketing open only a party Marketing has a record of in the user's organizations (a list member, subscription request, segment member, recipient, registrant or form submitter), since the contact's notes and files open on the same check; Sales and Commons still open any party they admit | The user's call (P19's review) |
 
 ## 5. Open questions
 
@@ -7023,6 +7024,27 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F378 | P19 (Review Nov 15): with R4, an account under Leads with no Marketing record (no list, send, registration or form) opens a "not available" Customer360 for an audience reader; adding it to a list goes through Accounts' bulk Add to list (P3), not ContactDetail | P19: as its Review note says |
 | F379 | P19 (Review Nov 15): the worker's withdrawal-by-address finding stands (a merged party's withdrawal at an address the kept party lacks stays on the moved rows only, keyed by contact mechanism; a suppression by address is the durable stop) | P19: as its Review note says |
 | F380 | P19 (Review Nov 15): the worker's other findings (the registration, the Customer360 tab bar, the product choices) are as described; the notes and files finding is R4, the Sales-reader link finding R5 | P19: as its Review note says |
+| F381 | Follow-up 3 (Built Nov 15): the code over the plan above: no Mantle or PASS spec depended on the BOSS events, and moving a quote's validity through the entity service raises its revision, so the loader runs without entity ECA rules; Fabrikam's quote is moved too | Follow-up 3: as its Built note says |
+| F382 | Follow-up 3 (Built Nov 15): the dates left fixed (the campaigns', the opportunities', Retail's holidays): no spec depends on them; the spring campaign ends Jan 31, 2027 whatever the load, so a later load shows its events after it | Follow-up 3: as its Built note says |
+| F383 | Follow-up 3 (Review Nov 15): R1 and R2 above | Follow-up 3: as its Review note says |
+| F384 | Follow-up 3 (Review Nov 15): the webinar's call link is made once (P16's webinarCall skips an event with an infoUrl), so a reload more than about two weeks after the first load moves the webinar past the link's 90 days; a fresh load is always inside. Not fixed: telling an expired link needs the CallLink row behind the path (its token is hashed); for the lead whether the demo loader should renew it | Follow-up 3: as its Review note says |
+| F385 | Follow-up 3 (Review Nov 15): a quote loader failure: the two moves share the service's transaction, so a failing update rolls back both (fixed IDs, rare); noted, not changed | Follow-up 3: as its Review note says |
+| F386 | P20 (Built Nov 15): the code over the plan above: the order's identity is its local visit, the key that visit carried and the customer as a consenting recipient; an unattributed decision recorded; amounts read from the attributed orders' own rows; the aggregation a whole recompute; the datasets' documents in mr-boss; counts, not rates, in the alert templates; one attention count service; Reports before Settings | P20: as its Built note says |
+| F387 | P20 (Built Nov 15): a remote PASS frontend's checkout carries no visitor key to the order (and its session no visit on the authority), so an order through a remote frontend is attributed only through its customer as a consenting recipient, not "through its visitor key" as scenario 18 asks; PASS's checkout operation would need to pass the key's digest for the order (mr-pass and the facade's schema; not in this phase's repositories) | P20: as its Built note says |
+| F388 | P20 (Built Nov 15): attribution through the visit needs the landing page (with the link's code) and the checkout in one session on the authority's host: the redirect itself declines its session, so a click followed by a Shop page without the code links nothing | P20: as its Built note says |
+| F389 | P20 (Built Nov 15): `preview#Audience` is not exposed to Assist: it answers names and whole addresses to an audience reader; an aggregate-only operation (bucket counts) would be the tool | P20: as its Built note says |
+| F390 | P20 (Built Nov 15): invoiced revenue is the attributed orders' OrderItemBilling (amount × quantity), returns their completed ReturnItems; design §11's invoice-line allocation of split lines and credits beyond returns are not built | P20: as its Built note says |
+| F391 | P20 (Built Nov 15): Audience growth counts the evidenced consent records of each list: a legacy member with no consent record is in "members now" and in no opening or closing count | P20: as its Built note says |
+| F392 | P20 (Built Nov 15): the delivery dataset has no campaign or send dimension (a delivery names its send only in its event key): campaign results by campaign are the reports' | P20: as its Built note says |
+| F393 | P20 (Built Nov 15): Commerce's Home keeps P15's Visits card with no conversion figure; Online sales shows visits and campaign orders | P20: as its Built note says |
+| F394 | P20 (Built Nov 15): the report readers see campaign totals (orders and their value by currency) without a Sales or Commerce read; an order's own row needs one (design §2: R for the reports, source rights for drill-down) | P20: as its Built note says |
+| F395 | P20 (Built Nov 15): the demo has no campaign deliveries, events or attributed orders, so the reports read nearly empty on the demo; the acceptance scenario makes its own | P20: as its Built note says |
+| F396 | P20 (Built Nov 15): `get#TrackingLinkResults` is built and on no screen (TrackingLinkDetail keeps get#TrackingLink's observations) | P20: as its Built note says |
+| F397 | P20 (Built Nov 15): a pending request with an expiry that an import row names cannot be removed (its foreign key) and is named each night; imports file requests without an expiry, so none is expected | P20: as its Built note says |
+| F398 | P20 (Review Nov 15): R1 to R6 above | P20: as its Review note says |
+| F399 | P20 (Review Nov 15): the worker's list stands (the order's identity by its local visit, its key and the consenting customer; the unattributed decision; amounts from the attributed orders' own rows; the aggregation a whole recompute; the datasets' documents in mr-boss; counts, not rates, in the alerts; one attention service; Reports before Settings; split-line allocation and credits beyond returns not built; the legacy member outside Audience growth's opening and closing; no campaign dimension in the delivery dataset; Commerce Home without a conversion figure; the demo's empty reports; `get#TrackingLinkResults` on no screen; the import-row request named each night) | P20: as its Review note says |
+| F400 | P20 (Review Nov 15): amounts in the reports are summed as JavaScript numbers and rounded only for display (decimals per JS-Globals would be exact); invoiced counts OrderItemBilling whatever its invoice's status (a cancelled invoice's billing still counts); neither fixed here | P20: as its Review note says |
+| F401 | P20 (Review Nov 15): the remote PASS checkout's visitor key (the user's call of Nov 15) is the lead's follow-up: see "For the lead" | P20: as its Review note says |
 
 ## 7. Later
 
