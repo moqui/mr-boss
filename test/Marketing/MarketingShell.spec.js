@@ -229,6 +229,16 @@ feature(
                 users.events,
                 () => invoke(C + "search#Records", {text: "Garden newsletter", limit: 10}).rows
             )
+            // the review: Approvals' and Automations' places only for their areas' users (the events manager neither, the author Automations)
+            const places = user =>
+                asUser(user, () => {
+                    const place = ec.resource.script("component://mr-boss/service/ironstone/marketing/Marketing.js").placesFor("Marketing")
+                    return {
+                        approvals: place("marketingApprovals"),
+                        automation: place("marketingAutomation", "marketingAutomationId", "X"),
+                        campaign: place("marketingCampaign", "marketingCampaignId", "X")
+                    }
+                })
             const number = "+1801" + callerNumber.contactNumber.replace(/\D/g, "")
             const call = user => asUser(user, () => invoke(C + "get#CallContext", {number}))
             return {
@@ -243,7 +253,9 @@ feature(
                 eventsInfo: info(users.events),
                 eventsPalette: Array.from(eventsPalette || []),
                 authorSendLink: sendLinks(users.author),
-                eventsSendLink: sendLinks(users.events)
+                eventsSendLink: sendLinks(users.events),
+                eventsPlaces: places(users.events),
+                authorPlaces: places(users.author)
             }
         },
         then({
@@ -258,8 +270,12 @@ feature(
             eventsInfo,
             eventsPalette,
             authorSendLink,
-            eventsSendLink
+            eventsSendLink,
+            eventsPlaces,
+            authorPlaces
         }) {
+            eventsPlaces.approvals == null && eventsPlaces.automation == null && eventsPlaces.campaign != null
+            authorPlaces.approvals == null && authorPlaces.automation == "/qapps/Marketing/Automations/AutomationDetail?marketingAutomationId=X"
             authorSendLink == "//Marketing/Sends/SendDetail" && eventsSendLink == null
             !eventsPalette.some(row => row.recordEntity === SEND)
             const eventsCard = Array.from(eventsInfo.recordList).find(row => row.recordId === ids.scheduledSendId)

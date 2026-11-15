@@ -1783,8 +1783,14 @@ const routePaths = {
     marketingDelivery: "Sends/CampaignDelivery",
     marketingRegistrations: "Events/Registrations"
 }
-// Follow-up 9: the capability a route's place asks before it is linked (a send's: the Sends area and a reader of sends)
-const routeCapabilities = {marketingSend: "sendLink", marketingDelivery: "sendLink"}
+// Follow-up 9: the capability a route's place asks before it is linked (a send's: the Sends area and a reader of sends; its review:
+// Approvals' and Automations' their areas, as each area's own check asks)
+const routeCapabilities = {
+    marketingSend: "sendLink",
+    marketingDelivery: "sendLink",
+    marketingApprovals: "approvals",
+    marketingAutomation: "automations"
+}
 // A route's place for a user of these capabilities (scope().capabilities), or null when there is none or they may not open it.
 function placeOf(appRoot, route, recordParameter, recordId, capabilities) {
     const path = route && Object.hasOwn(routePaths, route) ? routePaths[route] : null

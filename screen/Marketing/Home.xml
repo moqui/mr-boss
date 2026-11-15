@@ -55,7 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <!-- the places of the route keys a row names: Marketing's own screens -->
         <set field="places" from="{marketingAdoption: sharedLinks['Settings/Adoption'], marketingSettings: sharedLinks['Settings/Index'],
-                marketingCampaigns: sharedLinks['Campaigns/Campaigns'], marketingApprovals: sharedLinks['Campaigns/Approvals'],
+                marketingCampaigns: sharedLinks['Campaigns/Campaigns'], marketingApprovals: can.approvals ? sharedLinks['Campaigns/Approvals'] : null,
                 marketingCampaign: sharedLinks['Campaigns/CampaignDetail'], marketingCampaignDefaults: sharedLinks['Settings/CampaignDefaults'],
                 marketingLists: sharedLinks['Audiences/Lists'], marketingSends: can.sends ? sharedLinks['Sends/Sends'] : null,
                 marketingSend: sharedLinks['Sends/SendDetail'], marketingDelivery: sharedLinks['Sends/CampaignDelivery'],
