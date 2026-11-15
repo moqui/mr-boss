@@ -437,7 +437,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P13 Leads and the Sales handoff | Mantle, BOSS, PASS | Leads, LeadRules, LeadSources; PASS SubmitForm's lead purpose | built and reviewed Nov 14, merged |
 | P14 Content, blog posts and landing pages | Mantle, BOSS, PASS | Content, ContentDetail, BlogPosts, BlogPostDetail, LandingPages, PageDetail, Knowledge; PASS pages | built and reviewed Nov 14, merged |
 | P15 Tracking links and capture | Mantle, BOSS, PASS | TrackingLinks, TrackingLinkDetail; CampaignDetail's Tracking links tab | built and reviewed Nov 15, merged |
-| P16 Events and registration setup | Mantle, BOSS, PASS | Events, EventDetail, RegistrationSetup; PASS Event | — |
+| P16 Events and registration setup | Mantle, BOSS, PASS | Events, EventDetail, RegistrationSetup; PASS Event | built and reviewed Nov 15, merged |
 | P17 Registrations, tickets and payment | Mantle, BOSS, PASS | Registrations, RegistrationDetail; PASS Register, Registration | — |
 | P18 Check-in | Mantle, BOSS | CheckIn | — |
 | P19 Promotions, Customer360 and engagement | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail, Customer360, ContactDetail | — |
@@ -4584,7 +4584,7 @@ mr-moqui unchanged, no Rust built. Built beside the framework follow-up reservin
   NewEvent); ss-inventory's EventDetail and MyCalendar NewEventForm rows.
 - Design edits: design-marketing §3 (CampaignDetail's event link), §9 Events, EventDetail and RegistrationSetup (as built), §13 Event (as
   built), §14.1 RegistrationEvent; design-drawers-commons §7 (the EventDetail hook, an owner contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F308 to F313 in order:
   - the code over the plan above: RegistrationEvent keeping the organization and the campaign link made by E, one offer row per occurrence
     changed in place with its revisions, EventRegistration defined now with its seat states only, no amount on a ticket type, the gateway
     rule, the question publication written by E, `close#Registration`, the camelCase operation and `?offer=`, the EventDetail hook, Add video
@@ -4681,7 +4681,7 @@ follow-ups) merged into all three first: mr-mantle and mr-boss clean, mr-pass on
     organization whatever the calendar's visibility; now only to a viewer of the event (check#EventAccess canView);
   - R5 (low; Commons EventDetail.xml): a request carrying `eventAppLinks` as a JSON body's list passed the "not text" test; a request
     carrying the name now shows no app links.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F314 to F321 in order:
   - the Built note's findings stand but the first: the campaign link is the campaign's change (R1), not E's;
   - an offer changed in place keeps only a counter of its terms (termsRevision); the accepted words survive only in the policy row and
     the audit log. P17 should keep on each registration the termsRevision it accepted and the accepted text (or a snapshot row per terms
@@ -5354,6 +5354,20 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F305 | P15 (Review Nov 15): an allowlist entry admits its subdomains (`partner.example` admits `shop.partner.example`), so an entry for a shared hosting domain would admit every tenant under it; MARKETING_CONFIGURE only | P15: as its Review note says |
 | F306 | P15 (Review Nov 15): a pixel's limit is per client across all pixels (30 in ten minutes): a mail provider's image proxy fetching for many recipients from one address has most opens dropped (opens are not yet reported, P20) | P15: as its Review note says |
 | F307 | P15 (Review Nov 15): a link's end date cannot be cleared from the form (an empty Timestamp is no parameter, so the old one is kept); disabling is the way back | P15: as its Review note says |
+| F308 | P16 (Built Nov 15): the code over the plan above: RegistrationEvent keeping the organization and the campaign link made by E, one offer row per occurrence changed in place with its revisions, EventRegistration defined now with its seat states only, no amount on a ticket type, the gateway rule, the question publication written by E, `close#Registration`, the camelCase operation and `?offer=`, the EventDetail hook, Add video call on RegistrationSetup | P16: as its Built note says |
+| F309 | P16 (Built Nov 15): an event that does not repeat has its offer matched to its dates now, so moving the event in the calendar moves the offer; a series' occurrence is matched by the start its rule gives it, within 31 days of a changed instance's own start (a changed instance moved further no longer matches, and the offer's readiness says "no longer an occurrence"); changed dates' notices are P17's job | P16: as its Built note says |
+| F310 | P16 (Built Nov 15): EventDetail's tabs (Overview, Attendees, Reminders, Files, Chatter) link Commons' own route, as under People's mount, so a click there leaves Marketing's menu | P16: as its Built note says |
+| F311 | P16 (Built Nov 15): the demo's ZIZI_SHOP is unpublished (as P7's, P12's and P14's demos), so the two demo offers' pages are Not Found until it is published; the webinar's call link lasts 90 days (the framework's most), shorter than a later event would need | P16: as its Built note says |
+| F312 | P16 (Built Nov 15): the occurrence choice of a series lists the next 24 occurrences in 400 days; a later one cannot be offered yet | P16: as its Built note says |
+| F313 | P16 (Built Nov 15): a time zone is typed (validated against the server's zones), not chosen from a list | P16: as its Built note says |
+| F314 | P16 (Review Nov 15): the Built note's findings stand but the first: the campaign link is the campaign's change (R1), not E's | P16: as its Review note says |
+| F315 | P16 (Review Nov 15): an offer changed in place keeps only a counter of its terms (termsRevision); the accepted words survive only in the policy row and the audit log. P17 should keep on each registration the termsRevision it accepted and the accepted text (or a snapshot row per terms revision written when it rises), not rely on EntityAuditLog as evidence | P16: as its Review note says |
+| F316 | P16 (Review Nov 15): the capacity checks lock the offer's row (forUpdate); P17's reservation must take the same lock (offer, then ticket type) so a capacity change and a reservation serialize | P16: as its Review note says |
+| F317 | P16 (Review Nov 15): after publication store#RegistrationPolicy accepts a closing date past the occurrence's end, and store#TicketType a ticket capacity above the offer's seats (its description says "within the offer's seats"); the readiness checks the window at publish only | P16: as its Review note says |
+| F318 | P16 (Review Nov 15): the public availability says "Full: join the waitlist" when the waitlist is on even when its limit is reached | P16: as its Review note says |
+| F319 | P16 (Review Nov 15): a ticket type with places taken may be ended (its places stay counted in the offer); P17 decides what its holders see | P16: as its Review note says |
+| F320 | P16 (Review Nov 15): find#Events and get#EventSetup give a registration event's name, dates and place to every Marketing reader of the organization, whatever the calendar's visibility (its notes now follow it, R4) | P16: as its Review note says |
+| F321 | P16 (Review Nov 15): an author may still publish registration questions alone through Commons (P12's registration purpose); only an offer's own publication is kept off SubmitForm | P16: as its Review note says |
 
 ## 7. Later
 
