@@ -189,9 +189,9 @@ feature("a reader of every app sees the step's count, Commerce's own, and opens 
         orders.status == 200
         orders.errors == ""
         counted.status == 200
-        // the Sales and Marketing steps, whose apps are not built
-        quote.stateText == "Information"
-        quote.url == null
+        // Sales P19: the step opens Sales' quotes
+        quote.stateText == ""
+        quote.url.includes("/Sales/Quotes/Quotes")
         // Marketing P20: the step opens Marketing's campaigns
         findUs.stateText == ""
         findUs.url.includes("/Marketing/Campaigns/Campaigns")

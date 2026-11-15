@@ -46,10 +46,21 @@ const apps = {
     }
 }
 // The mounting app's registration with its context read now: {app, pageApp, can: {themeEdit, publish}, sharedLinks, detailUrl, ...};
-// an app with none is refused, as its context service refuses a user it does not admit.
+// an app with none (the screen opened outside a mount) gets an empty context, app null, whose screens show "not available"
+// and read nothing; the user a mounting app's context service does not admit is refused there.
 function context(appRoot) {
     const app = Object.hasOwn(apps, appRoot || "") ? apps[appRoot] : null
-    if (!app) throw new Error("PAGES_CONTEXT: The pages are not available here")
+    if (!app) return {
+        app: null,
+        pageApp: null,
+        storePages: false,
+        words: {routeTip: "", empty: "The pages are not available in this app.", unavailable: "the pages are not available in this app."},
+        choicesService: null,
+        can: {themeEdit: false, publish: false},
+        sharedLinks: {},
+        detailUrl: null,
+        review: null
+    }
     const out = ec.service.sync().throwOnError(true).name(app.contextService).parameters({appRoot}).call() || {}
     const caps = out.capabilities || {}
     return {

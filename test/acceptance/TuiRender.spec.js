@@ -41,6 +41,7 @@ const demoParameters = {
     "FacilityDetail": {facilityId:"ZIRET_WH"},
     "QualityInspection": {qualityInspectionId:"BOSS_WH_INSP"},
     "ReturnDetail": {returnId:"BOSS_ACCT_RETURN"},
+    "AgreementDetail": {agreementId:"BOSS_SALES_NO_AGREEMENT"},
     "SupplierPrices": {organizationPartyId:"ORG_ZIZI_SERVICES"},
     "PriceExplain": {productId:"BOSS_PRD_OWN",organizationPartyId:"ORG_ZIZI_SERVICES"},
     "Products/Prices/PriceLists/PriceListDetail": {priceListId:"BOSS_PRICE_LIST"},

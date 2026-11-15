@@ -308,7 +308,8 @@ feature("the W agent receives one unit and a second rejected at the dock, then t
             settled,
             beyond,
             box2,
-            billed: rows("mantle.order.return.ReturnItemBilling", {returnId: state.returnId}).reduce(
+            // the filters' units settled; the item's tax adjustment follows it as a child return item of its own
+            billed: rows("mantle.order.return.ReturnItemBilling", {returnId: state.returnId, returnItemSeqId: seq}).reduce(
                 (total, row) => total + Number(String(row.quantity ?? 0)),
                 0
             ),

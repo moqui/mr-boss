@@ -12,7 +12,19 @@ const {ids, users, asUser, system, invoke, refusal} = lib
 const webroot = "component://webroot/screen/webroot.xml"
 const L = "mantle.request.SlaServices."
 const state = {}
-const chicago = (day, clock) => new Date(Date.parse(day + "T" + clock + ":00-06:00")).getTime()
+// The walk's dates were written for the week of Friday 6 Nov 2026; they move by whole weeks to the first Friday from today on,
+// as the demo's working hours (Demo.js, store#WorkingHours) start the week before the load, so a fixed past Friday falls before
+// them. Each date below is written as in that week and read through day().
+const dayMs = 24 * 60 * 60 * 1000
+const shiftDays = Math.max(0, Math.ceil((Date.now() - Date.UTC(2026, 10, 7)) / (7 * dayMs))) * 7
+const day = text => {
+    const [y, m, d] = text.split("-").map(Number)
+    return new Date(Date.UTC(y, m - 1, d) + shiftDays * dayMs).toISOString().slice(0, 10)
+}
+const chicago = (text, clock) =>
+    Number(String(ec.l10n.parseTimestamp(day(text) + " " + clock, "yyyy-MM-dd HH:mm", null, "America/Chicago")))
+// a time as the SLA screens show it (Sla.js textAt)
+const shown = (text, clock) => ec.l10n.format(new Date(chicago(text, clock)), "EEE d MMM yyyy HH:mm", null, "America/Chicago")
 const at = value => (value == null ? null : /^-?\d+$/.test(String(value)) ? Number(value) : Date.parse(String(value)))
 const one = (entity, conditions) => system(() => ec.entity.find(entity).condition(conditions).one())
 const rows = (entity, conditions) => system(() => Array.from(ec.entity.find(entity).condition(conditions).list()))
@@ -72,14 +84,14 @@ function message(requestId, typeId, mailStatusId) {
 
 spec({
     setupSpec() {
-        // Monday the 9th is Retail's holiday
+        // the Monday after the walk's Friday (the 9th as written) is Retail's holiday
         system(() =>
             call("create#mantle.work.effort.WorkEffort", {
                 workEffortTypeEnumId: "WetEvent",
                 purposeEnumId: "WepHoliday",
                 workEffortName: "Walk holiday",
                 ownerPartyId: ids.organizationId,
-                allDayStart: "2026-11-09"
+                allDayStart: day("2026-11-09")
             })
         )
     },
@@ -120,12 +132,12 @@ feature("a case received Friday 16:30 with a holiday Monday is due for first res
     },
     then({simulation, page, first, history}) {
         simulation.clocks[0].label == "First response"
-        simulation.clocks[0].dueText == "Tue 10 Nov 2026 12:30"
+        simulation.clocks[0].dueText == shown("2026-11-10", "12:30")
         simulation.holidays.some(row => row.name == "Walk holiday")
         page.errors == []
         page.output.includes("When would a case be due?")
         at(first.dueDate) == chicago("2026-11-10", "12:30")
-        history.output.includes("Tue 10 Nov 2026 12:30")
+        history.output.includes(shown("2026-11-10", "12:30"))
     }
 })
 

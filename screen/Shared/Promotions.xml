@@ -55,9 +55,11 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <actions>
         <set field="can" from="sharedMountContext.capabilities"/>
-        <service-call name="mantle.product.StorePromotionServices.find#Promotions" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{productStoreId:(productStoreId || null), term:term, serviceRegisterId:(serviceRegisterId || null),
-                    requireCode:(requireCode || null), state:(state || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <if condition="sharedMountContext.available">
+            <service-call name="mantle.product.StorePromotionServices.find#Promotions" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{productStoreId:(productStoreId || null), term:term, serviceRegisterId:(serviceRegisterId || null),
+                        requireCode:(requireCode || null), state:(state || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        </if>
         <script>ec.message.clearErrors()</script>
         <set field="promotions" from="found?.promotions || []"/>
         <set field="promotionsCount" from="found?.promotionsCount || 0"/>
@@ -71,6 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="newPromotion" from="{newProductStoreId:(productStoreId || (sharedMountContext.storeOptions || [])[0]?.value || null), requireCode:'Y'}"/>
     </actions>
     <widgets>
+        <label text="The promotions are not available in this app." type="p" style="text-caption m-muted" condition="!sharedMountContext.available"/>
         <container style="row items-center q-col-gutter-sm q-mb-sm">
             <container style="col"><label text="Promotions" type="h5"/></container>
             <container style="col-auto">

@@ -46,6 +46,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="createPage">
         <actions>
+            <if condition="!pagesContext.app"><return error="true" message="The pages are not available here"/></if>
             <service-call name="mantle.public.ThemeServices.store#SitePage" out-map="created"
                     in-map="{app:pagesContext.pageApp, siteId:siteId, title:title, routePath:routePath, locale:(locale || null),
                         templateKey:(templateKey || null), pageRole:(pageRole || null), changeReason:(changeReason || null)}"/>
@@ -60,9 +61,11 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <!-- the locale choices are read here, not in the widget (server-static: a widget sees only part of ec) -->
         <set field="localeOptions" from="ec.l10n.getAvailableLocales()"/>
-        <service-call name="mantle.public.ThemeServices.find#SitePages" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{app:pagesContext.pageApp, siteId:(siteId || null), term:(term || null), locale:(locale || null),
-                    pageRole:(pageRole || null), state:(state || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <if condition="pagesContext.app">
+            <service-call name="mantle.public.ThemeServices.find#SitePages" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{app:pagesContext.pageApp, siteId:(siteId || null), term:(term || null), locale:(locale || null),
+                        pageRole:(pageRole || null), state:(state || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        </if>
         <set field="foundError" from="ec.message.hasError()"/>
         <script>ec.message.clearErrors()</script>
         <set field="pages" from="found?.pages || []"/>

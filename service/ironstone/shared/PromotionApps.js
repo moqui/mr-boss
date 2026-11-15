@@ -45,7 +45,18 @@ const registration = appRoot => {
 }
 // The mounting app's registration with its context read now, in the shape the screens read (sharedMountContext): its capabilities
 // (promotionEdit, orders), storeOptions (the stores a new promotion may take), appRoot, sharedLinks, and the registration itself.
+// An app with none (the screen opened outside a mount) gets an empty context, available false, whose screens show "not available"
+// and read nothing; its transitions are refused by registration.
 function context(appRoot) {
+    if (!Object.hasOwn(apps, appRoot || "")) return {
+        appRoot,
+        available: false,
+        capabilities: {promotionEdit: false, orders: false},
+        storeOptions: [],
+        sharedLinks: {},
+        campaignLinks: false,
+        choicesService: null
+    }
     const app = registration(appRoot)
     const out = ec.service.sync().throwOnError(true).name(app.contextService).parameters({appRoot}).call() || {}
     const caps = out.capabilities || {}
@@ -57,6 +68,7 @@ function context(appRoot) {
           )
     return {
         appRoot,
+        available: true,
         capabilities: {
             promotionEdit: !!caps[app.capabilities.promotionEdit],
             orders: !!(app.capabilities.orders && caps[app.capabilities.orders])
