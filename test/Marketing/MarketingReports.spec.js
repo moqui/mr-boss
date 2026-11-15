@@ -152,18 +152,51 @@ feature(
                 })
                 ec.search.indexDocuments(retail.concat([services]))
             })
+            // the totals by list (an aggregate), and the records themselves, which name the member in their key (P20 review)
+            const attempt = action => {
+                ec.message.pushErrors()
+                try {
+                    const out = action()
+                    return ec.message.hasError() ? {error: ec.message.getErrorsString()} : {out}
+                } catch (error) {
+                    return {error: String(error.message)}
+                } finally {
+                    ec.message.clearErrors()
+                    ec.message.popErrors()
+                }
+            }
             const seen = extra =>
-                asUser(users.analyst, () =>
-                    Array.from(
-                        invoke(
-                            "org.moqui.report.ReportServices.query#Documents",
-                            Object.assign(
-                                {datasetId: "boss-marketing-audience", pageSize: 200, from: "now-5y", thru: "now+1d"},
+                asUser(users.analyst, () => {
+                    const found = attempt(() =>
+                        invoke("org.moqui.report.ReportServices.run#Query", {
+                            query: Object.assign(
+                                {
+                                    datasetId: "boss-marketing-audience",
+                                    from: "now-5y",
+                                    thru: "now+1d",
+                                    aggregations: [
+                                        {id: "list", type: "terms", role: "x-axis", params: {field: "contactListId", size: 200}}
+                                    ]
+                                },
                                 extra || {}
                             )
-                        ).hits || []
-                    ).map(hit => hit.body?.contactListId)
+                        })
+                    )
+                    return found.error ? "ERROR " + found.error : JSON.stringify(found.out)
+                })
+            const records = asUser(users.analyst, () =>
+                attempt(() =>
+                    invoke("org.moqui.report.ReportServices.query#Documents", {
+                        datasetId: "boss-marketing-audience",
+                        pageSize: 200,
+                        from: "now-5y",
+                        thru: "now+1d"
+                    })
                 )
+            )
+            const memberKey = system(
+                () => Array.from(ec.entity.getDataDocuments("BossMarketingMembership", {contactListId: ids.gardenListId}))[0]?._id
+            )
             try {
                 return {
                     registered,
@@ -171,13 +204,15 @@ feature(
                     loaded,
                     own: seen(),
                     forged: seen({queryString: "organizationPartyId:" + ids.otherOrganizationId}),
+                    records,
+                    memberKey,
                     otherDocId
                 }
             } finally {
                 system(() => ec.search.deleteDocument("BossMarketingMembership", otherDocId))
             }
         },
-        then({registered, problems, loaded, own, forged, otherDocId}) {
+        then({registered, problems, loaded, own, forged, records, memberKey, otherDocId}) {
             registered.catalog.length == 4 && registered.metrics.length == 2 && registered.providers.length == 4
             problems == []
             // no person, address or token in a shipped document
@@ -195,8 +230,11 @@ feature(
                     "boss-marketing-weekly-digest report"
                 ]
             // the Retail analyst reads Retail's memberships, never Services' copy, whatever they ask
-            own.includes(ids.gardenListId) && !own.includes(otherDocId)
+            !own.startsWith("ERROR") && own.includes(ids.gardenListId) && !own.includes(otherDocId)
             !forged.includes(otherDocId)
+            // a membership record's key carries its member: the records are no reader's, only the totals
+            String(memberKey).split("::").length == 3
+            String(records.error).includes("ROWS_RESTRICTED")
         }
     }
 )

@@ -603,5 +603,22 @@ along with this software (see the LICENSE.md file). If not, see
             title="Marketing campaign performance"
             description="get#CampaignPerformance: for an organization of the user's Marketing report scope (organizationPartyId), the campaigns whose window meets a period (fromDate, thruDate, yyyy-MM-dd; the last 30 days by default) or one campaign (marketingCampaignId, with its children when includeChildren is true): budget and actual cost, accepted sends, reach, visits, leads, qualified leads, registrations, orders and their value and invoiced net by currency (never added across currencies) and ROI where one currency allows it. Aggregates only: no person or address."
             classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <!-- Assist's audience counts (the user's call of Nov 15; the P20 review): Mantle's SegmentServices.count#Audience, preview#Audience's
+        buckets and reasons alone (never a name, an address, a party id or a row), for an audience reader (MARKETING_AUDIENCE_VIEW, which
+        the service checks with the organization of the topic and every source); the audience managers and the administrator are
+        granted the one service. Assistant only, never MCP. -->
+    <artifactGroups artifactGroupId="BOSS_MKT_ASSIST_AUDIENCE" description="Marketing: the audience count service Assist's tool calls">
+        <artifacts artifactName="mantle.marketing.SegmentServices.count#Audience" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MKT_ASSIST_AUDIENCE_AUD" userGroupId="BOSS_MARKETING_AUDIENCE" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MKT_ASSIST_AUDIENCE_ADMIN" userGroupId="BOSS_MARKETING_ADMIN" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.agent.AgentToolExposure toolName="marketing_audience_counts" serviceName="mantle.marketing.SegmentServices.count#Audience"
+            title="Marketing audience counts"
+            description="count#Audience: for a Marketing topic list of the user's scope (topicListId) and optionally its source lists and segments (listIds, segmentIds) and exclusions (excludeListIds, excludeSegmentIds), how many people match and how many fall in each bucket (eligible, suppressed, withdrawn or not subscribed, needs evidence, duplicate address, no valid address, not available) and each reason, with the eligible people who do not allow tracking. Counts only: no name, address or contact id."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
     <!-- ===== end of Marketing P20 ===== -->
 </entity-facade-xml>
