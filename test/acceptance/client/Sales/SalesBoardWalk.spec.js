@@ -22,12 +22,63 @@ function waitForText(page, text) {
 // the board's column holding a card, by the card's title
 function columnOf(page, title) {
     return page.evaluate(title => {
-        const card = Array.from(document.querySelectorAll(".m-board-card, .m-list-card")).find(node =>
-            node.innerText.includes(title)
-        )
-        const column = card?.closest(".m-board-column, .m-list-column")
-        return column ? column.querySelector(".m-board-column-title, .m-list-column-title, header")?.innerText || "" : ""
+        const card = Array.from(document.querySelectorAll(".m-board-card")).find(node => node.innerText.includes(title))
+        const column = card?.closest(".m-board-col")
+        return column ? column.querySelector(".m-board-col-label")?.innerText || "" : ""
     }, title)
+}
+// a card dragged by the pointer onto a column, as a mouse drags it (the board's SortableJS reads pointer events; the harness has no
+// drag of its own): pressed on the card, moved in steps to the column's cards and released there
+function dragCard(page, title, column) {
+    return page.evaluate(
+        async ({title, column}) => {
+            const card = Array.from(document.querySelectorAll(".m-board-card")).find(node => node.innerText.includes(title))
+            const target = Array.from(document.querySelectorAll(".m-board-col"))
+                .find(node => (node.querySelector(".m-board-col-label")?.innerText || "").includes(column))
+                ?.querySelector(".m-board-cards")
+            if (!card || !target) return false
+            const from = card.getBoundingClientRect()
+            const to = target.getBoundingClientRect()
+            const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
+            const fire = (node, type, x, y) => {
+                const init = {
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: x,
+                    clientY: y,
+                    button: 0,
+                    buttons: type.endsWith("up") ? 0 : 1
+                }
+                node.dispatchEvent(
+                    new PointerEvent(type, Object.assign({pointerId: 1, pointerType: "mouse", isPrimary: true}, init))
+                )
+                node.dispatchEvent(new MouseEvent(type.replace("pointer", "mouse"), init))
+            }
+            const x0 = from.left + from.width / 2,
+                y0 = from.top + from.height / 2
+            const x1 = to.left + to.width / 2,
+                y1 = to.top + Math.min(to.height / 2, 30)
+            fire(card, "pointerdown", x0, y0)
+            await wait(60)
+            for (let step = 1; step <= 12; step++) {
+                const x = x0 + ((x1 - x0) * step) / 12,
+                    y = y0 + ((y1 - y0) * step) / 12
+                fire(document.elementFromPoint(x, y) || document.body, "pointermove", x, y)
+                await wait(60)
+            }
+            fire(document.elementFromPoint(x1, y1) || document.body, "pointerup", x1, y1)
+            await wait(100)
+            return true
+        },
+        {title, column}
+    )
+}
+// the index among the list's rows (the form-list's .tr elements) of the row naming text
+function rowIndex(page, text) {
+    return page.evaluate(
+        text => Array.from(document.querySelectorAll(".tr")).findIndex(row => row.innerText.includes(text)),
+        text
+    )
 }
 // a drop-down of the open dialog: open it, type, choose the option, and leave the field
 function choose(page, scope, label, typed, option) {
@@ -42,21 +93,25 @@ feature("a card dragged to the next stage stays there; the row's Change stage mo
         const page = pages.desk
         page.goto("/qapps/Sales/Pipeline/Opportunities?view=board").status == 200
         waitForText(page, "Wingtip maintenance plan")
-        const card = page.locator(".m-board-card, .m-list-card").filter({hasText: "Wingtip maintenance plan"}).first()
-        const target = page.locator(".m-board-column, .m-list-column").filter({hasText: "Discovery"}).first()
-        card.dragTo(target)
         page.settle()
-        page.reload()
+        dragCard(page, "Wingtip maintenance plan", "Discovery") == true
+        page.settle()
+        // opened again (the harness has no reload)
+        page.goto("/qapps/Sales/Pipeline/Opportunities?view=board").status == 200
         waitForText(page, "Wingtip maintenance plan")
         columnOf(page, "Wingtip maintenance plan").includes("Discovery")
 
         page.goto("/qapps/Sales/Pipeline/Opportunities?view=list").status == 200
         waitForText(page, "Wingtip stores refit")
-        page.locator("tr").filter({hasText: "Wingtip stores refit"}).getByRole("button", {name: "Change stage"}).click()
+        page.locator(".tr").nth(rowIndex(page, "Wingtip stores refit")).getByRole("button", {name: "Change stage"}).click()
         const dialog = page.getByRole("dialog")
         choose(page, dialog, "Stage", "Nego", /^Negotiation$/)
         dialog.getByRole("button", {name: "Change stage", exact: true}).click()
-        waitForText(page, "Stage changed")
+        // the message is a notification, outside the page's content
+        page.waitFor(() => document.body.innerText.includes("Stage changed"))
+        page.goto("/qapps/Sales/Pipeline/Opportunities?view=board").status == 200
+        waitForText(page, "Wingtip stores refit")
+        columnOf(page, "Wingtip stores refit").includes("Negotiation")
         !/Error rendering|Exception in render/.test(page.text())
     }
 })

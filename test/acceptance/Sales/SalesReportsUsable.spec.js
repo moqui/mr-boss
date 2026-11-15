@@ -41,10 +41,15 @@ function insights(user, path, parameters = {}, method = null) {
         }
     })
 }
-const csvRows = output =>
-    String(output || "")
+// the rows of one list in a screen's CSV, which writes each of its lists in turn (a header line, then its rows): those after the
+// list's header, the deals lists being their screens' last
+const csvRows = (output, header) => {
+    const lines = String(output || "")
         .split(/\r?\n/)
-        .filter(line => line.trim()).length - 1
+        .filter(line => line.trim())
+    const at = header ? lines.findIndex(line => line.startsWith(header)) : 0
+    return at < 0 ? -1 : lines.length - at - 1
+}
 function removeMemberships() {
     system(() => {
         for (const [userId, userGroupId] of memberships)
@@ -64,17 +69,39 @@ spec({
                     .name("create#moqui.security.UserGroupMember")
                     .parameters({userId, userGroupId, fromDate: 0})
                     .call()
+            // a personal schedule's result goes to its owner's address, which the demo manager has none of
+            const account = ec.entity.find("moqui.security.UserAccount").condition("userId", managerId).one()
+            shared.managerEmail = account.emailAddress ?? null
+            if (!shared.managerEmail) account.set("emailAddress", "sales.manager@ziziwork.example").update()
         })
     },
     cleanupSpec() {
         ec.message.clearErrors()
         login("john.doe")
+        // the copied alert deleted as Insights deletes it (its versions with it)
+        if (
+            shared.ruleId &&
+            system(() => ec.entity.find("moqui.report.Definition").condition("definitionId", shared.ruleId).one())
+        )
+            insights(users.manager, "Alerts/AlertDetail/deleteAlert", {definitionId: shared.ruleId}, "post")
+        ec.message.clearErrors()
         system(() => {
-            if (shared.ruleId) ec.entity.find("moqui.report.Definition").condition("definitionId", shared.ruleId).deleteAll()
+            if (!shared.managerEmail)
+                ec.entity
+                    .find("moqui.security.UserAccount")
+                    .condition("userId", managerId)
+                    .one()
+                    ?.set("emailAddress", null)
+                    .update()
             for (const schedule of Array.from(
                 ec.entity.find("moqui.screen.ScreenScheduled").condition("reportOwnerId", managerId).list()
-            ))
+            )) {
+                ec.entity
+                    .find("moqui.screen.ScreenScheduledLock")
+                    .condition("screenScheduledId", schedule.screenScheduledId)
+                    .deleteAll()
                 schedule.delete()
+            }
             if (shared.stalled)
                 ec.entity
                     .find("mantle.sales.opportunity.SalesOpportunity")
@@ -98,17 +125,9 @@ feature("the reader opens each report for Retail from All reports; each export a
             pipeline: page("Reports/PipelineAnalysis", org),
             winLoss: page("Reports/WinLoss", allDates),
             attainment: page("Reports/TargetAttainment", org),
-            pipelineCsv: page(
-                "Reports/PipelineAnalysis",
-                Object.assign({pageNoLimit: "true", formListFindId: "PipelineDeals"}, org),
-                "csv"
-            ),
+            pipelineCsv: page("Reports/PipelineAnalysis", Object.assign({pageNoLimit: "true"}, org), "csv"),
             pipelineCount: system(() => invoke(F + "get#PipelineAnalysis", org).dealListCount),
-            winLossCsv: page(
-                "Reports/WinLoss",
-                Object.assign({pageNoLimit: "true", formListFindId: "OutcomeDeals"}, allDates),
-                "csv"
-            ),
+            winLossCsv: page("Reports/WinLoss", Object.assign({pageNoLimit: "true"}, allDates), "csv"),
             winLossCount: system(() => invoke(F + "get#WinLoss", allDates).dealListCount)
         }))
     },
@@ -120,8 +139,8 @@ feature("the reader opens each report for Retail from All reports; each export a
         found.analysis.output.includes("Net invoiced")
         found.pipeline.output.includes("Time in each stage")
         found.winLoss.output.includes("Win rate")
-        csvRows(found.pipelineCsv.output) == found.pipelineCount
-        csvRows(found.winLossCsv.output) == found.winLossCount
+        csvRows(found.pipelineCsv.output, "Opportunity,Stage,Owner") == found.pipelineCount
+        csvRows(found.winLossCsv.output, "Opportunity,Outcome,Closed") == found.winLossCount
     }
 })
 
@@ -136,7 +155,7 @@ feature("Accounting's Sales analysis shows its finance columns over the same row
         return {
             sales: page("Reports/SalesAnalysis", options, "csv"),
             accounting: page("Reports/SalesAnalysis", options, "csv", "Accounting"),
-            rows: invoke("mantle.sales.SalesReportServices.run#SalesAnalysis", options).analysisRows.length
+            rows: system(() => invoke("mantle.sales.SalesReportServices.run#SalesAnalysis", options)).analysisRows.length
         }
     },
     then({sales, accounting, rows}) {
@@ -187,23 +206,22 @@ feature("a manager subscribes to the weekly pipeline digest and copies the stall
                 .one()
             shared.stalled = {salesOpportunityId: deal.salesOpportunityId, stageEnteredDate: deal.stageEnteredDate}
             deal.set("stageEnteredDate", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).update()
-            invoke("ironstone.insights.DatasetServices.refresh#DatasetIndex", {datasetId: "mantle-sales-pipeline"})
+            // the stage-age dataset reads the pipeline dataset's index (the same document): its registered refresh
+            invoke("ironstone.insights.DatasetServices.refresh#DatasetIndex", {
+                refreshKey: "insights.dataset.mantle-sales-pipeline.index"
+            })
         })
         system(() => invoke(R + "evaluate#Alerts", {}))
         const state = asUser(users.manager, () => invoke(R + "get#AlertState", {definitionId: shared.ruleId}))
-        return {subscribed, schedules, copied, activated, state}
+        // each series' state (get#AlertState's instances)
+        return {subscribed, schedules, copied, activated, states: Array.from(state.instances || []).map(row => String(row.state))}
     },
-    then({subscribed, schedules, copied, activated, state}) {
+    then({subscribed, schedules, copied, activated, states}) {
         subscribed.errors == ""
         schedules == 1
         copied.errors == ""
         shared.ruleId != null
         activated.errors == ""
-        String(state.state || state.alertState || "")
-            .toLowerCase()
-            .includes("firing") ||
-            String(state.state || state.alertState || "")
-                .toLowerCase()
-                .includes("alerting")
+        states.includes("Firing")
     }
 })

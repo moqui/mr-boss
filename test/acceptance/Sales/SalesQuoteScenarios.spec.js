@@ -10,6 +10,8 @@ const {ids, users, asUser, system, invoke, page} = lib
 const run = String(Date.now()).slice(-6)
 const capture = ec.factory.getTool("MailCapture")
 const asService = (user, action) => asUser(user, () => system(action))
+// the deliveries' attempts run after the send commits, on the worker pool
+const drain = () => ec.factory.waitWorkerPoolEmpty(50)
 const one = (entity, values) => ec.entity.find(entity).condition(values).disableAuthz().one()
 const revisionOf = orderId => Number(one("mantle.order.OrderHeader", {orderId}).orderRevision ?? 1)
 const issuesOf = orderId => asService(users.rep, () => invoke("mantle.order.SalesQuoteIssueServices.get#QuoteIssues", {orderId}))
@@ -66,6 +68,7 @@ spec({
     stepwise: true,
     setupSpec() {
         capture.enable()
+        shared.restoreMail = lib.captureSystemMail()
         login("john.doe")
         // a second contact of Wingtip with no email yet
         system(() => {
@@ -80,6 +83,7 @@ spec({
         })
     },
     cleanupSpec() {
+        if (shared.restoreMail) shared.restoreMail()
         capture.reset()
         ec.message.clearErrors()
         login("john.doe")
@@ -109,10 +113,12 @@ feature("a rep proposes a quote and sends it to two contacts; the one with no em
                 fromDate: ec.user.nowTimestamp
             })
         })
+        drain()
         const firstMails = capture.count()
         capture.clear()
         send(orderId, [ids.contacts.dana, unmailed])
         attempt(orderId)
+        drain()
         const second = issuesOf(orderId)
         return {proposed, dialog, first, firstMails, mails: capture.getMessages(), second}
     },

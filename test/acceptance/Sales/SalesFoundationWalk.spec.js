@@ -105,8 +105,8 @@ feature("the menu renders for each group with only its areas; each entry opens a
 feature("sales.reader opens SalesSummary for Ziziwork Retail and is refused Ziziwork Sales'", {
     when() {
         return asUser(users.reader, () => ({
-            own: page("Reports/SalesSummary", {vendorPartyIds: ids.organizationId}, "html"),
-            other: page("Reports/SalesSummary", {vendorPartyIds: ids.otherOrganizationId}, "html")
+            own: page("Reports/SalesSummary", {organizationPartyId: ids.organizationId}, "html"),
+            other: page("Reports/SalesSummary", {organizationPartyId: ids.otherOrganizationId}, "html")
         }))
     },
     then({own, other}) {
