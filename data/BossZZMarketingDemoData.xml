@@ -117,10 +117,12 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.marketing.campaign.MarketingPolicy marketingPolicyId="BOSS_MKT_POLICY_RETAIL" organizationPartyId="ORG_ZIZI_RETAIL"
             fromDate="2026-01-01 00:00:00" currencyUomId="USD" selfApprovalAllowed="N" managerRequired="Y" audienceLimit="50000"
             frequencyCapCount="3" frequencyCapDays="7" explanation="Separation on: an author never approves their own"/>
-    <!-- Retail's running campaign, approved at revision 1 by the approver, with a planned child; and a planned one -->
+    <!-- Retail's running campaign, approved at revision 1 by the approver, with a planned child; and a planned one. The campaigns' dates
+        are written by ironstone.marketing.DemoServices.load#CampaignDatesDemo after the sends (Marketing follow-up 6), relative to the
+        load. -->
     <mantle.marketing.campaign.MarketingCampaign marketingCampaignId="BOSS_MKT_CMP_SPRING" campaignName="Spring garden launch"
             campaignSummary="The spring garden range: newsletter, store promotion and a launch event" organizationPartyId="ORG_ZIZI_RETAIL"
-            statusId="MKTG_CAMP_INPROGRESS" fromDate="2026-11-01 00:00:00" thruDate="2027-01-31 00:00:00" startDate="2026-11-02 09:00:00"
+            statusId="MKTG_CAMP_INPROGRESS"
             costUomId="USD" budgetedCost="12000" estimatedCost="10000" actualCost="0" campaignRevision="1" createdByUserId="BOSS_MKT_AUTHOR"
             isActive="Y"/>
     <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_SPRING" partyId="ORG_ZIZI_RETAIL"
@@ -139,7 +141,7 @@ along with this software (see the LICENSE.md file). If not, see
             decidedByPartyId="BOSS_MKT_APPROVER" reason="Within the season's budget"/>
     <mantle.marketing.campaign.MarketingCampaign marketingCampaignId="BOSS_MKT_CMP_SPRING_EVENT" campaignName="Spring launch evening"
             parentCampaignId="BOSS_MKT_CMP_SPRING" organizationPartyId="ORG_ZIZI_RETAIL" statusId="MKTG_CAMP_PLANNED"
-            fromDate="2027-01-10 00:00:00" thruDate="2027-01-12 00:00:00" costUomId="USD" budgetedCost="2000" campaignRevision="1"
+            costUomId="USD" budgetedCost="2000" campaignRevision="1"
             createdByUserId="BOSS_MKT_AUTHOR"/>
     <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_SPRING_EVENT" partyId="ORG_ZIZI_RETAIL"
             roleTypeId="MarketingOrganization" fromDate="2026-10-25 09:00:00"/>
@@ -147,7 +149,7 @@ along with this software (see the LICENSE.md file). If not, see
             roleTypeId="MarketingCampaignManager" fromDate="2026-10-25 09:00:00"/>
     <mantle.marketing.campaign.MarketingCampaign marketingCampaignId="BOSS_MKT_CMP_HOLIDAY" campaignName="Holiday gift guide"
             campaignSummary="The holiday gift guide and its sends" organizationPartyId="ORG_ZIZI_RETAIL" statusId="MKTG_CAMP_PLANNED"
-            fromDate="2026-12-01 00:00:00" thruDate="2026-12-31 00:00:00" costUomId="USD" budgetedCost="8000" campaignRevision="1"
+            costUomId="USD" budgetedCost="8000" campaignRevision="1"
             createdByUserId="BOSS_MKT_AUTHOR"/>
     <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_HOLIDAY" partyId="ORG_ZIZI_RETAIL"
             roleTypeId="MarketingOrganization" fromDate="2026-11-05 09:00:00"/>
@@ -155,8 +157,8 @@ along with this software (see the LICENSE.md file). If not, see
             roleTypeId="MarketingCampaignManager" fromDate="2026-11-05 09:00:00"/>
     <!-- Services' campaign, its own author's, for the isolation scenarios -->
     <mantle.marketing.campaign.MarketingCampaign marketingCampaignId="BOSS_MKT_CMP_SERVICES" campaignName="Service plan renewals"
-            organizationPartyId="ORG_ZIZI_SERVICES" statusId="MKTG_CAMP_PLANNED" fromDate="2026-12-01 00:00:00"
-            thruDate="2027-02-28 00:00:00" costUomId="USD" budgetedCost="3000" campaignRevision="1" createdByUserId="BOSS_MKT_AUTHOR2"/>
+            organizationPartyId="ORG_ZIZI_SERVICES" statusId="MKTG_CAMP_PLANNED"
+            costUomId="USD" budgetedCost="3000" campaignRevision="1" createdByUserId="BOSS_MKT_AUTHOR2"/>
     <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_SERVICES" partyId="ORG_ZIZI_SERVICES"
             roleTypeId="MarketingOrganization" fromDate="2026-11-05 09:00:00"/>
     <mantle.marketing.campaign.MarketingCampaignParty marketingCampaignId="BOSS_MKT_CMP_SERVICES" partyId="BOSS_MKT_AUTHOR2"
@@ -375,8 +377,8 @@ along with this software (see the LICENSE.md file). If not, see
             testAddresses="marketing.author@retail.example&#10;marketing.review@retail.example"/>
     <!-- Three sends of the running spring campaign: a draft from the spring preview invitation; the November garden newsletter, prepared
         (Maya the one eligible member of the garden newsletter) and approved by the approver at revision 1; and the December one,
-        approved for 1 December. The contents are the demo's component files, an edit writing a file of its own. Nothing is released
-        (P9). -->
+        approved for 1 December (as loaded on Nov 15, 2026: its schedule follows the load, below). The contents are the demo's component
+        files, an edit writing a file of its own. Nothing is released (P9). -->
     <mantle.marketing.campaign.CampaignSend campaignSendId="BOSS_MKT_SEND_PREVIEW" marketingCampaignId="BOSS_MKT_CMP_SPRING"
             organizationPartyId="ORG_ZIZI_RETAIL" sendName="Spring preview invitation" channelEnumId="MdcEmail"
             contactListId="BOSS_MKT_LIST_VIP" purposeEnumId="PcpMarketingEmail" audienceJson="{}" messageTemplateId="BOSS_MKT_TPL_SPRING"
@@ -417,7 +419,7 @@ along with this software (see the LICENSE.md file). If not, see
             sendingProfileId="BOSS_MKT_PROFILE_RETAIL" subject="Garden news for ${firstName}" preheader="Winter care"
             bodyLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.html.fancy-locked"
             bodyTextLocation="component://mr-boss/template/marketing/DemoGardenNewsletter.fancy-locked" variablesJson="[{&quot;name&quot;:&quot;firstName&quot;,&quot;label&quot;:&quot;First name&quot;,&quot;fallback&quot;:&quot;gardener&quot;,&quot;required&quot;:false}]" localeId="en"
-            scheduledDate="2026-12-01 08:00:00" scheduleTimeZone="America/Chicago"
+            scheduleTimeZone="America/Chicago"
             statusId="CsApproved" sendRevision="1" createdByUserId="BOSS_MKT_AUTHOR" revisedByUserId="BOSS_MKT_AUTHOR"
             createdDate="2026-11-10 09:00:00" preparedRevision="1" preparedDate="2026-11-11 10:00:00" preparedByUserId="BOSS_MKT_AUTHOR"
             contentDate="2026-11-11 10:00:00" marketingPolicyId="BOSS_MKT_POLICY_RETAIL" policyFromDate="2026-01-01 00:00:00"
@@ -439,6 +441,13 @@ along with this software (see the LICENSE.md file). If not, see
             requestDecisionId="BOSS_MKT_DEC_DEC_REQ" selfApproval="N" recipientCount="1" marketingPolicyId="BOSS_MKT_POLICY_RETAIL"
             policyFromDate="2026-01-01 00:00:00" decisionDate="2026-11-12 09:00:00" decidedByUserId="BOSS_MKT_APPROVER"
             decidedByPartyId="BOSS_MKT_APPROVER" reason="For the first of December"/>
+    <!-- Marketing follow-up 6 (§4 Nov 15, the user's call): the campaigns' windows and the December send's schedule are relative to the
+        load, so the running campaign holds today, the sends and the calendar's projected collection (30 days back, 180 ahead) hold them
+        on any day; the rows above name no date and ironstone.marketing.DemoServices.load#CampaignDatesDemo writes them, so a reload
+        changes nothing it did not move. Counted in days from the load day, a load on Nov 15, 2026 gives the old dates: the spring
+        campaign Nov 1 to Jan 31 (started Nov 2 09:00), its launch evening Jan 10 to 12, the holiday guide Dec 1 to 31, Services'
+        renewals Dec 1 to Feb 28, and the December newsletter Dec 1 at 08:00 Chicago time. -->
+    <ironstone.marketing.DemoServices.load-CampaignDatesDemo/>
     <!-- ===== end of Marketing P8 ===== -->
 
     <!-- ===== Marketing P10: experiments (impl-marketing P10; design-marketing §5 ExperimentDetail) ===== -->

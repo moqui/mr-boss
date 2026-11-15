@@ -16,7 +16,7 @@ const prefix = "MKSHELL"
 const callerNumber = {countryCode: "1", areaCode: "801", contactNumber: "555-0142"}
 const day = millis => ec.l10n.format(new Date(millis), "yyyy-MM-dd")
 const dayMs = 24 * 60 * 60 * 1000
-// a range of days around a record's own date (the demo's dates are fixed or relative to the load)
+// a range of days around a record's own date (the demo's campaign, send and event dates are relative to the load)
 const around = millis => ({start: day(millis - dayMs), end: day(millis + dayMs)})
 const entityLib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const stamp = (entity, fields, field) => system(() => entityLib.ms(ec.entity.find(entity).condition(fields).one()[field]))
@@ -82,6 +82,9 @@ feature("Calendar renders its component and shows the campaign's window, its sch
     when() {
         const qvue = asUser(users.author, () => page("Calendar", {}, "qvue"))
         const campaignFrom = stamp(CAMPAIGN, {marketingCampaignId: ids.runningCampaignId}, "fromDate")
+        // the running campaign's window as loaded (follow-up 6: load#CampaignDatesDemo, 14 days before the load day to 77 after)
+        const campaignThru = stamp(CAMPAIGN, {marketingCampaignId: ids.runningCampaignId}, "thruDate")
+        const campaignWindow = {fromDays: (Date.now() - campaignFrom) / dayMs, thruDays: (campaignThru - Date.now()) / dayMs}
         const sendAt = stamp(SEND, {campaignSendId: ids.scheduledSendId}, "scheduledDate")
         const eventAt = stamp("mantle.work.effort.WorkEffort", {workEffortId: ids.webinarEventId}, "estimatedStartDate")
         const events = range => json(transition(users.author, "Calendar/calendarEvents", range)).eventList || []
@@ -108,10 +111,15 @@ feature("Calendar renders its component and shows the campaign's window, its sch
                     item.workEffortId === ids.webinarEventId
             ).length,
             moved,
-            agenda
+            agenda,
+            campaignWindow
         }
     },
-    then({qvue, campaign, send, event, otherCampaign, otherSees, moved, agenda}) {
+    then({qvue, campaign, send, event, otherCampaign, otherSees, moved, agenda, campaignWindow}) {
+        campaignWindow.fromDays > 13.5 &&
+            campaignWindow.fromDays < 16 &&
+            campaignWindow.thruDays > 75 &&
+            campaignWindow.thruDays < 78
         qvue.status == 200 && qvue.output.includes("module.exports")
         campaign.allDay == true && campaign.canEdit == false
         campaign.url == "/qapps/Marketing/Campaigns/CampaignDetail?marketingCampaignId=" + ids.runningCampaignId
