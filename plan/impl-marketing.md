@@ -6711,6 +6711,80 @@ and only where `visitorKeyAllowed` holds, read again in the placement's transact
 by the provider's return, webhook or job), never part of the request's identity or a cause of refusal, the cookie sent by PASS only
 without Do Not Track or Global Privacy Control. Branch `mkt/fix5` in mr-mantle and mr-pass (mr-boss for the plan).
 
+**Built Nov 15 (follow-up 5).** mr-mantle, mr-pass and mr-boss on branch `mkt/fix5` (hashes in the worker's reply), from master after
+follow-up 4's merge; mr-moqui unchanged, no Rust built. Built beside P21's review and P22 (`mkt/p22`).
+- Checked first (the code over the plan): this section, follow-up 4's Built and Review notes and its code (MarketingTracking.js
+  `visitorKeyAllowed`, `orderVisitorKeyHash`, `visitorKeyHash`; ShopCheckout.js `visitorKeyHashOf`, the freeze's write,
+  `keptVisitorKey`; PASS TrackingLib `heldKey`, `doNotTrack` and Shop/ShopCheckout.js `visitorKeyInput`), P17's Built and Review
+  notes and code (MarketingPortal.js `completeRegistration` and `startRegistrationPayment`, EventRegistrationPlaces.js `complete`,
+  EventRegistrationPayments.js `orderOf`, `startPayment`, `refresh`, `place`, `seatReviewed`, `reconcile`), PASS Register.xml. The
+  code over the plan:
+  - "`completeRegistration` forwards the key": a ticket order does not exist at `completeRegistration` (a free reservation is
+    confirmed there with no order at all); the order is made by `startRegistrationPayment` (`orderOf` in `startPayment`'s step,
+    with its promised payment, before the provider is asked), the ticket checkout's counterpart of Shop's submit and freeze. Built
+    there: Register's Pay sends the key and the digest is committed on the order in that step, so nothing key-derived is kept on a
+    reservation that may never have an order, and a free registration keeps nothing (`completeRegistration` and its schema entry are
+    unchanged);
+  - the shared code moved where both checkouts call it: MarketingTracking.js `checkoutVisitorKeyHash(key, customer, seller, label)`
+    (`orderVisitorKeyHash` that never fails the caller: a failed read keeps nothing and is logged under the label, never the key;
+    was ShopCheckout's `visitorKeyHashOf` body) and `keepOrderVisitorKey(orderId)` (the re-check before `place#Order`: the first
+    part's customer and vendor through `visitorKeyAllowed`, cleared when no longer allowed or unreadable, fail closed; was
+    ShopCheckout's `keptVisitorKey` body); ShopCheckout.js calls them (behaviour unchanged); PASS TrackingLib.js `checkoutKeyInput
+    (request)` (the held `mkt_vk` cookie of the key's form as `{visitorKey}`, none under Do Not Track or GPC or without a request;
+    was ShopCheckout.js `visitorKeyInput`'s body), which Shop's submit and Register's pay transition both call;
+  - identity and refusal: the digest is computed before the start's transaction (customer the reservation's buyer, seller the
+    offer's organization); a repeat start that answers the existing attempt (`alreadyStarted`, or a start that raced it) returns
+    before the step and changes nothing; a start replacing a declined or cancelled payment writes that Pay's digest (or none), as a
+    Shop freeze does; a malformed key is dropped and the start goes on; staff's `start#RegistrationPayment` sends no key;
+  - the placement: `place` (the provider's return, the page, `reconcile`'s retries, `seatReviewed` through `refresh`) calls
+    `keepOrderVisitorKey` inside its placement step before `place#Order`, so every ticket placement re-reads consent and policy.
+- mr-mantle: `service/mantle/marketing/MarketingTracking.js` (the two helpers after `orderVisitorKeyHash`, exported),
+  `service/mantle/order/ShopCheckout.js` (`visitorKeyHashOf` and `keptVisitorKey` call them), `service/mantle/work/
+  EventRegistrationPayments.js` (the header, `startPayment`'s `visitorKey` and the order's write, `place`'s re-check),
+  `service/mantle/marketing/MarketingPortal.js` (`startRegistrationPayment` passes `visitorKey`), `MarketingPortalServices.xml`
+  (start#RegistrationPayment's description), `service/mantle/forum/ForumSchema.js` (`startRegistrationPayment` gains `visitorKey`).
+- mr-pass: `script/TrackingLib.js` (`checkoutKeyInput`), `screen/Shop/ShopCheckout.js` (`visitorKeyInput` calls it),
+  `screen/Marketing/Register.xml` (the pay transition sends it), `service/pass/Schema.js` (byte-identical with ForumSchema.js);
+  `Contracts.d.ts` names no Marketing registration operation (unchanged).
+- mr-boss: `plan/design-marketing.md` (§11's attribution identity, §13 Register's as built), this note.
+- Tests: mr-mantle EventRegistrations gains "a ticket payment's visitor key: its digest kept only where allowed, read again before
+  placement, attributed by it" (a buyer without consent under no policy: nothing kept; under a spec-local MarketingPolicy
+  `visitorKeys` Y, removed after: the events' digest kept and never the raw key, a repeat start with another key `alreadyStarted`
+  and the digest unchanged, the order placed at the return keeps it and is attributed by it (MobTrackingEvent, a remote click by
+  the key, no local visit); a malformed key dropped with the payment started; a buyer who withdrew tracking never kept; kept at the
+  start then the policy ended before the return: placed with no digest). Seen to fail with `place`'s re-check removed (the late
+  check), with the start not forwarding the key (the kept check), with the guard bypassed (the no-consent check), with
+  `trackingWithdrawn` removed from `visitorKeyAllowed` (the withdrawn check) and with the key's form unchecked (the malformed
+  check). mr-pass MarketingRegistration gains "follow-up 5: the payment start sends the held visitor key, never under Do Not Track
+  or GPC; the facade admits it" (`checkoutKeyInput` with the cookie, under `dnt`, under `sec-gpc`, a malformed cookie, another
+  cookie, no request; `startRegistrationPayment` with `visitorKey` through the facade answered, not "Unsupported"); seen to fail
+  with PASS's schema entry reverted. Run (release binary, `--nobuild`, this worktree's runtime): mr-mantle EventRegistrations 17 of
+  17 (5.7 s feature time; the new feature 1.0 s), ShopCheckout 9 of 9 (4.3 s), Attribution 4 of 4 (0.7 s), Tracking 4 of 4 (1.4 s),
+  MarketingRetention 1 of 1 (0.1 s); mr-pass MarketingRegistration 5 of 5 (0.3 s; the new feature 0.01 s), ShopCheckout 4 of 4
+  (0.5 s), MarketingTracking 4 of 4 (0.9 s), Forum 13 of 13 (0.7 s). Screen lint (Register.xml changed): no parse failure, Register
+  not flagged. Not run: test-apps, any acceptance test (none changed).
+- Findings (provisional, numbered by the lead):
+  - the key is forwarded with `startRegistrationPayment`, not `completeRegistration` as the section names (the order is made at the
+    payment's start; above); the lead or the user may confirm;
+  - Register's pay transition is not driven by a spec with headers and a cookie (the helper it calls is: the PASS feature above), as
+    follow-up 4's review found for Shop's submit (low);
+  - deployment order, as for follow-up 4: a PASS with this change against an authority without it refuses every Register Pay that
+    carries a key ("Unsupported operation or input"); deploy the authority first.
+- For the lead:
+  - budget share: mr-mantle about +1.0 s (EventRegistrations' new feature); mr-pass about +0.01 s; no client spec;
+  - merge hot spots: mr-mantle `MarketingTracking.js` (after `orderVisitorKeyHash`, the export list), `ShopCheckout.js`
+    (`visitorKeyHashOf`, `keptVisitorKey`), `EventRegistrationPayments.js` (the header, `startPayment`, `place`),
+    `MarketingPortal.js` (`startRegistrationPayment`), `MarketingPortalServices.xml`, `ForumSchema.js`/PASS `Schema.js` (the
+    `startRegistrationPayment` entry; P22's SMS schema entries may meet them), `test/work/EventRegistrations.spec.js` (the setup's
+    offers, a feature at the end); mr-pass `script/TrackingLib.js` (the export list), `screen/Shop/ShopCheckout.js`,
+    `screen/Marketing/Register.xml`, `test/Marketing/MarketingRegistration.spec.js` (a feature at the end); mr-boss
+    `design-marketing.md` §11 and §13 Register, this file;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`; no mr-moqui worktree): in follow-up 4's replacement, "the visitor-key
+    digest its Shop checkout kept (`OrderHeader.marketingVisitorKeyHash`: a frontend's `submitCheckout` `visitorKey`," becomes "the
+    visitor-key digest its Shop checkout or ticket payment kept (`OrderHeader.marketingVisitorKeyHash`: a frontend's
+    `submitCheckout` or `startRegistrationPayment` `visitorKey`,";
+  - the user's calls: none (the first finding is the plan's wording against the code).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
