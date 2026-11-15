@@ -47,6 +47,7 @@ const statusOf = (contactListId, partyId) => sys(() => {
 const consents = (partyId) => sys(() => Array.from(ec.entity.find("mantle.party.PartyConsent").condition({ partyId }).list())
         .sort((a, b) => Number(b.consentDate) - Number(a.consentDate) || (String(b.partyConsentId).length - String(a.partyConsentId).length)
             || (String(b.partyConsentId) > String(a.partyConsentId) ? 1 : -1)))
+const listsOf = (output, partyId) => (new RegExp('data-party="' + partyId + '">(.*?)</div>', "s").exec(output) || [])[1] || ""
 const rowsOf = (output) => Array.from(output.matchAll(/data-party="([^"]+)"/g)).map((match) => match[1])
 const list = (parameters) => render("apps/Comms/Consent", parameters)
 const contact = (partyId) => render("apps/Comms/Consent/Contact", { partyId })
@@ -57,13 +58,20 @@ spec({
 
 feature("the registry: one row per contact with consent data, the chips of its lists and purposes, the last change; the demo's states", {
     when() {
-        return { shown: list({}) }
+        // the demo's News list holds all five demo contacts: the registry's first page of every contact (twenty, the newest change
+        // first) holds them only on a fresh database, where the specs of a worker before this one add contacts with newer changes
+        return { shown: list({ contactListId: LIST_NEWS }) }
     },
     then({ shown }) {
         shown.status == 200
         shown.errors == ""
         !shown.broken
         [ALEX, JORDAN, CASEY, TAYLOR, BOB].every((id) => rowsOf(shown.output).includes(id))
+        // one row per contact; a row's chips are all of its lists, the filtered one and the other (the list names are also the filter's
+        // options, so the chips are read in the row)
+        new Set(rowsOf(shown.output)).size == rowsOf(shown.output).length
+        listsOf(shown.output, ALEX).includes("Ziziwork News") && listsOf(shown.output, ALEX).includes("Events and workshops")
+        listsOf(shown.output, CASEY).includes("Ziziwork News") && !listsOf(shown.output, CASEY).includes("Events and workshops")
         shown.output.includes("Alex Rivera")
         shown.output.includes("Ziziwork News")
         shown.output.includes("Events and workshops")

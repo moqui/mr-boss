@@ -31,6 +31,8 @@ feature("SendDetail shows an approved send's preparation, prepared content, audi
         detail.output.includes("Content and audience as planned")
         !detail.output.includes("SendDecisionDialog") && !detail.output.includes("PrepareDialog")
         detail.output.includes("Edit content")
+        // not released: no Delivery box (follow-up 7: a container-box condition is not read, so it showed "Released undefined")
+        !detail.output.includes("handed off:") && !detail.output.includes("Released undefined")
     }
 })
 

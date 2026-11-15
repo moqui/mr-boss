@@ -23,7 +23,7 @@ suite(
     {
         server: {
             components: ["mr-boss"],
-            specs: ["AccountingClientFixtures", "InsightsClientFixtures", "AdminClientFixtures"],
+            specs: ["AccountingClientFixtures", "InsightsClientFixtures", "AdminClientFixtures", "MarketingClientFixtures"],
             conf: "conf/MoquiDevConf.xml",
             // the walks that send (invoices, reminders, the close) keep their mail in the capture (docs/Build-Test.md)
             properties: {mail_capture_sends: "true"}

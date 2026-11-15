@@ -680,10 +680,16 @@ feature(
                     .list()
                 if (launcher.size() !== 1 || launcher.get(0).artifactGroupId !== "BOSS_MARKETING")
                     problems.push("the launcher's artifact")
+                // the holders among the registered bundles of every app: a spec's own user groups (Mantle's Campaigns, Sends, Dispatch
+                // and the rest grant MARKETING_APPROVE and the like to spec-local groups and leave them) are not Admin's registry, and a
+                // worker that ran one of them before this spec found them here (follow-up 7 review)
+                const bundleGroups = new Set(
+                    Array.from(ec.entity.find("moqui.security.CapabilityBundle").list()).map(row => row.userGroupId)
+                )
                 const holders = userPermissionId =>
                     Array.from(ec.entity.find("moqui.security.UserGroupPermission").condition({userPermissionId}).list())
                         .map(row => row.userGroupId)
-                        .filter(id => id !== "ADMIN")
+                        .filter(id => id !== "ADMIN" && bundleGroups.has(id))
                         .sort()
                 const expectHolders = (userPermissionId, groups) => {
                     const found = holders(userPermissionId)
