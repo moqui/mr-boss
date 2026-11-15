@@ -443,7 +443,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P16 Events and registration setup | Mantle, BOSS, PASS | Events, EventDetail, RegistrationSetup; PASS Event | built and reviewed Nov 15, merged |
 | P17 Registrations, tickets and payment | Mantle, BOSS, PASS | Registrations, RegistrationDetail; PASS Register, Registration | built and reviewed Nov 15, merged |
 | P18 Check-in | Mantle, BOSS | CheckIn | built and reviewed Nov 15, merged |
-| P19 Promotions, Customer360 and engagement | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail, Customer360, ContactDetail | — |
+| P19 Promotions, Customer360 and engagement | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail, Customer360, ContactDetail | built and reviewed Nov 15, merged |
 | P20 Attribution, reports and Insights | Mantle, BOSS | Reports, CampaignPerformance, DeliveryAnalysis, AudienceGrowth, Attribution | — |
 | P21 Calendar, shell providers and Assist | Mantle, BOSS | Calendar, QuickCreate | — |
 | P22 SMS | Mantle, BOSS, PASS | the SMS channel of Sends, Compose, AutomationDetail, SendingProfiles; PASS EmailPreferences' SMS scope | — |
@@ -5479,7 +5479,7 @@ and mr-pass unchanged, no Rust built. Built beside P20 (`mkt/p20`): the hot spot
 - Design edits: design-marketing §2 (PromoCodeDetail a sibling), §7 and §10 (as built: the registration, the link's rights, Customer360 on
   one page, the sources and their permissions, ContactDetail, the merge guards); design-commerce §7 (as built: the per-app registration,
   an owner contract); design-crosscut §3.2's Marketing row.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F370 to F375 in order:
   - the code over the plan above: the promotion registration (PromotionApps.js) and no `appRoot` parameter on the four screens; the
     promotion link's Commerce guard in Mantle and find#CampaignAssociations; P2's `promotionName` label; Customer360 on one page (F91);
     the Customers and Contacts paths and the contact record kind; the eight engagement sources and their permissions; the merge module,
@@ -5571,7 +5571,7 @@ and design §2, §7, §10, X15; master (P18, follow-ups 1 and 2) merged into bot
     refuse a user without MARKETING_AUDIENCE_VIEW (the worker's finding); Sales.js's Marketing mount row now gives the two links only
     with that permission (`pathPermissions`), so the rows show unlinked otherwise, as before P19. SalesAccess: the rep without
     audience read gets the three P3 links, the administrator the two P19 ones (fails before).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F376 to F380 in order:
   - R1–R5 above;
   - Marketing's Promotions list and PromoCodes list show every promotion of Commerce's store scope (find#Promotions takes one store or
     all), not only the stores of the user's Marketing organizations that its choices offer; the two scopes coincide for a member of
@@ -6578,6 +6578,17 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F367 | Follow-up 2 (Review Nov 15): existing entry codes of follow-up 1's construction rotate at their registration's next showing (as the Built note says) | Follow-up 2: as its Review note says |
 | F368 | Follow-up 2 (Review Nov 15): the demo quote BOSS_SAL_QTE_WINGTIP is untaxed as loaded (no tax line until a rep chooses the address or proposes it), since Retail's gateway and nexus load after the Sales demo; giving it tax at load would mean taxing it after BossZZMarketingDemoData or moving Retail's nexus into the Sales demo | Follow-up 2: as its Review note says |
 | F369 | Follow-up 2 (Review Nov 15): dates beyond December that specs depend on, next to turn (the worker's list, not changed): Marketing's webinar offer (2027-01-28) and workshop (2027-03-13, closing 03-12), which MarketingAccess and the Marketing specs register for; Wingtip's quote valid to 2027-01-31; PeopleLeave's requests of 2027-04-06/07 | Follow-up 2: as its Review note says |
+| F370 | P19 (Built Nov 15): the code over the plan above: the promotion registration (PromotionApps.js) and no `appRoot` parameter on the four screens; the promotion link's Commerce guard in Mantle and find#CampaignAssociations; P2's `promotionName` label; Customer360 on one page (F91); the Customers and Contacts paths and the contact record kind; the eight engagement sources and their permissions; the merge module, its four refusals (RECIPIENT_PENDING beyond the plan's text), the restrictive membership rule, the consent withdrawal by address and PcsMerge; MessageSuppression needs no move | P19: as its Built note says |
+| F371 | P19 (Built Nov 15): a merged party's withdrawal at an address the kept party does not have stays on the moved rows only; nothing reaches that address through the kept party, and if the address is later added to the kept party under a new contact mechanism its withdrawal does not follow (a consent keyed by contact mechanism, not by address) | P19: as its Built note says |
+| F372 | P19 (Built Nov 15): a Sales reader without MARKETING_AUDIENCE_VIEW who opens Sales' Accounts under Marketing's Leads now follows an account to Marketing's Customer360, which refuses them (PERMISSION_DENIED); before, the account showed unlinked. The account link could stay unlinked for them (Accounts.xml reads `sharedLinks` only), Sales' owner file | P19: as its Built note says |
+| F373 | P19 (Built Nov 15): the Customer360 tab bar (F91) stays the owner's or the framework's fix; Marketing's branch avoids it by having no tabs | P19: as its Built note says |
+| F374 | P19 (Built Nov 15): the contact record's notes and files are open under the Marketing root to an audience reader for any directory party of their organizations or shared, as Sales opens them for its accounts' contacts | P19: as its Built note says |
+| F375 | P19 (Built Nov 15): the promotion screens' product choices under Marketing are Mantle's product rule (owner organization or shared), not Products' catalog search (Products' context admits no Marketing root) | P19: as its Built note says |
+| F376 | P19 (Review Nov 15): R1–R5 above | P19: as its Review note says |
+| F377 | P19 (Review Nov 15): Marketing's Promotions list and PromoCodes list show every promotion of Commerce's store scope (find#Promotions takes one store or all), not only the stores of the user's Marketing organizations that its choices offer; the two scopes coincide for a member of their organizations and differ only for a COMMERCE_ALL_ORGANIZATIONS or MARKETING_ALL_ORGANIZATIONS holder, and Mantle still decides every read, so it adds no right; a store filter in Mantle's find is Commerce's owner change | P19: as its Review note says |
+| F378 | P19 (Review Nov 15): with R4, an account under Leads with no Marketing record (no list, send, registration or form) opens a "not available" Customer360 for an audience reader; adding it to a list goes through Accounts' bulk Add to list (P3), not ContactDetail | P19: as its Review note says |
+| F379 | P19 (Review Nov 15): the worker's withdrawal-by-address finding stands (a merged party's withdrawal at an address the kept party lacks stays on the moved rows only, keyed by contact mechanism; a suppression by address is the durable stop) | P19: as its Review note says |
+| F380 | P19 (Review Nov 15): the worker's other findings (the registration, the Customer360 tab bar, the product choices) are as described; the notes and files finding is R4, the Sales-reader link finding R5 | P19: as its Review note says |
 
 ## 7. Later
 
