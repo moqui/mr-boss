@@ -1,3 +1,6 @@
+Nov 15, 2026 — gate 5 built: P12–P15 (stage M5), public forms and campaign content (surveys and form publication with PASS
+SubmitForm, leads and the Sales handoff, content, blog posts and landing pages, tracking links and capture), each phase reviewed by a
+fresh agent and merged on its focused specs, with an origin sync and the wiki page-name follow-ups between. Next: P16 (events).
 Nov 14, 2026 — gates 3 and 4 built: P8–P11 (stages M3–M4), durable sends and drip sequences (sends and the composer with a
 paged evaluation, dispatch and delivery, A/B experiments, automation run as its saved owner), each phase reviewed by a fresh agent and
 merged on its focused specs, beside Sales P16–P20. The user's calls of the build are in §4. Next: P12 (surveys and form publication),
@@ -433,7 +436,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P12 Surveys and form publication | Mantle, BOSS, PASS | Surveys, SurveyDetail, SurveyDistribution, Responses, ResponseDetail; PASS SubmitForm | built and reviewed Nov 14, merged |
 | P13 Leads and the Sales handoff | Mantle, BOSS, PASS | Leads, LeadRules, LeadSources; PASS SubmitForm's lead purpose | built and reviewed Nov 14, merged |
 | P14 Content, blog posts and landing pages | Mantle, BOSS, PASS | Content, ContentDetail, BlogPosts, BlogPostDetail, LandingPages, PageDetail, Knowledge; PASS pages | built and reviewed Nov 14, merged |
-| P15 Tracking links and capture | Mantle, BOSS, PASS | TrackingLinks, TrackingLinkDetail; CampaignDetail's Tracking links tab | — |
+| P15 Tracking links and capture | Mantle, BOSS, PASS | TrackingLinks, TrackingLinkDetail; CampaignDetail's Tracking links tab | built and reviewed Nov 15, merged |
 | P16 Events and registration setup | Mantle, BOSS, PASS | Events, EventDetail, RegistrationSetup; PASS Event | — |
 | P17 Registrations, tickets and payment | Mantle, BOSS, PASS | Registrations, RegistrationDetail; PASS Register, Registration | — |
 | P18 Check-in | Mantle, BOSS | CheckIn | — |
@@ -4280,7 +4283,7 @@ whose files this phase does not touch.
 - Design edits: design-marketing §2 (TrackingLinkDetail's sibling path), §8 TrackingLinks and TrackingLinkDetail (as built), LandingPages
   and PageDetail (the review), §12 CampaignDefaults (the tracking settings), §13.1 (the two operations and their paths);
   design-commerce §3 Home (the Visits card as built).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F294 to F301 in order:
   - the code over the plan above: the site id in the link's path, tokens per attempt in the build rather than at preparation and only
     for the organization's tracking links, the automated kinds, the organization's visitor-key policy and the browser's signals as the
     site's tracking choices, the allowlist on MarketingPolicy, LinkObservations inside get#TrackingLink, MARKETING_CAMPAIGN_EDIT writing
@@ -4420,7 +4423,7 @@ nothing new. Fixes mr-mantle 1b8ccb88, mr-pass 76461ba, mr-boss (this note's com
   - R4 (low; mr-boss MarketingTracking.xml storeTrackingLink): clearing a link's source, medium, content tag or type kept the old
     value (`|| null` sent nothing); the four now pass the empty value, which the service stores as none. Campaign defaults' "Tracking
     link hosts" tooltip says a host's subdomains are included, as store#TrackingLink matches them.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F302 to F307 in order:
   - the Built note's findings stand as written; the user's calls of Nov 15 are in §4 (the visitor key as built, no banner, a banner in
     §7; `/trk` and `/trk-o` reserved in the framework as a follow-up). The framework's reserved list also lacks the default conf's own
     `/search` and `/dashboard` servlets: the follow-up could derive the reserved segments from every declared servlet pattern;
@@ -5101,6 +5104,20 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F291 | P14 (Review Nov 14): blog categories are global (WikiPageCategory), so one organization's newsletter takes another organization's public posts in a category of the same name, and create#ContentSend takes any category id; as the framework's model is, with no organization on a wiki space | P14: as its Review note says |
 | F292 | P14 (Review Nov 14): BlogPost's small image (design §8 NewBlogPost and BlogPost: image upload with thumbnail) is not built | P14: as its Review note says |
 | F293 | P14 (Review Nov 14): the Built note's others stand as written (the preview and test message without the posts, experiments' variants without them, no sitemap or robots for the marketing mount, a Shop menu linking a landing page, the blog link from `publicBlogUrl`, P15's hook) | P14: as its Review note says |
+| F294 | P15 (Built Nov 15): the code over the plan above: the site id in the link's path, tokens per attempt in the build rather than at preparation and only for the organization's tracking links, the automated kinds, the organization's visitor-key policy and the browser's signals as the site's tracking choices, the allowlist on MarketingPolicy, LinkObservations inside get#TrackingLink, MARKETING_CAMPAIGN_EDIT writing links, the review as Marketing's approvals' page kind | P15: as its Built note says |
+| F295 | P15 (Built Nov 15): store#MarketingPolicy dropped Campaign defaults' test addresses since P8 (the parameter was declared on store#CampaignBudget); fixed here: a policy saved before this phase from Campaign defaults has no test list until it is saved again | P15: as its Built note says |
+| F296 | P15 (Built Nov 15): `/trk` and `/trk-o` are servlet patterns on every host of a deployment, so they shadow a Smithy group or a root-mounted Shop page route of those names; the framework's reserved paths do not list them (Deployment says so) | P15: as its Built note says |
+| F297 | P15 (Built Nov 15): the visitor key is a first-party cookie set by the redirect: with the policy on, a browser without Global Privacy Control or Do Not Track gets it with no consent banner (PASS has none); a jurisdiction needing prior consent for analytics cookies should leave the policy off, which still counts visits and clicks without unique visitors (the user's call below) | P15: as its Built note says |
+| F298 | P15 (Built Nov 15): opens: a pixel fetch by a mail provider's image proxy is counted as an open (a known scanner's is set apart); opens are not shown in LinkObservations (a link's) and wait for P20's send reports | P15: as its Built note says |
+| F299 | P15 (Built Nov 15): Online sales' visits are not built (Home's are); with conversion they wait for P20's `Marketing.Visits` and attribution | P15: as its Built note says |
+| F300 | P15 (Built Nov 15): CampaignDetail's Tracking links box and RecipientDetail's clicks are not rendered by a regression spec (CampaignDetail's one render is MarketingCampaigns', which does not look for the box); a send's unique clicks are shown per recipient and per experiment variant, not yet on SendDetail | P15: as its Built note says |
+| F301 | P15 (Built Nov 15): a send's tracked links are those whose public address the author pasted; a plain link in the body is never counted, by design (no destination a link of the organization does not register) | P15: as its Built note says |
+| F302 | P15 (Review Nov 15): the Built note's findings stand as written; the user's calls of Nov 15 are in §4 (the visitor key as built, no banner, a banner in §7; `/trk` and `/trk-o` reserved in the framework as a follow-up). The framework's reserved list also lacks the default conf's own `/search` and `/dashboard` servlets: the follow-up could derive the reserved segments from every declared servlet pattern | P15: as its Review note says |
+| F303 | P15 (Review Nov 15): a token is scoped to its recipient, send and organization, not to the links of its message: a holder may append it to another tracking link of the same organization and have that click attributed to the recipient (while they allow tracking). Nothing else follows from it | P15: as its Review note says |
+| F304 | P15 (Review Nov 15): a link's destination and safe destination are checked when saved: a host later removed from the allowlist, or a site whose mount no longer serves the organization, still receives the link's visitors until the link is saved or disabled | P15: as its Review note says |
+| F305 | P15 (Review Nov 15): an allowlist entry admits its subdomains (`partner.example` admits `shop.partner.example`), so an entry for a shared hosting domain would admit every tenant under it; MARKETING_CONFIGURE only | P15: as its Review note says |
+| F306 | P15 (Review Nov 15): a pixel's limit is per client across all pixels (30 in ten minutes): a mail provider's image proxy fetching for many recipients from one address has most opens dropped (opens are not yet reported, P20) | P15: as its Review note says |
+| F307 | P15 (Review Nov 15): a link's end date cannot be cleared from the form (an empty Timestamp is no parameter, so the old one is kept); disabling is the way back | P15: as its Review note says |
 
 ## 7. Later
 
