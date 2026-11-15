@@ -618,8 +618,9 @@ along with this software (see the LICENSE.md file). If not, see
         </out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
-            const name = String(pageName || '').replace(/\s+/g, ' ').trim()
-            if (!name || !StringUtilities.isAlphaNumeric(name, ".,'-_:()!? ") || name === '.' || name === '..') {
+            // in NFC as the wiki saves it (update#WikiPage), so the path checked here is the one written
+            const name = String(pageName || '').normalize('NFC').replace(/\s+/g, ' ').trim()
+            if (!name || !StringUtilities.isAlphaNumeric(name, ".,'-_:()!? ", true) || name === '.' || name === '..') {
                 ec.message.addError(L("A page name has letters, digits, spaces and . , ' - _ : ( ) ! ? only"))
                 return
             }
@@ -690,8 +691,9 @@ along with this software (see the LICENSE.md file). If not, see
             if (!srcPath) { ec.message.addError(L('The home page of a space is copied with its space (Spaces, Clone)')); return }
             if (!src.exists) { ec.message.addError(L('This page has no text yet to copy')); return }
             const spaceId = toWikiSpaceId || src.wikiSpaceId
-            const name = String(toPageName || '').replace(/\s+/g, ' ').trim()
-            if (!name || !StringUtilities.isAlphaNumeric(name, ".,'-_:()!? ") || name === '.' || name === '..') {
+            // in NFC as the wiki saves it (update#WikiPage), so the path checked here is the one written
+            const name = String(toPageName || '').normalize('NFC').replace(/\s+/g, ' ').trim()
+            if (!name || !StringUtilities.isAlphaNumeric(name, ".,'-_:()!? ", true) || name === '.' || name === '..') {
                 ec.message.addError(L("A page name has letters, digits, spaces and . , ' - _ : ( ) ! ? only"))
                 return
             }
@@ -1508,8 +1510,10 @@ along with this software (see the LICENSE.md file). If not, see
             const space = ec.service.sync().name('org.moqui.resource.WikiServices.ensure#UserNotesSpace').call()
             if (ec.message.hasError() || !space?.wikiSpaceId) return
             wikiSpaceId = space.wikiSpaceId
-            // at most 80 characters and 200 bytes in UTF-8 (by whole characters), room for " (n)" under create#Page's 240
-            const cleanChars = Array.from(String(title || '').replace(/[^\p{L}\p{Nd}_.\-,':()!? ]+/gu, ' ').replace(/\s+/g, ' ').trim()).slice(0, 80)
+            // in NFC, letters, digits and combining marks (after a letter or digit) of any script and .,'-_:()!? only (create#Page's
+            // rule), at most 80 characters and 200 bytes in UTF-8 (by whole characters), room for " (n)" under create#Page's 240
+            const cleanChars = Array.from(String(title || '').normalize('NFC').replace(/[^\p{L}\p{M}\p{Nd}_.\-,':()!? ]+/gu, ' ')
+                .replace(/(^|[^\p{L}\p{M}\p{Nd}])\p{M}+/gu, '$1').replace(/\s+/g, ' ').trim()).slice(0, 80)
             while (encodeURIComponent(cleanChars.join('')).replace(/%[0-9A-F]{2}/g, '_').length > 200) cleanChars.pop()
             const cleanTitle = cleanChars.join('').trim()
             const base = cleanTitle || (L('Note') + ' ' + ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH.mm'))

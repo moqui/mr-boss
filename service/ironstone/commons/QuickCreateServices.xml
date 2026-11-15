@@ -219,11 +219,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <if condition="ec.message.hasError()"><return/></if>
                 <set field="wikiSpaceId" from="spaceOut.wikiSpaceId"/>
                 <script><![CDATA[
-                    // a page name has letters and digits of any script and .,'-_:()!? only (update#WikiPage's rule), at most
-                    // 200 bytes in UTF-8 by whole characters so a name in use has room for the time added under its 240
+                    // a page name has letters, digits and combining marks (after a letter or digit) of any script and .,'-_:()!?
+                    // only, in NFC (update#WikiPage's rule), at most 200 bytes in UTF-8 by whole characters so a name in use has
+                    // room for the time added under its 240
                     const fromText = String(noteText).split('\n').map((line) => line.replace(/^#+\s*/, '').trim()).find((line) => line) || ''
-                    const chars = Array.from(String(title || Array.from(fromText).slice(0, 60).join(''))
-                            .replace(/[^\p{L}\p{Nd}_.\-,':()!? ]+/gu, ' ').replace(/\s+/g, ' ').trim())
+                    const chars = Array.from(String(title || Array.from(fromText).slice(0, 60).join('')).normalize('NFC')
+                            .replace(/[^\p{L}\p{M}\p{Nd}_.\-,':()!? ]+/gu, ' ').replace(/(^|[^\p{L}\p{M}\p{Nd}])\p{M}+/gu, '$1')
+                            .replace(/\s+/g, ' ').trim())
                     while (encodeURIComponent(chars.join('')).replace(/%[0-9A-F]{2}/g, '_').length > 200) chars.pop()
                     let name = chars.join('').trim()
                     if (!name || name === '.' || name === '..') name = ec.l10n.localize('Note')

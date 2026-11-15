@@ -198,6 +198,25 @@ feature("a Chinese page name is created and renamed, and a slash or .. is still 
     },
 })
 
+feature("combining marks: a Devanagari name is made, a decomposed (NFD) name is its composed twin and taken, a leading mark is refused", {
+    when() {
+        const create = (pageName) => post("createPage", { wikiSpaceId: "BOSSKB", parentPath: "Office", pageName })
+        const devanagari = create(`हिन्दी पृष्ठ ${RUN}`)
+        const composed = create(`Café ${RUN}`)
+        const decomposed = create(`Cafe\u0301 ${RUN}`)
+        const leading = create(`\u0301Cafe ${RUN}`)
+        const removed = [devanagari, composed].map((made) => post("deletePage", { wikiPageId: made.json.wikiPageId }).errors)
+        return { devanagari, composed, decomposed, leading, removed }
+    },
+    then({ devanagari, composed, decomposed, leading, removed }) {
+        devanagari.errors == "" && devanagari.json.pagePath == `Office/हिन्दी पृष्ठ ${RUN}`
+        composed.errors == "" && composed.json.pagePath == `Office/Café ${RUN}`
+        decomposed.errors.includes(`There is a page Office/Café ${RUN} already`)
+        leading.errors.includes("letters")
+        removed.every((error) => error == "")
+    },
+})
+
 feature("an edit saves a version with its note; a save from an older version meets the newer one and is kept until forced", {
     when() {
         const first = page({ wikiPageId: made.pageId })
