@@ -3,7 +3,8 @@
 // scheduled send opening SendDetail, its webinar an event), a send refused by the calendar's drag; the root's providers (quick create's
 // send, Today, record-lookup, call-context, the answer actions); Today with a failing provider named and Marketing's answered; the
 // palette, record-lookup and call-context answering a Marketing user with no address or token in any row, another organization's user
-// shown nothing. The schedule's rules are Mantle's (test/marketing/MarketingCalendar); the walk is the acceptance
+// shown nothing; follow-up 9: the events manager, who may not open SendDetail, sees the send unlinked in the calendar, the links of Home
+// (sharedLinks) and the Comms card, and the palette finds no send for them. The schedule's rules are Mantle's (test/marketing/MarketingCalendar); the walk is the acceptance
 // MarketingCalendarWalk.
 // Run: ./moq test mr-boss --spec MarketingShell
 const lib = ec.resource.script("component://mr-boss/test/Marketing/MarketingSpecLib.js")
@@ -92,6 +93,10 @@ feature("Calendar renders its component and shows the campaign's window, its sch
         // another organization's author (Services) over the same days: none of Retail's items (P21 review)
         const otherEvents = range => json(transition(users.otherAuthor, "Calendar/calendarEvents", range)).eventList || []
         const other = [].concat(otherEvents(around(sendAt)), otherEvents(around(eventAt)))
+        // follow-up 9: the events manager, who may not open SendDetail, sees the send unlinked
+        const eventsSend = (json(transition(users.events, "Calendar/calendarEvents", around(sendAt))).eventList || []).find(
+            item => item.key === "send|" + ids.scheduledSendId
+        )
         const moved = transition(users.author, "Calendar/moveEvent", {
             workEffortId: ids.scheduledSendId,
             start: day(sendAt + 2 * dayMs),
@@ -112,10 +117,11 @@ feature("Calendar renders its component and shows the campaign's window, its sch
             ).length,
             moved,
             agenda,
-            campaignWindow
+            campaignWindow,
+            eventsSend
         }
     },
-    then({qvue, campaign, send, event, otherCampaign, otherSees, moved, agenda, campaignWindow}) {
+    then({qvue, campaign, send, event, otherCampaign, otherSees, moved, agenda, campaignWindow, eventsSend}) {
         campaignWindow.fromDays > 13.5 &&
             campaignWindow.fromDays < 16 &&
             campaignWindow.thruDays > 75 &&
@@ -125,6 +131,7 @@ feature("Calendar renders its component and shows the campaign's window, its sch
         campaign.url == "/qapps/Marketing/Campaigns/CampaignDetail?marketingCampaignId=" + ids.runningCampaignId
         send.canEdit == false
         send.url == "/qapps/Marketing/Sends/SendDetail?campaignSendId=" + ids.scheduledSendId
+        eventsSend.title.includes("Garden newsletter, December") && eventsSend.url == null
         event.url == "/qapps/Marketing/Events/EventDetail?workEffortId=" + ids.webinarEventId
         !otherCampaign
         otherSees == 0
@@ -212,6 +219,26 @@ feature(
             const registrationCard = asUser(users.events, () =>
                 invoke(C + "lookup#Records", {operation: "card", recordEntityName: REGISTRATION, recordId: prefix + "_REG"})
             )
+            // follow-up 9: a send is linked (Home's Upcoming by sharedLinks, the palette, the Comms card) only for who may open SendDetail
+            const sendLinks = user =>
+                asUser(
+                    user,
+                    () => invoke(C + "get#SharedContext", {appRoot: "Marketing"}).sharedLinks["Sends/SendDetail"] || null
+                )
+            const eventsPalette = asUser(
+                users.events,
+                () => invoke(C + "search#Records", {text: "Garden newsletter", limit: 10}).rows
+            )
+            // the review: Approvals' and Automations' places only for their areas' users (the events manager neither, the author Automations)
+            const places = user =>
+                asUser(user, () => {
+                    const place = ec.resource.script("component://mr-boss/service/ironstone/marketing/Marketing.js").placesFor("Marketing")
+                    return {
+                        approvals: place("marketingApprovals"),
+                        automation: place("marketingAutomation", "marketingAutomationId", "X"),
+                        campaign: place("marketingCampaign", "marketingCampaignId", "X")
+                    }
+                })
             const number = "+1801" + callerNumber.contactNumber.replace(/\D/g, "")
             const call = user => asUser(user, () => invoke(C + "get#CallContext", {number}))
             return {
@@ -222,10 +249,37 @@ feature(
                 links,
                 registrationCard,
                 events: call(users.events),
-                reader: call(users.reader)
+                reader: call(users.reader),
+                eventsInfo: info(users.events),
+                eventsPalette: Array.from(eventsPalette || []),
+                authorSendLink: sendLinks(users.author),
+                eventsSendLink: sendLinks(users.events),
+                eventsPlaces: places(users.events),
+                authorPlaces: places(users.author)
             }
         },
-        then({palette, otherPalette, author, otherAuthor, links, registrationCard, events, reader}) {
+        then({
+            palette,
+            otherPalette,
+            author,
+            otherAuthor,
+            links,
+            registrationCard,
+            events,
+            reader,
+            eventsInfo,
+            eventsPalette,
+            authorSendLink,
+            eventsSendLink,
+            eventsPlaces,
+            authorPlaces
+        }) {
+            eventsPlaces.approvals == null && eventsPlaces.automation == null && eventsPlaces.campaign != null
+            authorPlaces.approvals == null && authorPlaces.automation == "/qapps/Marketing/Automations/AutomationDetail?marketingAutomationId=X"
+            authorSendLink == "//Marketing/Sends/SendDetail" && eventsSendLink == null
+            !eventsPalette.some(row => row.recordEntity === SEND)
+            const eventsCard = Array.from(eventsInfo.recordList).find(row => row.recordId === ids.scheduledSendId)
+            eventsCard.visible && eventsCard.url == null
             palette.some(row => row.recordEntity === SEND && row.recordId === ids.scheduledSendId)
             !otherPalette.some(row => row.recordId === ids.scheduledSendId)
             !JSON.stringify(palette).includes("@") && !/token/i.test(JSON.stringify(palette))

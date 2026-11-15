@@ -316,7 +316,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <template v-else>
                                     <template v-for="item in cell.items.slice(0, cell.limit)" :key="item.key">
                                         <div :id="'boss-ev-m' + cell.date + item.domKey" class="rounded-borders ellipsis text-caption q-px-xs q-mt-xs"
-                                                :class="item.long ? eventClass(item) : ''" :style="item.long ? colorStyle(item) : {cursor: 'pointer'}"
+                                                :class="item.long ? eventClass(item) : ''" :style="item.long ? colorStyle(item) : {cursor: openable(item) ? 'pointer' : 'default'}"
                                                 @pointerdown.stop="onChipDown($event, item, 'month', cell.date)">
                                             <template v-if="item.long">{{item.title}}</template>
                                             <template v-else><span class="rounded-borders q-mr-xs" :class="dotClass(item)" :style="dotStyle(item, 8)"></span><span class="m-muted">{{item.shortTime}}</span> <span :class="item.partyStatusId === 'WeptDeclined' || item.done ? 'text-strike' : ''">{{item.title}}</span></template>
@@ -342,7 +342,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <div v-if="group.isToday" class="text-caption text-primary q-ml-sm">{{t('Today')}}</div>
                     </div>
                     <q-list dense class="q-pb-xs">
-                        <q-item v-for="item in group.items" :key="item.key" :id="'boss-ev-g' + group.date + item.domKey" clickable @click="openItem($event, item)">
+                        <q-item v-for="item in group.items" :key="item.key" :id="'boss-ev-g' + group.date + item.domKey" :clickable="openable(item)" @click="openItem($event, item)">
                             <q-item-section side class="text-caption" :style="{width: phone ? '74px' : '150px'}">{{item.long ? t('All day') : (phone ? item.shortTime : item.timeText)}}</q-item-section>
                             <q-item-section avatar style="min-width:18px"><span class="rounded-borders" :class="dotClass(item)" :style="dotStyle(item, 10)"></span></q-item-section>
                             <q-item-section>
@@ -1057,14 +1057,14 @@ module.exports = {
         eventStyle(item) {
             const dragging = this.preview && this.preview.item.key === item.key;
             return Object.assign(this.colorStyle(item), { top: item.top + 'px', height: Math.max(item.height - 1, 15) + 'px', left: 'calc(' + item.leftPct + '% + 1px)',
-                width: 'calc(' + item.widthPct + '% - 4px)', zIndex: 2, cursor: item.canEdit && !this.phone ? 'grab' : 'pointer', opacity: dragging ? 0.35 : undefined });
+                width: 'calc(' + item.widthPct + '% - 4px)', zIndex: 2, cursor: item.canEdit && !this.phone ? 'grab' : this.openable(item) ? 'pointer' : 'default', opacity: dragging ? 0.35 : undefined });
         },
         chipStyle(item, moved) {
             const leftPct = moved ? moved.leftPct : item.leftPct;
             const lane = moved ? item.lane : item.lane;
             const dragging = !moved && this.chipPreview && this.chipPreview.item.key === item.key;
             return Object.assign(this.colorStyle(item), { top: (lane * 22 + 3) + 'px', height: '20px', lineHeight: '20px', left: 'calc(' + leftPct + '% + 2px)',
-                width: 'calc(' + item.widthPct + '% - 5px)', zIndex: 2, cursor: item.canEdit && !this.phone ? 'grab' : 'pointer', opacity: dragging ? 0.35 : undefined });
+                width: 'calc(' + item.widthPct + '% - 5px)', zIndex: 2, cursor: item.canEdit && !this.phone ? 'grab' : this.openable(item) ? 'pointer' : 'default', opacity: dragging ? 0.35 : undefined });
         },
         dotClass(item) { return item.kind === 'task' ? 'bg-grey-6' : (PLAN_COLORS[item.kind] ? 'bg-' + PLAN_COLORS[item.kind] : (item.freeBusyOnly ? 'bg-grey-5' : '')); },
         // a work item, milestone, release or sprint has its kind's icon; an event none
@@ -1336,6 +1336,9 @@ module.exports = {
             this.reload();
         },
         // ===== the event popover =====
+        // an item a click opens: an event (its popover) or a read-only item with a place (a resource mode's url); one with none, such
+        // as a Marketing send for a user who may not open SendDetail, shows no pointer (Marketing follow-up 9 review)
+        openable(item) { return item.kind === 'event' || !!item.url; },
         openItem(domEvent, item) {
             const requestSeq = ++this.popRequestSeq;
             if (item.kind !== 'event') { this.go(item.url); return; }
