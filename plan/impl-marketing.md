@@ -7791,6 +7791,17 @@ the walk's story has them, asserting the unlinked item. Branch `mkt/fix9` in mr-
     (routeCapabilities), screen/Marketing/Home.xml, test/Marketing/MarketingShell.spec.js;
   - the user's call: none.
 
+### Framework fixes from the acceptance run (fix/accfw)
+
+**Built and reviewed Nov 15, merged.** mr-moqui: a path screen's `<actions>` error with its own status answers that status and its
+error page as from `<pre-actions>` (render.rs, sri/sections.rs, web::discard_output; streaming and in-place general errors unchanged);
+moqui-mail captures before the SMTP-host check (a host outside allowed-hosts still refused); `moqui test --serve` gives each client
+spec its own loopback requester address (127.1.0.N) through an X-Moqui-Test-Peer header honoured only on a test server, from a
+loopback peer with a loopback client address, and stripped on every server; /status, /health and /metrics accept 127.0.0.0/8. mr-boss:
+the Sales helper captureSystemMail removed. Review R1 (low): the header needs both the peer and the client address loopback; R2 a
+test that a non-test server drops it; R3 status_allowed simplified. Findings: a non-web makeRender whose path screen's actions throw
+NotFound now fails the render; browser walks still share 127.0.0.1.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -7873,6 +7884,7 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | mr-boss's client budget is raised to the measured time of the re-run after the final suites' fixes (about 93 s; MarketingSendWalk 8 s within the approved Marketing estimate) | The user's call |
 | Nov 15, 2026 | Marketing's calendar and Home show a scheduled send to whoever sees them, but link it (SendDetail, the palette) only for a user who may read sends; the events manager sees it unlinked (the acceptance run); follow-up 9 | The user's call |
 | Nov 15, 2026 | Framework fixes from the acceptance run (fix/accfw): a subscreen's NotFound thrown in `<actions>` answers 404 as from `<pre-actions>`; moqui-mail's capture comes before the SMTP-host check; the test runner gives each client spec its own requester address so a rate limit keyed by requester is per spec | The user's call |
+| Nov 15, 2026 | The fix for errors in a path screen's `<actions>` covers every error kind with its own status (BadRequest, Validation, Conflict, Unprocessable, MethodNotAllowed as well as NotFound), matching `<pre-actions>`; General, rollback-only and unavailable errors stay written in place (fix/accfw's review) | The user's call |
 
 ## 5. Open questions
 
