@@ -1306,7 +1306,7 @@ join address) is on RegistrationSetup's More menu, beside Open in the calendar.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| RegistrationPolicy | single | Define admission | occurrence, opening/closing dates, total seats, hold duration, waitlist, cancellation terms, public site | date-time and capacity preview | E.store#RegistrationPolicy | Odoo event; Frappe LMS batch |
+| RegistrationPolicy | single | Define admission | occurrence, opening/closing dates, total seats, hold duration, waitlist, cancellation terms and rule (deadline hours, refund %, late cancellation; follow-up 1), public site | date-time and capacity preview | E.store#RegistrationPolicy | Odoo event; Frappe LMS batch |
 | TicketTypes | list, editable rows | Offer free/paid places | ticket product, price source/currency, capacity, sales dates, per-order limit | product/server-search, authorized price explanation | E.store#TicketType | WorkEffortProduct; Odoo tickets |
 | RegistrationQuestions | single | Choose shared questions | DbForm, effective time, attendee/buyer scope, required consent text | shared survey builder | E.store#RegistrationForm | ProductDbForm/OrderItemFormResponse; Odoo questions |
 | EventCommunications | list, editable rows | Schedule relevant notices | trigger/offset, template, channel, recipient scope, transactional/promotional kind | preview recipients | E.store#CommunicationSchedule | Odoo event mail schedulers |
@@ -1393,10 +1393,30 @@ paid place's refund to the payment services after the commit (release of an auth
 refund#SinglePayment of its line and tax), shown pending until the provider's answer and Accounting's to finish when it fails; then the
 waitlist is offered in order with a hold of its own, a reservation's waiting places together (none split, none passed; a completed
 free one confirmed at once). The payment step shows the tickets' prices now and Pay sends that amount's key: a price changed since is
-refused with the new amount (PRICE_CHANGED), never charged unseen (P17 review). The entry code is never stored: its digest and revision are, and each new code (a
-ticket notice, Show my entry code, a substitution) revokes the last. Jobs: run_EventRegistrations (payment results, placement retries,
+refused with the new amount (PRICE_CHANGED), never charged unseen (P17 review). Jobs: run_EventRegistrations (payment results, placement retries,
 waiting refunds, hold expiry, waitlist offers) and run_EventRegistrationNotices (the time-driven notices), each with its operation and
 JobRegistration.
+
+As built (impl-marketing follow-up 1; §4 Nov 15, the user's calls):
+- Capture on approval: once a ticket order's approval commits (EventRegistrationApprovedInvoice, E.invoice#RegistrationOrder) each
+  approved part is invoiced once, under its lock, through Accounting's create#FulfillmentInvoice, whose apply#OrderPaymentsToInvoice
+  captures the authorized payment, as Shop's digital lines are billed; a place cancelled before the approval is left off the invoice and
+  its share refunded from the capture (a partial cancellation's refund waits for it). An invoiced order whose places are all cancelled
+  is no longer cancelled: its refunds are Accounting's payments.
+- Cancellation rule: RegistrationPolicy gains a cancellation deadline (hours before the start, a day being 24; empty: until the start),
+  a refund percentage of a confirmed place's price and tax (empty: 100) and whether a buyer may still cancel after the deadline with no
+  refund; part of the accepted terms (a change after publication raises termsRevision; EventRegistrationTerms keeps the rule of each
+  revision). A buyer's cancellation follows the rule of the revision the registration accepted: a confirmed place until the deadline
+  for the percentage, after it with no refund where allowed, else CANCELLATION_CLOSED; a place not yet confirmed (held, pending the
+  organizer's approval, waitlisted, under review) is refunded in full. Staff's cancel#Registration (and the batch) gives the rule's
+  percentage by default and may name another with the reason, recorded as EraRefundOverride; the percentage is kept on the
+  registration. Register, Event and Registration state the rule in words. An authorization never captured is released whole.
+- Entry code: one code per credential revision, derived again whenever it is shown (a ticket, Send again, Show my entry code) from a
+  keyed digest of the registration and its revision with the offer's secret (EventRegistrationPolicy.entryCodeKey, made at publication,
+  encrypted by the server's key, never shown): HMAC-SHA256 through the script host's `ec.resource.hmac` since follow-up 2; only its
+  digest and revision are kept. A correction, a substitution, a cancellation or a
+  staff reissue (E.reissue#RegistrationCode, RegistrationDetail's New entry code, with a reason: EraCodeReissued) raises the revision,
+  so the earlier code stops matching.
 
 **Source:** research §7; Odoo tickets/questions/mail schedulers, Frappe LMS batch and native event/product/order joins.
 
@@ -1431,7 +1451,7 @@ the organization's events managers only.
 | Registration | display | Explain entitlement | attendee/buyer, occurrence, ticket, accepted terms, seat state, payment, source | native order/payment links by rights | E.get#Registration | Odoo registration; Frappe LMS enrollment |
 | Answers | display | Read submitted answers | form/effective time, answers, consent evidence | shared historical response renderer | F.get#Response | DbForm and FormResponse |
 | Attendance | list, read | Inspect check-in history | actor, time, action, credential revision, correction reason | audit timeline | E.get#Registration | Odoo desk; Frappe attendance |
-| RegistrationChange | dialog | Cancel or request correction/refund | action, reason, capacity/payment impact, expected stamp | confirmation | E.cancel#Registration, E.correct#Registration | research §7 |
+| RegistrationChange | dialog | Cancel or request correction/refund | action, reason, capacity/payment impact, refund % (the accepted terms' by default; another recorded with the reason), expected stamp; a new entry code with its reason (follow-up 1) | confirmation | E.cancel#Registration, E.correct#Registration, E.reissue#RegistrationCode | research §7 |
 
 Cancellation releases capacity once. A refund request is handed to the existing financial service
 and stays pending until its result; a cancelled registration does not imply refunded money.
@@ -2143,8 +2163,10 @@ response; staff correction remains an internal action. **Needs:** MKT-EVENT, MKT
 As built (impl-marketing P17): `Marketing/Registration`, reached by the ExternalAccess kind `EventRegistration` (a reservation; scopes
 RegistrationView and RegistrationCancel, issued only by the registration services: at the reservation and in each receipt) or by the
 buyer's own verified account (the self relationship); a link's token is read once into the session and the address replaced by the
-reference. Show my entry code is a POST with a fresh request key that issues a new code (its QR from the built barcode helper),
-shown once; cancelRegistration (POST, RegistrationCancel) is the buyer's until the occurrence starts. No answer, code digest, order line
+reference. Show my entry code is a POST with a fresh request key that shows the place's code (its QR from the built barcode helper),
+the same code each time for its revision (follow-up 1); cancelRegistration (POST, RegistrationCancel) is the buyer's as the accepted
+terms' cancellation rule allows (follow-up 1: until its deadline for its refund, after it with no refund only where the rule allows,
+never after the start), the rule shown in words above Cancel. No answer, code digest, order line
 or party id is in any answer.
 
 **Source:** research §7; Odoo attendee receipt and shared PASS source-bound access.
@@ -2193,7 +2215,7 @@ there is no parallel Marketing version/snapshot system for configuration history
 | EventRegistrationPolicy / EventTicketType | event occurrence, effective offer/terms, site, registration window, capacity/hold/waitlist, ticket product and pricing source | One authoritative capacity domain per occurrence and per ticket; accepted terms referenced by registrations |
 | EventRegistration | registration ID, occurrence/ticket, attendee/buyer party, hold expiry/state, native order/item/payment references, source campaign, response ID, entry credential digest/revision | Attendee identity separate from payer/order; unique source/request allocation; financial facts remain in native records |
 | EventAttendance (impl-marketing P18) | registration (one fact each), offer, event, organization, attendee, ticket, method (entry code, found by name, a manager's override), the state then, the code's revision, reason, device, who and when, operation key | Check-in once per registration, a repeat answering the first; the attendance reports and the "attended" triggers read it |
-| EventReservation / EventRegistrationTerms (impl-marketing P17) | a request's buyer, request key (unique per offer), terms revision, order and payment; an offer's terms, cancellation terms and consent text per terms revision | A repeat answers the first; the words a registrant accepted survive a later change of the offer |
+| EventReservation / EventRegistrationTerms (impl-marketing P17) | a request's buyer, request key (unique per offer), terms revision, order and payment; an offer's terms, cancellation terms, cancellation rule (follow-up 1: deadline hours, refund percentage, late cancellation) and consent text per terms revision | A repeat answers the first; the words and rule a registrant accepted survive a later change of the offer |
 | EventRegistrationAction / EventCommunicationSchedule | action ID, registration, action/actor/time/reason; event effective trigger/offset/template/purpose | Check-in/correction/cancellation evidence and one notice per registration/schedule/trigger, sent as a delivery-ledger source; no duplicate event store |
 | FormPublication / FormInvitation / FormSubmission (Commons, X16) | publication ID, DbForm, site/campaign or case/purpose/access/effective interval; invitation over `ExternalAccessCapability`; submission ID/request identity, response, verified party if any, source/effects status | One model for Marketing, Customer Service and Sales lead forms, owned by Commons; framework owns form/answers; publication controls exposure; submission is an acceptance/integration fact, not a copy of answers |
 | MarketingLeadRule / MarketingLeadCapture | dated source/trigger/allowed mapping and Sales routing target; unique rule/source event, opportunity/result/error | Reusable Sales intake; retries never create duplicate opportunities or grant consent |
