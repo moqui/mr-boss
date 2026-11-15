@@ -6702,6 +6702,15 @@ section, P20's Review note "the user's call 1", §4's Nov 15 row, §2 and design
     visitor-key digest of an organization's orders placed before its statistics retention";
   - the user's calls: whether Register's ticket checkout should forward the key too (a follow-up).
 
+### Follow-up 5 — Register's ticket checkout forwards the visitor key
+
+The user's call of Nov 15 (§4, follow-up 4's review): Register's ticket checkout (`completeRegistration`, P17) forwards a remote PASS
+frontend's first-party visitor key as Shop's `submitCheckout` does since follow-up 4, so a ticket order placed through a remote frontend
+is attributed by its key. The same rules: the key's form checked or dropped, only its digest kept on `OrderHeader.marketingVisitorKeyHash`
+and only where `visitorKeyAllowed` holds, read again in the placement's transaction before `place#Order` (a paid ticket placed later
+by the provider's return, webhook or job), never part of the request's identity or a cause of refusal, the cookie sent by PASS only
+without Do Not Track or Global Privacy Control. Branch `mkt/fix5` in mr-mantle and mr-pass (mr-boss for the plan).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -6776,6 +6785,7 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | A remote PASS frontend forwards the consented visitor key with the checkout, so an order placed through it is attributed like a local one; a follow-up the lead runs in mr-pass and mr-mantle after P20's review (what record#OrderAttribution needs: P20's Review note, For the lead) | The user's call (P20) |
 | Nov 15, 2026 | Assist gets an aggregate-only audience tool: counts per bucket and reason only (classify#Recipients' buckets), never names, addresses or party ids; Assistant only, not MCP; the reader's audience permission and organization scope. Built in P20's review (SegmentServices count#Audience, marketing_audience_counts) | The user's call (P20) |
 | Nov 15, 2026 | Customer360 and ContactDetail under Marketing open only a party Marketing has a record of in the user's organizations (a list member, subscription request, segment member, recipient, registrant or form submitter), since the contact's notes and files open on the same check; Sales and Commons still open any party they admit | The user's call (P19's review) |
+| Nov 15, 2026 | Register's ticket checkout (completeRegistration) forwards a remote PASS frontend's visitor key as Shop's checkout does (follow-up 4): the digest kept only where an event would keep the key, read again before place#Order; follow-up 5 | The user's call (follow-up 4's review) |
 
 ## 5. Open questions
 
