@@ -89,7 +89,7 @@ feature("PriceExplain explains a quote line's price to a rep without PRICE_VIEW,
 })
 
 // Marketing follow-up 3 (impl-marketing §4 Nov 15, the user's call): the demo quotes' validity ends relative to the load
-// (ironstone.sales.DemoServices load#QuoteDatesDemo moves the 2099 placeholders), so both are open on any day: Wingtip's 77 days and
+// (ironstone.sales.DemoServices load#QuoteDatesDemo writes it; the rows name none), so both are open on any day: Wingtip's 77 days and
 // Fabrikam's 105 days after the load day
 feature("the demo quotes are valid from the load: Wingtip's for eleven weeks, Fabrikam's for fifteen", {
     when() {

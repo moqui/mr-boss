@@ -133,7 +133,8 @@ feature(
 
 // Marketing follow-up 3 (the user's call of Nov 15): the demo events are dated from the load (ironstone.marketing.DemoServices
 // load#EventDatesDemo moves the 2099 placeholders): the webinar upcoming, ten to eleven weeks out on a Thursday evening, the workshop a
-// few months out on a Saturday morning, closing the day before; each event's start is its offer's occurrence
+// few months out on a Saturday morning, closing the day before, the day and hour in the offer's zone (America/Denver, as PASS shows
+// them) whatever the server's (Marketing follow-up 3 review); each event's start is its offer's occurrence
 feature("the demo webinar and workshop are dated from the load, each event with its offer", {
     when() {
         const row = (entity, keys) => system(() => ec.entity.find(entity).condition(keys).disableAuthz().one())
@@ -146,7 +147,9 @@ feature("the demo webinar and workshop are dated from the load, each event with 
                 end: ms(offer.occurrenceEnd),
                 eventStart: ms(event.estimatedStartDate),
                 eventEnd: ms(event.estimatedCompletionDate),
-                closes: offer.closesDate == null ? null : ms(offer.closesDate)
+                closes: offer.closesDate == null ? null : ms(offer.closesDate),
+                local: String(ec.l10n.format(String(offer.occurrenceStart), "EEE HH:mm", "en", offer.timeZone)),
+                zone: offer.timeZone
             }
         }
         return {
@@ -159,10 +162,10 @@ feature("the demo webinar and workshop are dated from the load, each event with 
         const day = 86400000
         webinar.start == webinar.eventStart && webinar.end == webinar.eventEnd && webinar.end - webinar.start == 3600000
         webinar.start > now + 68 * day && webinar.start < now + 79 * day
-        new Date(webinar.start).getDay() == 4 && new Date(webinar.start).getHours() == 18
+        webinar.zone == "America/Denver" && webinar.local == "Thu 18:00"
         workshop.start == workshop.eventStart && workshop.end == workshop.eventEnd && workshop.end - workshop.start == 3 * 3600000
         workshop.start > now + 116 * day && workshop.start < now + 126 * day
-        new Date(workshop.start).getDay() == 6 && new Date(workshop.start).getHours() == 9
+        workshop.zone == "America/Denver" && workshop.local == "Sat 09:00"
         workshop.closes > now && workshop.start - workshop.closes == 16 * 3600000
     }
 })
