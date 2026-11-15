@@ -5827,6 +5827,8 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | The demo's Retail organization gets a Utah nexus and an address, so its ticket orders, and ZIZI_RETAIL's Shop orders, are taxed through the LOCAL gateway named on ORG_ZIZI_CORP; the specs whose totals change are updated. Built in follow-up 1 | The user's call (P17's review) |
 | Nov 15, 2026 | Mantle's classic flow specs (OrderToCashBasicFlow, ReturnToResponseBasicFlow, OrderBulk, PayTraceGateway) move to a Mantle-owned seller with no nexus and no inherited tax gateway rather than suspending the demo's Retail nexus, their expected figures kept; DemoTaxNexus.js removed. Built in follow-up 1's review for OrderBulk and PayTraceGateway (spec-local sellers); the OrderToCash chain's move is left (its size, in the review note) and suspends the nexus meanwhile | The user's call (follow-up 1's review) |
 | Nov 15, 2026 | A framework `hmac` host member replaces the nested digest of the entry code (EventRegistrationPlaces.js codeOf, one function); the lead builds it in mr-moqui after follow-up 1's review | The user's call (follow-up 1's review) |
+| Nov 15, 2026 | Mantle's OrderToCashBasicFlow and ReturnToResponseBasicFlow keep suspending Retail's Utah nexus during their run (test/order/DemoTaxNexus.js) rather than move the chain to a Mantle-owned seller | The user's call (follow-up 1's review) |
+| Nov 15, 2026 | Demo data dates that specs depend on are made relative to load time (or far future) and the specs read as of a fixed date, starting with BOSS_PRICE_SALES/BOSS_PRICE_NEXT; built in follow-up 2 with the framework hmac member | The user's call |
 
 ## 5. Open questions
 
