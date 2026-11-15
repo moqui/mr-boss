@@ -1,12 +1,13 @@
 // Marketing P21's campaign calendar in the live client (impl-marketing P21 "usable when"; design-marketing §3 Calendar, §1.3 CX-SYNC,
 // §14.3 palette), an acceptance walk as marketing.events, the webinar's organizer: the calendar shows the running campaign's window, its
 // scheduled December newsletter and the spring planting webinar; dragging the webinar to another day moves it (Commons'
-// update#EventOccurrence), while dragging the send moves nothing and clicking it opens SendDetail; a phone given an app password lists
-// the "Campaign calendar" collection over CalDAV with the same items, and its write is refused; the palette finds the campaign and the
-// send by name. The demo's own records (data/BossZZMarketingDemoData.xml), dated from the load (follow-up 6: the campaign 14 days
-// before the load day to 77 after, the send 16 days after; follow-up 3: the webinar ten weeks or more after), so the days are read from
-// the records and the projected collection (30 days back, 180 ahead) holds them on any day; the rules are mr-mantle's MarketingCalendar
-// and mr-boss's MarketingShell. The webinar is moved back at the end.
+// update#EventOccurrence), while dragging the send moves nothing; a reader of sends (the author) opens the send's SendDetail from the
+// calendar; a phone given an app password lists the "Campaign calendar" collection over CalDAV with the same items, and its write is
+// refused; the palette finds the campaign by name, and the send for the author. The demo's own records
+// (data/BossZZMarketingDemoData.xml), dated from the load (follow-up 6: the campaign 14 days before the load day to 77 after, the send
+// 16 days after; follow-up 3: the webinar ten weeks or more after), so the days are read from the calendar itself and the projected
+// collection (30 days back, 180 ahead) holds them on any day; the rules are mr-mantle's MarketingCalendar and mr-boss's MarketingShell.
+// The webinar is moved back at the end.
 // Run: ./moq accept mr-boss --spec MarketingCalendarWalk
 const user = "marketing.events"
 const ids = {
@@ -26,7 +27,19 @@ const field = (entity, id, name) => {
     const found = admin.get("/rest/e1/" + entity + "/" + id, {accept: "json"})
     return found.ok ? found.json()[name] : null
 }
-const dayOf = value => String(value || "").substring(0, 10)
+// a record's date as epoch milliseconds (entity REST answers a timestamp so), or null
+const msOf = value => (value == null || value === "" ? null : /^\d+$/.test(String(value)) ? Number(value) : Date.parse(value))
+// the day a record lands on in the calendar's month view: the cell of the smallest chip whose text holds the title (the calendar's
+// own zone decides the day, which need not be the browser's)
+const shownDay = title =>
+    page.evaluate(title => {
+        const chip = Array.from(document.querySelectorAll(".boss-calendar [data-day] *"))
+            .filter(element => (element.innerText || "").includes(title))
+            .sort((x, y) => x.offsetWidth * x.offsetHeight - y.offsetWidth * y.offsetHeight)[0]
+        return chip?.closest("[data-day]")?.getAttribute("data-day") || null
+    }, title)
+// the first day of a record's month, in UTC: the month view of a day a few days into it holds the record whatever the zone
+const nearDay = ms => new Date(ms).toISOString().substring(0, 10)
 const addDays = (day, days) => new Date(Date.parse(day + "T12:00:00Z") + days * dayMs).toISOString().substring(0, 10)
 function waitForText(text) {
     page.waitFor(text => (document.body.innerText || "").includes(text), {arg: text})
@@ -37,7 +50,7 @@ function drag(title, toDay) {
         ({title, toDay}) => {
             // the smallest element whose text starts with the title: the chip (a pointer down on its text reaches its handler)
             const chip = Array.from(document.querySelectorAll(".boss-calendar div"))
-                .filter(element => (element.innerText || "").trim().startsWith(title))
+                .filter(element => (element.innerText || "").includes(title))
                 .sort((x, y) => x.offsetWidth * x.offsetHeight - y.offsetWidth * y.offsetHeight)[0]
             const cell = document.querySelector(".boss-calendar [data-day='" + toDay + "']")
             if (!chip || !cell) return {found: false, chip: !!chip, cell: !!cell}
@@ -71,10 +84,9 @@ spec({
     stepwise: true,
     setupSpec() {
         admin = session({user: "john.doe"})
-        state.sendDay = dayOf(field("mantle.marketing.campaign.CampaignSend", ids.send, "scheduledDate"))
+        state.sendDate = field("mantle.marketing.campaign.CampaignSend", ids.send, "scheduledDate")
         state.webinarStart = field("mantle.work.effort.WorkEffort", ids.webinar, "estimatedStartDate")
-        state.webinarDay = dayOf(state.webinarStart)
-        if (!state.sendDay || !state.webinarDay) skip("the demo's December newsletter and webinar are not loaded")
+        if (!state.sendDate || !state.webinarStart) skip("the demo's December newsletter and webinar are not loaded")
         page = browser.newPage({user, viewport: {width: 1440, height: 1000}, timeout: 30})
         page.allowProblems(/userPhoto\?userId=/)
     },
@@ -94,12 +106,15 @@ feature("the calendar shows the campaign's window, its scheduled send and its ev
         page.goto("/qapps/Marketing/Home").status == 200
         page.getByRole("link", {name: "Calendar"}).first().click()
         page.waitForURL(/\/qapps\/Marketing\/Calendar/)
-        page.goto(monthOf(state.sendDay)).status == 200
+        page.goto(monthOf(nearDay(msOf(state.sendDate)))).status == 200
         waitForText(ids.sendName)
+        state.sendDay = shownDay("Send: " + ids.sendName)
         page.text().includes("Campaign: " + ids.campaignName)
         page.text().includes("Send: " + ids.sendName)
-        page.goto(monthOf(state.webinarDay)).status == 200
+        page.goto(monthOf(nearDay(msOf(state.webinarStart)))).status == 200
         waitForText(ids.webinarName)
+        state.webinarDay = shownDay(ids.webinarName)
+        !!state.sendDay && !!state.webinarDay
         !/Error rendering|Exception in render/.test(page.text())
     }
 })
@@ -113,18 +128,29 @@ feature("dragging the event moves it; dragging the send moves nothing, and the s
         drag(ids.webinarName, state.movedTo).found == true
         const save = page.getByRole("button", {name: "Save"})
         if (save.isVisible()) save.click()
-        waitUntil(() => dayOf(field("mantle.work.effort.WorkEffort", ids.webinar, "estimatedStartDate")) === state.movedTo)
+        // a day later at the same time
+        waitUntil(
+            () =>
+                msOf(field("mantle.work.effort.WorkEffort", ids.webinar, "estimatedStartDate")) ===
+                msOf(state.webinarStart) + dayMs
+        )
         // the send stays where its approval put it
         page.goto(monthOf(state.sendDay))
         waitForText(ids.sendName)
         drag("Send: " + ids.sendName, addDays(state.sendDay, 2)).found == true
         sleep(500)
-        dayOf(field("mantle.marketing.campaign.CampaignSend", ids.send, "scheduledDate")) == state.sendDay
-        page.getByText("Send: " + ids.sendName)
+        msOf(field("mantle.marketing.campaign.CampaignSend", ids.send, "scheduledDate")) == msOf(state.sendDate)
+        // the send opens SendDetail for a reader of sends (the author; Sends is not the events manager's area, design §1.2)
+        const author = browser.newPage({user: "marketing.author", viewport: {width: 1440, height: 1000}, timeout: 30})
+        author.allowProblems(/userPhoto\?userId=/)
+        author.goto(monthOf(state.sendDay))
+        author.waitFor(text => (document.body.innerText || "").includes(text), {arg: ids.sendName})
+        author
+            .getByText("Send: " + ids.sendName)
             .first()
             .click()
-        page.waitForURL(/\/qapps\/Marketing\/Sends\/SendDetail\?campaignSendId=BOSS_MKT_SEND_DEC/)
-        waitForText(ids.sendName)
+        author.waitForURL(/\/qapps\/Marketing\/Sends\/SendDetail\?campaignSendId=BOSS_MKT_SEND_DEC/)
+        author.waitFor(text => (document.body.innerText || "").includes(text), {arg: ids.sendName})
     }
 })
 
@@ -151,7 +177,9 @@ feature("a phone with an app password lists the Campaign calendar's items read o
         listed.status == 207
         listed.text.includes("marketing-campaign-" + ids.campaign + ".ics")
         listed.text.includes("marketing-send-" + ids.send + ".ics")
-        sendObject.status == 200 && sendObject.text.includes("Send: " + ids.sendName)
+        // the object's text unfolded and unescaped (RFC 5545 escapes a comma in a SUMMARY)
+        const ics = sendObject.text.replace(/\r\n[ \t]/g, "").replace(/\\([,;\\])/g, "$1")
+        sendObject.status == 200 && ics.includes("Send: " + ids.sendName)
         put.status == 403
     }
 })
@@ -160,14 +188,20 @@ feature("the palette finds the campaign and the send by name", {
     expect() {
         page.goto("/qapps/Marketing/Home").status == 200
         page.click("#m-search")
-        page.keyboard.type("Spring garden")
+        // the palette's own input, filled once it is open (keys typed before it takes the focus are lost)
+        const query = page.locator("input[placeholder^='Search screens']")
+        query.fill("Spring garden")
         waitForText("Campaign · ")
         page.text().includes(ids.campaignName)
         page.press("Escape")
-        page.click("#m-search")
-        page.keyboard.type("Garden newsletter, December")
-        waitForText("Send · ")
-        page.text().includes(ids.sendName)
-        page.press("Escape")
+        // a send is found by a reader of sends (the author; not the events manager's area, design §1.2)
+        const author = browser.newPage({user: "marketing.author", viewport: {width: 1440, height: 1000}, timeout: 30})
+        author.allowProblems(/userPhoto\?userId=/)
+        author.goto("/qapps/Marketing/Home").status == 200
+        author.click("#m-search")
+        author.locator("input[placeholder^='Search screens']").fill("Garden newsletter, December")
+        author.waitFor(text => (document.body.innerText || "").includes(text), {arg: "Send · "})
+        author.text().includes(ids.sendName)
+        author.press("Escape")
     }
 })

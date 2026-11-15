@@ -27,6 +27,9 @@ const make = (entity, values) =>
 const as = (user, service, parameters) =>
     asUser(user, () => system(() => ec.service.sync().name(service).parameters(parameters).call() || {}))
 const period = {organizationPartyId: ids.organizationId, fromDate: ago(30), thruDate: new Date(Date.now() + dayMs)}
+// the days of this scenario's own send, visit and orders (3 to 1 days ago): the reconciliation reads them alone, not the running
+// campaign's deliveries other specs of a shared acceptance run release today
+const window = {organizationPartyId: ids.organizationId, fromDate: ago(3.5), thruDate: ago(0.5)}
 
 spec({
     stepwise: true,
@@ -169,22 +172,23 @@ feature("a partial refund reduces the attributed net once; the four reports reco
             returnPrice: 20
         })
         const analyst = name => as(users.analyst, R + name, period)
+        const attributionAs = user =>
+            as(user, R + "get#Attribution", Object.assign({marketingCampaignId: ids.runningCampaignId}, window))
         return {
             performance: as(
                 users.analyst,
                 R + "get#CampaignPerformance",
-                Object.assign({marketingCampaignId: ids.runningCampaignId}, period)
+                Object.assign({marketingCampaignId: ids.runningCampaignId}, window)
             ),
-            delivery: as(users.analyst, R + "get#DeliveryAnalysis", Object.assign({campaignSendId: prefix + "_SEND"}, period)),
+            delivery: as(users.analyst, R + "get#DeliveryAnalysis", Object.assign({campaignSendId: prefix + "_SEND"}, window)),
             growth: analyst("get#AudienceGrowth"),
-            attribution: as(
-                users.analyst,
-                R + "get#Attribution",
-                Object.assign({marketingCampaignId: ids.runningCampaignId}, period)
-            )
+            attribution: attributionAs(users.analyst),
+            // the amounts of fewer than three orders show only to a reader of each order (impl-marketing P20 R5): the instance
+            // administrator reads them
+            shown: attributionAs(users.system)
         }
     },
-    then({performance, delivery, growth, attribution}) {
+    then({performance, delivery, growth, attribution, shown}) {
         const campaign = performance.campaignRows[0]
         campaign.acceptedCount == 2 && campaign.reachCount == 2
         // the click and the page by one key: one visit
@@ -194,7 +198,10 @@ feature("a partial refund reduces the attributed net once; the four reports reco
         send.attemptedCount == 3 && send.acceptedCount == 2 && send.deliveredCount == 1 && send.failedCount == 1
         // the summary's orders are the decisions'; the refund taken once from the invoiced net
         attribution.summaryRows.find(row => row.marketingCampaignId == ids.runningCampaignId).orderCount == campaign.orderCount
-        attribution.summaryRows.find(row => row.marketingCampaignId == ids.runningCampaignId).amounts[0].net == 100
+        // the analyst reads no order: the two orders' amounts are withheld, their count kept
+        const withheld = attribution.summaryRows.find(row => row.marketingCampaignId == ids.runningCampaignId).amounts[0]
+        withheld.withheld == true && withheld.net == null
+        shown.summaryRows.find(row => row.marketingCampaignId == ids.runningCampaignId).amounts[0].net == 100
         growth.listRows.some(row => row.contactListId == ids.gardenListId)
     }
 })

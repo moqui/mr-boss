@@ -15,14 +15,16 @@ const people = ["ADA", "BO", "CY", "DEV", "EM"]
 let listId
 
 // A transition posted as the user's browser does, under a root
+// (a render's result carries its errors only; the transition's messages stay on ec.message)
 function post(root, path, parameters) {
+    ec.message.clearAll()
     const result = ec.screen
         .makeTest()
         .rootScreen("component://mr-boss/screen/" + root + ".xml")
         .render(path, parameters, "post")
     const errors = Array.from(result.errorMessages || []).join(" | ")
-    const messages = Array.from(result.messages || []).join(" | ")
-    ec.message.clearErrors()
+    const messages = Array.from(ec.message.messages || []).join(" | ")
+    ec.message.clearAll()
     return {status: result.status, errors, messages}
 }
 const statusOf = (contactListId, partyId) =>
@@ -154,12 +156,15 @@ feature("a complaint suppression stays after the contact resubscribes; a mailbox
                 organizationPartyId: ids.organizationId
             })
         )
+        // the Inbox's create, as its screen's grant calls Mantle: as the user, the artifact check off
         const mailbox = asUser(users.audience, () =>
-            call("mantle.marketing.ContactListServices.create#ContactList", {
-                contactListTypeEnumId: "MAILBOX",
-                contactListName: "Audience walk room",
-                memberPartyIdList: [prefix + "_BO"]
-            })
+            system(() =>
+                call("mantle.marketing.ContactListServices.create#ContactList", {
+                    contactListTypeEnumId: "MAILBOX",
+                    contactListName: "Audience walk room",
+                    memberPartyIdList: [prefix + "_BO"]
+                })
+            )
         )
         return {resubscribed, status: statusOf(listId, partyId), blocked, mailbox}
     },

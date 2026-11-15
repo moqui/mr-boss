@@ -10,18 +10,19 @@ const lib = ec.resource.script("component://mr-boss/test/Marketing/MarketingSpec
 const {ids, users, asUser, system, refusal, invoke, shell, page} = lib
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
 const refused = message => /MARKETING_UNAVAILABLE|is not authorized/.test(message)
-// each group's menu (design §1.2 as built, Marketing.xml's menu-include): Settings for the administrator
+// each group's menu (design §1.2 as built, Marketing.xml's menu-include, as the later phases grew it: MarketingSpecLib's menus and
+// MarketingAccess's): Settings for the administrator
 const menus = {
-    [users.author]: ids.staffMenu,
-    [users.audience]: ids.staffMenu,
-    [users.approver]: ids.staffMenu,
-    [users.dispatch]: ids.staffMenu,
+    [users.author]: ids.authorMenu,
+    [users.audience]: ids.audienceMenu,
+    [users.approver]: ids.sendsStaffMenu,
+    [users.dispatch]: ids.sendsStaffMenu,
     [users.events]: ids.staffMenu,
-    [users.analyst]: ids.staffMenu,
-    [users.reader]: ids.staffMenu,
-    [users.otherAuthor]: ids.staffMenu,
+    [users.analyst]: ids.analystMenu,
+    [users.reader]: ids.readerMenu,
+    [users.otherAuthor]: ids.authorMenu,
     [users.admin]: ids.adminMenu,
-    [users.system]: ids.adminMenu
+    [users.system]: ids.systemMenu
 }
 // every ironstone.marketing service a screen calls, with parameters it accepts from a Marketing user of Retail
 const marketingServices = [
@@ -95,8 +96,15 @@ feature("the menu renders for each group with only its areas; each entry opens a
             const found = shell(user, user === users.system)
             if (found.status != 200 || JSON.stringify(found.names) !== JSON.stringify(expected))
                 problems.push(`${user}'s menu: ${found.status} ${found.names}`)
-            for (const entry of ids.adminMenu) {
+            for (const entry of ids.systemMenu) {
                 const rendered = asUser(user, () => page(entry, {}, "html"))
+                // Leads mounts Sales' lists for every Marketing user (design §10): one the menu does not show it to (no Sales read,
+                // no lead rules) opens it to the lists' note and no lead
+                if (entry === "Leads" && !expected.includes(entry)) {
+                    if (!opened(rendered) || !rendered.output.includes("You do not read leads in Sales."))
+                        problems.push(`${user} opens Leads without its note: ${rendered.errors.join(" | ")}`)
+                    continue
+                }
                 if (expected.includes(entry) !== opened(rendered))
                     problems.push(`${user} ${opened(rendered) ? "opens" : "is refused"} ${entry}: ${rendered.errors.join(" | ")}`)
             }

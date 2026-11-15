@@ -46,13 +46,17 @@ function post(path, parameters) {
     ec.message.clearErrors()
     return {status: result.status, errors}
 }
+// Mantle's preview as the user with the artifact check off, as AudiencePreview's grant lets it call Mantle: the service's own checks
+// decide what the user sees (names and whole addresses an audience reader's only)
 const preview = user =>
     asUser(user, () =>
-        ec.service
-            .sync()
-            .name("mantle.marketing.SegmentServices.preview#Audience")
-            .parameters({topicListId: topic, listIds: [topic, second], segmentIds: [segmentId], pageSize: 50})
-            .call()
+        system(() =>
+            ec.service
+                .sync()
+                .name("mantle.marketing.SegmentServices.preview#Audience")
+                .parameters({topicListId: topic, listIds: [topic, second], segmentIds: [segmentId], pageSize: 50})
+                .call()
+        )
     )
 const memberships = () => system(() => ec.entity.find(CLP).condition("contactListId", "in", [topic, second]).count())
 

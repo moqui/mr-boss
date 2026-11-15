@@ -1,5 +1,5 @@
 // Marketing P11's "usable when" (impl-marketing P11; design-marketing §16.3 scenario 9, automation), as an acceptance scenario through
-// the screens' transitions with artifact authorization on: marketing.author writes a welcome sequence on the garden newsletter's
+// the screens' transitions with artifact authorization on: marketing.author writes a welcome sequence on a newsletter's
 // confirmed subscription (a welcome, a wait of a day, the tips) and asks for approval; marketing.approver approves it and may not
 // activate it; marketing.dispatch activates it. A new subscriber gets the welcome once though the admission event is read twice; a
 // pause holds the due tips and the resume sends them once; a subscriber who unsubscribes is stopped before the tips; and Retail's store,
@@ -15,6 +15,8 @@ const ENROLLMENT = "mantle.marketing.automation.AutomationEnrollment"
 const EXECUTION = "mantle.marketing.automation.AutomationStepExecution"
 const capture = ec.factory.getTool("MailCapture")
 const prefix = "MKT_AUTO_SCN"
+// the scenario's own newsletter of Retail, so its subscribers join no demo list the other Marketing specs count
+const listId = prefix + "_LIST"
 const store = "POPC_DEFAULT"
 const dayMs = 86400000
 const addressOf = name => name.toLowerCase() + "@automation-scenario.example"
@@ -85,19 +87,22 @@ function person(name, extra = {}) {
     }
     return partyId
 }
-// accepted on the garden newsletter with evidence, by the audience manager
+// accepted on the scenario's newsletter with evidence, by the audience manager: Mantle's service called as the user with the artifact
+// check off, as ListDetail's grant lets it call Mantle (the service's own permission and organization checks deciding)
 function subscribe(partyId) {
     return asUser(users.audience, () =>
-        ec.service
-            .sync()
-            .name("mantle.marketing.AudienceServices.request#Subscriptions")
-            .parameters({
-                contactListId: ids.gardenListId,
-                partyIdList: [partyId],
-                evidenceText: "Asked at the counter",
-                accept: true
-            })
-            .call()
+        system(() =>
+            ec.service
+                .sync()
+                .name("mantle.marketing.AudienceServices.request#Subscriptions")
+                .parameters({
+                    contactListId: listId,
+                    partyIdList: [partyId],
+                    evidenceText: "Asked at the counter",
+                    accept: true
+                })
+                .call()
+        )
     )
 }
 // an automation written by the author, approved by the approver and activated by the dispatcher: its id and each refusal on the way
@@ -109,7 +114,7 @@ function automation(fields, stepList) {
             Object.assign(
                 {
                     marketingCampaignId: ids.runningCampaignId,
-                    contactListId: ids.gardenListId,
+                    contactListId: listId,
                     sendingProfileId: ids.retailProfileId
                 },
                 fields
@@ -154,6 +159,13 @@ spec({
         login("john.doe")
         capture.enable()
         system(() => {
+            call("create#mantle.marketing.contact.ContactList", {
+                contactListId: listId,
+                contactListName: "Automation scenario newsletter",
+                contactListTypeEnumId: "NEWSLETTER",
+                contactMechTypeEnumId: "CmtEmailAddress",
+                ownerPartyId: ids.organizationId
+            })
             state.quinn = person("Quinn")
             state.ruth = person("Ruth")
             state.sam = person("Sam", {account: true})
@@ -254,7 +266,7 @@ feature("a subscriber who unsubscribes is stopped before the tips", {
         system(() => {
             call("mantle.party.ConsentServices.record#PartyConsent", {
                 partyId: state.ruth,
-                contactListId: ids.gardenListId,
+                contactListId: listId,
                 purposeEnumId: "PcpMarketingEmail",
                 statusId: "PconWithdrawn",
                 sourceEnumId: "PcsEmailLink",
@@ -263,6 +275,14 @@ feature("a subscriber who unsubscribes is stopped before the tips", {
             const enrollment = Array.from(
                 ec.entity.find(ENROLLMENT).condition({marketingAutomationId: id, partyId: state.ruth}).list()
             )[0]
+            // the wait's day passed: its execution's due date and the enrollment's (a wait still running holds the enrollment)
+            const wait = Array.from(
+                ec.entity
+                    .find(EXECUTION)
+                    .condition({automationEnrollmentId: enrollment.automationEnrollmentId, outcomeEnumId: "AsoWaiting"})
+                    .list()
+            )[0]
+            call("update#" + EXECUTION, {automationStepExecutionId: wait.automationStepExecutionId, dueDate: ago(0.01)})
             call("update#" + ENROLLMENT, {automationEnrollmentId: enrollment.automationEnrollmentId, nextDueDate: ago(0.01)})
         })
         steps(id)
@@ -316,6 +336,8 @@ feature("a store whose recovery sender is the cart automation sends one recovery
                 orderItemSeqId: "01",
                 orderPartSeqId: "01",
                 itemTypeEnumId: "ItemProduct",
+                // a product line (a cart with no product line is empty to recovery)
+                productId: "DEMO_1_1",
                 itemDescription: "Scenario seeds",
                 quantity: 2,
                 unitAmount: "8.00"

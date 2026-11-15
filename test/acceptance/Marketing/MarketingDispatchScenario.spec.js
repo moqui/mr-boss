@@ -159,8 +159,12 @@ feature("a stop after a hand-off leaves one delivery uncertain; the dispatcher r
             call("update#" + SEND, {campaignSendId: sendId, scheduledDate: new Date(Date.now() - 60000)})
             call(D + "start#DueSend", {campaignSendId: sendId})
             const claim = call(D + "claim#RecipientPage", {campaignSendId: sendId, pageSize: 20})
-            for (const campaignRecipientId of Array.from(claim.campaignRecipientIdList))
-                call(D + "handOff#Recipient", {campaignRecipientId, claimKey: claim.claimKey, verdict: {eligible: true}})
+            // each with the verdict the dispatcher's check gives: eligible, at the recipient's address
+            for (const campaignRecipientId of Array.from(claim.campaignRecipientIdList)) {
+                const recipient = one(RECIPIENT, {campaignRecipientId})
+                const address = one("mantle.party.contact.ContactMech", {contactMechId: recipient.contactMechId})?.infoString
+                call(D + "handOff#Recipient", {campaignRecipientId, claimKey: claim.claimKey, verdict: {eligible: true, address}})
+            }
         })
         const first = deliveries(sendId).sort((a, b) => (a.deliveryId < b.deliveryId ? -1 : 1))[0]
         system(() =>
