@@ -73,7 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
             Marketing (MARKETING_UNAVAILABLE).</description>
         <implements service="ironstone.marketing.ContextServices.define#Parameters"/>
         <in-parameters>
-            <parameter name="recordType" required="true"><description>organization, campaign, list, segment, send, automation, enrollment or content</description></parameter>
+            <parameter name="recordType" required="true"><description>organization, campaign, list, segment, send, automation, enrollment, content or trackingLink (P15)</description></parameter>
             <parameter name="recordId" required="true"/>
             <parameter name="capability"/>
         </in-parameters>
@@ -115,7 +115,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="wikiSpaceId"><description>P14: the space whose pages spacePages lists</description></parameter>
             <parameter name="contentKindEnumId"><description>P14: the kind of content contentSources lists</description></parameter>
             <parameter name="marketingCampaignId"><description>P14: the campaign whose organization's pages and files contentSources
-                lists</description></parameter>
+                lists (P15: and whose organization's values vocabulary lists)</description></parameter>
+            <parameter name="vocabularyKindEnumId"><description>P15: the kind of value vocabulary lists (a UTM source, medium or content,
+                a tracking code type)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

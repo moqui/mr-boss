@@ -143,7 +143,10 @@ explicit reporting currency and Accounting's conversion policy. The summaries re
 store scope (Nov 5, impl-commerce F21). Visits exclude preview/test
 traffic; refunds are separate from gross sales; the cards say that aggregate visits are not
 people. When the site has no Marketing tracking, the visitor and conversion cards are hidden
-rather than shown as zero.
+rather than shown as zero. As built (impl-marketing P15): Home's Visits card reads Marketing's `mantle.marketing.TrackingServices.count#StoreVisits`
+(distinct visitor keys of the non-automated events of the sites whose Shop mount sells for the stores, plus each keyless event) for the
+period and the one before, shown when such a site exists; the `Marketing.Visits` metric registration, conversion and Online sales'
+visits wait for Marketing P20's attribution and reports.
 
 The shell receives store, site, record, selection and filter context. Register store/product/order
 palette providers, whose rows carry `recordEntity` and `recordId` (R-LV-W10), and scoped

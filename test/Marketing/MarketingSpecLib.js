@@ -24,7 +24,7 @@ const ids = {
     // P13: the Leads tabs of an author who reads no Sales
     authorLeadsMenu: ["LeadRules"],
     // P14: Content's tabs
-    contentMenu: ["Content", "BlogPosts", "LandingPages", "Knowledge"],
+    contentMenu: ["Content", "BlogPosts", "LandingPages", "Knowledge", "TrackingLinks"],
     sendsMenu: ["Sends", "MessageTemplates"],
     // P5: Segments and AudiencePreview join the Audiences tabs
     audiencesMenu: ["Lists", "Segments", "Consent", "Suppressions", "AudiencePreview"],
@@ -96,7 +96,10 @@ const ids = {
     blogCategoryId: "BOSS_MKT_BLOGCAT_GARDEN",
     blogPostId: "BOSS_MKT_BLOG_ROSES",
     landingPageId: "BOSS_MKT_PAGE_SPRING",
-    contentLinkId: "BOSS_MKT_CC_ROSES"
+    contentLinkId: "BOSS_MKT_CC_ROSES",
+    // P15's demo links of the running campaign on ZIZI_SHOP: the poster's QR code to the spring landing page, the newsletter's link
+    trackingLinkId: "BOSS_MKT_TRK_POSTER",
+    newsLinkId: "BOSS_MKT_TRK_NEWS"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's

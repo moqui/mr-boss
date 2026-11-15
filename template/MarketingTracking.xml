@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The tracking link transitions and form of the IronStone Marketing screens (impl-marketing P15; design-marketing §8 TrackingLinks,
+    TrackingLinkDetail, §18 the tracking URL and QR): each transition calls Mantle's guarded service (mantle.marketing.TrackingServices),
+    which checks MARKETING_CAMPAIGN_EDIT, the campaign's organization and the destination (a landing page of the organization's Marketing
+    mount, or an https address of its sites or its allowed list), so a screen that includes one adds no authority. A screen includes
+    each transition it uses by name (transition-include); links go through the root's sharedLinks.
+    - storeTrackingLink: a new link (it opens its TrackingLinkDetail) or a change at the revision read.
+    - qrCode: the link's QR code as SVG (inline for the page, or a download with download=Y), read through get#TrackingLink.
+    - TrackingLinkForm: TrackingLinks' and CampaignDetail's New link and TrackingLinkDetail's Edit link, over the map linkValues
+      (campaignFixed keeps the campaign). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="storeTrackingLink">
+        <actions>
+            <service-call name="mantle.marketing.TrackingServices.store#TrackingLink" out-map="stored"
+                    in-map="{trackingCodeId:(trackingCodeId || null), expectedRevision:(expectedRevision || null),
+                        marketingCampaignId:(marketingCampaignId || null), description:description, comments:(comments ?? null),
+                        siteId:(siteId || null), destinationKindEnumId:(destinationKindEnumId || null), sitePageId:(sitePageId || null),
+                        redirectUrl:(redirectUrl || null), safeUrl:(safeUrl ?? null), trackingCodeTypeEnumId:(trackingCodeTypeEnumId ?? null),
+                        utmSource:(utmSource ?? null), utmMedium:(utmMedium ?? null), utmContent:(utmContent ?? null),
+                        disabled:(disabled || null), fromDate:(fromDate || null), thruDate:(thruDate || null)}"/>
+            <set field="linkDetailPath" from="sharedLinks?.['Content/TrackingLinkDetail'] || null"/>
+            <set field="created" from="!trackingCodeId"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${created ? 'Link created; share its address or QR code' : 'Link saved'}</message>
+            </if>
+        </actions>
+        <conditional-response url="${linkDetailPath}"><condition><expression>linkDetailPath &amp;&amp; created &amp;&amp; stored?.trackingCodeId</expression></condition>
+            <parameter name="trackingCodeId" from="stored.trackingCodeId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="qrCode" read-only="true">
+        <parameter name="trackingCodeId"/>
+        <actions>
+            <service-call name="mantle.marketing.TrackingServices.get#TrackingLink" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{trackingCodeId:(trackingCodeId || '')}"/>
+            <script><![CDATA[
+                ec.message.clearErrors()
+                if (!found?.qrSvg) ec.web.sendError(404, 'Not available', null)
+                else ec.web.sendTextResponse(found.qrSvg, 'image/svg+xml',
+                    ec.web.parameters.download === 'Y' ? 'qr-' + found.trackingLink.trackingCodeId + '.svg' : null)
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <section name="TrackingLinkForm">
+            <widgets>
+                <label type="p" style="text-caption m-muted"
+                        text="A link goes only to its registered destination: a landing page of the organization's Marketing mount, or an https address of its sites or its allowed list."/>
+                <form-single name="TrackingLink" transition="storeTrackingLink" map="linkValues">
+                    <field name="trackingCodeId"><default-field><hidden/></default-field></field>
+                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                    <field name="marketingCampaignId">
+                        <conditional-field condition="linkValues.campaignFixed"><hidden/></conditional-field>
+                        <default-field title="Campaign">
+                            <drop-down allow-empty="false">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'campaigns', selected:marketingCampaignId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="description"><default-field title="Description"><text-line size="40"/></default-field></field>
+                    <field name="siteId">
+                        <default-field title="Site" tooltip="The site the link's address is on (its Marketing mount serves the campaign's organization)">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'sites', selected:siteId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="destinationKindEnumId">
+                        <default-field title="Destination">
+                            <radio><option key="TdkSitePage" text="A landing page"/><option key="TdkUrl" text="A web address"/></radio>
+                        </default-field>
+                    </field>
+                    <field name="sitePageId">
+                        <default-field title="Landing page" tooltip="For a landing page: one of the organization's Marketing mount">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'contentSources', contentKindEnumId:'CckSitePage', selected:sitePageId}">
+                                    <depends-on field="marketingCampaignId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="redirectUrl">
+                        <default-field title="Web address" tooltip="For a web address: https, on a site of the organization or its allowed list">
+                            <text-line size="60"/></default-field>
+                    </field>
+                    <field name="safeUrl">
+                        <default-field title="When ended" tooltip="Where the link goes once it is disabled or ended; empty: a page saying it is not available">
+                            <text-line size="60"/></default-field>
+                    </field>
+                    <field name="trackingCodeTypeEnumId">
+                        <default-field title="Type">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'vocabulary', vocabularyKindEnumId:'MvkTrackingCodeType', selected:trackingCodeTypeEnumId}">
+                                    <depends-on field="marketingCampaignId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="utmSource">
+                        <default-field title="Source">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'vocabulary', vocabularyKindEnumId:'MvkUtmSource', selected:utmSource}">
+                                    <depends-on field="marketingCampaignId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="utmMedium">
+                        <default-field title="Medium">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'vocabulary', vocabularyKindEnumId:'MvkUtmMedium', selected:utmMedium}">
+                                    <depends-on field="marketingCampaignId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="utmContent">
+                        <default-field title="Content tag">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                        parameter-map="{choice:'vocabulary', vocabularyKindEnumId:'MvkUtmContent', selected:utmContent}">
+                                    <depends-on field="marketingCampaignId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate"><default-field title="From"><date-time/></default-field></field>
+                    <field name="thruDate"><default-field title="Until"><date-time/></default-field></field>
+                    <field name="disabled">
+                        <conditional-field condition="linkValues.trackingCodeId" title="State">
+                            <radio><option key="N" text="Active"/><option key="Y" text="Disabled"/></radio>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="${linkValues.trackingCodeId ? 'Save link' : 'Create link'}"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="marketingCampaignId"/><field-ref name="siteId"/></field-row>
+                        <field-ref name="description"/>
+                        <field-ref name="destinationKindEnumId"/>
+                        <field-row><field-ref name="sitePageId"/><field-ref name="redirectUrl"/></field-row>
+                        <field-ref name="safeUrl"/>
+                        <field-row><field-ref name="utmSource"/><field-ref name="utmMedium"/></field-row>
+                        <field-row><field-ref name="utmContent"/><field-ref name="trackingCodeTypeEnumId"/></field-row>
+                        <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                        <field-ref name="disabled"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

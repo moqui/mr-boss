@@ -21,7 +21,9 @@ along with this software (see the LICENSE.md file). If not, see
     Marketing's storeless landing pages (no policy role or template; its content grant edits and publishes). The page is read and
     saved through mantle.public.ThemeServices and published through mantle.public.SiteServices.publish#SitePage, which check the
     permission and the site's store or organization again (a page's app is its mount's). A page outside the user's scope is not
-    available. -->
+    available. impl-marketing P15: a registration with a review (Marketing's) shows its state at the text version, Request review for an
+    author and Review (approve or refuse) for an approver, through the services the registration names; publishing does not wait for
+    it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Page" default-menu-include="false">
     <parameter name="sitePageId" required="true"/>
@@ -41,7 +43,47 @@ along with this software (see the LICENSE.md file). If not, see
     </always-actions>
     <subscreens default-item="PageContent" always-use-full-path="true"/>
     <transition name="pages"><default-response url="../Pages"/></transition>
+    <!-- impl-marketing P15 (its §4 Nov 14): a registration's optional review (Marketing's landing pages): asked at the text version read,
+        decided by an approver; the registration names the services, which check the permission, the organization and the version -->
+    <transition name="requestPageReview">
+        <actions>
+            <if condition="pagesContext.review">
+                <script>ec.service.sync().name(pagesContext.review.requestService).parameters({targetKind:pagesContext.review.targetKind,
+                    targetId:sitePageId, targetRevision:(targetRevision || null), reason:(reason || null)}).call()</script>
+                <if condition="!ec.message.hasError()"><message type="success">Review asked; the approvers are notified. Publishing does not wait for it.</message></if>
+                <else><message type="danger">This page has no review here</message></else>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="decidePageReview">
+        <actions>
+            <if condition="pagesContext.review">
+                <script>ec.service.sync().name(pagesContext.review.decideService).parameters({targetKind:pagesContext.review.targetKind,
+                    targetId:sitePageId, targetRevision:(targetRevision || null), decision:decision, reason:(reason || null)}).call()</script>
+                <if condition="!ec.message.hasError()"><message type="success">${decision == 'approve' ? 'Approved at this version' : 'Refused'}</message></if>
+                <else><message type="danger">This page has no review here</message></else>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
     <actions>
+        <!-- P15: the registration's review, when it has one (Marketing's landing pages) -->
+        <if condition="recordFound &amp;&amp; pagesContext.review">
+            <script><![CDATA[
+                ec.message.pushErrors()
+                try {
+                    reviewFound = ec.service.sync().name(pagesContext.review.readService).parameters({sitePageId}).requireNewTransaction(true).call()
+                } finally {
+                    ec.message.clearErrors()
+                    ec.message.popErrors()
+                }
+            ]]></script>
+        </if>
+        <set field="pageReview" from="reviewFound?.review || null"/>
+        <set field="reviewCan" from="reviewFound?.capabilities || {}"/>
         <if condition="recordFound">
             <set field="captionText" from="[sitePage.siteName, sitePage.locale, sitePage.roleText ? sitePage.roleText + ' policy' : null,
                     sitePage.templateKey ? 'template ' + sitePage.templateKey : null].filter((part) =&gt; part).join(' · ')"/>
@@ -85,10 +127,31 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="Waiting to publish: ${sitePage.scheduledText}" type="span" style="text-caption q-ml-sm" condition="sitePage.scheduledText"/>
                         <label text="Not published at its date: ${sitePage.failureText}" type="span" style="text-caption text-negative q-ml-sm"
                                 condition="sitePage.failureText"/>
+                        <label text="Review: ${pageReview.stateText}" type="span" style="text-caption q-ml-sm" condition="pageReview"/>
                     </container>
                     <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
                         <link url="${sitePage.publicUrl}" url-type="plain" text="View the live page" icon="sym_o_open_in_new" link-type="anchor"
                                 target-window="_blank" condition="sitePage.state == 'published' &amp;&amp; sitePage.publicUrl"/>
+                        <container-dialog id="RequestReviewDialog" button-text="Request review" icon="sym_o_rate_review" width="520"
+                                title="Request a review of ${sitePage.title}" condition="pageReview &amp;&amp; reviewCan.canRequest">
+                            <label type="p" style="text-caption m-muted" text="An approver of the organization is notified and may approve version ${pageReview.versionShort}. Publishing stays yours: it does not wait for the review."/>
+                            <form-single name="RequestReview" transition="requestPageReview">
+                                <field name="targetRevision" from="pageReview.revision"><default-field><hidden/></default-field></field>
+                                <field name="reason"><default-field title="Note for the reviewer"><text-area rows="2" cols="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Request review"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="DecideReviewDialog" button-text="Review" icon="sym_o_approval" width="520"
+                                title="Review ${sitePage.title}, version ${pageReview.versionShort}" condition="pageReview &amp;&amp; reviewCan.canDecide">
+                            <form-single name="DecideReview" transition="decidePageReview">
+                                <field name="targetRevision" from="pageReview.revision"><default-field><hidden/></default-field></field>
+                                <field name="decision">
+                                    <default-field title="Decision"><radio no-current-selected-key="approve"><option key="approve" text="Approve"/><option key="refuse" text="Refuse"/></radio></default-field>
+                                </field>
+                                <field name="reason"><default-field title="Reason" tooltip="Needed to refuse"><text-area rows="2" cols="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Record the review"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
                     </container>
                 </container>
             </container>

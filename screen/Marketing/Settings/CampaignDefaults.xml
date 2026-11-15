@@ -39,7 +39,7 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <set field="policy" from="found?.policy || null"/>
         <set field="historyList" from="found?.history || []"/>
-        <set field="policyValues" from="Object.assign({selfApprovalAllowed: 'N', managerRequired: 'Y'}, policy || {},
+        <set field="policyValues" from="Object.assign({selfApprovalAllowed: 'N', managerRequired: 'Y', visitorKeys: 'N'}, policy || {},
                 {organizationPartyId: organizationPartyId, expectedPolicyId: policy?.marketingPolicyId || ''})"/>
         <if condition="previewing == 'Y' &amp;&amp; organizationPartyId">
             <service-call name="mantle.marketing.CampaignServices.preview#MarketingPolicy" out-map="preview" transaction="force-new" ignore-error="true"
@@ -102,6 +102,15 @@ along with this software (see the LICENSE.md file). If not, see
                                 <default-field title="Test addresses" tooltip="A send's test message goes only to these, one a line, at most ten">
                                     <text-area rows="3" cols="60"/></default-field>
                             </field>
+                            <field name="trackingDomains">
+                                <default-field title="Tracking link hosts" tooltip="Other sites a tracking link may lead to, beside the organization's own sites: one host name a line (its subdomains included), at most twenty">
+                                    <text-area rows="3" cols="60"/></default-field>
+                            </field>
+                            <field name="visitorKeys">
+                                <default-field title="Visitor keys" tooltip="Whether a tracking link or page sets a first-party key to count unique visitors; never for a browser that asks not to be tracked">
+                                    <radio><option key="N" text="Count visits only"/><option key="Y" text="Count unique visitors"/></radio>
+                                </default-field>
+                            </field>
                             <field name="submitButton">
                                 <default-field title=""><submit text="Save from now" confirmation="Start these campaign defaults now, ending the ones in effect?"/></default-field>
                             </field>
@@ -112,6 +121,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field-row><field-ref name="recipientRetentionDays"/><field-ref name="statisticsRetentionDays"/></field-row>
                                 <field-ref name="explanation"/>
                                 <field-ref name="testAddresses"/>
+                                <field-row><field-ref name="trackingDomains"/><field-ref name="visitorKeys"/></field-row>
                                 <field-ref name="submitButton"/>
                             </field-layout>
                         </form-single>

@@ -367,4 +367,11 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <!-- ===== end of Marketing P13 ===== -->
+
+    <!-- ===== Marketing P15: tracking links; a landing page's optional review (impl-marketing P15, §4 Nov 14) ===== -->
+    <!-- Tracking links are in the Content area, every Marketing reader's (no area group); a landing page's review notice (Mantle seeds
+        MarketingPageReview with its decision services) opens its PageDetail -->
+    <moqui.security.user.NotificationTopic topic="MarketingPageReview"
+            linkTemplate="/qapps/Marketing/Content/PageDetail?sitePageId=${sitePageId}"/>
+    <!-- ===== end of Marketing P15 ===== -->
 </entity-facade-xml>

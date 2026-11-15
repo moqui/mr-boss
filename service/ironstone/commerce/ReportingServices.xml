@@ -60,8 +60,9 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="HomePeriod" allow-remote="false">
         <description>Home's period strip (design §1.2, §3 Home PeriodStrip): the chosen period's orders and net invoiced of the
             user's stores (or one) against the period before, per currency, and its top product; the same totals Online sales
-            shows for the same stores and period. Every Commerce user's; RECORD_UNAVAILABLE for a store not theirs. Visits and
-            conversion are left out until Marketing's tracking exists.</description>
+            shows for the same stores and period. Every Commerce user's; RECORD_UNAVAILABLE for a store not theirs. Visits (impl-marketing
+            P15) are Marketing's count#StoreVisits of the stores' sites for the period and the one before, when a site sells for them;
+            conversion waits for Marketing's attribution (P20).</description>
         <implements service="ironstone.commerce.ReportingServices.define#ReportParameters"/>
         <out-parameters><parameter name="period" type="Map"/></out-parameters>
         <actions>

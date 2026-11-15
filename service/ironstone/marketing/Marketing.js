@@ -249,7 +249,10 @@ const linkPaths = [
     "Content/BlogPostDetail",
     "Content/LandingPages",
     "Content/PageDetail",
-    "Content/Knowledge"
+    "Content/Knowledge",
+    // P15: the tracking links
+    "Content/TrackingLinks",
+    "Content/TrackingLinkDetail"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -375,6 +378,27 @@ const recordKinds = {
                 organizationPartyId: row.organizationPartyId,
                 label: "Enrollment " + automationEnrollmentId + " · " + (automation?.automationName || row.marketingAutomationId),
                 detail: statusName(row.statusId)
+            }
+        }
+    },
+    // P15: a tracking link (TrackingCode), by its organization (a legacy code's campaign's): TrackingLinkDetail
+    trackingLink: {
+        name: "Tracking link",
+        icon: "sym_o_link",
+        destination: {path: "Content/TrackingLinkDetail", parameter: "trackingCodeId"},
+        read: (userScope, trackingCodeId) => {
+            if (!userScope.capabilities.anyRead) return null
+            const row = one("mantle.marketing.tracking.TrackingCode", {trackingCodeId})
+            const organizationPartyId =
+                row?.organizationPartyId ||
+                (row?.marketingCampaignId
+                    ? one(CAMPAIGN, {marketingCampaignId: row.marketingCampaignId})?.organizationPartyId
+                    : null)
+            if (!row || !covers(userScope, organizationPartyId)) return null
+            return {
+                organizationPartyId,
+                label: "Tracking link " + trackingCodeId + " · " + (row.description || row.publicCode || ""),
+                detail: row.redirectUrl || ""
             }
         }
     },
@@ -914,6 +938,39 @@ const choiceSources = {
                 .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
                 .slice(0, choiceLimit)
         return []
+    },
+    // P15: an organization's current vocabulary of a kind (a UTM source, medium or content code, a tracking code type), of the named
+    // campaign's organization or the scope's (Mantle's store#TrackingLink checks the value against the link's organization again)
+    vocabulary: (userScope, term, selected, p) => {
+        const kind = String(p.vocabularyKindEnumId || "")
+        if (!["MvkUtmSource", "MvkUtmMedium", "MvkUtmContent", "MvkTrackingCodeType"].includes(kind)) return []
+        const campaign = p.marketingCampaignId ? one(CAMPAIGN, {marketingCampaignId: p.marketingCampaignId}) : null
+        const ids = campaign ? [campaign.organizationPartyId].filter(id => covers(userScope, id)) : organizationIds(userScope)
+        if (!ids.length) return []
+        const seen = new Set()
+        const options = []
+        for (const row of Array.from(
+            find("mantle.marketing.campaign.MarketingVocabulary", {vocabularyKindEnumId: kind})
+                .condition("organizationPartyId", "in", ids)
+                .orderBy("sequenceNum")
+                .orderBy("label")
+                .limit(200)
+                .list()
+        )) {
+            if (!lib.active(row)) continue
+            const value = kind === "MvkTrackingCodeType" ? row.enumId : row.vocabularyCode
+            if (!value || seen.has(value)) continue
+            const label = (row.label || value) + (kind === "MvkTrackingCodeType" ? "" : " (" + value + ")")
+            if (term && !label.toLowerCase().includes(term.toLowerCase())) continue
+            seen.add(value)
+            options.push({value, label})
+        }
+        return withSelected(
+            options.slice(0, choiceLimit),
+            selected,
+            value => seen.has(value),
+            value => value
+        )
     },
     // P3: the email templates a list's policy or binding may name (Comms' templates arrive in P6), by id or description
     emailTemplates: (userScope, term, selected) => {

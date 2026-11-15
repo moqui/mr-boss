@@ -240,7 +240,7 @@ Shared forms have one definition at the cited owner; each mounted route is count
 | PageDetail | Marketing/Content/PageDetail | editor | xml | Author a campaign landing page | PublicSitePage, extended (X14); WikiPage | Commerce §5 PageDetail (Shared, X14) | content editors | new | site/page ID |
 | Knowledge | Marketing/Content/Knowledge | editor | qvue | Author/review the linked wiki page | WikiPage | Commons §10 | content editors | parity | authorized wiki page |
 | TrackingLinks | Marketing/Content/TrackingLinks | list | xml | Find campaign links and QR targets | TrackingCode | own | app | new | campaign/source filters |
-| TrackingLinkDetail | Marketing/Content/TrackingLinks/TrackingLinkDetail | detail | xml | Maintain and inspect a tracking link | TrackingCode | own | A, R | new | tracking code ID |
+| TrackingLinkDetail | Marketing/Content/TrackingLinkDetail (a sibling, as built in P15) | detail | xml | Maintain and inspect a tracking link | TrackingCode | own | A, R | new | tracking code ID |
 | Events | Marketing/Events | list | xml | Find campaign events and registrations | WorkEffort WetEvent | own | app | new | campaign/event filters |
 | EventDetail | Marketing/Events/EventDetail | detail | xml | Edit the common calendar event | WorkEffort | Commons §7 | E and event rights | parity | event and campaign |
 | RegistrationSetup | Marketing/Events/RegistrationSetup | settings | xml | Set tickets, capacity, forms and notices | N EventRegistrationPolicy | own | E | new | event ID |
@@ -1164,6 +1164,15 @@ five a page); PASS renders a list offered on the site as a subscribe box posting
 card linking SubmitForm, and anything else as nothing. A campaign's link to a page is its CampaignContent; CampaignAssociation's
 page kind stays unavailable. The Event component arrives with P16.
 
+As built (impl-marketing P15, §4 Nov 14): PageDetail offers a landing page an optional review. Request review (a content author,
+with a note) asks Marketing's approvers of the mount's organization at the page's text version (its revision the count of the
+text's saved versions, the version name kept on the decision), by the MarketingPageReview notice that opens PageDetail and the
+Approvals list; an approver who did not save that version or ask approves or refuses it (a reason to refuse) on PageDetail or the
+notice; the header shows the review's state at the current version, and a later save leaves it unreviewed. Publishing does not wait
+for a review and is not stopped by a refusal: MARKETING_CONTENT_EDIT publishes as before. The review is Marketing's approvals' page
+kind (`MarketingApprovals.js`, MdtPage), named by Marketing's registration in PageApps.js; Commerce's pages have none. Blog posts are
+unchanged.
+
 **Source:** research §6; Commerce §5. **Needs:** MKT-CONTENT, MKT-PUBLIC.
 
 ### Knowledge — Context passed
@@ -1198,6 +1207,26 @@ allowlist; public requests cannot supply an arbitrary redirect URL. Disabled/exp
 neutral unavailable state or their explicitly configured safe destination, not a caller-provided
 fallback. Generic campaign links never contain party IDs. Personalized opaque link tokens carry
 recipient/link scope through server lookup, are redacted from logs and expire under policy.
+
+As built (impl-marketing P15): TrackingLinks and TrackingLinkDetail are Content's tabs (`Marketing/Content/TrackingLinks`,
+`Marketing/Content/TrackingLinkDetail`), with CampaignDetail's Tracking links box the list fixed to the campaign. Any Marketing reader
+reads links; MARKETING_CAMPAIGN_EDIT writes them on an open campaign at the revision read (`store#TrackingLink`). A link is the native
+TrackingCode with its organization, site, a random public code (`https://{the site's canonical host}/trk/{siteId}/{code}`), typed UTM
+source, medium and content (the organization's vocabulary; the campaign is the link's own utm_campaign), and a destination of two
+kinds: a landing page of the organization's Marketing mount (followed to its published address) or an https address on a host of a
+site that serves the organization (a mount targeting it or one of its stores) or on the privileged allowlist, CampaignDefaults'
+tracking link hosts (MARKETING_CONFIGURE); "same-site published paths" are those landing pages and site addresses. The safe
+destination is checked the same way. LinkOutput's QR is the built barcode helper's SVG (`get#TrackingLink`), shown and downloaded
+through the screen's `qrCode` transition. LinkObservations is part of `get#TrackingLink` for an author or a report reader (R's
+`get#TrackingLinkResults` is P20's report): clicks, page visits, visitors (distinct visitor keys plus each keyless event), the share
+with a key, recipients who clicked and automated fetches apart, over the last 30 days and in all. The public capture is
+MarketingTrackingEvent (the visitor key's digest only; no party; the recipient only for a consenting recipient's personalized link or
+pixel, checked again at each event) and, beside it, TrackingCodeVisit when the request has a local visit. The visitor key is set only
+where the organization's CampaignDefaults count unique visitors (visitorKeys, off by default) or the visitor is a consenting
+recipient, never for a browser that sends Global Privacy Control or Do Not Track; those are this build's "site tracking choices". A
+send's personalized token is made at each attempt of a consenting recipient's delivery (as the unsubscribe and invitation links are),
+not at preparation, for the message's tracking links of the organization (the author pastes a link's public address); other links of
+the body are left as written.
 
 Tracking requires applicable tracking consent, recorded under a proposed `PcpTracking` value of
 PartyConsentPurpose (today PcpMarketingEmail, PcpSms, PcpPhone and PcpDataProcessing exist, with
@@ -1694,7 +1723,8 @@ including the defined content of automated steps. The one-person-team flag, off 
 an author approve and release their own send to fewer than 500 recipients, recorded as a
 self-approval; at 500 or more, and with the flag off, the author never decides their own
 (impl-marketing §4, Nov 11; §3 Approvals). Admin cannot relax withdrawn consent or provider
-suppression. Unknown data defaults to review. Retention settings distinguish recipient/address
+suppression. As built (impl-marketing P15): the policy also holds its tracking settings, the external hosts a tracking link may lead
+to (at most twenty) and whether public tracking sets a visitor key (off by default). Unknown data defaults to review. Retention settings distinguish recipient/address
 information, aggregate statistics, consent evidence and financial/registration sources; expiry jobs
 remove/anonymize eligible data without corrupting required native source records. **Needs:** MKT-APPROVAL, MKT-CONSENT.
 
@@ -1813,7 +1843,12 @@ signed provider callbacks are web scripts (the framework's mechanism; the script
 registered by a conf of mr-pass's own, impl-marketing F55, F79) calling K, not BOSS screens or operations a
 page offers (§8). A remote frontend has no Mantle, so a script reaches K through PASS's transport as
 pages do, by two schema operations of its own whose only fields are the code or token, the visitor key,
-the site and the kind; the destination always comes from the authority.
+the site and the kind; the destination always comes from the authority. As built (impl-marketing P15): `resolveTrackingLink` (GET
+`marketing/tracking/link`: siteId, code, token; read only) and `recordTrackingEvent` (POST `marketing/tracking/event`: siteId, code,
+token, visitorKey, kind; an anonymous write in the three TOKEN_WRITES lists, bounded by the authority's limits), over
+`mantle.marketing.TrackingServices` `resolve#TrackingLink` and `record#TrackingEvent`; the scripts are registered at `/trk/*` and
+`/trk-o/*` by mr-pass's `MoquiConf.xml`, and the site id is in the path, since a web script has no conf binding of its host to a
+site.
 
 The authority derives organization, site, allowed form fields, campaign and destination from its
 publication/credential. Requests never select arbitrary party IDs, service names, backend URLs,

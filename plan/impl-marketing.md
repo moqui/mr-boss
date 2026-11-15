@@ -4149,6 +4149,307 @@ MKT-TRACKING, MKT-CONSENT; gate 5.
   frontend; a consenting recipient's click shows on the send and a refusing one's does not; Commerce's Home shows
   the store's visits.
 
+**Built Nov 14 (P15).** mr-mantle, mr-boss and mr-pass on branch `mkt/p15` (hashes in the worker's reply), from master after P13's and
+P14's merges; mr-moqui unchanged, no Rust built. Built beside a framework wiki page-name fix (mr-moqui WikiServices, mr-boss Knowledge),
+whose files this phase does not touch.
+- Checked first (the code over the plan): P13's and P14's Built and Review notes, P7's and P12's public-surface reviews, F31, F55, F79,
+  F87, F90–F293 and §4 (the Nov 14 row on a landing page's review); TrackingCode and its native joins (MarketingEntities.xml), P13's
+  minimal find#TrackingLinks and Sales' use of it, P8's CampaignRecipient `tracked` (PcpTracking at preparation) and P6's sending
+  profile tracking policy (MtrNone, MtrConsented), P9's build#CampaignDelivery (each attempt renders the recipient's message, with its
+  unsubscribe and P12's invitation link), P10's experiment results (`observedOf` null until P15), P14's Page.xml hook, PASS's Facade.js,
+  Transport.js (`routeOf`'s anonymous writes), Mantle's PassApi.js and PassAuthority.js (the TOKEN_WRITES lists), web scripts
+  (docs/interfaces/Web-Scripts.md: no host-to-site binding for a servlet, `declineSession`, cookies by header), the request log's
+  redaction (a token route's path and any query parameter named like a secret, `token` among them), Commerce's Home and Reporting.js.
+  The code over the plan:
+  - "the redirect and the pixel ... with two schema operations ... whose only fields are the code or token, the visitor key, the site
+    and the kind": built so (`resolveTrackingLink`, GET `marketing/tracking/link`: siteId, code, token; `recordTrackingEvent`, POST
+    `marketing/tracking/event`: siteId, code, token, visitorKey, kind), mapped to TrackingServices `resolve#TrackingLink` and
+    `record#TrackingEvent` (camelCase as P12's and P14's), after P14's block in both schema copies and route lists (byte-identical);
+    the event is an anonymous write in the three TOKEN_WRITES lists and Transport's `routeOf` lets it through with no token (as
+    `requestSubscription`); the read is in none;
+  - the site: a web script has no conf binding of its host to a site (the public-site resolution binds `resolvedSiteId` for the screens
+    only) and a remote frontend has no Mantle to look one up, so the site id is in the link's path: `/trk/{siteId}/{publicCode}` and
+    the pixel `/trk-o/{siteId}?token=`; the authority answers a code only for its own link's site (another site's is NotFound). The
+    paths `/trk` and `/trk-o` are servlet patterns of every host of the deployment (a finding below);
+  - "a send's links are rewritten at preparation to personalized opaque tokens": at each attempt, in build#CampaignDelivery (the
+    prepared, approved body is left as it is; a token per attempt, as the unsubscribe and invitation links are), and only the message's
+    tracking links of the organization are rewritten (the author pastes a link's public address); a link's token rides in a `token`
+    query parameter, which the request log redacts, its digest alone kept (MarketingTrackingToken, ninety days); an expired token's link
+    still works, as an anonymous click; other links of the body stay as written;
+  - "the pixel" for a recipient with PcpTracking under a profile that tracks consenting recipients only; it sets no cookie;
+  - "kind" values: click, open, visit, and two known automated fetches, `fetch` (a link or the pixel) and `visitFetch` (a page carrying a
+    code), recorded with `automated` Y; the script decides automation (a HEAD, a prefetch header, a scanner's, crawler's or command-line
+    user agent, or none);
+  - "an opaque visitor key ... no cookie or visitor key without tracking consent where the design requires": the design's "site
+    tracking choices" do not exist in PASS, so this build adds the organization's own (MarketingPolicy `visitorKeys`, off by default,
+    Campaign defaults' "Visitor keys") and honors the browser's (Global Privacy Control, Do Not Track); a consenting recipient's
+    personalized link may set it too; the key is stored as its digest only (the user's call below);
+  - "the privileged external allowlist": MarketingPolicy `trackingDomains` (Campaign defaults' "Tracking link hosts", MARKETING_CONFIGURE,
+    at most twenty host names); "the site's hosts" are the live PublicSiteHost names of every site with an enabled mount targeting the
+    organization or one of its stores;
+  - store#MarketingPolicy never declared `testAddresses` (P8 put the parameter on store#CampaignBudget by mistake), so Campaign defaults'
+    test addresses were dropped on save; moved to store#MarketingPolicy beside the two new settings (a finding below);
+  - "LinkObservations R.get#TrackingLinkResults": part of get#TrackingLink here for an author or a report reader (aggregates only); the
+    report service is P20's;
+  - who writes: MARKETING_CAMPAIGN_EDIT (a campaign's link, the author group's) on an open campaign at the revision read; every Marketing
+    reader reads (design §2 TrackingLinks: app); TrackingLinkDetail is a sibling, `Marketing/Content/TrackingLinkDetail` (design §2 says
+    so);
+  - "TrackingCodeVisit written too when the request has a local visit": when `ec.user.visitId` names a Visit (a page on the authority
+    itself); the redirect declines its session, so its events have none;
+  - Commerce's Home shows the stores' visits (count#StoreVisits); Online sales' visits are left for P20 with conversion (a finding below);
+  - "PASS Marketing pages carrying a tracking code call the same operation": Page (`/marketing/pages/{route}?tc={code}`) records a page
+    visit with the key the browser already holds; the page sets no cookie;
+  - the landing page's review (§4 Nov 14): Marketing's approvals gain the page kind (MdtPage, topic MarketingPageReview), its revision the
+    count of the page's saved text versions (WikiPageHistory), the version name on the decision (MarketingDecision `targetVersionName`),
+    its authors whoever saved the current version and the requester; PageDetail shows the state and offers Request review and Review by
+    the services Marketing's registration names (PageApps.js), so the shared screen names no app; publishing neither waits for it nor
+    is stopped by a refusal.
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P15 block after P14's): TrackingCode extended (organizationPartyId, siteId, publicCode unique,
+    destinationKindEnumId TdkSitePage or TdkUrl, sitePageId, safeUrl, utmSource, utmMedium, utmContent, disabled, createdByUserId),
+    MarketingTrackingEvent (MteClick, MteOpen, MteVisit; automated; visitorKeyHash; the recipient and send only for a consenting
+    recipient; visitId), MarketingTrackingToken, MarketingPolicy `trackingDomains` and `visitorKeys`, MarketingDecision
+    `targetVersionName` and MdtPage; `data/MarketingSeedData.xml` (a P15 block): the MarketingPageReview topic and its registration.
+  - `service/mantle/marketing/MarketingTracking.js` (new, K) under `TrackingServices.xml`: find#TrackingLinks (paged, the scope's
+    organizations, its rows keeping P13's `label` and `current`), get#TrackingLink (the public URL, the QR SVG, the observations),
+    store#TrackingLink, resolve#TrackingLink and record#TrackingEvent (public, NotFound for what they do not serve, limits per client
+    and code 30 in ten minutes and per site 20,000 an hour, an unexpected failure Unavailable), count#StoreVisits; `messageTracking`
+    (a message's links and pixel), `recipientClicks`, `uniqueClickers`, `trackingAllowed`. P13's findTrackingLinks left
+    MarketingLeads.js.
+  - `MarketingDispatch.js` build#CampaignDelivery calls messageTracking before the unsubscribe footer; get#Recipient's `clicksText`.
+    `MarketingExperiments.js` observedOf: a variant's tracked recipients who clicked. `MarketingEligibility.js` exports purposeState.
+  - `MarketingApprovals.js` the page kind (and a kind's own edit capability); `MarketingContent.js` pageKind and get#PageReview
+    (`MarketingContentServices.xml`); `MarketingPolicies.js` and `CampaignServices.xml` the tracking settings (testAddresses declared on
+    store#MarketingPolicy, removed from store#CampaignBudget).
+  - PASS's operations: `ForumSchema.js`, `script/PassRoutes.js`, `script/PassApi.js` and `script/PassAuthority.js` (TOKEN_WRITES).
+- PASS: `MoquiConf.xml` (new: the servlets PassTrackingRedirect at `/trk/*` and PassTrackingPixel at `/trk-o/*`, and their per-client
+  `<rate-limit>`s, 60 and 120 a minute); `script/TrackingLib.js`, `TrackingRedirect.js`, `TrackingPixel.js` (new); `Schema.js`,
+  `Routes.js`, `Transport.js` (the copies, TOKEN_WRITES and `routeOf`); `screen/Marketing/Page.xml` (a code's visit);
+  `docs/Deployment.md` (Marketing app: Tracking links; Remote frontend), README.
+- BOSS: `screen/Marketing/Content/TrackingLinks.xml` and `TrackingLinkDetail.xml` (new) under `Content.xml` (menu 5);
+  `template/MarketingTracking.xml` (new: storeTrackingLink, qrCode, TrackingLinkForm); CampaignDetail's Tracking links box;
+  RecipientDetail's clicks; Campaign defaults' two settings; `Marketing.js` (the link paths, the `trackingLink` record kind, the
+  `vocabulary` choice), `ContextServices.xml` and `template/MarketingParts.xml` (`vocabularyKindEnumId`); `Shared/PageDetail.xml` and
+  `PageApps.js` (the registration's review); `Campaigns/Approvals.xml` (the review topic); Commerce's `Home.xml` (Visits),
+  `Reporting.js` and `ReportingServices.xml` (homePeriod's visits); setup (`BossSetupMarketingData.xml`, a P15 block: the review notice's
+  link to PageDetail); demo (`BossZZMarketingDemoData.xml`, a P15 block): Retail's link vocabulary (sources poster and newsletter,
+  mediums qr and email, a content tag), its policy counting unique visitors with one external host allowed, and two links of the spring
+  campaign on ZIZI_SHOP, the poster's QR code to the spring landing page (`/trk/ZIZI_SHOP/SpringQr2026`) and the newsletter's link by
+  address.
+- Specs:
+  - Mantle `test/marketing/Tracking` (new, 4 features, about 1.4 s: an unregistered, plain-http, user-info and another site's
+    destination refused, an allowed external host and the organization's own site accepted, another organization's landing page and an
+    unoffered source refused, a reader and another organization's author kept out, the public URL and QR, a stale revision refused;
+    the capture's visitor key kept as its digest where the policy allows and dropped where it does not, another site's code NotFound,
+    an open with a code and a pixel without a token record nothing, a scanner's fetch apart and no visit; a disabled link answers its
+    safe destination whatever the request names, an unregistered safe destination refused, an ended link with none the neutral page; a
+    message gives a consenting recipient personalized links and the pixel, the token's digest kept for ninety days, and a refusing one
+    the direct destination escaped in HTML and no pixel, a click names the consenting recipient only while they allow tracking, a forged
+    or expired token names no one); `test/public/SitePages` (one feature, about 0.7 s: the review asked by an editor and refused to a
+    reader, the approver told, the editor's own decision SELF_APPROVAL, approved at the version, a new save unreviewed and the old
+    revision STALE_REVISION, published with no review); `test/marketing/Experiments` (P10's results read "0" clicks where they read
+    "Not available").
+  - mr-pass `test/Marketing/MarketingTracking` (new, 4 features, about 0.9 s: the redirect called as the container calls it records a
+    click with the key it sets (HttpOnly, Secure) and no party, the held key sent again, none for Global Privacy Control or a scanner, a
+    registered remote frontend's event taken as a token write and an unregistered one refused; a destination in the query never followed,
+    the facade refusing an input naming one, an unknown, another site's or a malformed code the neutral 404 echoing nothing; a client over
+    its limit redirected 32 times and 30 recorded; the operations in both copies and route lists, the event in the three lists, routed
+    as a POST with no token); `MarketingPages` (its one render carries a code: one page visit, no key, no party).
+  - mr-boss `MarketingTracking` (new, 2 features, about 0.6 s: TrackingLinkDetail's one qvt render for the author; the vocabulary choice,
+    a reader's capabilities, another organization's author refused, the record kind, Home's visits, the registration's review);
+    `MarketingSends` (ExperimentDetail's undecided reason with no accepted recipient) and Commerce's `CommerceAccess` (Home shows Visits
+    for the reader's store, whose site sells for it), the two cases the phase names; `MarketingSpecLib` (the link ids, Content's tabs).
+  - Acceptance, written and not run: mr-boss `test/acceptance/Marketing/MarketingTrackingScenario` (4 features, stepwise: New link to the
+    landing page through the transition, an unregistered destination refused; a scan through PASS's redirect and the page with the
+    code, one visitor by key; a consenting recipient's click on the send and a refusing recipient's direct link; Commerce's Home
+    visits); mr-pass `test/acceptance/client/MarketingTrackingHttp` (over HTTP, locally or through the remote frontend:
+    redirect, cookie, a query destination ignored, the page visit, the neutral 404, the pixel, one visitor key) with
+    `test/acceptance/MarketingTrackingFixtures` on PASS_HTTP, in `client/suite.js`.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Tracking, SitePages, Experiments, LeadCapture, Dispatch,
+  Sends, Campaigns, MarketingApprovals, MarketingContent, PassAuthority, Eligibility, SalesOpportunities, Automations, ShopCatalog,
+  ThemeAuthoring (86 of 86 across the runs); mr-pass MarketingTracking, MarketingPages, MarketingAccess, SubmitForm, Transport, Portals,
+  ShopCart, SalesPortalAccess, Forum (38 of 38); mr-boss MarketingTracking, MarketingContent, MarketingAccess, MarketingCampaigns,
+  MarketingSends, MarketingLeads, MarketingDelivery, MarketingTemplates, CommerceReports, CommerceSitePages, CommerceAccess,
+  SalesOpportunities (45 of 45); after Prettier the new specs again (43 of 43). A throwaway render of TrackingLinks (qvt, tui),
+  TrackingLinkDetail (tui; html for a reader), CampaignDetail (html), Campaign defaults (qvt), PageDetail under Marketing (qvt with
+  Request review and the review's state; tui), Commerce's Home (html, Visits), RecipientDetail and the qrCode transition (SVG) passed
+  and was not kept. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen; parse failures 0.
+  Prettier (mr-moqui's config) on the new and changed JavaScript that was clean (Commerce's Reporting.js and CommerceAccess.spec.js were
+  not and are left as they were; PASS's scripts follow Transport.js's style). Not run: test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P15" table; ss-inventory has no row for these screens.
+- Design edits: design-marketing §2 (TrackingLinkDetail's sibling path), §8 TrackingLinks and TrackingLinkDetail (as built), LandingPages
+  and PageDetail (the review), §12 CampaignDefaults (the tracking settings), §13.1 (the two operations and their paths);
+  design-commerce §3 Home (the Visits card as built).
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: the site id in the link's path, tokens per attempt in the build rather than at preparation and only
+    for the organization's tracking links, the automated kinds, the organization's visitor-key policy and the browser's signals as the
+    site's tracking choices, the allowlist on MarketingPolicy, LinkObservations inside get#TrackingLink, MARKETING_CAMPAIGN_EDIT writing
+    links, the review as Marketing's approvals' page kind;
+  - store#MarketingPolicy dropped Campaign defaults' test addresses since P8 (the parameter was declared on store#CampaignBudget); fixed
+    here: a policy saved before this phase from Campaign defaults has no test list until it is saved again;
+  - `/trk` and `/trk-o` are servlet patterns on every host of a deployment, so they shadow a Smithy group or a root-mounted Shop page
+    route of those names; the framework's reserved paths do not list them (Deployment says so);
+  - the visitor key is a first-party cookie set by the redirect: with the policy on, a browser without Global Privacy Control or Do Not
+    Track gets it with no consent banner (PASS has none); a jurisdiction needing prior consent for analytics cookies should leave the
+    policy off, which still counts visits and clicks without unique visitors (the user's call below);
+  - opens: a pixel fetch by a mail provider's image proxy is counted as an open (a known scanner's is set apart); opens are not shown in
+    LinkObservations (a link's) and wait for P20's send reports;
+  - Online sales' visits are not built (Home's are); with conversion they wait for P20's `Marketing.Visits` and attribution;
+  - CampaignDetail's Tracking links box and RecipientDetail's clicks are not rendered by a regression spec (CampaignDetail's one render
+    is MarketingCampaigns', which does not look for the box); a send's unique clicks are shown per recipient and per experiment variant,
+    not yet on SendDetail;
+  - a send's tracked links are those whose public address the author pasted; a plain link in the body is never counted, by design (no
+    destination a link of the organization does not register).
+- For the lead:
+  - budget share: mr-mantle about 2.1 s (Tracking 1.4 s, SitePages +0.7 s); mr-pass server about 0.9 s (MarketingTracking; MarketingPages
+    unchanged); mr-boss server about 0.6 s (MarketingTracking); no client spec;
+  - merge hot spots: mr-mantle `entity/MarketingEntities.xml` (a P15 block after P14's), `data/MarketingSeedData.xml` (a P15 block at the
+    end), `ForumSchema.js` and `script/PassRoutes.js` with mr-pass `Schema.js` and `Routes.js` (a P15 entry after P14's), the three
+    TOKEN_WRITES lists (`Transport.js`, `PassApi.js`, `PassAuthority.js`) and Transport's `routeOf`, `MarketingDispatch.js`
+    (build#CampaignDelivery, get#Recipient), `MarketingApprovals.js` (targetKinds), `MarketingContent.js` (pageKind, operations),
+    `MarketingContentServices.xml`, `CampaignServices.xml` and `MarketingPolicies.js` (the policy's parameters), `MarketingExperiments.js`,
+    `MarketingLeads.js` (findTrackingLinks removed), `TrackingServices.xml` (P20 adds record#OrderAttribution), `test/public/SitePages.spec.js`;
+    mr-boss `screen/Marketing/Content.xml` (P15's items), `Campaigns/CampaignDetail.xml` (a Tracking links box before Decisions),
+    `Campaigns/Approvals.xml` (the topics), `Settings/CampaignDefaults.xml`, `Sends/RecipientDetail.xml`, `Marketing.js` (linkPaths,
+    recordKinds, choiceSources), `ContextServices.xml`, `template/MarketingParts.xml`, `Shared/PageDetail.xml`, `shared/PageApps.js`,
+    Commerce's `Home.xml`, `Reporting.js`, `ReportingServices.xml` and `test/Commerce/CommerceAccess.spec.js`, `data/BossSetupMarketingData.xml`
+    and `data/BossZZMarketingDemoData.xml` (P15 blocks at the ends), `test/Marketing/MarketingSpecLib.js` and `MarketingSends.spec.js`,
+    `plan/usl-inventory.md`, `plan/design-marketing.md`, `plan/design-commerce.md`, this file; mr-pass `MoquiConf.xml` (new),
+    `screen/Marketing/Page.xml`, `test/Marketing/MarketingPages.spec.js`, `test/acceptance/client/suite.js`, README, `docs/Deployment.md`;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, after PASS Marketing's landing pages paragraph; no mr-moqui worktree):
+    "PASS Marketing's tracking redirect and pixel are web scripts of mr-pass (`script/TrackingRedirect.js` at `/trk/*`,
+    `script/TrackingPixel.js` at `/trk-o/*`, registered by mr-pass's own `MoquiConf.xml` on the authority and on a remote frontend
+    alike, each with a per-client `<rate-limit>`, 60 and 120 a minute, when per-client web protection is on). Each declines the session
+    (`ec.web.declineSession()`: no session cookie, token or Visit), runs as the anonymous request, and reaches the authority only through
+    PASS's facade and transport (in process, REST or gRPC) by two operations of the allowlist whose only fields are the site, the code
+    or token, the visitor key and the kind: `resolveTrackingLink` (`mantle.marketing.TrackingServices.resolve#TrackingLink`, read only,
+    in no TOKEN_WRITES list) and `recordTrackingEvent` (`record#TrackingEvent`, an anonymous write the transport lets through by name and
+    the authority takes from a registered deployment as a TOKEN_WRITES operation), both `allow-remote="false"`,
+    `authenticate="anonymous-all"`. A link is `/trk/{siteId}/{code}`: the code is random and the authority answers it only for a
+    published site that is the link's own (another site's, an unknown or a malformed code is the same NotFound, a neutral 404 page that
+    echoes nothing). The destination comes only from the link: its registered destination, a landing page of its organization's
+    Marketing mount or an https address on a host of a site that serves the organization or on the organization's allowlist (both
+    checked when staff save the link through `store#TrackingLink`, MARKETING_CAMPAIGN_EDIT in the campaign's organization; no user
+    name, no other scheme), with its own UTM values; a disabled or ended link goes to its safe destination, checked the same way, or to
+    the neutral page. No query parameter but `token` is read, so a destination, fallback or return address in the request is never
+    followed, and the facade refuses an operation input naming one. The redirect sets nothing but the visitor key, a random first-party
+    `mkt_vk` cookie (HttpOnly, SameSite=Lax, Secure over https, a year) set by a `Set-Cookie` header only when the organization's policy
+    counts unique visitors (off by default) or the link is a consenting recipient's, never for a browser sending Global Privacy Control
+    or Do Not Track or for a known automated fetch; the authority keeps only its digest and never a party id. Responses are no-store
+    with no referrer. Recording is limited by the authority per client and code (30 in ten minutes; a registered frontend's forwarded
+    visitor address) and per site (20,000 an hour); over a limit, and whenever recording fails, the visitor is still redirected (or
+    given the image) and nothing is kept. A known scanner, crawler, prefetch or HEAD is recorded apart as automated and is never a
+    conversion. A send's message carries personalized links and the pixel only for a recipient who allows tracking (PcpTracking) under
+    a sending profile that tracks consenting recipients: each attempt's 40-character token rides in a `token` query parameter (redacted
+    from the request log), its digest alone kept for ninety days; the recipient is named on an event only while they still allow
+    tracking, checked when it comes; an expired or forged token names no one. Every other recipient gets each link's direct
+    destination and no pixel. A landing page's address with a link's code (`?tc=`) records a page visit with the key the browser
+    already holds, through the same operation; the page sets no cookie. Staff read links and their aggregate observations through
+    `mantle.marketing.TrackingServices` (any Marketing reader of the organization; the observations for an author or a report reader;
+    no person), and Commerce reads its stores' visit counts through `count#StoreVisits` after its own store check.";
+  - the user's call (none blocking): whether a site's visitor key needs a visitor's prior consent (a banner) rather than the
+    organization's policy and the browser's signals; whether `/trk` and `/trk-o` should join the framework's reserved paths (mr-moqui);
+    the landing page's review as built (advisory: publishing never waits for it).
+
+**Review Nov 15 (P15).** A fresh review of `mkt/p15` (mr-mantle 436488f8, mr-pass 05e164b, mr-boss 4025e199) against P15, §2, §4 and
+design §8, §13.1, §18, judged as the most exposed public surface so far; master (the wiki page-name fixes: mr-boss Knowledge and
+QuickCreate, then mr-mantle and mr-boss combining marks and NFC) merged into mr-mantle and mr-boss twice, no conflict; mr-pass had
+nothing new. Fixes mr-mantle 1b8ccb88, mr-pass 76461ba, mr-boss (this note's commit).
+- Checked and sound:
+  - the redirect is never an open redirect: TrackingRedirect.js reads only the path's site and code and the `token` parameter; the
+    destination is resolve#TrackingLink's alone, from the link's row: a published landing page's URL (PublicApps.pageUrl, the site's
+    canonical host from the database, never the request's Host) or the registered `redirectUrl`, with the link's own UTM values; a
+    disabled or ended link its `safeUrl`. store#TrackingLink checks both (https only, no user info, no whitespace, quotes, angle
+    brackets or control characters, at most 2,000 characters; a host of a site with an enabled mount targeting the organization or one
+    of its stores, preview hosts excluded, or on MarketingPolicy `trackingDomains`, MARKETING_CONFIGURE); the script redirects only an
+    `https://` value with no whitespace, so no header splitting. A query destination, `next`, `redirect` and the facade's extra input
+    are ignored or refused (spec'd);
+  - the site in the path cannot cross organizations: a code answers only when the link's own `siteId` is the path's and the site is
+    published (another site's, an unknown, a malformed code and an unpublished site are one NotFound, the same neutral 404 that echoes
+    nothing); a link's site is chosen at save among the sites whose Marketing mount targets the campaign's organization; the pixel's
+    organization is the site's Marketing mount's and its token must be that organization's;
+  - the pixel and record#TrackingEvent: no PII in a URL (a random 10-character code, a 40-character token whose SHA-256 alone is kept,
+    ninety days, redacted from the request log by the framework's `token` rule); the visitor key's digest alone kept, never a party id;
+    the recipient named only for a token of a `tracked` recipient who allows tracking (PcpTracking) when the event comes; known
+    automated fetches (HEAD, prefetch headers, scanners, crawlers, command-line agents, no agent) set apart as `automated` and never a
+    visit; limits per client and code (30 in ten minutes; a registered frontend's forwarded visitor address through requesterKey) and per
+    site (20,000 an hour) on the authority, token lookups 100 in ten minutes per client, and the servlets' per-client `<rate-limit>`s
+    (`/trk/**` and `/trk-o/**`, a pattern guard.rs supports); over a limit or on any failure the redirect or image is still answered
+    and nothing kept; both scripts `declineSession()`; an unexpected failure of a public operation is Unavailable with its words logged
+    and not returned;
+  - the cookie: `mkt_vk`, random, Path=/, Max-Age a year, HttpOnly, SameSite=Lax, Secure whenever the request is https (the framework's
+    `secure` honors a trusted proxy's X-Forwarded-Proto), set only when the authority says the organization's `visitorKeys` is on or the
+    token is a consenting recipient's, never with Sec-GPC or DNT, never for an automated fetch; the pixel and the landing page set none;
+  - personalized links: a token per attempt only for a `tracked` recipient under an MtrConsented profile who allows tracking at the
+    attempt, scoped to the recipient's send and organization; a forwarded link lets its holder do nothing but have a click (or open)
+    attributed to the recipient while they still allow tracking: the token authorizes no other operation (its digest prefix is its own,
+    apart from the unsubscribe and invitation tokens), is not passed to the destination, and the redirect is no-referrer; an expired,
+    forged or withdrawn recipient's token names no one;
+  - the new mr-pass MoquiConf.xml exposes only the two scripts (TrackingLib.js is loaded by them, not served); the framework's default
+    conf declares MoquiServlet explicitly, so a remote frontend with only framework, webroot and PASS keeps its screens beside them;
+    the operations: `resolveTrackingLink` a GET any caller may make through PassApi (it answers what the redirect answers), and
+    `recordTrackingEvent` a POST that PassApi takes from a registered deployment as a token write or from a browser session with its
+    CSRF token, the same limits applying; both `allow-remote="false"`;
+  - schema and route copies byte-identical (Schema.js and ForumSchema.js, Routes.js and PassRoutes.js); the three TOKEN_WRITES lists
+    equal; Transport's routeOf lets `recordTrackingEvent` through with no token;
+  - the landing page's review (§4 Nov 14): advisory, nothing in publish#SitePage reads it; bound to the text version (the revision is
+    the count of the page's saved WikiPageHistory versions, the version name kept on each decision, a save after a request makes the
+    request and its decision STALE_REVISION); separation: whoever saved the current version and the requester never decide it, and
+    selfApprovalAdmits never admits the page kind, so the one-person-team flag does not either; PageDetail shows the actions from the
+    registration's capabilities only, the services checking again;
+  - store#MarketingPolicy's `testAddresses` fix (finding 2): declared on store#MarketingPolicy, removed from store#CampaignBudget;
+  - find#TrackingLinks, get#TrackingLink and store#TrackingLink check the reader's or author's scope and the campaign's organization
+    (missing and another organization's are one RECORD_UNAVAILABLE), MARKETING_CAMPAIGN_EDIT on an open campaign at the revision read;
+    observations are aggregates for an author or a report reader; count#StoreVisits checks each store through StoreAdmin first;
+  - specs: Mantle Tracking, mr-pass MarketingTracking and mr-boss MarketingTracking test what they claim; screens one render each.
+- Fixed:
+  - R1 (medium; mr-pass TrackingRedirect.js, mr-mantle MarketingTracking.js recordPublic): a disabled or ended link with no safe
+    destination answered the neutral page but first set the visitor cookie and recorded a click, so it differed from an unknown code (a
+    Set-Cookie header and a second call) and a disabled link went on counting; record#TrackingEvent recorded events of a disabled, ended
+    or not yet started link from any caller. Now the redirect answers a link with no destination exactly as an unknown code (the same
+    page, no cookie, nothing recorded), records and sets a key only for a current link (`available`), and record#TrackingEvent keeps
+    nothing for a link that is not current. Specs: mr-pass (a disabled link's page equals the unknown code's, no cookie, no event) and
+    Mantle (a disabled and an ended link's click recorded false); both fail on the unfixed code;
+  - R2 (low; MarketingTracking.js messageTracking): a send's tracking link was matched on any host, so an author's
+    `https://elsewhere.example/trk/{site}/{code}` carried the recipient's token to that host; now a link's address is rewritten only on
+    a live host of its own site and anything else is left as written. Spec (a mirror host's link keeps no token); fails on the unfixed
+    code;
+  - R3 (low; specs only): the Mantle Tracking spec's "expired" case could not fail (it read `visitorKeys`, true by policy); it now
+    clicks with the expired token while Ann still allows tracking and finds her not named; Campaigns' policy case stores
+    `testAddresses` and `trackingDomains` through store#MarketingPolicy and reads them back (finding 2 had no spec);
+  - R4 (low; mr-boss MarketingTracking.xml storeTrackingLink): clearing a link's source, medium, content tag or type kept the old
+    value (`|| null` sent nothing); the four now pass the empty value, which the service stores as none. Campaign defaults' "Tracking
+    link hosts" tooltip says a host's subdomains are included, as store#TrackingLink matches them.
+- Provisional findings (for the lead to number):
+  - the Built note's findings stand as written; the user's calls of Nov 15 are in §4 (the visitor key as built, no banner, a banner in
+    §7; `/trk` and `/trk-o` reserved in the framework as a follow-up). The framework's reserved list also lacks the default conf's own
+    `/search` and `/dashboard` servlets: the follow-up could derive the reserved segments from every declared servlet pattern;
+  - a token is scoped to its recipient, send and organization, not to the links of its message: a holder may append it to another
+    tracking link of the same organization and have that click attributed to the recipient (while they allow tracking). Nothing else
+    follows from it;
+  - a link's destination and safe destination are checked when saved: a host later removed from the allowlist, or a site whose mount
+    no longer serves the organization, still receives the link's visitors until the link is saved or disabled;
+  - an allowlist entry admits its subdomains (`partner.example` admits `shop.partner.example`), so an entry for a shared hosting
+    domain would admit every tenant under it; MARKETING_CONFIGURE only;
+  - a pixel's limit is per client across all pixels (30 in ten minutes): a mail provider's image proxy fetching for many recipients
+    from one address has most opens dropped (opens are not yet reported, P20);
+  - a link's end date cannot be cleared from the form (an empty Timestamp is no parameter, so the old one is kept); disabling is the
+    way back.
+- Tests (release binary, `--nobuild`, this worktree's runtime, after the second master merge): mr-mantle Tracking (4 of 4), Campaigns
+  (7 of 7), Dispatch (6 of 6), Experiments (3 of 3); mr-pass MarketingTracking (4 of 4), MarketingPages (2 of 2); mr-boss
+  MarketingTracking (2 of 2), MarketingCampaigns (1 of 1); each run about 27-38 s with startup. Tracking and MarketingTracking with the
+  fixes reverted failed on R1 and R2's checks. `moqui lint --screens` (release): 141 flagged sites as before, parse failures 0. Prettier
+  (mr-moqui's config) clean on the changed Mantle JavaScript. Not run: test-apps, the acceptance suite.
+- For the lead:
+  - budget share: unchanged in effect (a few hundredths of a second on Tracking and MarketingTracking);
+  - merge hot spots: as the Built note's, plus `test/marketing/Campaigns.spec.js` (the policy case);
+  - Attack-Surface: the worker's paragraph is right but for two sentences: replace "a disabled or ended link goes to its safe
+    destination, checked the same way, or to the neutral page." with "a disabled or ended link goes to its safe destination, checked
+    the same way when saved, or to the neutral page, and records nothing and sets no key; with no safe destination its answer is the
+    unknown code's.", and after "Every other recipient gets each link's direct destination and no pixel." add "A message's link is
+    personalized only on a live host of its own site.";
+  - the user's calls: none open (the Nov 15 rows in §4).
+
 ### P16 — Events and registration setup, with the PASS Event page
 
 Design §9 Events, EventDetail and RegistrationSetup, §13 Event; MKT-EVENT (its offer part), MKT-FORMS; stage M6.
@@ -4486,6 +4787,8 @@ design-marketing.md or the owner's design.
 | Nov 14, 2026 | Suppressions block promotional mail only, except a hard bounce: a complaint, a staff block or repeated soft failures refuse a promotional delivery (the ledger's `transactional` N: a list's, campaign's or topic's) and never a transactional notice (an order confirmation, a password reset, a system notice); a hard bounce refuses every delivery to the address | The user's call (P3). Built in the P3 review (R2) in the ledger's attempt (`MessageSuppressions.js` `blocksEveryDelivery`); design-drawers-commons' Mailboxes row records it as the ledger's owner contract |
 | Nov 14, 2026 | An automation runs as a saved owner, the dispatcher who last activated or resumed it, signed in for each admission and step run and checked again (as run#EtlMapping signs in as a mapping's saved owner): its trigger, goal and condition segments may use the owner's Sales and purchase facts (P5's sources, under the owner's own Sales and Commerce access, read at run time), and classify#Recipients' "not available" is the owner's (P5 review); an owner who loses access (the permission, the organization, a disabled account) pauses the automation with a readiness reason rather than running wider or narrower; a new activation by another dispatcher makes that person the owner. This replaces P11's build as the system | The user's call (P11; built in its review, R1) |
 | Nov 14, 2026 | Choosing or changing a lead rule's Sales team needs `SALES_TEAM_MANAGE` in the organization (a sales manager); a Marketing content author without it saves a rule only with the organization's default team of Sales' SalesPolicy, or with no team (each lead then goes to the default team in effect at the handoff; refused when Sales has none); LeadRuleDetail shows the team read-only without it | The user's call (P13; built in its review, R1): design §2 LeadRules' "Sales routing grant" |
+| Nov 15, 2026 | The tracking visitor key stays as built in P15: a first-party key set only where the organization's MarketingPolicy `visitorKeys` is on (off by default) or for a consenting recipient's link, never for a browser sending Global Privacy Control or Do Not Track; no consent banner in PASS (a banner is later, §7) | The user's call (P15's review) |
+| Nov 15, 2026 | `/trk` and `/trk-o` (PASS's tracking servlets on every host) join the framework's reserved path names, so a public site's mount, page route or Smithy name cannot take them; built as a framework follow-up in mr-moqui | The user's call (P15's review), F-finding on the shadowing |
 
 ## 5. Open questions
 
@@ -4809,6 +5112,8 @@ Designed, not in this build:
   and offline check-in; certification, timed exams and live quizzes; a block email builder (§21.3); campaign stages
   and tags on a generic record tag (§21.7); tickets in a Shop cart (§21.4; later by the user's call, §4); more than
   two experiment variants; WhatsApp and the other C4 channels.
+- **A site's tracking consent banner** (§4 Nov 15): a visitor's prior consent for PASS's first-party visitor key, where a
+  jurisdiction needs one; until then the organization's policy (off by default) and the browser's GPC and Do Not Track decide.
 - **The privacy provider** (§4): Marketing's find, export and anonymize of consent and membership history,
   suppressions, recipients, tracking events, submissions and registrations, when Admin's PrivacyServices and the
   PASS Account privacy page are built.

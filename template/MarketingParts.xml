@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
                         organizationPartyId:(organizationPartyId || null), excludeId:(excludeId || null),
                         campaignSendId:(campaignSendId || null), marketingAutomationId:(marketingAutomationId || null),
                         wikiSpaceId:(wikiSpaceId || null), contentKindEnumId:(contentKindEnumId || null),
-                        marketingCampaignId:(marketingCampaignId || null)}"/>
+                        marketingCampaignId:(marketingCampaignId || null), vocabularyKindEnumId:(vocabularyKindEnumId || null)}"/>
             <script>ec.web.sendJsonResponse(found.options)</script>
         </actions>
         <default-response type="none"/>
