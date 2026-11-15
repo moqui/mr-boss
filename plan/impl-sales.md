@@ -6036,7 +6036,7 @@ the default now covers them. The Opportunities list's Change stage keeps the lis
   mr-boss' acceptance suite, ./moq test-apps, test-framework.
 - Inventories and design: usl-inventory's P11 table (update#SalesOrderFacility) and the update#OrderPart row; design-sales §9
   SalesDefaults, §6 OrderDetail's sales-order context and §3 Opportunities, each with an as-built paragraph.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F350 to F352 in order:
   - mr-mantle's AssetReservationMultipleThreads sums every asset of DEMO_1_1 in the database and assumes the demo's total, so demo
     stock of DEMO_1_1 in another warehouse fails it (it did with fifty at BOSS_SAL_WH); Ziziwork Sales' warehouse holds only its own
     kits, and the acceptance orders of DEMO_1_1 reserve there with no stock. A spec-own product would free the demo.
@@ -6093,7 +6093,7 @@ design §3, §6, §9.
     places the order changed to the second warehouse and checks it still ships from there.
   - R3 (low; doc): design §3's follow-up 5 paragraph was inserted between two rows of the Opportunities forms table, splitting it;
     moved after the table. Design §6's Ships from paragraph names Sales' own orders (R1).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F353 to F354 in order:
   - R1 above: a Sales operation over the orders orderOf covers needs its own kind check where the field is another app's to set.
   - The spec covers create, copy and place; respond#Quote's, clone#Quote's and create#RecurringOrder's fill are reviewed by reading
     only (each the same applyDefaultFacility call).
@@ -6555,6 +6555,11 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F347 | Follow-up 4 (Built Nov 14): TextFiling (mr-boss) and SalesRecurrence's base feature (mr-mantle) failed in a serial run of their whole component and pass alone: order or timing dependent, not looked into | Follow-up 4: as its Built note says |
 | F348 | Follow-up 4 (Built Nov 14): PayConfiguration (mr-mantle, 10.2 s in a loaded serial run, 7.8 s alone) and AccountingAccess (mr-boss, 9.5 s) are the next nearest the limit; not split (under 12 s) | Follow-up 4: as its Built note says |
 | F349 | Follow-up 4 (Review Nov 14): Two specs used the same spec-local ids (R1), and two read shared demo or list data that other specs change or grow (R2, R3). These pass alone and fail only in a full serial run. A spec-local id prefix, and a lookup by id rather than a first page, keep them apart | Follow-up 4: as its Review note says |
+| F350 | Follow-up 5 (Built Nov 15): mr-mantle's AssetReservationMultipleThreads sums every asset of DEMO_1_1 in the database and assumes the demo's total, so demo stock of DEMO_1_1 in another warehouse fails it (it did with fifty at BOSS_SAL_WH); Ziziwork Sales' warehouse holds only its own kits, and the acceptance orders of DEMO_1_1 reserve there with no stock. A spec-own product would free the demo | Follow-up 5: as its Built note says |
+| F351 | Follow-up 5 (Built Nov 15): Every filter of the Opportunities list was lost after Change stage or a batch, not only replaced by the target stage, since the forms post no list parameters; Leads' Assign set the chosen owner as the list's owner filter. Both fixed here through the shared transitions. Marketing's mount of Leads includes the same transitions and posts no `listFilters` unless it renders Sales' Leads screen, in which case it is fixed too | Follow-up 5: as its Built note says |
+| F352 | Follow-up 5 (Built Nov 15): The default fills only a part with no facility: a copy keeps its source's facility even if the seller has since closed or sold it, and a store order keeps its store's | Follow-up 5: as its Built note says |
+| F353 | Follow-up 5 (Review Nov 15): R1 above: a Sales operation over the orders orderOf covers needs its own kind check where the field is another app's to set | Follow-up 5: as its Review note says |
+| F354 | Follow-up 5 (Review Nov 15): The spec covers create, copy and place; respond#Quote's, clone#Quote's and create#RecurringOrder's fill are reviewed by reading only (each the same applyDefaultFacility call) | Follow-up 5: as its Review note says |
 
 ## 7. Later
 
