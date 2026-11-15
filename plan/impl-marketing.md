@@ -5257,6 +5257,91 @@ files (EventRegistrations.js, EventRegistrationPlaces.js, EventRegistrationPayme
     override limited to held and pending places (a waitlisted or review place admitted would pass the seats); ADMIN holding
     MARKETING_CHECKIN as it holds PEOPLE_KIOSK_PUNCH.
 
+**Review Nov 15 (P18).** A fresh review of `mkt/p18` (mr-mantle 237372df, mr-boss 073c9427) against P18, §2, §4 (Nov 13, Nov 15),
+F83, §5 Q7 and design §6, §9, §10, §14.1; master had nothing newer for either repository (no merge). Fix in mr-mantle (this note's
+commit); mr-boss changed only by this note.
+- Checked and sound:
+  - the door tablet: Mantle accepts MARKETING_CHECKIN only when `UserSecurityChecks.currentDevice()` names a credential whose display
+    account is the request's user, whose route group's `parameterName` is `registrationPolicyId`, whose `parameterValue` is the offer
+    asked and whose display account's party is of the offer's organization; anywhere else DEVICE_REQUIRED, another offer
+    RECORD_UNAVAILABLE. The framework puts the registered value in place of a request's (Shared-Devices.md step 5) and Mantle compares
+    the device row's value again, so a sent `registrationPolicyId` cannot move the tablet; the spec's `askOffer` proves the second
+    check alone. The allow-list BOSS_DEV_MKT_CHECKIN names CheckIn, `checkIn` and `scanResolve` by name, not inheritable; the display
+    bundle holds MARKETING_CHECKIN, the three services (not `get#Attendance`) and no Marketing root grant; the root builds no context
+    for a device and refuses it the record panels; Events lets it through to CheckIn alone; the screen's `onDevice` never offers the
+    search. People's kiosk (KioskIdentity.js `deviceOfRequest`, BossSetupData's PEOPLE_CLOCKING, ClockingKiosk's island page) followed
+    line for line; a display account cannot hold ADMIN or another privileged group (device.rs), so ADMIN's MARKETING_CHECKIN opens
+    nothing but DEVICE_REQUIRED off a device;
+  - what the tablet sees, on every path: the desk (title, occurrence, count, open or not; no expected count), the decision with the
+    attendee as first name and initial and the ticket, an attendance's time and method (no staff name, no reason, no state); every
+    refusal's words are the reason alone (an unknown, wrong-event, cancelled, pending or waitlisted code is refused by
+    `resolve#EntryCode` before Confirm with no name); no term, no check-in by id, no override (PERMISSION_DENIED before any lookup);
+  - "wrong event" against "unknown code": WRONG_EVENT is decided before the attendee is read and tells the tablet only that the code
+    is someone's current ticket elsewhere, never whose, which event or its state; the person holding a code already knows it, codes are
+    long random digests looked up by `registrationOfCode` and every scan counts against 60 a minute per device, so it is no
+    enumeration aid. Judged acceptable; folding it into CODE_UNKNOWN would only cost the door a useful answer;
+  - once per registration: `checkIn#Registration` re-reads the place `forUpdate` and decides after the lock (the place's offer, its
+    state and the attendance read inside), EventAttendance's key is the registration (a racing second insert fails rather than
+    doubles), a repeat answers the first fact and writes nothing; the transition calls it in a transaction of its own and turns a
+    refusal into a message, no code kept in the session or an address. The rate limit (`record#Attempt` in its own transaction, key by
+    device or staff user) is taken before any lookup on every path but the bare desk;
+  - the window and overrides: the window (a day before the start to twelve hours after the end) is checked for eligible and
+    overridable places alike; an override needs `override`, a reason and a held-live or pending place, records EamOverride with the
+    state then and changes neither state nor payment; staff check-in by name needs a reason (EamLookup); the expected revision is
+    honoured;
+  - automations: AtrRegistered and AtrAttended need an offer of the automation's organization (`triggerFor`, on create and on
+    `store#EnrollmentRule`, where a changed offer is material), `collectOffer` runs inside the owner's run as P11 and P12's triggers do,
+    files `registered:`/`attended:` plus the registration so each registration enrolls once (fileEvent's source key), and keeps P12's
+    cursor shape (`>=` the cursor, ordered, 200 a run);
+  - lead rules: an offer's rule is the content authors' of its organization (`storeOfferRule`: covers, one current per offer and
+    trigger, team and source by `checkRouting`, which is P13's check moved, not changed); the job captures each registration once per
+    rule (capture keyed by rule, kind and registration; a replaced rule's window ends at its thruDate and the new one's begins at its
+    fromDate); `inquiryOfRegistration` re-checks rule, offer, organization and confirmation or attendance, sends the attendee's own name
+    and address (the reservation's only when the attendee is its buyer), `verified: false` always, no answers; Sales' change is two
+    `sourceKinds` entries and two enumerations, an addition no existing caller sees (SalesLeadIntake passes unchanged);
+  - the two lint sites (`UserSecurityChecks.currentDevice()` in Marketing.xml and CheckIn.xml, `WebUtilities.encodeHtml` in CheckIn's
+    bare page) are the documented host globals People.xml and ClockingKiosk.xml use the same way; acceptable, no other way to ask for
+    the device from a screen;
+  - screens: one html render (the bare page) and one qvt render (the island) of CheckIn in MarketingAccess, no route fixture, no sweep;
+    the AttendeeLookup's html text is never reached (the page section is qvt/tui only).
+- Fixed:
+  - R1 (medium; mr-mantle `EventCheckIn.js` `doorOf`): the services asked the Marketing scope first, so a door tablet whose display
+    account had been given an events manager's group (not privileged, so the framework allows it) became a staff door at the device:
+    the attendee search, check-in by id with any reason, overrides and full names, all through the allow-listed `checkIn` transition.
+    A shared device's request is now always the tablet's, whatever its display account holds. Spec EventCheckIn's tablet feature
+    gives the display group MARKETING_VIEW and MARKETING_EVENT_MANAGE for four calls (search, by id, an override, a scan showing
+    "Finn D."): refused and initial-only; the check fails on the unfixed code.
+- Provisional findings (for the lead to number):
+  - R1 above;
+  - the worker's list stands (EventAttendance its own record, the window, overrides for held and pending only, first name and
+    initial, staff-only search, the device by the fixed parameter, attempt buckets, the offer triggers and Sales source kinds; an
+    overridden held place may still expire and free its seat while the attendee is in, so a sold-out door can admit one more than its
+    seats; P12's form trigger has no screen choice; no answers to Sales; one occurrence per trigger; no demo door);
+  - the offer triggers' cursor, as P12's, stalls if more than 200 places share one `confirmedDate` (or attendances one `checkInDate`)
+    to the millisecond: each run re-reads the same 200, all filed. Unreachable today (a reservation has ten places at most, confirmations
+    and check-ins are one at a time); a tie-break on the registration id would close it for both triggers;
+  - no spec runs two check-ins of one place concurrently; the row lock and EventAttendance's key make it safe by construction.
+- Tests run (release, `--nobuild`, this worktree's runtime): mr-mantle EventCheckIn (3 of 3, 1.0 s; also run on the unfixed
+  EventCheckIn.js: the new check fails), Automations (8 of 8), LeadCapture (5 of 5), SalesLeadIntake (4 of 4); mr-boss MarketingAccess
+  (8 of 8); each about 23-27 s with startup. Prettier on the changed JavaScript. No screen changed (no lint run).
+- For the lead:
+  - budget share: mr-mantle EventCheckIn about +0.05 s over the worker's 0.9 s; otherwise as the Built note;
+  - follow-up 1 (`mkt/fix1`): it keeps `issueCode(registrationId)` and `registrationOfCode(code)` but derives the code per credential
+    revision from a keyed digest with the offer's encrypted secret. EventCheckIn.spec.js's `offer()` and MarketingCheckInFixtures make
+    offers by `make` with no secret and call `issueCode` then expect `{code}`, and the substitution case (correct#Registration) expects
+    the old code to name no one; whichever merges second must check that a spec-made offer gets a secret (or `issueCode` makes one) and
+    that a substitution raises the revision. EventCheckIn.js itself needs only `registrationOfCode` to answer null for an old revision;
+  - merge hot spots: as the Built note, plus `test/work/EventCheckIn.spec.js` (the `promoted` helper and the tablet feature's checks);
+  - Attack-Surface: the worker's paragraph is right with one addition after "the display account belongs to the offer's organization":
+    "A device's request is always the tablet's, whatever its display account holds (an events manager's group given to it adds
+    nothing at the device)." Also "An entry code is looked up only by its digest ... never stored" means the code; its digest is
+    stored, as P17's paragraph says;
+  - the user's calls, none unsafe: the window (a day before to twelve hours after; generous, but a check-in is only an attendance
+    fact and a day-early scan at a door is unlikely); first name and initial (the least a door can greet by; safe); overrides for held
+    and pending only (safe and the right line: a waitlisted or review place has no seat; the user should know an overridden held place's
+    hold can still expire, above); ADMIN holding MARKETING_CHECKIN (safe: ADMIN is privileged, so never a display account, and off a
+    device the permission is DEVICE_REQUIRED; it only lets an administrator see the registry entry, as PEOPLE_KIOSK_PUNCH).
+
 ### P19 — Promotions, Customer360 and engagement
 
 Design §7, §10 Customer360 and ContactDetail; MKT-CAMPAIGN (associations), MKT-REPORT (engagement); stage M7.
