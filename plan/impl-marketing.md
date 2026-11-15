@@ -7720,6 +7720,12 @@ boxes (60) read through: none needed a change.
 **Review Nov 15.** Sound; R1 (low): a test of the csv, xml, html-print and xlsx guards (9b9368c16). Findings: a box condition's syntax
 error is caught by lint and at render, not at screen load as a section's; a box with no id is labelled "container-box []".
 
+### Follow-up 9 — A scheduled send linked only for readers of sends
+
+The user's call of Nov 15 (§4, the acceptance run): the calendar, Home's Upcoming and the palette link a send (SendDetail) only for a
+user who may read sends; the events manager sees it unlinked; MarketingCalendarWalk's send steps return to the events manager where
+the walk's story has them, asserting the unlinked item. Branch `mkt/fix9` in mr-mantle and mr-boss.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -7800,6 +7806,8 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | The demo's campaign sends get dates relative to the load, as follow-up 3 did for events, so the calendar walk's projected collection holds them on any run day; follow-up 6 | The user's call (P21's review) |
 | Nov 15, 2026 | A container-box's `condition` is honoured by the framework (the XSD and every renderer), so the 58 mr-boss boxes and the base tools' one that rely on it work as written; a framework follow-up (fix/boxcond) before the acceptance run (follow-up 7's review) | The user's call |
 | Nov 15, 2026 | mr-boss's client budget is raised to the measured time of the re-run after the final suites' fixes (about 93 s; MarketingSendWalk 8 s within the approved Marketing estimate) | The user's call |
+| Nov 15, 2026 | Marketing's calendar and Home show a scheduled send to whoever sees them, but link it (SendDetail, the palette) only for a user who may read sends; the events manager sees it unlinked (the acceptance run); follow-up 9 | The user's call |
+| Nov 15, 2026 | Framework fixes from the acceptance run (fix/accfw): a subscreen's NotFound thrown in `<actions>` answers 404 as from `<pre-actions>`; moqui-mail's capture comes before the SMTP-host check; the test runner gives each client spec its own requester address so a rate limit keyed by requester is per spec | The user's call |
 
 ## 5. Open questions
 
