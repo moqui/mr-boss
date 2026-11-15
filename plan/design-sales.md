@@ -130,7 +130,12 @@ warning and Purchasing's approval warning are, so with the setting off a Sales w
 order from automatic approval like the others. Only with the setting on, when approval is always
 manual and no automatic path is left for them to block, are the warnings shown in the UI only:
 OrderDetail's approval section and the Awaiting approval list show them to the person approving,
-and they do not refuse that approval.
+and they do not refuse that approval. An event registration's storeless ticket order (purpose
+`OrpEventRegistration`, impl-marketing P17) is not stopped by the check's built-in new-customer and
+shipping-address warnings, which guard a first order's goods and their delivery, as a store's
+settings turn them off for its orders; nothing ships and no store's settings apply. Sales' own
+warnings, credit and the approval setting still apply to it (an owner contract; the user's call to
+confirm).
 
 The following groups/permissions are proposed. **R** means representative, **M** manager,
 **A** sales approver, **P** price editor, **C** commercial-change operator, **S** administrator,

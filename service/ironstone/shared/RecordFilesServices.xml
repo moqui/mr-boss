@@ -87,7 +87,10 @@ along with this software (see the LICENSE.md file). If not, see
                     'campaignAssetId', 'CampaignAssetType'],
                 // IronStone Marketing's send files host (impl-marketing P8, design §14.3 CampaignSendContent)
                 'mantle.marketing.campaign.CampaignSend': ['mantle.marketing.CampaignSendServices.create#CampaignSendContent',
-                    'campaignSendContentId', 'CampaignSendContentType']}
+                    'campaignSendContentId', 'CampaignSendContentType'],
+                // IronStone Marketing's registration files host (impl-marketing P17, design §14.1 EventRegistrationContent)
+                'mantle.work.registration.EventRegistration': ['mantle.work.EventRegistrationServices.create#EventRegistrationContent',
+                    'registrationContentId', 'RegistrationContentType']}
             const found = services[info.recordEntityName] || [null, null, null]
             const pkFields = Object.keys(ec.entity.makeValue(content.entityName).getPrimaryKeys())
             contentType = {entityName: content.entityName, keyField: content.keyField, typeField: content.typeField, dateField: content.dateField,

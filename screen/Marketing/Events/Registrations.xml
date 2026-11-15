@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Events › Registrations (design-marketing §9 Registrations: RegistrationFind, Attendees, StaffRegistration,
+    RegistrationBatch; style-guide §3.2 List; impl-marketing P17): the registrations of an event's offers (workEffortId), one offer's
+    (registrationPolicyId) or every offer of the user's organizations, for an events manager (mantle.work.EventRegistrationServices
+    find#Registrations, scoped in Mantle; "Not available" for anyone else): each attendee with the buyer, ticket, state (held with its
+    end, payment received and awaiting the organizer, confirmed, waitlisted, under review, cancelled), payment and refund, by state,
+    ticket and a name or address, a page at a time. New registration (StaffRegistration) holds or waitlists a place as a visitor's
+    request would; the selected rows are cancelled with a reason or sent their notice again (RegistrationBatch), each on its own. A row
+    opens RegistrationDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Registrations" default-menu-include="false">
+    <parameter name="workEffortId"/>
+    <parameter name="registrationPolicyId"/>
+    <parameter name="statusId"/>
+    <parameter name="term"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="enterRegistration" location="component://mr-boss/template/MarketingRegistrations.xml"/>
+    <transition-include name="applyRegistrations" location="component://mr-boss/template/MarketingRegistrations.xml"/>
+    <actions>
+        <if condition="marketing.capabilities.registrationRead">
+            <service-call name="mantle.work.EventRegistrationServices.find#Registrations" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{workEffortId:(registrationPolicyId ? null : (workEffortId || null)), registrationPolicyId:(registrationPolicyId || null),
+                        statusId:(statusId || null), term:(term || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+            <if condition="workEffortId">
+                <service-call name="mantle.work.EventRegistrationServices.get#EventSetup" out-map="setup" transaction="force-new" ignore-error="true"
+                        in-map="{workEffortId:workEffortId}"/>
+            </if>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!found"/>
+        <script><![CDATA[
+            registrations = Array.from(found?.registrationList || [])
+            registrationsCount = found?.registrationListCount || 0
+            registrationsPageIndex = found?.registrationListPageIndex || 0
+            registrationsPageSize = found?.registrationListPageSize || 20
+            registrationsPageMaxIndex = found?.registrationListPageMaxIndex || 0
+            registrationsPageRangeLow = found?.registrationListPageRangeLow || 0
+            registrationsPageRangeHigh = found?.registrationListPageRangeHigh || 0
+            detailPath = sharedLinks['Events/RegistrationDetail']
+            setupPath = sharedLinks['Events/RegistrationSetup']
+            offerList = Array.from(setup?.offers || []).filter(offer => offer.statusId === 'ErpPublished')
+            canEnter = !!found?.canEnter && offerList.length > 0
+            titleText = setup?.event ? 'Registrations: ' + setup.event.eventName : 'Registrations'
+            findValues = {workEffortId, registrationPolicyId, statusId, term}
+            entryValues = {workEffortId, acceptTerms: 'Y'}
+            ticketOptions = offerList.flatMap(offer => Array.from(offer.tickets || []).map(ticket => ({ticketKey: offer.registrationPolicyId + ':' + ticket.ticketTypeId,
+                label: (offerList.length > 1 ? offer.occurrenceText + ' · ' : '') + ticket.ticketName + ' · ' + ticket.priceText,
+                registrationPolicyId: offer.registrationPolicyId})))
+            filtered = !!(statusId || term)
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="RegistrationsNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Registrations are for the events managers of the event's organization."/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="RegistrationsFound" condition="recordFound"><widgets>
+            <container style="row items-center q-col-gutter-sm q-mb-sm">
+                <container style="col">
+                    <label text="${titleText}" type="h5"/>
+                    <label type="p" style="text-caption m-muted q-mb-none"
+                            text="Attendees and their places: held places end when their hold does, a paid place waits for the organizer where Sales approves orders."/>
+                </container>
+                <container style="col-auto row q-gutter-xs">
+                    <link url="${setupPath}" text="Registration setup" icon="sym_o_tune" link-type="anchor-button"
+                            parameter-map="{workEffortId:workEffortId}" condition="workEffortId &amp;&amp; setupPath"/>
+                    <container-dialog id="StaffRegistrationDialog" button-text="New registration" icon="sym_o_person_add" type="primary" width="640"
+                            title="New registration" condition="canEnter">
+                        <label type="p" text="The same holds as a visitor's: a free place is confirmed, a paid one is held until the buyer pays, and with no place left it joins the waitlist."/>
+                        <form-single name="StaffRegistration" transition="enterRegistration" map="entryValues">
+                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                            <field name="ticketKey">
+                                <default-field title="Ticket">
+                                    <drop-down allow-empty="false"><list-options list="ticketOptions" key="${ticketKey}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="buyerName"><default-field title="Buyer"><text-line size="30" maxlength="100"/></default-field></field>
+                            <field name="buyerEmail"><default-field title="Buyer's email"><text-line size="30" maxlength="254" input-type="email"/></default-field></field>
+                            <field name="attendeeName"><default-field title="Attendee" tooltip="Empty: the buyer attends"><text-line size="30" maxlength="100"/></default-field></field>
+                            <field name="attendeeEmail"><default-field title="Attendee's email"><text-line size="30" maxlength="254" input-type="email"/></default-field></field>
+                            <field name="acceptTerms"><default-field title="Terms"><check><option key="Y" text="The buyer accepted the offer's terms"/></check></default-field></field>
+                            <field name="submitButton"><default-field title=""><submit text="Register"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </container>
+            </container>
+            <form-single name="RegistrationFind" transition="." map="findValues">
+                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                <field name="term"><default-field title="Find" tooltip="A name, an address or a registration"><text-line size="20"/></default-field></field>
+                <field name="statusId">
+                    <default-field title="State">
+                        <drop-down allow-empty="true">
+                            <option key="EvrHeld" text="Held"/>
+                            <option key="EvrPending" text="Payment received, awaiting confirmation"/>
+                            <option key="EvrConfirmed" text="Confirmed"/>
+                            <option key="EvrWaitlisted" text="Waitlisted"/>
+                            <option key="EvrReview" text="Paid after the hold ended"/>
+                            <option key="EvrExpired" text="Hold ended"/>
+                            <option key="EvrCancelled" text="Cancelled"/>
+                        </drop-down>
+                    </default-field>
+                </field>
+                <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                <field-layout><field-row-big><field-ref name="term"/><field-ref name="statusId"/><field-ref name="submitButton"/></field-row-big></field-layout>
+            </form-single>
+            <container-box>
+                <box-body-nopad>
+                    <form-list name="Attendees" list="registrations" skip-form="true" select-columns="true">
+                        <row-selection id-field="registrationId" parameter="registrationIds" list-mode="true">
+                            <action>
+                                <form-single name="RegistrationBatchCancel" transition="applyRegistrations">
+                                    <field name="batch" from="'cancel'"><default-field><hidden/></default-field></field>
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="30" maxlength="200"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Cancel">
+                                            <submit icon="sym_o_cancel" type="danger" confirmation="Cancel the selected registrations? Each releases its place and a paid one's refund goes to Accounting."/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </action>
+                            <action>
+                                <form-single name="RegistrationBatchNotify" transition="applyRegistrations">
+                                    <field name="batch" from="'notify'"><default-field><hidden/></default-field></field>
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Send again">
+                                            <submit icon="sym_o_forward_to_inbox" confirmation="Send the selected registrations their ticket or status again?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </action>
+                        </row-selection>
+                        <field name="attendeeName">
+                            <default-field title="Attendee">
+                                <link url="${detailPath}" text="${attendeeName}" link-type="anchor" parameter-map="{registrationId:registrationId}"/>
+                            </default-field>
+                        </field>
+                        <field name="buyerName"><default-field title="Buyer"><display/></default-field></field>
+                        <field name="ticketName"><default-field title="Ticket"><display/></default-field></field>
+                        <field name="occurrenceText"><default-field title="Occurrence"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="holdEndsText"><default-field title="Held until"><display/></default-field></field>
+                        <field name="paymentText"><default-field title="Payment"><display/></default-field></field>
+                        <field name="refundText"><default-field title="Refund"><display/></default-field></field>
+                        <field name="createdText"><default-field title="Registered"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="attendeeName"/><field-ref name="ticketName"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="paymentText"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+            <label text="${filtered ? 'No registration matches these filters.' : 'No registration yet.'}" type="p" style="text-caption m-muted"
+                    condition="!registrations.length"/>
+        </widgets></section>
+    </widgets>
+</screen>

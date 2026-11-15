@@ -1371,6 +1371,28 @@ written by E after its checks since Commons' publication services ask the form's
 EventCommunicationSchedule (trigger and offset, an email template of the organization, recipients, transactional or
 promotional; a promotional template is never a transactional notice).
 
+As built (impl-marketing P17): a request for places is an EventReservation (its buyer, PASS's request key, unique per offer, and the
+terms revision accepted) with one EventRegistration per attendee; the offer's row lock and then its ticket types' (the lock the
+capacity changes take) hold every place of a request together for the offer's hold minutes, or put them all on the waitlist when
+they do not fit and the waitlist's place limit allows. Completing names the attendees, answers the questions per attendee or once for
+the buyer (Commons' accept#Submission on the offer's own publication; the response kept on the registration) and keeps the accepted
+terms' words once per revision (EventRegistrationTerms); a free reservation confirms then. The ticket order (purpose
+OrpEventRegistration) is made at the payment's start, one line per paid place at the ticket product's price, taxed by
+calculate#OrderSalesTax (X1 through the organization's gateway at the event's facility address, else the organization's own; the
+store's for a store order), with a promised payment and Accounting's attempt (PapEventRegistration) committed before the provider is
+asked. The verified result is applied under the offer's lock: still held, the places pend (no end) and place#Order runs once, whose
+OrderPlacedAutoApprove reaches autoApprove#Order; the order's approval (or Sales' approver) confirms them through the
+EventRegistrationOrderStatus SECA, its cancellation cancels them. A success after a hold ended leaves its places for review (EvrReview,
+no seat, the order not placed); staff refund it, or give seats where free, which places the order. A storeless ticket order skips
+check#OrderPreApprove's new-customer and shipping-address checks (nothing ships, no store's settings apply); Sales' own warnings still
+stop it (impl-marketing P17, the user's call to confirm). A cancellation releases the place once, revokes the entry code and hands a
+paid place's refund to the payment services after the commit (release of an authorization once none of its places is left, else
+refund#SinglePayment of its line and tax), shown pending until the provider's answer and Accounting's to finish when it fails; then the
+waitlist is offered in order with a hold of its own. The entry code is never stored: its digest and revision are, and each new code (a
+ticket notice, Show my entry code, a substitution) revokes the last. Jobs: run_EventRegistrations (payment results, placement retries,
+waiting refunds, hold expiry, waitlist offers) and run_EventRegistrationNotices (the time-driven notices), each with its operation and
+JobRegistration.
+
 **Source:** research §7; Odoo tickets/questions/mail schedulers, Frappe LMS batch and native event/product/order joins.
 
 ### Registrations
@@ -1385,6 +1407,15 @@ promotional; a promotional template is never a transactional notice).
 Marketing messages use promotional consent; receipt, schedule-change and cancellation notices use
 registration authority and cannot carry unrelated promotions. Staff entries follow the same holds,
 consent and payment checks as public entries. **Needs:** MKT-EVENT, MKT-CONSENT.
+
+As built (impl-marketing P17): at `Marketing/Events/Registrations` (an event's offers, one offer's or all of the user's organizations'),
+the events managers' (MARKETING_EVENT_MANAGE); StaffRegistration holds or waitlists a place as a visitor's request would (outside the
+public window), names the attendee and records the terms as accepted on the buyer's behalf, a free place confirming; RegistrationBatch
+is the list's row selection (Cancel with a reason, Send again), each item in a transaction of its own. The registration's own messages
+(receipt, ticket, waitlist offer, cancellation) are transactional deliveries of the ledger (source MdsrcEventRegistration) from the
+offer's transactional profile; the offer's scheduled notices are one delivery per registration, schedule and trigger, a promotional one
+handed off only with the recipient's consent. EventRegistration is a Chatter and RecordFiles host (EventRegistrationContent), seen by
+the organization's events managers only.
 
 **Source:** research §7; Odoo attendees and Dolibarr event registration.
 
@@ -1401,6 +1432,11 @@ Cancellation releases capacity once. A refund request is handed to the existing 
 and stays pending until its result; a cancelled registration does not imply refunded money.
 Attendee substitution requires explicit permission, updates the entitled party, revokes old entry
 credentials and records the reason; no silent overwriting of historical check-in. **Needs:** MKT-EVENT.
+
+As built (impl-marketing P17): at `Marketing/Events/RegistrationDetail`; Answers links the shared response page
+(`Surveys/ResponseDetail`); Attendance is the registration's action history (EventRegistrationAction: who, when, the states, the code
+revision, the reason), which P18's check-ins join. Confirm is for a held free place or a place paid after its hold (given seats only
+where free for every place of its payment); Correct or substitute records the reason and whom it replaced and revokes the old code.
 
 **Source:** research §7; Odoo registration record and Frappe LMS enrollment/attendance.
 
@@ -2025,6 +2061,13 @@ gateway webhooks land as SystemMessage receipts on Accounting's side. A user can
 of attendee address can be required by publication policy; payment alone does not prove control of
 all attendee addresses. **Needs:** MKT-EVENT, MKT-PUBLIC.
 
+As built (impl-marketing P17): `Marketing/Register?offer=` (the Event page's Register link) over the operations
+`reserveRegistration` (POST `marketing/registration`, an anonymous write: PASS's request key, ten requests per client in ten minutes,
+500 per site an hour and five per buyer address an hour, refused alike and holding nothing), `completeRegistration`,
+`startRegistrationPayment` and `getRegistration` (POSTs by the reservation's capability, kept in the visitor's session, never in an
+address); the provider returns to `?ref=&key=`, whose key reads the state alone. Only a provider page by address is followed; a gateway
+whose hosted step is a posted form (Accept Hosted) is not offered here yet.
+
 **Source:** research §7; Odoo event tickets, Dolibarr public registration and native order/form records.
 
 ### Registration
@@ -2041,6 +2084,13 @@ and awaiting the organizer's confirmation, with the receipt and no ticket, entry
 Buyer access to an order does not reveal another attendee's private survey answers. Entry credentials
 are opaque, revocable and event-bound. Expired/unknown capabilities return the same unavailable
 response; staff correction remains an internal action. **Needs:** MKT-EVENT, MKT-PUBLIC.
+
+As built (impl-marketing P17): `Marketing/Registration`, reached by the ExternalAccess kind `EventRegistration` (a reservation; scopes
+RegistrationView and RegistrationCancel, issued only by the registration services: at the reservation and in each receipt) or by the
+buyer's own verified account (the self relationship); a link's token is read once into the session and the address replaced by the
+reference. Show my entry code is a POST with a fresh request key that issues a new code (its QR from the built barcode helper),
+shown once; cancelRegistration (POST, RegistrationCancel) is the buyer's until the occurrence starts. No answer, code digest, order line
+or party id is in any answer.
 
 **Source:** research §7; Odoo attendee receipt and shared PASS source-bound access.
 
@@ -2087,6 +2137,7 @@ there is no parallel Marketing version/snapshot system for configuration history
 | RegistrationEvent (impl-marketing P16, F107) | event, organization, who and when | The organization that offers an event's registration, kept once; the event stays the calendar's |
 | EventRegistrationPolicy / EventTicketType | event occurrence, effective offer/terms, site, registration window, capacity/hold/waitlist, ticket product and pricing source | One authoritative capacity domain per occurrence and per ticket; accepted terms referenced by registrations |
 | EventRegistration | registration ID, occurrence/ticket, attendee/buyer party, hold expiry/state, native order/item/payment references, source campaign, response ID, entry credential digest/revision | Attendee identity separate from payer/order; unique source/request allocation; financial facts remain in native records |
+| EventReservation / EventRegistrationTerms (impl-marketing P17) | a request's buyer, request key (unique per offer), terms revision, order and payment; an offer's terms, cancellation terms and consent text per terms revision | A repeat answers the first; the words a registrant accepted survive a later change of the offer |
 | EventRegistrationAction / EventCommunicationSchedule | action ID, registration, action/actor/time/reason; event effective trigger/offset/template/purpose | Check-in/correction/cancellation evidence and one notice per registration/schedule/trigger, sent as a delivery-ledger source; no duplicate event store |
 | FormPublication / FormInvitation / FormSubmission (Commons, X16) | publication ID, DbForm, site/campaign or case/purpose/access/effective interval; invitation over `ExternalAccessCapability`; submission ID/request identity, response, verified party if any, source/effects status | One model for Marketing, Customer Service and Sales lead forms, owned by Commons; framework owns form/answers; publication controls exposure; submission is an acceptance/integration fact, not a copy of answers |
 | MarketingLeadRule / MarketingLeadCapture | dated source/trigger/allowed mapping and Sales routing target; unique rule/source event, opportunity/result/error | Reusable Sales intake; retries never create duplicate opportunities or grant consent |

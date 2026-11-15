@@ -4785,6 +4785,174 @@ Design §9 RegistrationSetup's order rules, Registrations and RegistrationDetail
   on, a paid registration shows pending with its place held until the order is approved from Sales' Awaiting
   approval list, and then shows its ticket.
 
+**Built Nov 15 (P17).** mr-mantle, mr-pass and mr-boss on branch `mkt/p17` (hashes in the worker's reply), from master after P16's
+merge; mr-moqui unchanged, no Rust built.
+- Checked first (the code over the plan): P16's Built and Review notes (F308–F321) and §4; impl-sales P7 (X1: SalesTax.js `order`, which
+  taxes a storeless part only with an address), P9, P11 (`autoApprove#Order`, SalesOrders.js `approvalWaits`, OrderPlacedAutoApprove),
+  P13 and P17; Shop's checkout (ShopCheckout.js freeze, authorize, apply, place, refresh) and Accounting's attempt coordinator
+  (PaymentAttempts.js, PapEventRegistration); `check#OrderPreApprove`; ExternalAccess.js; the delivery ledger (`queue#Delivery`, a
+  source's build); MarketingPortal.js (served, limits, SubmitForm's pattern); the schema, route and TOKEN_WRITES copies; mr-pass's
+  Marketing pages and Shared/Portal.js. The code over the plan:
+  - "EventRegistration (one per attendee; ... the order, item and payment references ...)": a request is its own record,
+    `EventReservation` (buyer, PASS's request key unique per offer with a hash of its values, terms revision, order, payment, the return
+    key's digest), each attendee an EventRegistration; the accepted words are kept once per terms revision in `EventRegistrationTerms`
+    and each registration names its revision (P16 review: not the audit log). `EventRegistrationAction` is the history (states, code
+    revision, reason, operation key) and `EventRegistrationContent` the files host. A new state `EvrReview` (paid after the hold ended,
+    no seat) with the transitions every move needs;
+  - "start#RegistrationPayment makes the attempt for the held order": the order is made at the payment's start and placed only once the
+    attempt's verified result is approved (Shop's order of steps), so no unpaid ticket order is ever placed and listed in Sales' Awaiting
+    approval; its placement's own SECA (OrderPlacedAutoApprove) runs `autoApprove#Order`, so the approval is never a status write of
+    Marketing's. The registrations follow the order by a new SECA on OrderHeader's status (`EventRegistrationOrderStatus`, in the
+    order's transaction): Approved confirms the pending places once, Cancelled or Rejected cancels them;
+  - "taxed through the organization's gateway by X1": X1 taxes a storeless part only at an address, so the order part's address is the
+    event's facility's postal address, else the organization's own (PostalShippingOrigin, Primary, Billing); an online event with
+    neither is untaxed;
+  - "unless the order carries a pre-approval warning": `check#OrderPreApprove`'s built-in sales checks (a new customer; a missing or
+    untrusted shipping address) warned on every first-time storeless ticket order, so none would ever auto-approve. A storeless order of
+    purpose `OrpEventRegistration` now skips those two checks (nothing ships; a store's settings turn them off for its orders); Sales'
+    own warnings, credit and the approval setting still stop it (Mantle OrderInfoServices.xml, an owner contract written into
+    design-sales §5; the user's call to confirm);
+  - "a refund handed to Accounting and shown pending": handed to the payment services after the commit, with the registration's
+    operation key: `release#SinglePayment` of an authorization once none of its places is left, else `refund#SinglePayment` of the place's
+    line and its tax once taken; refunded on the provider's success, else `ErfFailed` (Accounting's to finish), never retried blind; a
+    partial cancellation of an authorization not yet taken waits (requested) and the job hands it over once it is captured;
+  - "MyRegistration with the ticket and entry QR": the entry code is never stored (its digest and revision are), so a code cannot be
+    shown again: each ticket notice attempt and each "Show my entry code" (getRegistration with showTicket and a fresh request key, a
+    POST) issues a new code and revokes the last; the QR is the built barcode helper's;
+  - the PASS operations are camelCase POSTs, as P12's and Shop's capability reads: `reserveRegistration` (anonymous, the plan's
+    `marketing.reserveRegistration`), `completeRegistration`, `startRegistrationPayment`, `getRegistration`, `cancelRegistration`, all
+    in the three TOKEN_WRITES lists (PassAuthority, PassApi, mr-pass Transport, identical), the remote transport exempting
+    `reserveRegistration` from its session rule as `requestSubscription`; schema and route copies byte-identical;
+  - "by verified account or a registration-scoped capability": the ExternalAccess kind `EventRegistration` names a reservation
+    (scopes RegistrationView, RegistrationCancel), issued only by the registration services (at the reservation, once, and in each
+    receipt), `self: true` for the buyer's verified account; the page keeps a token in the session and drops it from the address;
+  - the registration and lead-rule triggers of P11 and P13 are not built (they need the offer named on MarketingAutomation and
+    MarketingLeadRule and their screens; attendance waits for P18's check-in) — see the findings;
+  - the demo: ORG_ZIZI_RETAIL has no accounting preference of its own (it rolls up to ORG_ZIZI_CORP), so a Retail row naming LOCAL
+    would cut its rollup for every other setting; not added (the workshop's ticket order is untaxed in the demo; the user's call).
+- Mantle:
+  - `entity/EventRegistrationEntities.xml` (a P17 block: EventRegistration's fields, EvrReview and transitions, the refund states;
+    EventReservation, EventRegistrationTerms, EventRegistrationAction, EventRegistrationContent); `data/MarketingSeedData.xml` (source
+    MdsrcEventRegistration, EmailTemplate MANTLE_EVENT_REGISTRATION, order purpose OrpEventRegistration); `data/EventRegistrationSetupData.xml`
+    (new: jobs `run_EventRegistrations` every two minutes and `run_EventRegistrationNotices` every fifteen, their JobRegistration and
+    RecoveryDescriptor); `service/EventRegistration.secas.xml` (new).
+  - `service/mantle/work/EventRegistrationServices.xml` (a P17 block: find#, get#, reserve#, complete#, confirm#, cancel#, correct#Registration,
+    change#Registrations, start#RegistrationPayment, check#RegistrationAccess, create#EventRegistrationContent, run#RegistrationHolds,
+    run#RegistrationNotices and the internal handle#RegistrationOrderStatus, offer#WaitlistPlaces, refund#, refresh#RegistrationPayment,
+    queue#RegistrationNotice, build#RegistrationDelivery) over three new modules: `EventRegistrationPlaces.js` (reserve under the offer's
+    and tickets' locks, complete, confirm, cancel once, waitlist offers in order, hold expiry, the order's status, the staff reads and
+    writes), `EventRegistrationPayments.js` (the order, the attempt, the verified result, placement, refunds, the job's part) and
+    `EventRegistrationNotices.js` (receipts, tickets, offers, cancellations and the schedules as ledger deliveries); `EventRegistrations.js`
+    exports `publicFacts` and `profileOf`.
+  - `MarketingPortal.js` (a P17 section: reach, the view, the five operations; `subscriberOf` exported), `MarketingPortalServices.xml`;
+    `ForumSchema.js`, `script/PassRoutes.js`, `PassAuthority.js`, `PassApi.js`; `ExternalAccess.js` (the kind); `CommunicationServices.xml`
+    (the host's visibility and files); `OrderInfoServices.xml` (above); `MarketingWorkspace.js` (Home's registrations card: places taken
+    against the seats of the published offers to come).
+- PASS: `screen/Marketing/Register.xml` and `.html.fancy` (RegistrationChoice, RegistrationAnswers, RegistrationPayment, RegistrationReceipt),
+  `Registration.xml` and `.html.fancy` (MyRegistration with Show my entry code, CancelRegistration), `Registrations.js` (the session's
+  capability, the calls); the Event page's Register link; `Schema.js`, `Routes.js`, `Transport.js`; `screen/Marketing.xml`'s comment;
+  `docs/Deployment.md` (Registrations), README.
+- BOSS: `screen/Marketing/Events/Registrations.xml` (RegistrationFind, Attendees with row selection for Cancel and Send again,
+  StaffRegistration) and `RegistrationDetail.xml` (the header with Confirm by state and More: Correct or substitute, Send again, Cancel;
+  Registration facts, the terms accepted, Answers' link, the history) over `template/MarketingRegistrations.xml` (new); Events' subscreens
+  and EventDetail's Registrations link; RegistrationSetup's More › Registrations; Home's card link; `Marketing.js` (registrationRead, the
+  link paths, the `registration` record kind); `RecordFilesServices.xml` (the host).
+- Specs:
+  - Mantle `test/work/EventRegistrations` (new, 6 features, about 1.5 s): two requests for the last seat held and waitlisted, the hold
+    expired once and the waiting place offered and confirmed with its terms' words kept; a storeless ticket order taxed through the
+    organization's gateway (two lines, 84.80), approved with no store, one payment for two starts and one confirmation for two results;
+    a staff cancellation (a reader and another organization's manager refused, a stale revision refused, twice STATUS_INVALID) releasing
+    one seat and refunding 42.40; a payment after the hold ended left for review with no seat while another visitor holds it, and a
+    calendar RSVP no seat; with the approval setting on the order placed, the place pending with no end and no code until the order is
+    approved, then confirmed; a cancelled order cancelling its place and offering the waiting one; a client's reservations past its
+    limit refused and holding nothing. `test/marketing/MarketingScope` (Home's registrations card now available).
+  - mr-pass `test/Marketing/MarketingRegistration` (new, 3 features, about 0.3 s; fixtures `MarketingFixtures.js` registrations()):
+    Register's one html render; a capability reads and cancels only its own reservation, a forged, another site's and a bad return key
+    the one NotFound; the places' allow-listed keys, no answer, credential or party id; the client limit; the operations in both schema
+    copies and route lists and in the three TOKEN_WRITES lists alike.
+  - mr-boss `MarketingRegistrations` (new, 2 features, about 0.6 s): RegistrationDetail's one qvt render of a staff registration of the
+    demo webinar for the events manager; a reader's "Not available" (html), the record kind, another organization's author refused, the
+    list, the context's links and capability.
+  - Acceptance, written and not run: mr-boss `test/acceptance/Marketing/MarketingRegistrationScenario` (5 features, stepwise: the free
+    webinar's ticket with the video link; the race; the paid registration taxed with no store; cancellation from RegistrationDetail with
+    the refund and the waitlist offer; the approval setting on, approved, then the ticket); mr-pass `test/acceptance/MarketingRegisterFixtures`
+    and `test/acceptance/client/MarketingRegisterHttp` (in `suite.js`: register from the Event page, Registration by the receipt's
+    link, the race and a cancellation offering the waiting place, a forged link).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle EventRegistrations, EventRegistrationSetup,
+  SalesOrderApproval, StorelessOrderTax, PaymentAttemptPurpose, PassAuthority, MarketingSubscriptions, SalesPortal, AccountingPortals,
+  MarketingScope, RecordVisibility, ContentRecords, ShopCheckout, CalendarServices, Campaigns (all passed); mr-pass MarketingRegistration,
+  MarketingEvents, MarketingAccess, SubmitForm, MarketingPages, ShopCart, SalesPortalAccess, Transport (all passed); mr-boss
+  MarketingRegistrations, MarketingEvents, MarketingAccess, EventDetail, Calendar, MarketingCampaigns, SalesOrders (all passed); after
+  Prettier the new specs and their neighbours again (24 of 24). `moqui lint --screens` (release): 141 flagged sites, as before, none in a
+  new or changed screen; parse failures 0. Prettier (mr-moqui's config) on the new and changed JavaScript (ExternalAccess.js was not
+  clean before and is left). Not run: test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P17" table (and check#OrderPreApprove's change); ss-inventory has no baseline
+  registration form to map.
+- Design edits: design-marketing §9 RegistrationSetup's order rules, Registrations and RegistrationDetail (as built), §13 Register and
+  Registration (as built), §14.1 EventReservation and EventRegistrationTerms; design-sales §5 (the storeless ticket order's
+  pre-approval checks, an owner contract).
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: the reservation and terms records, the order placed after the verified payment, the order-status
+    SECA, EvrReview, refunds through the payment services, the code never stored and shown anew, the camelCase POST operations, the
+    EventRegistration kind naming a reservation;
+  - `check#OrderPreApprove` skips the new-customer and shipping-address warnings for a storeless ticket order; without it no first-time
+    buyer's ticket order would ever auto-approve with the approval setting off (the user's call);
+  - the registration and lead-rule triggers of P11 and P13 are not built: they need a field naming the offer on MarketingAutomation and
+    MarketingLeadRule, their screens' choices and a source cursor over confirmed registrations; attendance's trigger waits for P18;
+  - the demo's Retail has no accounting preference of its own, so no tax gateway was named for it (the plan's demo row) and the
+    workshop's ticket orders are untaxed in the demo; the acceptance scenario uses its own organizations;
+  - Register follows a provider page by address only; a gateway whose hosted step is a posted form (Authorize.Net Accept Hosted, Shop's
+    PaymentRelay) is not offered on Register yet;
+  - a partial cancellation of a payment only authorized waits for the capture to refund; the order's line is not cancelled, so the
+    order's total stays as paid; a hold that ends while the payer is at the provider leaves the unplaced order open (a late success is
+    review, refunded or seated by staff, never automatically);
+  - a price changed between the reservation and the payment's start is charged at the new price without a review step (Shop's
+    checkout reviews it);
+  - each ticket notice attempt and each Show my entry code revokes the earlier code, so an earlier email's code stops working;
+  - the public cancellation is allowed until the occurrence starts whatever the cancellation terms say (they are words, not a rule);
+  - Register posts an attendee's questions only for a publication open with the offer; a registration's answers open in Surveys'
+    ResponseDetail, whose own access decides who reads them.
+- For the lead:
+  - budget share: mr-mantle about 1.5 s (EventRegistrations); mr-pass about 0.3 s of features (MarketingRegistration; its fixtures in
+    setup); mr-boss server about 0.6 s (MarketingRegistrations); no client spec;
+  - merge hot spots: mr-mantle `entity/EventRegistrationEntities.xml` (the P17 block; P18 adds check-in), `EventRegistrationServices.xml`,
+    `EventRegistrationPlaces.js` (`issueCode`, `registrationOfCode` for P18), `MarketingPortal.js` (a P17 section before livePagesOf, the
+    operations table and exports), `MarketingPortalServices.xml`, `ForumSchema.js`, `script/PassRoutes.js`, `PassAuthority.js`,
+    `PassApi.js`, `ExternalAccess.js` (a kind before SalesOrder), `CommunicationServices.xml` (host rows), `OrderInfoServices.xml` (Sales'
+    file), `MarketingWorkspace.js` (the card), `data/MarketingSeedData.xml` (a P17 block), `test/marketing/MarketingScope.spec.js`; mr-pass
+    `Schema.js`, `Routes.js`, `Transport.js`, `screen/Marketing/Event.*`, `test/Marketing/MarketingFixtures.js`,
+    `test/acceptance/client/suite.js`, README, `docs/Deployment.md`; mr-boss `screen/Marketing/Events.xml`, `Events/RegistrationSetup.xml`,
+    `Home.xml`, `Marketing.js`, `RecordFilesServices.xml`, `test/Marketing/MarketingSpecLib.js`, `plan/usl-inventory.md`,
+    `plan/design-marketing.md`, `plan/design-sales.md`, this file;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, after PASS Marketing's Event page paragraph; no mr-moqui worktree): "PASS
+    Marketing's registration (`mantle.marketing.MarketingPortalServices` `reserve#Registration`, `complete#Registration`,
+    `start#RegistrationPayment`, `get#Registration` and `cancel#Registration`, each `allow-remote="false"`, `authenticate="anonymous-all"`,
+    reached only as the PASS operations `reserveRegistration`, `completeRegistration`, `startRegistrationPayment`, `getRegistration` and
+    `cancelRegistration` of the authority's allowlist, all POSTs in the three TOKEN_WRITES lists, rendered at `/marketing/Register` and
+    `/marketing/Registration`) finds the organization from the site's `marketing` mount and reserves only on an offer published on that
+    site, open now; a reservation is an anonymous write bounded by PASS's request key (a repeat answers the first; the same key with
+    other values is refused) and the authority's limits (ten a client in ten minutes, 500 a site an hour, five a buyer's address an
+    hour), past which it is refused alike and holds nothing; the buyer is a party made or matched by the address without saying which.
+    Its places are held or waitlisted together under the offer's and its tickets' row locks, so the seats are never oversold. Every
+    later operation is reached by the reservation's capability (ExternalAccess `EventRegistration`, scopes RegistrationView and
+    RegistrationCancel, its token answered once to the reserving request or put in a receipt, stored as a digest only and kept in the
+    visitor's session, never in an address), by the buyer's own verified account, or for the payment provider's return by the
+    reservation's reference and a return key (its digest only), which reads the state alone; an unknown, expired or another site's
+    capability and a bad key answer the same NotFound, and every token lookup counts against the requester's limit first. The payment
+    is Accounting's typed attempt (PapEventRegistration) with the gateway's operation key, its amount the native order's total (the
+    ticket products' own prices, X1's or the store's tax), never a value from the request; the browser's return confirms nothing: the
+    verified result is applied under the offer's lock, and a success after the hold ended takes no seat. The answer names each place's
+    attendee, ticket and state, the payment and refund state and the event's public facts; never another attendee's answers, an entry
+    code's digest, the order's lines or a party id. An entry code is issued only to a confirmed place's ticket or by Show my entry code (a
+    POST with a fresh request key), shown once, stored as a digest with a revision, each new code revoking the last; the link to join an
+    online event goes to a confirmed place only. A cancellation needs the RegistrationCancel scope, a confirmation and a request key,
+    before the occurrence starts. Staff registrations go through `mantle.work.EventRegistrationServices`, which asks
+    MARKETING_EVENT_MANAGE in the offer's organization for every read and write (another organization's registration answering as a
+    missing one), each write at the revision read; the registration's files and Chatter are its events managers' only.";
+  - the user's calls: the storeless ticket order's pre-approval exemption (above); the demo's tax gateway for Retail (a Retail
+    accounting preference would cut its rollup to Corp); where the registration triggers of P11 and P13 go (P18 with attendance, or a
+    follow-up); whether Register should take Accept Hosted's posted form as Shop's PaymentRelay does.
+
 ### P18 — Check-in
 
 Design §9 CheckIn; MKT-EVENT; CX-DEVICE; gate 6. Admin P18's shared devices are built (F83).

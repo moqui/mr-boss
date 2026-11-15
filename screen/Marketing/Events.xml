@@ -17,8 +17,9 @@ along with this software (see the LICENSE.md file). If not, see
     mounted, the event under the calendar's own rules, with Marketing's links above its tabs) and RegistrationSetup (one event's
     offers, tickets, questions and notices, the events managers'). Every Marketing reader reads the events (design §2: the app's);
     MARKETING_EVENT_MANAGE sets up their registration. Every read and write is mantle.work.EventRegistrationServices or the calendar's
-    mantle.work.EventServices, which check the permission, the organization and the calendar's rule again. P17 adds Registrations and
-    RegistrationDetail, P18 CheckIn. -->
+    mantle.work.EventServices, which check the permission, the organization and the calendar's rule again. P17: Registrations (an
+    event's or offer's attendees, StaffRegistration and RegistrationBatch) and RegistrationDetail (one registration, its change), the
+    events managers'; P18 CheckIn. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Events" default-menu-index="7" menu-image="sym_o_event" menu-image-type="icon">
     <always-actions>
@@ -33,7 +34,10 @@ along with this software (see the LICENSE.md file). If not, see
                 ec.message.clearErrors()
                 if (eventCheck?.recordId && marketing.capabilities.eventSetupRead)
                     eventAppLinks = [{label: 'Registration setup', icon: 'sym_o_how_to_reg',
-                        url: marketing.webBase + '/Events/RegistrationSetup?workEffortId=' + encodeURIComponent(eventCheck.recordId)}]
+                        url: marketing.webBase + '/Events/RegistrationSetup?workEffortId=' + encodeURIComponent(eventCheck.recordId)},
+                        // P17: the event's registrations, the events managers'
+                        {label: 'Registrations', icon: 'sym_o_groups',
+                        url: marketing.webBase + '/Events/Registrations?workEffortId=' + encodeURIComponent(eventCheck.recordId)}]
             ]]></script>
         </if>
     </always-actions>
@@ -41,6 +45,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Events" location="component://mr-boss/screen/Marketing/Events/Events.xml" menu-title="Events" menu-index="1"/>
         <subscreens-item name="EventDetail" location="component://mr-boss/screen/Commons/Calendar/EventDetail.xml" menu-include="false"/>
         <subscreens-item name="RegistrationSetup" location="component://mr-boss/screen/Marketing/Events/RegistrationSetup.xml" menu-include="false"/>
+        <subscreens-item name="Registrations" location="component://mr-boss/screen/Marketing/Events/Registrations.xml" menu-include="false"/>
+        <subscreens-item name="RegistrationDetail" location="component://mr-boss/screen/Marketing/Events/RegistrationDetail.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="MarketingEventsPanel" type="tab"/>

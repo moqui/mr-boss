@@ -148,6 +148,9 @@ function scope() {
     // calendar's (its organizer and its calendars' editors)
     capabilities.eventRead = !!capabilities.anyRead
     capabilities.eventSetupRead = !!capabilities.anyRead && !!capabilities.eventManage
+    // P17: the registrations and their attendees are the events managers' (design §2 Registrations, RegistrationDetail: E), as Mantle's
+    // EventRegistrationServices ask
+    capabilities.registrationRead = !!capabilities.anyRead && !!capabilities.eventManage
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
@@ -263,7 +266,10 @@ const linkPaths = [
     "Events/Events",
     "Events/EventDetail",
     "Events/RegistrationSetup",
-    "QuickCreate/NewEvent"
+    "QuickCreate/NewEvent",
+    // P17: the registrations of an offer or event and one registration (design §9 Registrations, RegistrationDetail)
+    "Events/Registrations",
+    "Events/RegistrationDetail"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -410,6 +416,25 @@ const recordKinds = {
                 organizationPartyId,
                 label: "Tracking link " + trackingCodeId + " · " + (row.description || row.publicCode || ""),
                 detail: row.redirectUrl || ""
+            }
+        }
+    },
+    // P17: an attendee's registration (mantle.work.registration.EventRegistration), by its offer's organization, for an events manager
+    registration: {
+        name: "Registration",
+        icon: "sym_o_how_to_reg",
+        destination: {path: "Events/RegistrationDetail", parameter: "registrationId"},
+        read: (userScope, registrationId) => {
+            if (!userScope.capabilities.eventManage) return null
+            const row = one("mantle.work.registration.EventRegistration", {registrationId})
+            const policy = row
+                ? one("mantle.work.registration.EventRegistrationPolicy", {registrationPolicyId: row.registrationPolicyId})
+                : null
+            if (!policy || !covers(userScope, policy.organizationPartyId)) return null
+            return {
+                organizationPartyId: policy.organizationPartyId,
+                label: "Registration " + registrationId + " · " + (policy.publicTitle || ""),
+                detail: row.statusId || ""
             }
         }
     },
