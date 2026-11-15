@@ -7296,7 +7296,7 @@ reads those dates is updated. Branch `mkt/fix6` in mr-boss (mr-mantle if a Mantl
   and 0.43 s for the touched features); every Marketing and Insights regression spec of mr-boss on 4 workers (31 specs, 103 of 103,
   37.4 s of feature time); the two again after Prettier (mr-moqui's config) on the changed specs. Not run: test-apps, test-framework,
   acceptance.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F436 to F438 in order:
   - the code over the plan above: the campaigns' windows move with the send (the walk's month view and collection need the running
     campaign's), and the only scheduled send is the December one;
   - the December send's name and approval reason name December whatever the load (story seam, low);
@@ -7341,7 +7341,7 @@ reads those dates is updated. Branch `mkt/fix6` in mr-boss (mr-mantle if a Mantl
   - R1 (low): MarketingDelivery's lower bound of 14.5 days left about an hour of margin under `--db snapshot`, which is keyed by the
     server's local day while the send's load day is Chicago's: a UTC server's snapshot made at midnight and read at the end of that
     day sees 14.54 days (15.54 with a spring DST change before the send). The bound is 14 (a broken loader still fails it).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F439 to F441 in order:
   - R1 above;
   - the December send's name ("Garden newsletter, December") and its approval reason ("For the first of December"), and the Holiday
     gift guide's window (16 to 46 days after the load), read as story on a load other than mid-November: low. Not changed: renaming
@@ -7891,6 +7891,12 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F433 | P22 (Review Nov 15): an SMS send's test goes to an allowlisted number as a promotional text, so the hook refuses it (suppressed) unless the tester's number holds PcpSms with the organization; no spec covers the SMS test | P22: as its Review note says |
 | F434 | P22 (Review Nov 15): there is no deployment-wide cap on promotional texts with no user: each of our numbers has its own `smsMaxPromotionalPerNumber` (1000), so the day's total grows with the numbers that have a bridge and a ready profile | P22: as its Review note says |
 | F435 | P22 (Review Nov 15): the Built note's other findings stand (the organization's number as its telecom number, the receipt dropped F73, the estimate with variables unfilled, the inline script's `toNumber` shadowing) | P22: as its Review note says |
+| F436 | Follow-up 6 (Built Nov 15): the code over the plan above: the campaigns' windows move with the send (the walk's month view and collection need the running campaign's), and the only scheduled send is the December one | Follow-up 6: as its Built note says |
+| F437 | Follow-up 6 (Built Nov 15): the December send's name and approval reason name December whatever the load (story seam, low) | Follow-up 6: as its Built note says |
+| F438 | Follow-up 6 (Built Nov 15): still fixed, no spec depends on them: the Sales opportunities' estimated close dates and Retail's holidays (follow-up 3's list less the campaigns), and the past history rows (decisions, consents, imports, the survey's invitation) | Follow-up 6: as its Built note says |
+| F439 | Follow-up 6 (Review Nov 15): R1 above | Follow-up 6: as its Review note says |
+| F440 | Follow-up 6 (Review Nov 15): the December send's name ("Garden newsletter, December") and its approval reason ("For the first of December"), and the Holiday gift guide's window (16 to 46 days after the load), read as story on a load other than mid-November: low. Not changed: renaming touches MarketingDelivery, MarketingShell's agenda, the acceptance MarketingCalendarWalk (name and palette search) and the November sibling's name for symmetry, for little gain; for the lead or the user | Follow-up 6: as its Review note says |
+| F441 | Follow-up 6 (Review Nov 15): a reload over a dev database where the December send was released or sent moves its schedule again (the row's reload already resets its status to CsApproved): demo-only, as the other loaders | Follow-up 6: as its Review note says |
 
 ## 7. Later
 
