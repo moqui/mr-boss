@@ -11,7 +11,20 @@ spec({})
 
 feature("CampaignDelivery shows a released send's recipients to its dispatcher, the address masked", {
     when() {
-        // its schedule a week from now whatever the day the spec runs (the demo's is 1 December), so the release waits for it
+        // the schedule as loaded: 08:00 Chicago time 16 days after the load day (follow-up 6: load#CampaignDatesDemo; a broken loader
+        // leaves none). The load day is Chicago's and a --db snapshot is the server's local day's, up to a day old: from 14 days
+        // (a UTC server's snapshot at midnight read at its day's end is 14.54 days) to 17
+        const loaded = system(() =>
+            ec.entity
+                .find("mantle.marketing.campaign.CampaignSend")
+                .condition("campaignSendId", ids.scheduledSendId)
+                .disableAuthz()
+                .one()
+        )
+        const loadedMs = loaded.scheduledDate == null ? null : ec.user.timestampMillis(loaded.scheduledDate)
+        const loadedDays = loadedMs == null ? null : (loadedMs - Date.now()) / 86400000
+        const loadedHour = loadedMs == null ? null : ec.l10n.format(String(loadedMs), "HH:mm", null, loaded.scheduleTimeZone)
+        // its schedule a week from now whatever the day the spec runs, so the release waits for it
         system(() =>
             invoke("update#mantle.marketing.campaign.CampaignSend", {
                 campaignSendId: ids.scheduledSendId,
@@ -37,9 +50,10 @@ feature("CampaignDelivery shows a released send's recipients to its dispatcher, 
             login(users.system)
         }
         const delivery = asUser(users.dispatch, () => page("Sends/CampaignDelivery", {campaignSendId: ids.scheduledSendId}))
-        return {released, delivery}
+        return {loadedDays, loadedHour, zone: loaded.scheduleTimeZone, released, delivery}
     },
-    then({released, delivery}) {
+    then({loadedDays, loadedHour, zone, released, delivery}) {
+        loadedDays > 14 && loadedDays < 17 && loadedHour == "08:00" && zone == "America/Chicago"
         released.statusId == "CsScheduled"
         delivery.status == 200 && delivery.errors.length == 0
         delivery.output.includes("Delivery of Garden newsletter, December")

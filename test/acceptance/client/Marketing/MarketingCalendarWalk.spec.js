@@ -3,8 +3,10 @@
 // scheduled December newsletter and the spring planting webinar; dragging the webinar to another day moves it (Commons'
 // update#EventOccurrence), while dragging the send moves nothing and clicking it opens SendDetail; a phone given an app password lists
 // the "Campaign calendar" collection over CalDAV with the same items, and its write is refused; the palette finds the campaign and the
-// send by name. The demo's own records (data/BossZZMarketingDemoData.xml); the rules are mr-mantle's MarketingCalendar and mr-boss's
-// MarketingShell. The webinar is moved back at the end.
+// send by name. The demo's own records (data/BossZZMarketingDemoData.xml), dated from the load (follow-up 6: the campaign 14 days
+// before the load day to 77 after, the send 16 days after; follow-up 3: the webinar ten weeks or more after), so the days are read from
+// the records and the projected collection (30 days back, 180 ahead) holds them on any day; the rules are mr-mantle's MarketingCalendar
+// and mr-boss's MarketingShell. The webinar is moved back at the end.
 // Run: ./moq accept mr-boss --spec MarketingCalendarWalk
 const user = "marketing.events"
 const ids = {

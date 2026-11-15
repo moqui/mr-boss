@@ -96,7 +96,8 @@ const ids = {
     retailProfileId: "BOSS_MKT_PROFILE_RETAIL",
     servicesProfileId: "BOSS_MKT_PROFILE_SERVICES",
     // P8's demo sends of the running campaign: a draft from the spring invitation, the November newsletter prepared and approved
-    // (Maya its one recipient), and the December one approved for 1 December
+    // (Maya its one recipient), and the December one approved for 08:00 Chicago time 16 days after the load (1 December for a load
+    // on Nov 15, 2026; follow-up 6), its campaigns' windows dated from the load too
     draftSendId: "BOSS_MKT_SEND_PREVIEW",
     approvedSendId: "BOSS_MKT_SEND_NOV",
     scheduledSendId: "BOSS_MKT_SEND_DEC",
