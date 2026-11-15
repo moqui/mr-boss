@@ -16,19 +16,26 @@ along with this software (see the LICENSE.md file). If not, see
     impl-commerce P7): the record header (the code, its promotion and store, its state as a chip; More: Expire, its promotion)
     and the boxes Code (dates, the use limits per code and per customer, customer entered, customers only, with the reason of
     a change), Customers (the parties the code is limited to: a customer the user may work with, checked by
-    ironstone.commerce.ContextServices.check#Record) and Usage (the committed uses, an order to a row). A code is expired,
+    the mounting app's customer check) and Usage (the committed uses, an order to a row). A code is expired,
     never deleted, so its usage stays readable. Read and saved through mantle.product.StorePromotionServices (get#PromoCode,
-    store#PromoCode, store#PromoCodeParty, expire#PromoCode, find#PromotionUses). Commerce's context only. -->
+    store#PromoCode, store#PromoCodeParty, expire#PromoCode, find#PromotionUses). The context is the mounting app's registration (service/ironstone/shared/PromotionApps.js; impl-marketing
+    P19, F22): Commerce's and Marketing's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Promotion code" default-menu-include="false">
-    <parameter name="appRoot"/>
     <parameter name="promoCodeId" required="true"/>
     <always-actions>
-        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
-        <set field="appRoot" from="sharedMountContext.appRoot"/>
+        <!-- the mounting app's registration and context (design-commerce §7's per-app table; PromotionApps.js; impl-marketing P19) -->
+        <set field="sharedMountContext" from="ec.resource.script('component://mr-boss/service/ironstone/shared/PromotionApps.js').context(appRoot)"/>
         <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
     </always-actions>
-    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <!-- the mounting app's drop-downs (its stores and customers: Commerce's, or Marketing's within Commerce's store scope) -->
+    <transition name="choices" read-only="true">
+        <actions>
+            <script>ec.web.sendJsonResponse(ec.resource.script('component://mr-boss/service/ironstone/shared/PromotionApps.js').choices(appRoot,
+                    {choice: choice, term: term, selected: selected}))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
     <transition name="codes"><default-response url="${sharedLinks['Promotions/PromoCodes']}"/></transition>
     <transition name="saveCode">
         <actions>
@@ -53,8 +60,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="addParty">
         <actions>
-            <!-- a customer the user may work with (Commerce's customer scope), then Mantle's save -->
-            <service-call name="ironstone.commerce.ContextServices.check#Record" in-map="{appRoot:appRoot, recordType:'customer', recordId:(partyId || '')}"/>
+            <!-- a customer the user may work with (the mounting app's customer scope: Commerce's, Marketing's), then Mantle's save -->
+            <script>ec.resource.script('component://mr-boss/service/ironstone/shared/PromotionApps.js').checkCustomer(appRoot, partyId)</script>
             <if condition="!ec.message.hasError()">
                 <service-call name="mantle.product.StorePromotionServices.store#PromoCodeParty" out-map="partyOut"
                         in-map="{promoCodeId:promoCodeId, partyId:partyId}"/>

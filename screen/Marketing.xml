@@ -27,7 +27,10 @@ along with this software (see the LICENSE.md file). If not, see
     routing to Sales and their handoffs, the authors'; BOSS_MKT_LEAD_RULES) and Sales' LeadSources in Settings; P14 Content (campaign
     content, blog posts, the shared landing pages with Marketing's registration and Commons Knowledge; every Marketing reader's); P16
     Events (the registration events, Commons' EventDetail mounted and RegistrationSetup; every Marketing reader's, set up by the events
-    managers); P18 its CheckIn, an events manager's under their own sign-in or an event's shared door tablet's (below). -->
+    managers); P18 its CheckIn, an events manager's under their own sign-in or an event's shared door tablet's (below); P19 Promotions
+    (Commerce's shared promotion screens, for a user with Commerce's promotion read when a store is configured) and, hidden from the
+    menu, Customers (the shared Customer360 with Marketing's engagement) and Contacts (the Commons contact record), the audience
+    readers'. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
 
@@ -57,6 +60,8 @@ along with this software (see the LICENSE.md file). If not, see
                 throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files are not available on a shared device')
             if ((panelName === 'Chatter' || panelName === 'RecordFiles') && ec.context.recordEntity) {
                 const panelHosts = {'mantle.marketing.campaign.MarketingCampaign': 'campaign', 'mantle.marketing.campaign.CampaignSend': 'send'}
+                // P19: ContactDetail's contact record, a party of the scope's audiences (check#Record contact, an audience reader's)
+                panelHosts['mantle.party.Party'] = 'contact'
                 const entityName = String(ec.context.recordEntity)
                 if (!Object.hasOwn(panelHosts, entityName))
                     throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
@@ -95,6 +100,11 @@ along with this software (see the LICENSE.md file). If not, see
             AutomationServices check the permissions and the organization again -->
         <subscreens-item name="Automations" location="component://mr-boss/screen/Marketing/Automations.xml" menu-index="5"
                 menu-include="ec.user.hasPermission('MARKETING_SEND_EDIT') || ec.user.hasPermission('MARKETING_APPROVE') || ec.user.hasPermission('MARKETING_DISPATCH') || ec.user.hasPermission('MARKETING_AUDIENCE_VIEW')"/>
+        <!-- P19: Promotions (design §7): Commerce's shared promotion screens in Marketing's registration (PromotionApps.js), the stores of
+            the user's Marketing organizations within Commerce's store scope, shown only when such a store is configured (the promotions
+            capability); Commerce's promotion permissions decide every read and write in Mantle's StorePromotionServices -->
+        <subscreens-item name="Promotions" location="component://mr-boss/screen/Marketing/Promotions.xml" menu-index="5"
+                menu-include="ec.resource.script('component://mr-boss/service/ironstone/marketing/Marketing.js').promotionsShown()"/>
         <!-- P14: Content (design §8): the campaigns' content, blog posts, landing pages (Shared/Pages and PageDetail in Marketing's registration)
             and Commons Knowledge, for every Marketing reader (the app's, design §2; no area deny); Mantle's content and site page services
             check the content grant, the organization and the wiki's rule again -->
@@ -115,6 +125,10 @@ along with this software (see the LICENSE.md file). If not, see
             routing to Sales, for a content author or the administrator -->
         <subscreens-item name="Leads" location="component://mr-boss/screen/Marketing/Leads.xml" menu-index="9"
                 menu-include="ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW') || ec.user.hasPermission('MARKETING_CONTENT_EDIT') || ec.user.hasPermission('MARKETING_CONFIGURE')"/>
+        <!-- P19: a contact's Customer360 with Marketing's engagement and its contact record (design §10), the audience readers', hidden
+            from the menu: reached from a lead's account, an engagement row or the palette -->
+        <subscreens-item name="Customers" location="component://mr-boss/screen/Marketing/Customers.xml" menu-include="false"/>
+        <subscreens-item name="Contacts" location="component://mr-boss/screen/Marketing/Contacts.xml" menu-include="false"/>
         <!-- P2: quick create's campaign form (QuickCampaign), hidden from the menu -->
         <subscreens-item name="QuickCreate" location="component://mr-boss/screen/Marketing/QuickCreate.xml" menu-include="false"/>
         <!-- P1: Settings (design §12), the administrator's (MARKETING_CONFIGURE); BOSS_MKT_SETTINGS denies the root user group, and

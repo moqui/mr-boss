@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Marketing branch (crosscut §3.2; design-marketing §10 Customer360 and ContactDetail; impl-marketing P19): the section
+    Shared/Customer360 includes when appRoot is Marketing, over mantle.marketing.MarketingWorkspaceServices.get#Engagement (read in its
+    always-actions after Marketing's record check, check#Record contact; anyone else is "not available"). One page, as Commerce's,
+    with no tab bar (the shared tab bar lists every app's tabs, impl-sales F91): the header (the contact's name, the organizations
+    read, Contact record and, for a consent editor, Consent history) and the engagement, primary, each source in its box only when the
+    user holds its permission: campaigns, lists and segments, sends with their delivery, opens and clicks (only while the person allows
+    tracking), form answers (no answer text), event registrations (no order or payment), promotion use (no order) and consent; the
+    sources the user may not read are named, never shown as none. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="MarketingCustomer" condition="appRoot == 'Marketing'">
+            <widgets>
+                <section name="MarketingCustomerMissing" condition="!customerFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Contact not available"/>
+                            <box-body>
+                                <label type="p" text="This contact is not available: it does not exist, or it is not a contact of your organizations' audiences."/>
+                                <link url="${sharedLinks['Audiences/Lists']}" text="Back to lists" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="MarketingCustomerFound" condition="customerFound">
+                    <actions>
+                        <set field="engagementBy" from="Object.fromEntries((customerDetail.sources || []).map(found =&gt; [found.sourceKey, found]))"/>
+                        <set field="omittedText" from="(customerDetail.omittedSources || []).map(key =&gt; ({campaigns: 'campaigns',
+                                memberships: 'lists and segments', sends: 'sends', engagement: 'opens and clicks', submissions: 'form answers',
+                                registrations: 'event registrations', promotionUse: 'promotion use', consent: 'consent'})[key] || key).join(', ')"/>
+                        <set field="failedText" from="(customerDetail.failedSources || []).join(', ')"/>
+                        <set field="contactParameters" from="{partyId:customerPartyId}"/>
+                        <set field="campaignPath" from="sharedLinks['Campaigns/CampaignDetail']"/>
+                        <set field="sendPath" from="sharedLinks['Sends/SendDetail']"/>
+                        <set field="registrationPath" from="marketing.capabilities.registrationRead ? sharedLinks['Events/RegistrationDetail'] : null"/>
+                        <set field="promotionPath" from="marketing.capabilities.promotionRead ? sharedLinks['Promotions/PromotionDetail'] : null"/>
+                        <set field="consentPath" from="marketing.capabilities.consentEdit ? sharedLinks['Audiences/Consent/Contact'] : null"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.party.Party" record-id="${customerPartyId}" title="${customerDetail.partyName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${customerDetail.partyName}" type="h5"/>
+                                    <label text="Engagement with ${(customerDetail.organizationNames || []).join(', ')}" type="p" style="text-caption m-muted q-mb-none"/>
+                                    <label text="Merged into ${customerDetail.merged?.mergedToPartyId}" type="p" style="text-caption text-warning q-mb-none"
+                                            condition="customerDetail.merged"/>
+                                </container>
+                                <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                                    <link url="${sharedLinks['Contacts/ContactDetail']}" text="Contact record" icon="sym_o_contact_page"
+                                            link-type="anchor-button" btn-type="primary" parameter-map="contactParameters"/>
+                                    <link url="${consentPath}" text="Consent history" icon="sym_o_history" link-type="anchor-button"
+                                            parameter-map="contactParameters" condition="consentPath"/>
+                                </container>
+                            </container>
+                        </container>
+                        <label type="p" style="text-caption m-muted" condition="omittedText" text="Not shown to you: ${omittedText}."/>
+                        <label type="p" style="text-warning" condition="failedText" text="Could not be read now: ${failedText}."/>
+
+                        <section name="EngagementCampaigns" condition="engagementBy.campaigns"><widgets>
+                        <container-box>
+                            <box-header title="Campaigns"/>
+                            <box-body-nopad>
+                                <form-list name="EngagementCampaigns" list="engagementBy.campaigns.rows" skip-form="true" paginate="false">
+                                    <field name="campaignName">
+                                        <default-field title="Campaign">
+                                            <link url="${campaignPath}" text="${campaignName}" link-type="anchor" parameter-map="{marketingCampaignId:marketingCampaignId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="howText"><default-field title="How"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="campaignName"/><field-ref name="howText"/></column>
+                                        <column><field-ref name="statusText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!engagementBy.campaigns.count" text="No campaign of your organizations has reached this contact."/>
+                            </box-body-nopad>
+                        </container-box>
+                        </widgets></section>
+
+                        <section name="EngagementSends" condition="engagementBy.sends"><widgets>
+                        <container-box>
+                            <box-header title="Sends"/>
+                            <box-body-nopad>
+                                <form-list name="EngagementSends" list="engagementBy.sends.rows" skip-form="true" paginate="false">
+                                    <field name="sendName">
+                                        <default-field title="Send">
+                                            <link url="${sendPath}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="selectedDateText"><default-field title="Selected"><display/></default-field></field>
+                                    <field name="recipientStatusText"><default-field title="Recipient"><display/></default-field></field>
+                                    <field name="deliveryText"><default-field title="Delivery"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="sendName"/><field-ref name="selectedDateText"/></column>
+                                        <column><field-ref name="deliveryText"/><field-ref name="recipientStatusText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!engagementBy.sends.count" text="No send of your organizations has gone to this contact."/>
+                            </box-body-nopad>
+                        </container-box>
+                        </widgets></section>
+
+                        <section name="EngagementObserved" condition="engagementBy.engagement"><widgets>
+                        <container-box>
+                            <box-header title="Opens and clicks"/>
+                            <box-body-nopad>
+                                <form-list name="EngagementObserved" list="engagementBy.engagement.rows" skip-form="true" paginate="false">
+                                    <field name="sendName"><default-field title="Send"><display/></default-field></field>
+                                    <field name="openCount" align="right"><default-field title="Opens"><display format="#,##0"/></default-field></field>
+                                    <field name="clickCount" align="right"><default-field title="Clicks"><display format="#,##0"/></default-field></field>
+                                    <field name="lastDateText"><default-field title="Last"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="sendName"/><field-ref name="lastDateText"/></column>
+                                        <column><field-ref name="openCount"/><field-ref name="clickCount"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!engagementBy.engagement.count"
+                                        text="Nothing observed: opens and clicks show only while the person allows tracking."/>
+                            </box-body-nopad>
+                        </container-box>
+                        </widgets></section>
+
+                        <section name="EngagementMemberships" condition="engagementBy.memberships"><widgets>
+                        <container-box>
+                            <box-header title="Lists and segments"/>
+                            <box-body-nopad>
+                                <form-list name="EngagementMemberships" list="engagementBy.memberships.rows" skip-form="true" paginate="false">
+                                    <field name="name"><default-field title="Name"><display/></default-field></field>
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${withdrawn ? 'negative' : current ? 'positive' : 'grey-7'}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="sinceText"><default-field title="Since"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="name"/><field-ref name="kindText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="sinceText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!engagementBy.memberships.count" text="On no list or segment of your organizations."/>
+                            </box-body-nopad>
+                        </container-box>
+                        </widgets></section>
+
+                        <section name="EngagementRegistrations" condition="engagementBy.registrations"><widgets>
+                        <container-box>
+                            <box-header title="Event registrations"/>
+                            <box-body-nopad>
+                                <form-list name="EngagementRegistrations" list="engagementBy.registrations.rows" skip-form="true" paginate="false">
+                                    <field name="title">
+                                        <default-field title="Event">
+                                            <link url="${registrationPath}" text="${title}" link-type="anchor" parameter-map="{registrationId:registrationId}"
+                                                    condition="registrationPath"/>
+                                            <label text="${title}" type="span" condition="!registrationPath"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="whenText"><default-field title="When"><display/></default-field></field>
+                                    <field name="roleText"><default-field title="As"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <field name="attendedText"><default-field title="Attended"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="whenText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="attendedText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!engagementBy.registrations.count" text="No registration for your organizations' events."/>
+                            </box-body-nopad>
+                        </container-box>
+                        </widgets></section>
+
+                        <section name="EngagementSubmissions" condition="engagementBy.submissions"><widgets>
+                        <container-box>
+                            <box-header title="Form answers"/>
+                            <box-body-nopad>
+                                <form-list name="EngagementSubmissions" list="engagementBy.submissions.rows" skip-form="true" paginate="false">
+                                    <field name="title"><default-field title="Form"><display/></default-field></field>
+                                    <field name="purposeText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="submittedDateText"><default-field title="Answered"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="purposeText"/></column>
+                                        <column><field-ref name="submittedDateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!engagementBy.submissions.count" text="No answer to your organizations' forms."/>
+                            </box-body-nopad>
+                        </container-box>
+                        </widgets></section>
+
+                        <section name="EngagementPromotionUse" condition="engagementBy.promotionUse"><widgets>
+                        <container-box>
+                            <box-header title="Promotion use"/>
+                            <box-body-nopad>
+                                <form-list name="EngagementPromotions" list="engagementBy.promotionUse.rows" skip-form="true" paginate="false">
+                                    <field name="promotionName">
+                                        <default-field title="Promotion">
+                                            <link url="${promotionPath}" text="${promotionName}" link-type="anchor" parameter-map="{storePromotionId:storePromotionId}"
+                                                    condition="promotionPath"/>
+                                            <label text="${promotionName}" type="span" condition="!promotionPath"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="promoCode"><default-field title="Code"><display/></default-field></field>
+                                    <field name="usedDateText"><default-field title="Used"><display/></default-field></field>
+                                    <field name="discount"><default-field title="Discount"><display currency-unit-field="currencyUomId" align="right"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="promotionName"/><field-ref name="promoCode"/></column>
+                                        <column><field-ref name="discount"/><field-ref name="usedDateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!engagementBy.promotionUse.count" text="No promotion of your organizations' stores used."/>
+                            </box-body-nopad>
+                        </container-box>
+                        </widgets></section>
+
+                        <section name="EngagementConsent" condition="engagementBy.consent"><widgets>
+                        <container-box>
+                            <box-header title="Consent"/>
+                            <box-body-nopad>
+                                <form-list name="EngagementConsent" list="engagementBy.consent.rows" skip-form="true" paginate="false">
+                                    <field name="purposeText"><default-field title="Purpose"><display/></default-field></field>
+                                    <field name="addressText"><default-field title="Address"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${granted ? 'positive' : 'negative'}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="scopeText"><default-field title="For"><display/></default-field></field>
+                                    <field name="consentDateText"><default-field title="Since"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="purposeText"/><field-ref name="addressText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="consentDateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="!engagementBy.consent.count" text="No consent recorded."/>
+                            </box-body-nopad>
+                        </container-box>
+                        </widgets></section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -16,22 +16,61 @@ along with this software (see the LICENSE.md file). If not, see
     impl-commerce P7): the record header (the promotion's id, description, store, rule and dates, its state as a chip; More:
     its codes) and the boxes Promotion (dates, order, code requirement, free ground shipping and the use limits per order, per
     customer and in all, with the reason of a change), Parameters (the registered rule's own parameters, each typed by the rule),
-    Products (included and excluded) and Redemptions (the committed uses, an order and code to a row). Read and saved through
+    Products (included and excluded) and Redemptions (the committed uses, an order and code to a row); in Marketing's context
+    (impl-marketing P19) a Campaigns box, the campaigns linking it (CampaignServices find# and store#CampaignAssociation). Read and saved through
     mantle.product.StorePromotionServices (get#Promotion, store#Promotion, store#PromotionParameters, store#PromotionProducts,
     find#PromotionUses), which check the permission and the store's scope; another organization's promotion, one of another
     staff member's store and a forged id are not available alike. The limits are counted again under a lock when an order is
-    placed (check#OrderPromotionLimits). Commerce's context only. -->
+    placed (check#OrderPromotionLimits). The context is the mounting app's registration (service/ironstone/shared/PromotionApps.js; impl-marketing
+    P19, F22): Commerce's and Marketing's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Promotion" default-menu-include="false">
-    <parameter name="appRoot"/>
     <parameter name="storePromotionId" required="true"/>
     <always-actions>
-        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
-        <set field="appRoot" from="sharedMountContext.appRoot"/>
+        <!-- the mounting app's registration and context (design-commerce §7's per-app table; PromotionApps.js; impl-marketing P19) -->
+        <set field="sharedMountContext" from="ec.resource.script('component://mr-boss/service/ironstone/shared/PromotionApps.js').context(appRoot)"/>
         <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
     </always-actions>
-    <transition-include name="catalogChoices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <!-- a promotion's products under the mounting app (Commerce's catalog choices, Marketing's of its organizations) -->
+    <transition name="catalogChoices" read-only="true">
+        <actions>
+            <script>ec.web.sendJsonResponse(ec.resource.script('component://mr-boss/service/ironstone/shared/PromotionApps.js').products(appRoot,
+                    {term: term, selected: selected}))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
     <transition name="promotions"><default-response url="${sharedLinks['Promotions/Promotions']}"/></transition>
+    <!-- impl-marketing P19 (design-marketing §7): the campaign links of an app whose registration links its campaigns (Marketing's): the
+        open campaigns of the promotion's store organization, a link and its end through the campaign service, which asks the campaign's
+        edit and Commerce's promotion permission and store scope again -->
+    <transition name="choices" read-only="true">
+        <actions>
+            <script>ec.web.sendJsonResponse(ec.resource.script('component://mr-boss/service/ironstone/shared/PromotionApps.js').choices(appRoot,
+                    {choice: choice, term: term, selected: selected, productStoreId: productStoreId}))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="linkCampaign">
+        <actions>
+            <if condition="!sharedMountContext.campaignLinks"><return error="true" message="Campaign links are not available here"/></if>
+            <service-call name="mantle.marketing.CampaignServices.store#CampaignAssociation"
+                    in-map="{marketingCampaignId:marketingCampaignId, associationKindEnumId:'CakPromotion', sourceId:storePromotionId,
+                        purpose:(purpose || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Linked the promotion to the campaign</message></if>
+        </actions>
+        <default-response url="."><parameter name="storePromotionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endCampaignLink">
+        <actions>
+            <if condition="!sharedMountContext.campaignLinks"><return error="true" message="Campaign links are not available here"/></if>
+            <service-call name="mantle.marketing.CampaignServices.store#CampaignAssociation"
+                    in-map="{marketingCampaignId:marketingCampaignId, action:'end', campaignAssociationId:campaignAssociationId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Ended the campaign link</message></if>
+        </actions>
+        <default-response url="."><parameter name="storePromotionId"/></default-response>
+        <error-response url="."/>
+    </transition>
     <transition name="savePromotion">
         <actions>
             <service-call name="mantle.product.StorePromotionServices.store#Promotion"
@@ -102,6 +141,15 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="stateColor" from="promotion.current ? 'positive' : promotion.future ? 'info' : 'grey-7'"/>
             <set field="usesText" from="(usesOut?.useCount || 0) + ' uses on ' + (usesOut?.orderCount || 0) + ' orders'"/>
             <set field="promotionValues" from="Object.assign({}, promotion, {expectedLastUpdatedStamp: promotion.lastUpdatedStamp})"/>
+            <!-- impl-marketing P19: the campaigns linking it, in an app that links its campaigns -->
+            <if condition="sharedMountContext.campaignLinks">
+                <service-call name="mantle.marketing.CampaignServices.find#CampaignAssociations" out-map="campaignLinksOut" transaction="force-new"
+                        ignore-error="true" in-map="{associationKindEnumId:'CakPromotion', sourceId:storePromotionId}"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+            <set field="campaignLinkList" from="campaignLinksOut?.links || []"/>
+            <set field="canLinkCampaign" from="!!campaignLinksOut?.canLink"/>
+            <set field="campaignDetailPath" from="sharedLinks['Campaigns/CampaignDetail'] || null"/>
         </if>
     </actions>
     <widgets>
@@ -212,6 +260,63 @@ along with this software (see the LICENSE.md file). If not, see
                             text="Each limit is counted again over the placed orders when an order is placed; an order past one is refused until it is repriced."/>
                 </box-body>
             </container-box>
+
+            <!-- impl-marketing P19 (design-marketing §7): the campaigns this promotion is linked to, attribution and planning context and
+                no rule, usage ceiling or grant; linked and ended by a campaign editor who also holds Commerce's promotion permission,
+                read only otherwise -->
+            <section name="PromotionCampaigns" condition="sharedMountContext.campaignLinks"><widgets>
+                <container-box>
+                    <box-header title="Campaigns"/>
+                    <box-toolbar>
+                        <container-dialog id="LinkCampaignDialog" button-text="Link to a campaign" icon="sym_o_link" width="560"
+                                title="Link ${promotion.itemDescription} to a campaign" condition="canLinkCampaign">
+                            <form-single name="LinkCampaignForm" transition="linkCampaign" map="{storePromotionId:storePromotionId}">
+                                <field name="storePromotionId"><default-field><hidden/></default-field></field>
+                                <field name="marketingCampaignId">
+                                    <default-field title="Campaign">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'campaigns', productStoreId:promotion.productStoreId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="purpose"><default-field title="Purpose" tooltip="Why the campaign uses this promotion"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Link"/></default-field></field>
+                            </form-single>
+                            <label type="p" style="text-caption m-muted"
+                                    text="A link is planning and attribution context; the promotion's rule, limits and codes stay as they are."/>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="PromotionCampaignLinks" list="campaignLinkList" skip-form="true" paginate="false">
+                            <field name="campaignName">
+                                <default-field title="Campaign">
+                                    <link url="${campaignDetailPath}" text="${campaignName}" link-type="anchor"
+                                            parameter-map="{marketingCampaignId:marketingCampaignId}" condition="campaignDetailPath"/>
+                                    <label text="${campaignName}" type="span" condition="!campaignDetailPath"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText"><default-field title="Campaign state"><display/></default-field></field>
+                            <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                            <field name="rowActions" align="right">
+                                <default-field title="">
+                                    <link url="endCampaignLink" text="End link" icon="sym_o_link_off" link-type="hidden-form-link" btn-type="danger"
+                                            condition="canEnd" confirmation="End the link of this promotion to ${campaignName}?"
+                                            parameter-map="{storePromotionId:storePromotionId, marketingCampaignId:marketingCampaignId,
+                                                campaignAssociationId:campaignAssociationId}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="campaignName"/><field-ref name="statusText"/></column>
+                                <column><field-ref name="fromDateText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!campaignLinkList.length"
+                                text="No campaign of your organizations uses this promotion yet."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets></section>
 
             <container-box>
                 <box-header title="Rule values"/>

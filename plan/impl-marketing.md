@@ -5375,6 +5375,147 @@ Design §7, §10 Customer360 and ContactDetail; MKT-CAMPAIGN (associations), MKT
   links a store promotion to a campaign and generates codes from Marketing; one without it sees the link read only;
   Customer360 shows a contact's sends and registrations and no order to a user without the Sales reader's right.
 
+**Built Nov 15 (P19).** mr-mantle and mr-boss on branch `mkt/p19` (hashes in the worker's reply), from master after P18's merge; mr-moqui
+and mr-pass unchanged, no Rust built. Built beside P20 (`mkt/p20`): the hot spots below.
+- Checked first (the code over the plan): P17's and P18's Built and Review notes, §4, F82 and F91; Sales P3's merge (PartyMerge.js `rules()`,
+  DuplicateServices.xml `merge#Parties` and its Sales move block) and Customer360's Sales branch (template/SalesCustomer360.xml); P14's
+  page registration (PageApps.js), the model here; Commerce's promotion screens, `ironstone.commerce` Commerce.js and Mantle's
+  StorePromotions.js and StoreAdmin.js scopes; P2's `store#CampaignAssociation` (CakPromotion was admitted with the campaign's edit alone).
+  The code over the plan:
+  - "the promotion mounts take their context from the mounting app": a registration per app, mr-boss `service/ironstone/shared/PromotionApps.js`
+    (as P14's PageApps.js): context and choices services, the choice names (stores, customers, campaigns), the capabilities that show
+    the edits and the order links, the product choices, the customer check and whether the app links campaigns. The four screens read it
+    in always-actions and no longer declare `appRoot`, so the app root is the mounting root's, never a request parameter (Commerce's
+    behaviour and specs unchanged). Commerce's registration is its context, choices, Products' catalog choices and its customer check as
+    built; Marketing's offers the stores of the user's Marketing organizations within Commerce's store scope (StoreAdmin.js, so a
+    store-limited staff member's own), its own product and customer choices (Mantle's rules: a product of the organization or shared, a
+    Customer-role directory party) and no order link;
+  - "the Commerce promotion permissions still decide every read and write": Mantle's StorePromotionServices are unchanged; the Promotions
+    menu entry needs `COMMERCE_VIEW` with a Marketing read and shows only when such a store exists (a menu-include over Marketing.js
+    `promotionsShown()`: the root's menu condition reads no screen context); `promotionEdit` is `COMMERCE_PROMOTION_EDIT`;
+  - "a campaign-link section through store#CampaignAssociation": a promotion's link, added or ended, now also needs Commerce's
+    `COMMERCE_PROMOTION_EDIT` with `COMMERCE_VIEW` and the store's scope (the association kind's `guard`), so "one without it sees the
+    link read only" holds in Mantle; a new `find#CampaignAssociations` lists a record's current links of the caller's campaigns with
+    canEnd and canLink; P2's label read `promotionName`, which ProductStorePromotion does not have (now `itemDescription`);
+  - "Customer360 with Marketing's Engagement tab primary": one page with no tab bar, as Commerce's (F91: the shared tab bar lists every
+    app's tabs, so a tab would bring Accounting's, Customer Service's and Sales' empty tabs); the Accounting tabs' conditions leave out
+    Marketing. Paths `Marketing/Customers/Customer360` and `Marketing/Contacts/ContactDetail`, hidden from the menu, the audience readers'
+    (design §2: U); Sales' Marketing mount row maps `Accounts/Customer360` and `Accounts/ContactDetail` to them (F64; SalesAccess's
+    expected keys follow). The record check is a new `contact` kind (a directory party, not another user's personal contact, internal or
+    disabled, shared or owned by an organization of the scope), which also admits the contact record's notes and files panels under the
+    Marketing root (`mantle.party.Party` joins the panel hosts, as Sales');
+  - "get#Engagement ... each source answered only with its own permission and omitted without it": eight sources, each named in
+    `omittedSources` without its permission (never zero): campaigns MARKETING_VIEW; memberships, sends, opens and clicks, consent
+    MARKETING_AUDIENCE_VIEW; form answers MARKETING_AUDIENCE_VIEW or MARKETING_REPORT_VIEW (the purposes' view permissions); registrations
+    MARKETING_EVENT_MANAGE; promotion use Commerce's COMMERCE_VIEW and store scope; each within the caller's organizations (or one named),
+    a failed source named and the rest answered; opens and clicks only while the person allows tracking in the send's organization now
+    (P15); no answer text, order, invoice, payment or opportunity is read. Its module is MarketingEngagement.js (P20 touches
+    MarketingWorkspace.js; the service is a P19 block at the end of MarketingWorkspaceServices.xml);
+  - "ContactDetail, Commons' contact form mounted with Add to list (P3) and the Consent link": the Consent link is P3's in
+    template/ContactRecord.xml; Add to list files `request#Subscriptions` for the one party (pending until the person confirms);
+  - "the party merges": refusals and moves in a module of Marketing's own, mantle/marketing/MarketingPartyMerge.js, called from PartyMerge.js
+    `rules()` and from `merge#Parties` in place of its ContactListParty, PartyConsent and ContactListToken lines. Refused, naming the
+    record: an active enrollment (ENROLLMENT_ACTIVE), an ended one whose automation and source the kept party also has (ENROLLMENT_CONFLICT:
+    the unique key), a live registration (held, pending, confirmed, waitlisted, review) of an occurrence that has not ended
+    (REGISTRATION_ACTIVE; one of a past occurrence moves) and a recipient waiting in an unfinished send (RECIPIENT_PENDING: it would reach
+    the kept party twice; not in the plan's text, the user's call). Memberships: on a collision of current rows on one list and role the
+    more restrictive state goes to the kept party's row (unsubscribed over pending unsubscription or rejected over invalid over a live
+    state; between live states the kept party's stands) and the merged row moves ended. Consent: the history moves, and a withdrawal is
+    recorded (`record#PartyConsent`, new source PcsMerge) wherever MarketingEligibility's `purposeState` finds the merged party's withdrawal
+    undone on the kept party, at each of the kept party's addresses that is the same address (an email ignoring case, a phone by its parts:
+    the merge attaches no duplicate address, so a withdrawal keyed to the merged party's contact mechanism would otherwise reach nothing).
+    Segment members move, an exclusion winning; subscription requests, import rows, recipients (tracking events and tokens name the
+    recipient, not the party), automation source events and ended enrollments, campaign people, list send statuses, registrations
+    (attendee and buyer), reservations, attendance and form submissions (lead captures name the submission) move. MessageSuppression is by
+    address (no party field): it follows the address and needs no move. MessageDelivery, FormInvitation and ExternalAccessCapability stay
+    their owners' (F82, §7).
+- Mantle: `service/mantle/marketing/MarketingPartyMerge.js`, `MarketingEngagement.js` (new); `party/PartyMerge.js` (the Marketing refusals in
+  `rules()`), `party/DuplicateServices.xml` (`merge#Parties`' description and the Marketing move in place of three lines);
+  `entity/PartyEntities.xml` (PcsMerge); `marketing/MarketingCampaigns.js` (the promotion guard, `findAssociations`, the label),
+  `CampaignServices.xml` (store#CampaignAssociation's description, a P19 find#CampaignAssociations); `MarketingWorkspaceServices.xml` (a P19
+  block: get#Engagement).
+- BOSS: `service/ironstone/shared/PromotionApps.js` (new); `screen/Shared/Promotions.xml`, `PromotionDetail.xml` (the Campaigns box, its
+  choices, linkCampaign and endCampaignLink, catalogChoices by registration), `PromoCodes.xml`, `PromoCodeDetail.xml` (choices and the
+  customer check by registration); `screen/Marketing/Promotions.xml`, `Customers.xml`, `Contacts.xml`, `Contacts/ContactDetail.xml`,
+  `template/MarketingCustomer360.xml` (new); `screen/Marketing.xml` (Promotions, Customers, Contacts; the Party panel host),
+  `Campaigns/CampaignDetail.xml` (Promotions box); `screen/Shared/Customer360.xml` (the Marketing branch) and seven Accounting tabs' conditions;
+  `service/ironstone/marketing/Marketing.js` (promotionRead, promotionEdit, promotions, customerRead, `promotionStoreIds`, the link paths,
+  the contact and promotionCustomer kinds, the choices promotionStores, promotionCustomers, promotionProducts, promotionCampaigns and
+  promotions, `promotionsShown`), `ContextServices.xml` (productStoreId on get#Choices); `service/ironstone/sales/Sales.js` (Marketing's
+  mount row).
+- Specs:
+  - Mantle `test/marketing/Engagement` (new, 3 features, about 0.4 s): a reader gets campaigns alone and the seven others named, never
+    zero; an audience reader sees their organization's list, send, one open and one click and consent, and after a tracking withdrawal the
+    send stays and the opens go; another organization's user sees only its own send, list, campaign and registration and is refused
+    asking for the other (ORGANIZATION_DENIED); an events manager sees the place; no Marketing read PERMISSION_DENIED, a missing party
+    RECORD_UNAVAILABLE. `test/marketing/CampaignPromotions` (new, 1 feature, about 0.4 s): an editor with Commerce's promotion permission
+    links and ends, one without it (same parameters) PERMISSION_DENIED and reads the link with canEnd false, another store's promotion and
+    another organization's campaign RECORD_UNAVAILABLE, the other organization sees no link. `test/party/ContactBooks` gains a feature
+    (about 0.08 s): an active enrollment refuses the merge (ENROLLMENT_ACTIVE, naming it), then a confirmed place on a coming occurrence
+    (REGISTRATION_ACTIVE), and with both ended the merge keeps the merged party's unsubscription over the kept party's later acceptance
+    (the merged row moved ended), records withdrawals for the kept party's same address (a case variant) and for tracking, keeps an
+    exclusion, leaves nothing on the merged party and moves the enrollment and the registration.
+  - mr-boss `test/Marketing/MarketingPromotions` (new, 4 features, about 1.1 s): the promotion stores and promotions offered to the
+    promotions author (Retail's store, not Services'), nothing to an author without Commerce's read, the Promotions menu for the one and
+    not the other; PromotionDetail's one qvt render in Marketing (the Campaigns box with the running campaign's link, its purpose, Link to
+    a campaign and End link); Customer360's Marketing branch, one qvt render (Maya's lists, Contact record, the sources not shown named,
+    no Accounting box); Marketing's ContactDetail, one qvt render (the record and Add to list). The promotions author is a spec group
+    (MarketingSpecLib `promotionsAuthor`: BOSS_MARKETING_AUTHOR with COMMERCE_VIEW and COMMERCE_PROMOTION_EDIT, no Commerce root).
+    `MarketingAccess`'s system menu gains Promotions (ADMIN holds Commerce's read); `Sales/SalesAccess`'s Marketing links gain the two
+    rows.
+  - Acceptance, written and not run: mr-boss `test/acceptance/Marketing/MarketingPromotionsWalk` (the promotions author links a promotion to
+    the running campaign from PromotionDetail and generates three codes from PromoCodes; an author without Commerce's permission is refused
+    the promotion screen, sees the link on CampaignDetail without Link a promotion and is refused ending it; Customer360 shows Maya's sends
+    and her webinar place to the Marketing administrator and no Accounting or order figure).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle Engagement, CampaignPromotions, ContactBooks, SalesAccounts,
+  ShopCart, ShopCustomer, CrmMiscServices, Contacts, Campaigns, EventRegistrationSetup, MarketingForms, Consent, ContactListSend,
+  MarketingScope (115 of 115); mr-boss MarketingPromotions, MarketingAccess, CommercePromotions, MarketingCampaigns, SalesAccess,
+  MarketingLeads, MarketingLists, AccountingCollections, AccountingReceivables, CustomerServiceAccess, CustomerServiceReports,
+  CustomerServiceWarranty, CustomerServiceOrders, InsightsRecords, ProjectsAccess, SalesAccounts, CommerceOrders (all passing); each run
+  about 25-50 s with startup. `moqui lint --screens` (release): parse failures 0, 143 flagged sites (P18's 143; one new site in
+  ContactDetail rewritten). Prettier (mr-moqui's config) on the new and changed JavaScript but ContactBooks.spec.js, which was not
+  Prettier-clean before. Not run: test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P19" table; ss-inventory's eleven ProductStore/Promotion rows name Marketing's mounts.
+- Design edits: design-marketing §2 (PromoCodeDetail a sibling), §7 and §10 (as built: the registration, the link's rights, Customer360 on
+  one page, the sources and their permissions, ContactDetail, the merge guards); design-commerce §7 (as built: the per-app registration,
+  an owner contract); design-crosscut §3.2's Marketing row.
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: the promotion registration (PromotionApps.js) and no `appRoot` parameter on the four screens; the
+    promotion link's Commerce guard in Mantle and find#CampaignAssociations; P2's `promotionName` label; Customer360 on one page (F91);
+    the Customers and Contacts paths and the contact record kind; the eight engagement sources and their permissions; the merge module,
+    its four refusals (RECIPIENT_PENDING beyond the plan's text), the restrictive membership rule, the consent withdrawal by address and
+    PcsMerge; MessageSuppression needs no move;
+  - a merged party's withdrawal at an address the kept party does not have stays on the moved rows only; nothing reaches that address
+    through the kept party, and if the address is later added to the kept party under a new contact mechanism its withdrawal does not
+    follow (a consent keyed by contact mechanism, not by address);
+  - a Sales reader without MARKETING_AUDIENCE_VIEW who opens Sales' Accounts under Marketing's Leads now follows an account to Marketing's
+    Customer360, which refuses them (PERMISSION_DENIED); before, the account showed unlinked. The account link could stay unlinked for
+    them (Accounts.xml reads `sharedLinks` only), Sales' owner file;
+  - the Customer360 tab bar (F91) stays the owner's or the framework's fix; Marketing's branch avoids it by having no tabs;
+  - the contact record's notes and files are open under the Marketing root to an audience reader for any directory party of their
+    organizations or shared, as Sales opens them for its accounts' contacts;
+  - the promotion screens' product choices under Marketing are Mantle's product rule (owner organization or shared), not Products'
+    catalog search (Products' context admits no Marketing root).
+- For the lead:
+  - budget share: mr-mantle about 0.9 s (Engagement 0.4 s, CampaignPromotions 0.4 s, ContactBooks +0.08 s); mr-boss server about 1.1 s
+    (MarketingPromotions); no client spec;
+  - merge hot spots (P20 beside): mr-mantle `service/mantle/marketing/MarketingWorkspaceServices.xml` (a P19 block at the end),
+    `MarketingCampaigns.js` (the CakPromotion guard, `findAssociations` before "the flow", the operations table), `CampaignServices.xml` (a
+    P19 service before start#Campaign), `party/PartyMerge.js`, `party/DuplicateServices.xml`, `entity/PartyEntities.xml`; mr-boss
+    `screen/Marketing.xml` (two subscreens items and the panel host line: P20's Reports item lands beside them),
+    `Campaigns/CampaignDetail.xml` (a Promotions box before Events; P20's Results tab is near), `service/ironstone/marketing/Marketing.js`
+    (capabilities after checkInRead, `promotionStoreIds` before `required`, linkPaths after CheckIn, record kinds after content, choice
+    sources after emailTemplates, the module's export), `ContextServices.xml`, `test/Marketing/MarketingSpecLib.js` (systemMenu, a
+    `promotionsAuthor` helper at the end: a P20 Reports menu item changes the same menu lists), `screen/Shared/Customer360.xml` and its
+    seven Accounting tabs, `service/ironstone/sales/Sales.js` (Marketing's mount row) and `test/Sales/SalesAccess.spec.js`, the inventories,
+    design-marketing, design-commerce, design-crosscut, this file;
+  - Attack-Surface: no public endpoint and no PASS operation added; nothing to add;
+  - the user's calls: the restrictive order of list memberships (between live states the kept party's stands, so a pending row on the
+    merged party does not downgrade the kept party's acceptance); RECIPIENT_PENDING refusing a merge while the merged party waits in a send
+    (rather than moving the recipient and risking a second message); a live registration of a past occurrence moving rather than refusing;
+    Customer360 on one page with no tab bar; the Customers and Contacts areas the audience readers' alone (design §2's U), so an events
+    manager without audience view sees registrations only through Registrations.
+
 ### P20 — Attribution, reports and Insights
 
 Design §11, §15.3 (the attribution and reporting jobs), §18 (the reports, the digest and the alerts);

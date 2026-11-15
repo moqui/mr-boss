@@ -17,7 +17,20 @@ const ids = {
     audienceMenu: ["Home", "Campaigns", "Audiences", "Automations", "Content", "Events", "Surveys"],
     // P13: Leads (its lead rules) for the authors and the administrator too
     adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Events", "Surveys", "Leads", "Settings"],
-    systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Events", "Surveys", "Leads", "Settings"],
+    // P19: Promotions for a holder of Commerce's promotion read when a store of their organizations is configured (ADMIN)
+    systemMenu: [
+        "Home",
+        "Campaigns",
+        "Audiences",
+        "Sends",
+        "Automations",
+        "Promotions",
+        "Content",
+        "Events",
+        "Surveys",
+        "Leads",
+        "Settings"
+    ],
     analystMenu: ["Home", "Campaigns", "Content", "Events", "Surveys"],
     // P6: Sends (Comms' templates) for the authors and the administrator
     authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Content", "Events", "Surveys", "Leads"],
@@ -224,4 +237,41 @@ function shell(user, menuOnly = false, path = "Home", group = "Marketing") {
     })
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell})
+// P19: a Retail Marketing author who also holds Commerce's promotion read and edit through a spec group (not Commerce's root), made once:
+// its username. MarketingPromotions and the acceptance MarketingPromotionsWalk use it.
+function promotionsAuthor() {
+    const make = (entity, values) =>
+        ec.service
+            .sync()
+            .name("create#" + entity)
+            .parameters(values)
+            .disableAuthz()
+            .call()
+    system(() => {
+        if (ec.entity.find("moqui.security.UserAccount").condition("userId", "MKPROMO_AUTHOR").one()) return
+        make("mantle.party.Party", {partyId: "MKPROMO_AUTHOR", partyTypeEnumId: "PtyPerson"})
+        make("mantle.party.Person", {partyId: "MKPROMO_AUTHOR", firstName: "Promotions", lastName: "Author"})
+        make("mantle.party.PartyRelationship", {
+            fromPartyId: "MKPROMO_AUTHOR",
+            toPartyId: ids.organizationId,
+            relationshipTypeEnumId: "PrtAgent",
+            toRoleTypeId: "OrgInternal",
+            fromDate: 0
+        })
+        make("moqui.security.UserGroup", {userGroupId: "MKPROMO_COMMERCE", description: "Marketing promotions spec"})
+        for (const userPermissionId of ["COMMERCE_VIEW", "COMMERCE_PROMOTION_EDIT"])
+            make("moqui.security.UserGroupPermission", {userGroupId: "MKPROMO_COMMERCE", userPermissionId, fromDate: 0})
+        make("moqui.security.UserAccount", {
+            userId: "MKPROMO_AUTHOR",
+            username: "mkpromo.author",
+            partyId: "MKPROMO_AUTHOR",
+            currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
+            passwordHashType: "SHA"
+        })
+        for (const userGroupId of ["BOSS_USERS", "BOSS_MARKETING", "BOSS_MARKETING_AUTHOR", "MKPROMO_COMMERCE"])
+            make("moqui.security.UserGroupMember", {userId: "MKPROMO_AUTHOR", userGroupId, fromDate: 0})
+    })
+    return "mkpromo.author"
+}
+
+;({ids, users, asUser, system, refusal, invoke, page, screenRefusal, hit, shell, promotionsAuthor})

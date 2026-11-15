@@ -468,10 +468,12 @@ feature(
             const marketing = asUser(users.rep, () => invoke(context, {appRoot: "Marketing"}))
             if (
                 JSON.stringify(Object.keys(marketing.sharedLinks || {}).sort()) !==
-                    '["Accounts/Accounts","Pipeline/Leads","Settings/LeadSources"]' ||
+                    '["Accounts/Accounts","Accounts/ContactDetail","Accounts/Customer360","Pipeline/Leads","Settings/LeadSources"]' ||
                 marketing.sharedLinks["Pipeline/Leads"] !== "//Marketing/Leads" ||
                 // impl-marketing P3: Accounts at Marketing/Leads/Accounts, for its bulk action
-                marketing.sharedLinks["Accounts/Accounts"] !== "//Marketing/Leads/Accounts"
+                marketing.sharedLinks["Accounts/Accounts"] !== "//Marketing/Leads/Accounts" ||
+                // impl-marketing P19: an account opens Marketing's Customer360
+                marketing.sharedLinks["Accounts/Customer360"] !== "//Marketing/Customers/Customer360"
             )
                 problems.push(`Marketing's links: ${JSON.stringify(marketing.sharedLinks)}`)
             const pipelineMenu = shell(users.rep, true, "Pipeline/Opportunities", "Pipeline").names

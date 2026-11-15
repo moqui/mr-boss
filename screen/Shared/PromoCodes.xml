@@ -17,10 +17,10 @@ along with this software (see the LICENSE.md file). If not, see
     the codes of the user's stores' promotions with their dates, limits and placed uses), NewCode (store#PromoCode: one code,
     typed or drawn) and GenerateCodes for a promotion manager (generate#PromoCodes: a bounded batch with a prefix, random or
     numbered, previewed first with its collisions, then made code by code under an operation key, each failure named).
-    Commerce's context only. -->
+    The context is the mounting app's registration (service/ironstone/shared/PromotionApps.js; impl-marketing
+    P19, F22): Commerce's and Marketing's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Promotion codes" default-menu-index="2">
-    <parameter name="appRoot"/>
     <parameter name="storePromotionId"/>
     <parameter name="term"/>
     <parameter name="state"/>
@@ -38,8 +38,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="genUseLimitPerCustomer"/>
     <parameter name="genRequireParty"/>
     <always-actions>
-        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
-        <set field="appRoot" from="sharedMountContext.appRoot"/>
+        <!-- the mounting app's registration and context (design-commerce §7's per-app table; PromotionApps.js; impl-marketing P19) -->
+        <set field="sharedMountContext" from="ec.resource.script('component://mr-boss/service/ironstone/shared/PromotionApps.js').context(appRoot)"/>
         <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
     </always-actions>
     <transition-include name="promotionOptions" location="component://mr-boss/template/CommerceParts.xml"/>

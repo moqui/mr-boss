@@ -1084,6 +1084,19 @@ Marketing selects permitted stores and emphasizes the campaign links defined in 
 reads eligible codes and applies them on the existing shared order form. No mount grants extra
 promotion or pricing authority.
 
+As built (impl-marketing P19, owner contract): the four screens read the mounting app's registration
+(mr-boss `service/ironstone/shared/PromotionApps.js`, as the page screens read `PageApps.js`): its
+context and choices services, the choice names of its drop-downs (stores, customers, campaigns), the
+capabilities that show the edits and the order links, where a promotion's products are chosen, how a
+code's customer is checked, and whether it links campaigns. The app root is the mounting root's,
+never a request parameter (the screens no longer declare `appRoot`). Commerce's registration keeps its
+context, choices, catalog choices and customer check as built; Marketing's offers the stores of the
+user's Marketing organizations within Commerce's store scope, no order link, its own product and
+customer choices, and PromotionDetail's Campaigns box. Mantle's `StorePromotionServices` decide every
+read and write with `COMMERCE_VIEW`, `COMMERCE_PROMOTION_EDIT` and the store's scope, under either app;
+a campaign link (`CampaignServices.store#CampaignAssociation`) asks the campaign's edit and Commerce's
+promotion permission and store scope. Commerce's promotion specs pass unchanged.
+
 ## 8. Checkout settings
 
 ### CheckoutSettings

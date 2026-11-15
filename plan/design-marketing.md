@@ -231,7 +231,7 @@ Shared forms have one definition at the cited owner; each mounted route is count
 | Promotions | Marketing/Promotions | list | xml | Find store promotions linked to campaigns | ProductStorePromotion | Commerce §7, crosscut §3.28 | promotion readers | parity | store/campaign filters |
 | PromotionDetail | Marketing/Promotions/PromotionDetail | detail | xml | Edit one store rule and campaign links | ProductStorePromotion | Commerce §7, crosscut §3.28 | promotion editors | parity | store promotion ID |
 | PromoCodes | Marketing/Promotions/PromoCodes | list | xml | Find/generate store promotion codes | ProductStorePromoCode | Commerce §7, crosscut §3.28 | promotion editors | parity | promotion and selection |
-| PromoCodeDetail | Marketing/Promotions/PromoCodes/PromoCodeDetail | detail | xml | Inspect code limits and use | ProductStorePromoCode | Commerce §7, crosscut §3.28 | promotion readers/editors | parity | code ID |
+| PromoCodeDetail | Marketing/Promotions/PromoCodeDetail (a sibling, as Commerce mounts it; built in P19) | detail | xml | Inspect code limits and use | ProductStorePromoCode | Commerce §7, crosscut §3.28 | promotion readers/editors | parity | code ID |
 | Content | Marketing/Content | list | xml | Plan campaign assets and publication links | N CampaignContent | own | app | new | campaign/type filters |
 | ContentDetail | Marketing/Content/ContentDetail | detail | xml | Link approved content to campaign outputs | N CampaignContent; WikiPage/WikiBlog | own | A | new | content association ID |
 | BlogPosts | Marketing/Content/BlogPosts | list | xml | Find and start blog posts | WikiBlog | own | app; A to create | parity | wiki space, category and date filters |
@@ -1055,6 +1055,16 @@ cards remain Accounting liabilities; Marketing may link an authorized offer, nev
 parallel balance. **Source:** research §5; baseline ProductStore/Promotion and PromoCode forms.
 **Needs:** MKT-CAMPAIGN; existing COM-PROMO and SHOP-CHECKOUT contracts are dependencies.
 
+As built (impl-marketing P19): Commerce's four screens read Marketing's registration (mr-boss
+`service/ironstone/shared/PromotionApps.js`; Commerce §7 "As built"). The Promotions menu entry shows to a
+Marketing reader holding Commerce's `COMMERCE_VIEW` when a store of their Marketing organizations is within
+Commerce's store scope; `COMMERCE_PROMOTION_EDIT` edits, as in Commerce. PromotionDetail's Campaigns box
+lists the campaigns of the user's organizations that link the promotion (`C.find#CampaignAssociations`) and
+offers Link to a campaign (the promotion's store organization's open campaigns) and End link to a campaign
+editor who also holds Commerce's promotion permission; `C.store#CampaignAssociation` asks both for a
+promotion, so an author without it reads the link only. CampaignDetail gains a Promotions box (Link a
+promotion, the same two rights). No order link: Redemptions name the order without opening it.
+
 ## 8. Content and tracking
 
 ### Content
@@ -1664,6 +1674,30 @@ suppressions, recipient executions, tracking events, form submissions and regist
 and exports a subject's records and anonymizes what policy allows, while consent evidence and paid
 registrations keep what the law and Accounting require. Requests arrive through the one PASS
 Account privacy page. **Source:** research §11; crosscut §§3.1–3.2. **Needs:** MKT-REPORT, MKT-CONSENT, MKT-COLLAB.
+
+As built (impl-marketing P19): Customer360 at `Marketing/Customers/Customer360` and ContactDetail at
+`Marketing/Contacts/ContactDetail`, both hidden from the menu and the audience readers' (an account under
+Leads, an engagement row and the palette open them); Sales' Accounts mounted under Leads opens them. The
+record check is a directory party (never another user's personal contact, an internal or disabled one)
+shared or owned by an organization of the scope. Customer360 is one page, as Commerce's, with no tab bar
+(the shared tab bar lists every app's tabs, impl-sales F91): the header (Contact record; Consent history for
+a consent editor) and Engagement (`W.get#Engagement`), each source in its box only with its permission:
+campaigns (`MARKETING_VIEW`), lists and segments, sends with their delivery, opens and clicks (only while
+the person allows tracking in the send's organization now), consent (`MARKETING_AUDIENCE_VIEW`), form
+answers without their text (`MARKETING_AUDIENCE_VIEW` or `MARKETING_REPORT_VIEW`), event registrations
+without order or payment (`MARKETING_EVENT_MANAGE`) and promotion use without the order (Commerce's
+`COMMERCE_VIEW` and store scope); the sources not shown are named, never shown as none, and no other
+organization's engagement shows. ContactDetail is the Commons contact record with Add to list (the
+evidenced `L.request#Subscriptions`, pending until the person confirms) and the record's Consent link.
+The merge guards (X15) as built: an active automation enrollment, a live registration of an occurrence
+that has not ended and a recipient waiting in an unfinished send refuse the merge, naming the record; list
+memberships move, a collision keeping the more restrictive state (a withdrawal wins) and moving the merged
+row ended; the consent history moves and a withdrawal is recorded for the kept party (source `PcsMerge`)
+wherever the merged party's withdrawal would be undone by the kept party's later grant, at each of its
+addresses that is the same address; explicit segment members move (an exclusion wins), and subscription
+requests, import rows, recipients (their tracking events name the recipient), automation events and ended
+enrollments, campaign people, registrations, reservations, attendance and form submissions move. A
+suppression is by address and follows the address.
 
 ## 11. Reports
 
