@@ -622,4 +622,13 @@ along with this software (see the LICENSE.md file). If not, see
             partyId="BOSS_MKT_CON_MAYA" siteId="ZIZI_SHOP" requestKey="demo-visit-2" payloadDigest="demo"
             submittedDate="2026-11-08 18:00:00" statusEnumId="FsbApplied"/>
     <!-- ===== end of Marketing P12 ===== -->
+
+    <!-- ===== Marketing P14: content, blog posts and landing pages (impl-marketing P14; design-marketing §8) ===== -->
+    <!-- Retail's garden blog (a wiki space Marketing Author writes, its blog public at the shop's address) with three posts in the garden
+        news category, "Pruning roses" and "Starting tomatoes" with a published page version, "Summer bulbs" a draft; the roses post
+        linked to the spring campaign as a newsletter article; and the spring garden landing page on ZIZI_SHOP's Marketing mount
+        (Retail's page space, published, linked to the campaign as its landing page) with an embedded subscribe box for the garden
+        newsletter. The wiki pages are written through the wiki services (ironstone.marketing.DemoServices.load#ContentDemo). -->
+    <ironstone.marketing.DemoServices.load-ContentDemo/>
+    <!-- ===== end of Marketing P14 ===== -->
 </entity-facade-xml>

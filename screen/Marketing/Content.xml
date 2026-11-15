@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Content area of IronStone Marketing (design-marketing §8 Content and tracking, §1.2 "Content"; impl-marketing P14): Content
+    (the campaigns' planned content, the default) and ContentDetail (one link: its use, the owner's publication read only, its
+    distribution with "create draft send"), BlogPosts and BlogPostDetail (posts over the framework's WikiBlog), LandingPages and
+    PageDetail (Commerce's shared Shared/Pages and Shared/PageDetail with Marketing's registration, service/ironstone/shared/PageApps.js:
+    the storeless landing pages of the sites whose Marketing mount serves the user's organizations), and Knowledge (Commons' editor
+    mounted as Customer Service mounts it, with its terminal twin). Every Marketing reader reads it (design §2: the app's); the
+    content grant edits; the wiki's own rules decide each page. Every read and write is mantle.marketing.MarketingContentServices or
+    the site page services, which check the permission, the organization and the wiki's rule again. P15 adds its tracking links here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Content" default-menu-index="6" menu-image="sym_o_article" menu-image-type="icon">
+    <always-actions>
+        <script>if(!marketing.capabilities.contentRead)throw new Error('PERMISSION_DENIED: Content is for Marketing readers')</script>
+    </always-actions>
+    <subscreens default-item="Content" always-use-full-path="true">
+        <subscreens-item name="Content" location="component://mr-boss/screen/Marketing/Content/Content.xml" menu-title="Content" menu-index="1"/>
+        <subscreens-item name="ContentDetail" location="component://mr-boss/screen/Marketing/Content/ContentDetail.xml" menu-include="false"/>
+        <subscreens-item name="BlogPosts" location="component://mr-boss/screen/Marketing/Content/BlogPosts.xml" menu-title="Blog posts" menu-index="2"/>
+        <subscreens-item name="BlogPostDetail" location="component://mr-boss/screen/Marketing/Content/BlogPostDetail.xml" menu-include="false"/>
+        <subscreens-item name="LandingPages" location="component://mr-boss/screen/Shared/Pages.xml" menu-title="Landing pages" menu-index="3"/>
+        <subscreens-item name="PageDetail" location="component://mr-boss/screen/Shared/PageDetail.xml" menu-include="false"/>
+        <subscreens-item name="Knowledge" location="component://mr-boss/screen/Commons/Knowledge.xml" menu-title="Knowledge" menu-index="4"/>
+        <!-- the terminal twin (Knowledge.xml's tui text names ../KnowledgeTui) -->
+        <subscreens-item name="KnowledgeTui" location="component://mr-boss/screen/Commons/KnowledgeTui.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MarketingContentPanel" type="tab"/>
+    </widgets>
+</screen>

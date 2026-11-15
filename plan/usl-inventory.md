@@ -1000,6 +1000,20 @@ called by built screens, PASS pages and the delivery ledger:
 | marketing/MarketingPortalServices | get#Form, submit#Form | PASS:Marketing/SubmitForm (PublicForm, FormReceipt) | PASS:Marketing/SubmitForm (getMarketingForm, submitMarketingForm) (Marketing P12) |
 | marketing/AutomationServices | create#Automation, store#EnrollmentRule (trigger AtrFormSubmitted) | design §6 (the form-submission trigger) | the admission job's form trigger (collect#AdmissionEvents over FormSubmission) (Marketing P12) |
 
+Added in Marketing P14 (Nov 14, 2026; Marketing's content and blog posts `mantle.marketing.MarketingContentServices` over
+MarketingContent.js, the site page services' storeless marketing mount, the landing page operation of
+`mantle.marketing.MarketingPortalServices`, and the framework's wiki services used as built, impl-marketing P14), called by built
+screens and PASS pages:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/MarketingContentServices | find#CampaignContent, get#CampaignContent, store#CampaignContent | Marketing/Content (ContentFind, CampaignContent, LinkContent); Marketing/Content/ContentDetail (ContentLink, PublicationReadiness, Distribution) | Marketing/Content/Content, Marketing/Content/ContentDetail, Marketing/Campaigns/CampaignDetail (Content box), Marketing/Content/BlogPostDetail (Link to campaign) (Marketing P14) |
+| marketing/MarketingContentServices | find#BlogPosts, get#BlogPost, store#BlogPost, add#BlogCategory, remove#BlogCategory | Marketing/Content/BlogPosts; Marketing/Content/BlogPosts/BlogPostDetail | Marketing/Content/BlogPosts, Marketing/Content/BlogPostDetail (Marketing P14) |
+| marketing/MarketingContentServices | create#ContentSend | Marketing/Content/ContentDetail (Distribution: D.create#Send) | Marketing/Content/ContentDetail (Create draft send; the newsletter's posts taken at prepare#Send, CampaignSendPost) (Marketing P14) |
+| marketing/MarketingPortalServices | get#Page | PASS Marketing landing pages (design §8 LandingPages, §13.1) | PASS:Marketing/Page (getMarketingPage) (Marketing P14) |
+| public/ThemeServices | find#SitePages, store#SitePage, get#SitePageHistory (app marketing) | Marketing/Content/LandingPages, Marketing/Content/LandingPages/PageDetail | Marketing/Content/LandingPages, Marketing/Content/PageDetail (Shared/Pages and PageDetail with Marketing's registration, PageApps.js) (Marketing P14) |
+| public/SiteServices | publish#SitePage, get#SitePage (a marketing mount's page) | Marketing/Content/LandingPages/PageDetail; PASS Marketing landing pages | Marketing/Content/PageDetail/PagePublication; MarketingPortalServices get#Page (Marketing P14) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

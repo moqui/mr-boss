@@ -16,22 +16,27 @@ along with this software (see the LICENSE.md file). If not, see
     a site page's record header (its route as a key chip, its title, site, locale and policy role, and its publication state
     as a chip, with the live page's address) and the tabs, each with the page as its context: Content (1: the Commons
     Knowledge editor on the bound page alone, F53, its terminal twin PageText), Route and SEO (2: PageRoute), Publication
-    (3: PagePublication, publish a version from a date, withdraw, cancel what waits) and History (4: PageHistory). Commerce's
-    context only (ironstone.commerce.ContextServices.get#SharedContext); the page is read and saved through
-    mantle.public.ThemeServices and published through mantle.public.SiteServices.publish#SitePage, which check the
-    permission and the site's store again. A page of a site outside the user's stores is not available. -->
+    (3: PagePublication, publish a version from a date, withdraw, cancel what waits) and History (4: PageHistory). The context is
+    the mounting app's registration (service/ironstone/shared/PageApps.js; impl-marketing P14, F22): Commerce's store pages or
+    Marketing's storeless landing pages (no policy role or template; its content grant edits and publishes). The page is read and
+    saved through mantle.public.ThemeServices and published through mantle.public.SiteServices.publish#SitePage, which check the
+    permission and the site's store or organization again (a page's app is its mount's). A page outside the user's scope is not
+    available. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Page" default-menu-include="false">
     <parameter name="sitePageId" required="true"/>
     <!-- the page for the tabs, which the client loads on their own (their actions run without this screen's) -->
     <always-actions>
-        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="pagesContext"/>
-        <set field="pagesCan" from="pagesContext.capabilities"/>
+        <set field="pagesContext" from="ec.resource.script('component://mr-boss/service/ironstone/shared/PageApps.js').context(appRoot)"/>
+        <set field="pagesCan" from="pagesContext.can"/>
         <set field="sharedLinks" from="pagesContext.sharedLinks"/>
+        <set field="storePages" from="pagesContext.storePages"/>
+        <set field="pagesWords" from="pagesContext.words"/>
         <service-call name="mantle.public.ThemeServices.find#SitePages" out-map="pageFound" transaction="force-new" ignore-error="true"
                 in-map="{sitePageId:(sitePageId || '')}"/>
         <script>ec.message.clearErrors()</script>
-        <set field="sitePage" from="pageFound?.pages?.[0] || null"/>
+        <!-- a page of the registration's app only (Commerce's pages under Commerce, the landing pages under Marketing) -->
+        <set field="sitePage" from="pageFound?.pages?.[0]?.app == pagesContext.pageApp ? pageFound.pages[0] : null"/>
         <set field="recordFound" from="!!sitePage"/>
     </always-actions>
     <subscreens default-item="PageContent" always-use-full-path="true"/>
@@ -47,7 +52,7 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <section name="PageNotFound" condition="!recordFound"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
-                <label type="p" text="Page ${sitePageId} is not available: it does not exist, or it is not on a site of one of your stores."/>
+                <label type="p" text="Page ${sitePageId} is not available: ${pagesWords.unavailable}"/>
                 <link url="pages" text="Back to Pages" link-type="anchor"/>
             </box-body></container-box>
         </widgets></section>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- IronStone Marketing's demo loader (impl-marketing P14; MarketingDemo.js), called from data/BossZZMarketingDemoData.xml: what demo
+    data cannot write as rows, the wiki pages of the content demo, through the wiki services. Data, not a business service: only data
+    loading or a system administrator runs it. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="load" noun="ContentDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
+        <description>Idempotent Marketing content demo for ORG_ZIZI_RETAIL, by fixed ID: the garden blog space (Marketing Author writes
+            it) with three posts in the garden news category, two with a published page version and one a draft, the first linked to
+            the spring campaign; and the spring garden landing page on ZIZI_SHOP's Marketing mount, its text in Retail's page space with
+            an embedded subscribe box for the garden newsletter, published and linked to the campaign. In the data file's transaction
+            (its rows are referenced); a part that fails is named in errors and the other is made. Only data loading or a system administrator may run it.</description>
+        <out-parameters>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="errors" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="demoResult" from="ec.resource.script('component://mr-boss/service/ironstone/marketing/MarketingDemo.js').execute('load', context)"/>
+            <set field="complete" from="demoResult.complete"/>
+            <set field="errors" from="demoResult.errors"/>
+        </actions>
+    </service>
+</services>

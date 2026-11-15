@@ -256,7 +256,9 @@ const capabilityNames = [
     "automations",
     // P12: the surveys' read (a Marketing reader who edits content or reads audiences or reports) and their area
     "surveyRead",
-    "surveys"
+    "surveys",
+    // P14: the content's read (every Marketing reader)
+    "contentRead"
 ]
 const audienceGrants = ["audienceView", "audienceEdit", "audienceImport", "audienceExport", "consentEdit"]
 // design §1.1's table; every user in BOSS_MARKETING holds view
@@ -281,7 +283,8 @@ const capabilityUsers = [
             "automationRead",
             "automations",
             "surveyRead",
-            "surveys"
+            "surveys",
+            "contentRead"
         ]
     },
     {
@@ -297,12 +300,24 @@ const capabilityUsers = [
             "automationRead",
             "automations",
             "surveyRead",
-            "surveys"
+            "surveys",
+            "contentRead"
         ]
     },
     {
         user: users.approver,
-        granted: ["view", "approve", "anyRead", "approvals", "sendsRead", "sends", "sendRead", "automationRead", "automations"]
+        granted: [
+            "view",
+            "approve",
+            "anyRead",
+            "approvals",
+            "sendsRead",
+            "sends",
+            "sendRead",
+            "automationRead",
+            "automations",
+            "contentRead"
+        ]
     },
     {
         user: users.dispatch,
@@ -317,13 +332,14 @@ const capabilityUsers = [
             "sends",
             "sendRead",
             "automationRead",
-            "automations"
+            "automations",
+            "contentRead"
         ]
     },
-    {user: users.events, granted: ["view", "eventManage", "anyRead"]},
+    {user: users.events, granted: ["view", "eventManage", "anyRead", "contentRead"]},
     // P12: the analyst reads surveys and opens their area; the reader reads them by permission but the area denies its groups
-    {user: users.analyst, granted: ["view", "reportView", "anyRead", "reportRead", "surveyRead", "surveys"]},
-    {user: users.reader, granted: ["view", "reportView", "anyRead", "reportRead", "surveyRead"]},
+    {user: users.analyst, granted: ["view", "reportView", "anyRead", "reportRead", "surveyRead", "surveys", "contentRead"]},
+    {user: users.reader, granted: ["view", "reportView", "anyRead", "reportRead", "surveyRead", "contentRead"]},
     {
         // no approval, dispatch or template edit (design §1.1); suppression review since P3 and sending configuration since P6 (the
         // user's call of Nov 13)

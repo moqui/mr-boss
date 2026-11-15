@@ -23,7 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
     Accounts with the bulk action, a Sales reader's) and Settings (the administrator's, MARKETING_CONFIGURE, BOSS_MKT_SETTINGS); Segments and Newsletters stay as
     redirects of their old links (F2), to Audiences and Sends (P5, P8); Sends gains the sends, SendDetail and Compose (P8); P11 builds
     Automations (the drip sequences, AutomationDetail and EnrollmentDetail; BOSS_MKT_AUTOMATIONS); P12 Surveys (the shared survey builder
-    and responses with Marketing's registration, and SurveyDistribution; BOSS_MKT_SURVEYS). -->
+    and responses with Marketing's registration, and SurveyDistribution; BOSS_MKT_SURVEYS); P14 Content (campaign content, blog posts, the
+    shared landing pages with Marketing's registration and Commons Knowledge; every Marketing reader's). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
 
@@ -81,6 +82,11 @@ along with this software (see the LICENSE.md file). If not, see
             AutomationServices check the permissions and the organization again -->
         <subscreens-item name="Automations" location="component://mr-boss/screen/Marketing/Automations.xml" menu-index="5"
                 menu-include="ec.user.hasPermission('MARKETING_SEND_EDIT') || ec.user.hasPermission('MARKETING_APPROVE') || ec.user.hasPermission('MARKETING_DISPATCH') || ec.user.hasPermission('MARKETING_AUDIENCE_VIEW')"/>
+        <!-- P14: Content (design §8): the campaigns' content, blog posts, landing pages (Shared/Pages and PageDetail in Marketing's registration)
+            and Commons Knowledge, for every Marketing reader (the app's, design §2; no area deny); Mantle's content and site page services
+            check the content grant, the organization and the wiki's rule again -->
+        <subscreens-item name="Content" location="component://mr-boss/screen/Marketing/Content.xml" menu-index="6"
+                menu-include="ec.user.hasPermission('MARKETING_VIEW') || ec.user.hasPermission('MARKETING_AUDIENCE_VIEW') || ec.user.hasPermission('MARKETING_REPORT_VIEW')"/>
         <!-- P12: Surveys (design §10): the survey builder's shared screens with Marketing's registration (SurveyApps.js), SurveyDistribution
             and the responses, for the authors, audience managers, analysts and the administrator (BOSS_MKT_SURVEYS denies the root user
             group); the builder's and Marketing's form services check the purposes' permissions and the organization again -->
@@ -145,6 +151,8 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g a" label="Automations" screen="Marketing/Automations/Automations"/>
             <!-- P12 -->
             <key keys="g v" label="Surveys" screen="Marketing/Surveys/Surveys"/>
+            <!-- P14 -->
+            <key keys="g o" label="Content" screen="Marketing/Content/Content"/>
         </keymap>
     </shell-providers>
 

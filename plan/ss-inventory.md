@@ -1096,15 +1096,15 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditWikiBlog | EditBlogForm | Marketing/Content/BlogPosts/BlogPostDetail |  |
-| EditWikiBlog | AddCategory | Marketing/Content/BlogPosts/BlogPostDetail |  |
-| EditWikiBlog | CategoriesForm | Marketing/Content/BlogPosts/BlogPostDetail |  |
-| EditWikiPage | EditPageForm | Commons/Knowledge; Marketing/Content/Knowledge; Marketing/Content/BlogPosts/BlogPostDetail | Commons/Knowledge |
+| EditWikiBlog | EditBlogForm | Marketing/Content/BlogPosts/BlogPostDetail | Marketing/Content/BlogPostDetail (BlogPost, through MarketingContentServices store#BlogPost over update#WikiBlog; Marketing P14) |
+| EditWikiBlog | AddCategory | Marketing/Content/BlogPosts/BlogPostDetail | Marketing/Content/BlogPostDetail (AddCategory, add#BlogCategory checking the space's write right; Marketing P14) |
+| EditWikiBlog | CategoriesForm | Marketing/Content/BlogPosts/BlogPostDetail | Marketing/Content/BlogPostDetail (Categories, remove#BlogCategory; Marketing P14) |
+| EditWikiPage | EditPageForm | Commons/Knowledge; Marketing/Content/Knowledge; Marketing/Content/BlogPosts/BlogPostDetail | Commons/Knowledge; Marketing/Content/Knowledge (Commons Knowledge mounted; BlogPostDetail's Body opens it on the post's page; Marketing P14) |
 | EditWikiSpace | CloneSpace | Commons/Knowledge/Spaces | Commons/Knowledge/Spaces |
 | EditWikiSpace | EditSpace | Commons/Knowledge/Spaces | Commons/Knowledge/SpaceDetail |
-| WikiBlogs | AddBlogPage | Marketing/Content/BlogPosts |  |
-| WikiBlogs | AddBlogText | Marketing/Content/BlogPosts |  |
-| WikiBlogs | WikiBlogList | Marketing/Content/BlogPosts |  |
+| WikiBlogs | AddBlogPage | Marketing/Content/BlogPosts | Marketing/Content/BlogPosts (NewBlogPostFromPage, store#BlogPost over create#WikiBlog with wikiPageId; Marketing P14) |
+| WikiBlogs | AddBlogText | Marketing/Content/BlogPosts | Marketing/Content/BlogPosts (NewBlogPost, store#BlogPost over create#WikiBlog with blogText; Marketing P14) |
+| WikiBlogs | WikiBlogList | Marketing/Content/BlogPosts | Marketing/Content/BlogPosts (BlogPostList over MarketingContentServices find#BlogPosts; Marketing P14) |
 | WikiSpaces | NewSpace | Commons/Knowledge/Spaces | Commons/Knowledge/Spaces |
 | WikiSpaces | WikiSpaceList | Commons/Knowledge/Spaces | Commons/Knowledge/Spaces |
 | wiki | AddPageForm | Commons/Knowledge | Commons/Knowledge |
