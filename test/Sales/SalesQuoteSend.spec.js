@@ -39,7 +39,14 @@ feature("QuoteSend shows an issued quote's stored PDF and its recipient, to be s
                     sendMode: "organization",
                     operationKey: "sqsend-" + ec.user.randomString(16)
                 })
-                return {orderId, sent, revision: revisionOf(orderId)}
+                // Retail's quote is taxed at Wingtip's Utah address, which create#Quote took (Marketing follow-up 1's nexus)
+                const taxLines = ec.entity
+                    .find("mantle.order.OrderItem")
+                    .condition({orderId, itemTypeEnumId: "ItemSalesTax"})
+                    .disableAuthz()
+                    .count()
+                const part = ec.entity.find("mantle.order.OrderPart").condition({orderId}).disableAuthz().one()
+                return {orderId, sent, revision: revisionOf(orderId), taxLines, address: part.postalContactMechId}
             })
         )
         const dialog = asUser(users.rep, () => lib.page("Orders/QuoteSend", {orderId: made.orderId}, "html"))
@@ -47,6 +54,8 @@ feature("QuoteSend shows an issued quote's stored PDF and its recipient, to be s
     },
     then({made, dialog}) {
         made.sent.newIssue == true
+        made.address == "BOSS_SAL_WINGTIP_ADDR"
+        made.taxLines > 0
         dialog.errors.length == 0
         dialog.output.includes("was issued already")
         dialog.output.includes("Quote-" + made.orderId + "-r" + made.revision + ".pdf")
