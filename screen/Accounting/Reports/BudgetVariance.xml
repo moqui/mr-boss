@@ -57,71 +57,78 @@ along with this software (see the LICENSE.md file). If not, see
                         text="Print"
                         icon="sym_o_print"
                         target-window="_blank"
-                        condition="budgetId &amp;&amp; !reportFailed"/>
+                        condition="budgetId &amp;&amp; !reportFailed &amp;&amp; sri.getRenderMode() != 'html-print'"/>
             </container>
         </container>
-        <form-single name="VarianceOptions" transition="." map="context">
-            <field name="organizationPartyId">
-                <default-field title="Organization">
-                    <drop-down allow-empty="true">
-                        <dynamic-options transition="choices"
-                                server-search="true"
-                                min-length="0"
-                                parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
-                                    selected:organizationPartyId}"/>
-                    </drop-down>
-                </default-field>
-            </field>
-            <field name="budgetId">
-                <default-field title="Budget">
-                    <drop-down allow-empty="true">
-                        <dynamic-options transition="choices"
-                                server-search="true"
-                                min-length="0"
-                                parameter-map="{choice:'budgets', organizationPartyId:organizationPartyId,
-                                    selected:budgetId}"/>
-                    </drop-down>
-                </default-field>
-            </field>
-            <field name="timePeriodId">
-                <default-field title="Period">
-                    <drop-down allow-empty="true">
-                        <dynamic-options transition="choices"
-                                server-search="true"
-                                min-length="0"
-                                parameter-map="{choice:'budgetPeriodsOf', organizationPartyId:organizationPartyId,
-                                    budgetId:budgetId, selected:timePeriodId}"/>
-                    </drop-down>
-                </default-field>
-            </field>
-            <field name="revisionSeqId">
-                <default-field title="As of">
-                    <drop-down allow-empty="true">
-                        <dynamic-options transition="choices"
-                                server-search="true"
-                                min-length="0"
-                                parameter-map="{choice:'budgetRevisions', organizationPartyId:organizationPartyId,
-                                    budgetId:budgetId, selected:revisionSeqId}"/>
-                    </drop-down>
-                </default-field>
-            </field>
-            <field name="submit">
-                <default-field title="">
-                    <submit text="Run"/>
-                </default-field>
-            </field>
-            <field-layout>
-                <field-row>
-                    <field-ref name="organizationPartyId"/>
-                    <field-ref name="budgetId"/>
-                </field-row>
-                <field-row>
-                    <field-ref name="timePeriodId"/>
-                    <field-ref name="revisionSeqId"/>
-                    <field-ref name="submit"/>
-                </field-row>
-            </field-layout>
-        </form-single>
+        <section name="VarianceOptionsForm" condition="sri.getRenderMode() != 'html-print'">
+            <widgets>
+                <form-single name="VarianceOptions" transition="." map="context">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                            selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="budgetId">
+                        <default-field title="Budget">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'budgets', organizationPartyId:organizationPartyId,
+                                            selected:budgetId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="timePeriodId">
+                        <default-field title="Period">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'budgetPeriodsOf', organizationPartyId:organizationPartyId,
+                                            budgetId:budgetId, selected:timePeriodId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="revisionSeqId">
+                        <default-field title="As of">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices"
+                                        server-search="true"
+                                        min-length="0"
+                                        parameter-map="{choice:'budgetRevisions', organizationPartyId:organizationPartyId,
+                                            budgetId:budgetId, selected:revisionSeqId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Run"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="budgetId"/>
+                        </field-row>
+                        <field-row>
+                            <field-ref name="timePeriodId"/>
+                            <field-ref name="revisionSeqId"/>
+                            <field-ref name="submit"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+            </widgets>
+            <fail-widgets>
+                <section-include name="ReportPrintCaption" location="component://mr-boss/template/AccountingReportParts.xml"/>
+            </fail-widgets>
+        </section>
         <label text="Choose a budget and run the report." type="p" condition="!budgetId"/>
         <label text="The budget is not available for this organization." type="p" condition="budgetId &amp;&amp; reportFailed"/>
         <section name="Results" condition="budgetId &amp;&amp; !reportFailed">

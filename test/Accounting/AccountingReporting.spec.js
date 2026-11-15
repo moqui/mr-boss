@@ -76,8 +76,25 @@ feature("each statement of the demo organization runs with its as-of time, and i
         html.errors == []
         print.errors == []
         labels(report.statementRows).every(label => text(html.output).includes(label) && text(print.output).includes(label))
+        // the print names what it covers instead of printing the options form (ACC-UI-011)
+        !text(print.output).includes("Compare with") && text(print.output).includes("Accounting Demo Company")
         // the export carries the rows the screen shows
         labels(report.statementRows).every(label => csv.output.includes(label))
+    }
+})
+
+// ACC-UI-011: the trial balance's print has the ledger reports' caption in place of their options form
+feature("the trial balance prints its organization by name and its period, without the options form", {
+    when() {
+        return as("finance.read", () => {
+            const report = helper().call("ironstone.accounting.ReportServices.get#Statement", {organizationPartyId: org, statement: "balanceSheet"})
+            return helper().page("Reports/TrialBalance", {organizationPartyId: org, timePeriodId: report.timePeriodId}, "html-print")
+        })
+    },
+    then({errors, output}) {
+        errors == []
+        !text(output).includes("Compare from") && !output.includes(">Print<")
+        text(output).includes("Accounting Demo Company")
     }
 })
 
@@ -158,15 +175,18 @@ feature("Home shows the money cards and the work waiting for the user", {
     when() {
         return {
             admin: as("finance.admin", () => helper().call("ironstone.accounting.HomeServices.get#Summary", {organizationPartyId: org})),
+            zone: as("finance.admin", () => String(ec.user.timeZone || "")),
             page: as("finance.admin", () => helper().page("Home", {}, "html")),
             reader: as("finance.read", () => helper().page("Home", {}, "html"))
         }
     },
-    then({admin, page, reader}) {
+    then({admin, zone, page, reader}) {
         admin.summary.arDue != null
         admin.summary.apDue != null
         admin.summary.bankBalance != null
         admin.summary.unpostedDocuments != null
+        // the as-of time names its zone (ACC-UI-002)
+        zone != "" && admin.summary.asOf.endsWith(" " + zone)
         admin.workRows.some(row => row.title == "Bills awaiting approval")
         page.errors == []
         page.output.includes("Receivables due")

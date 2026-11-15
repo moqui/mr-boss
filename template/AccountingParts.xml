@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
     - FindRecords: a list's organization and search text;
     - postBatch, with the BatchReview section: the reviewed posting of a selection or batch of journal entries, each
       entry posted on its own and each failure named;
-    - ReportOptions: the shared options of the ledger reports, which set reportOptions for their links;
+    - ReportOptions: the shared options of the ledger reports, which set reportOptions for their links; printed,
+      AccountingReportParts' ReportPrintCaption in their place;
     - BackToReport: the way back from a report's drill-down, with the report's options (reportReturn names the report). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
@@ -212,7 +213,9 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-box>
             </widgets>
         </section>
-        <section name="ReportOptions">
+        <!-- a print has no options form: its fields print as text, the titles cut mid-word and the organization as its ID
+            (ACC-UI-011); the caption says what the report covers -->
+        <section name="ReportOptions" condition="sri.getRenderMode() != 'html-print'">
             <widgets>
                 <form-single name="ReportOptions" transition="." map="context">
                     <field name="organizationPartyId">
@@ -330,6 +333,9 @@ along with this software (see the LICENSE.md file). If not, see
                     </field-layout>
                 </form-single>
             </widgets>
+            <fail-widgets>
+                <section-include name="ReportPrintCaption" location="component://mr-boss/template/AccountingReportParts.xml"/>
+            </fail-widgets>
         </section>
         <section name="BackToReport" condition="['TrialBalance','GeneralLedger'].includes(reportReturn)">
             <actions>

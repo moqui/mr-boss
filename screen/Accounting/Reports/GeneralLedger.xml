@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
                         text="Print"
                         icon="sym_o_print"
                         target-window="_blank"
-                        condition="organizationPartyId"/>
+                        condition="organizationPartyId &amp;&amp; sri.getRenderMode() != 'html-print'"/>
             </container>
         </container>
         <section-include name="ReportOptions" location="component://mr-boss/template/AccountingParts.xml"/>

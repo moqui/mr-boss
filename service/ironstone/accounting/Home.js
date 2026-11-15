@@ -269,7 +269,9 @@ function summary(parameters) {
         ec.logger.error("Accounting Home setup health: " + error.message)
         findings.push("Setup health is unavailable")
     }
-    counts.asOf = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd HH:mm:ss")
+    // in the session's zone, named: an account with no zone of its own reads in the server's, which need not be the
+    // reader's (ACC-UI-002)
+    counts.asOf = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd HH:mm") + (ec.user.timeZone ? " " + ec.user.timeZone : "")
     return {summary: counts, findings, workRows: scope.organizationPartyId ? work(scope) : []}
 }
 

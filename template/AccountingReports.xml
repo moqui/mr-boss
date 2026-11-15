@@ -50,54 +50,61 @@ along with this software (see the LICENSE.md file). If not, see
             </actions>
             <widgets>
                 <section-include name="ReportHeader" location="component://mr-boss/template/AccountingReportParts.xml"/>
-                <form-single name="StatementOptions" transition="." map="context">
-                    <field name="organizationPartyId">
-                        <default-field title="Organization">
-                            <drop-down allow-empty="true">
-                                <dynamic-options transition="choices"
-                                        server-search="true"
-                                        min-length="0"
-                                        parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
-                                            selected:organizationPartyId}"/>
-                            </drop-down>
-                        </default-field>
-                    </field>
-                    <field name="timePeriodId">
-                        <default-field title="Fiscal period">
-                            <drop-down allow-empty="true">
-                                <dynamic-options transition="choices"
-                                        server-search="true"
-                                        min-length="0"
-                                        parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
-                                            selected:timePeriodId}"/>
-                            </drop-down>
-                        </default-field>
-                    </field>
-                    <field name="compareTimePeriodId" hide="statement == 'accountBalance'">
-                        <default-field title="Compare with">
-                            <drop-down allow-empty="true">
-                                <dynamic-options transition="choices"
-                                        server-search="true"
-                                        min-length="0"
-                                        parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
-                                            selected:compareTimePeriodId}"/>
-                            </drop-down>
-                        </default-field>
-                    </field>
-                    <field name="submit">
-                        <default-field title="">
-                            <submit text="Run report" type="primary"/>
-                        </default-field>
-                    </field>
-                    <field-layout>
-                        <field-row>
-                            <field-ref name="organizationPartyId"/>
-                            <field-ref name="timePeriodId"/>
-                            <field-ref name="compareTimePeriodId"/>
-                        </field-row>
-                        <field-ref name="submit"/>
-                    </field-layout>
-                </form-single>
+                <section name="StatementOptionsForm" condition="sri.getRenderMode() != 'html-print'">
+                    <widgets>
+                        <form-single name="StatementOptions" transition="." map="context">
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'organizations', organizationPartyId:organizationPartyId,
+                                                    selected:organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="timePeriodId">
+                                <default-field title="Fiscal period">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
+                                                    selected:timePeriodId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="compareTimePeriodId" hide="statement == 'accountBalance'">
+                                <default-field title="Compare with">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices"
+                                                server-search="true"
+                                                min-length="0"
+                                                parameter-map="{choice:'periods', organizationPartyId:organizationPartyId,
+                                                    selected:compareTimePeriodId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Run report" type="primary"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="organizationPartyId"/>
+                                    <field-ref name="timePeriodId"/>
+                                    <field-ref name="compareTimePeriodId"/>
+                                </field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </widgets>
+                    <fail-widgets>
+                        <section-include name="ReportPrintCaption" location="component://mr-boss/template/AccountingReportParts.xml"/>
+                    </fail-widgets>
+                </section>
                 <label text="Choose an organization and run the report." type="p" condition="!organizationPartyId"/>
                 <section-include name="ReportState" location="component://mr-boss/template/AccountingReportParts.xml"/>
                 <section name="StatementResults" condition="report">

@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
       (reportIncomplete) and a report that could not run (reportError, the refusal's text), each distinct from no data;
     - RecordPrint: a record screen's Print link, which renders the screen's own record for printing, its evidence
       (design-accounting §17: journal, close, depreciation, reconciliation, stored-value and tax statement); the screen sets
-      printScreen (its path in sharedLinks) and printOptions (its record's parameters).
+      printScreen (its path in sharedLinks) and printOptions (its record's parameters);
+    - ReportPrintCaption: in a report's print, in place of its options form, what the report covers.
       -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
@@ -42,9 +43,26 @@ along with this software (see the LICENSE.md file). If not, see
                                 text="Print"
                                 icon="sym_o_print"
                                 target-window="_blank"
-                                condition="organizationPartyId"/>
+                                condition="organizationPartyId &amp;&amp; sri.getRenderMode() != 'html-print'"/>
                     </container>
                 </container>
+            </widgets>
+        </section>
+        <!-- ReportPrintCaption: what a printed report covers, in place of its options form (ACC-UI-011): the organization by
+            name, the period or dates and the currency -->
+        <section name="ReportPrintCaption">
+            <actions>
+                <set field="captionOrganization" from="organizationPartyId ? ec.entity.find('mantle.party.Organization')
+                        .condition('partyId', organizationPartyId).disableAuthz().one() : null"/>
+                <set field="captionPeriod" from="timePeriodId ? ec.entity.find('mantle.party.time.TimePeriod')
+                        .condition('timePeriodId', timePeriodId).disableAuthz().one() : null"/>
+                <set field="captionText" from="[captionOrganization?.organizationName || organizationPartyId,
+                        captionPeriod ? (captionPeriod.periodName || captionPeriod.timePeriodId) : null,
+                        fromDate || thruDate ? (fromDate || '…') + ' to ' + (thruDate || '…') : null,
+                        amountUomId || null].filter(Boolean).join(' · ')"/>
+            </actions>
+            <widgets>
+                <label text="${captionText}" type="p" condition="captionText"/>
             </widgets>
         </section>
         <section name="ReportState">
