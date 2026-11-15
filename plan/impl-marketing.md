@@ -7257,6 +7257,58 @@ fixed dates) get dates relative to the load, as follow-up 2 and follow-up 3 did 
 calendar walk's projected collection (30 days back, 180 ahead) hold them on any run day. Every regression and acceptance spec that
 reads those dates is updated. Branch `mkt/fix6` in mr-boss (mr-mantle if a Mantle spec reads the dates).
 
+**Built Nov 15 (follow-up 6).** mr-boss on branch `mkt/fix6` from master after P22's merge (mr-mantle unchanged).
+- Checked first (the code over the plan): every dated campaign send in the Marketing demo (BossZZMarketingDemoData.xml): one send has a
+  schedule, BOSS_MKT_SEND_DEC (approved, 2026-12-01 08:00 America/Chicago); the others are drafts with no schedule (PREVIEW, ABTEST),
+  the approved November one with none (NOV), the automation's step sends, and the survey invitation, sent and completed Nov 5 (its
+  FormInvitation's dates are past events, as the other history rows). The calendar's sources (MarketingCalendar.js: campaign windows,
+  scheduled sends, automation milestones from activatedDate and endedDate, publication dates, events): the automation milestone is its
+  activation, Nov 6, a past event; the events are follow-up 3's. What the specs and the P21 walk need besides the send is the running
+  campaign's window: the walk's month of the send day must show "Campaign: Spring garden launch" and the projected collection must list
+  the campaign, which a fixed window (Nov 1 to Jan 31) stops after March 2027. No rule ties a send's schedule to its campaign's window
+  and no entity ECA rule is on the campaign or send entities, so the loader writes through the entity services with rules on; the
+  approvals are of revision 1 and moving the dates through the entity service raises no revision. The code over the plan: the four
+  campaigns' windows move with the send (the section names the sends; the walk and the story need the windows, F382's seam closed).
+  No mr-mantle or mr-pass spec reads a BOSS demo campaign or send, so mr-mantle is unchanged.
+- Demo (mr-boss):
+  - BossZZMarketingDemoData.xml: the four campaigns' rows name no fromDate, thruDate or startDate and the December send's no
+    scheduledDate (follow-up 3's R2: a placeholder would change the stored row on a reload); the new
+    `ironstone.marketing.DemoServices.load#CampaignDatesDemo` (service/ironstone/marketing/DemoServices.xml), called at the end of the
+    P8 block after the sends, writes them in days from the load day: the spring garden launch from 14 days before to 77 after
+    (started 13 days before at 09:00), its launch evening 56 to 58 after, the holiday gift guide 16 to 46 after, Services' renewals 16
+    to 105 after, each 00:00 in the server's zone as load#QuoteDatesDemo; the December newsletter 16 days after at 08:00 wall-clock in
+    its schedule's zone (America/Chicago), as load#EventDatesDemo's R1 fix. A load on Nov 15, 2026 gives exactly the old dates; loading
+    again moves them. As the other loaders: anonymous-all, allow-remote false, a signed-in caller must be ADMIN, a missing row logged
+    and skipped. The webinar (70 or more days) now falls inside the spring campaign (77) on any load; the workshop (118) stays after it,
+    as before;
+  - the send keeps its name ("Garden newsletter, December") and its approval's reason ("For the first of December"): on a load other
+    than mid-November they read as story, not as the date (specs and the walk find the send by that name).
+- Specs (mr-boss):
+  - MarketingDelivery reads the send's schedule as loaded before moving it a week ahead: 08:00 in America/Chicago, 14.5 to 17 days
+    ahead (a broken loader leaves none and fails it);
+  - MarketingShell's calendar feature checks the running campaign's window as loaded: from 13.5 to 16 days back, to 75 to 78 days ahead;
+    its calendar reads were already around each record's own date;
+  - MarketingSpecLib's and the acceptance MarketingCalendarWalk's comments: the walk already read the send's and webinar's days from the
+    records (REST), so no expectation changed; with the window and the send relative its month view and the projected collection
+    (30 days back, 180 ahead) hold them on any day. Not run, as the brief says. No other spec or acceptance spec names these dates
+    (grep of mr-boss, mr-mantle and mr-pass for the literal dates, the send and the campaigns).
+- Tests run (release, `--nobuild`, this worktree's runtime): MarketingShell, MarketingDelivery (5 of 5; feature time unchanged, 0.60 s
+  and 0.43 s for the touched features); every Marketing and Insights regression spec of mr-boss on 4 workers (31 specs, 103 of 103,
+  37.4 s of feature time); the two again after Prettier (mr-moqui's config) on the changed specs. Not run: test-apps, test-framework,
+  acceptance.
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: the campaigns' windows move with the send (the walk's month view and collection need the running
+    campaign's), and the only scheduled send is the December one;
+  - the December send's name and approval reason name December whatever the load (story seam, low);
+  - still fixed, no spec depends on them: the Sales opportunities' estimated close dates and Retail's holidays (follow-up 3's list less
+    the campaigns), and the past history rows (decisions, consents, imports, the survey's invitation).
+- For the lead:
+  - budget share: none measurable (two entity reads in two existing features; the loader runs once per load);
+  - merge hot spots: mr-boss `data/BossZZMarketingDemoData.xml` (P2 and P8 blocks), `service/ironstone/marketing/DemoServices.xml`,
+    `test/Marketing/MarketingShell.spec.js`, `test/Marketing/MarketingDelivery.spec.js`, `test/Marketing/MarketingSpecLib.js`,
+    `test/acceptance/client/Marketing/MarketingCalendarWalk.spec.js` (P23's review walks may touch the acceptance tree), this file;
+  - the user's call: none new (whether the opportunities' dates follow the load stands from follow-up 3).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into

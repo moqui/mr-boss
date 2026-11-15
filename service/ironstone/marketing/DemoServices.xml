@@ -14,8 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- IronStone Marketing's demo loader (impl-marketing P14; MarketingDemo.js), called from data/BossZZMarketingDemoData.xml: what demo
     data cannot write as rows, the wiki pages of the content demo, through the wiki services, (P16) the webinar's call link, and
-    (follow-up 3) the events' dates relative to the load. Data, not a business service: only data loading or a system administrator
-    runs it. -->
+    (follow-up 3) the events' dates and (follow-up 6) the campaigns' and the December send's dates relative to the load. Data, not a
+    business service: only data loading or a system administrator runs it. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="load" noun="ContentDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
         <description>Idempotent Marketing content demo for ORG_ZIZI_RETAIL, by fixed ID: the garden blog space (Marketing Author writes
@@ -32,6 +32,52 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="complete" from="demoResult.complete"/>
             <set field="errors" from="demoResult.errors"/>
         </actions>
+    </service>
+    <service verb="load" noun="CampaignDatesDemo" authenticate="anonymous-all" allow-remote="false">
+        <description>Dates the campaign demo from the load (Marketing follow-up 6), in days from the load day: the spring garden launch
+            from 14 days before to 77 days after (started 13 days before at 09:00), its launch evening 56 to 58 days after, the holiday
+            gift guide 16 to 46 days after and Services' renewals 16 to 105 days after, each at 00:00 in the server's zone as the demo's
+            fixed dates are read; and the approved December newsletter's schedule 16 days after at 08:00 wall-clock in its schedule's
+            time zone (America/Chicago), whatever the server's zone. A load on Nov 15, 2026 gives the old dates (Nov 1 to Jan 31, Jan 10
+            to 12, Dec 1 to 31, Dec 1 to Feb 28, and Dec 1 at 08:00). Loading again moves them; a missing row is logged and skipped. Only
+            data loading or a system administrator may run it.</description>
+        <out-parameters><parameter name="scheduledDate" type="Timestamp"/></out-parameters>
+        <actions><script><![CDATA[
+            if (ec.user.userId && !ec.user.isInGroup('ADMIN')) throw new Error('Demo loading requires system administration')
+            const nowMillis = ec.user.timestampMillis(ec.user.nowTimestamp)
+            // the server's local day, as the demo data's fixed dates are read
+            const now = new Date(nowMillis)
+            const after = (days, hour = 0) => String(new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, hour).getTime())
+            // a wall-clock time in a zone: the load day there, a calendar day counted in UTC (no DST in the count), the hour read back in
+            // the zone (DST kept), as load#EventDatesDemo
+            const pad = (n) => String(n).padStart(2, '0')
+            const afterIn = (zone, days, hour) => {
+                const [year, month, date] = String(ec.l10n.format(String(nowMillis), 'yyyy-MM-dd', null, zone)).split('-').map(Number)
+                const d = new Date(Date.UTC(year, month - 1, date + days))
+                const text = d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + ' ' + pad(hour) + ':00:00'
+                return String(ec.user.timestampMillis(ec.l10n.parseTimestamp(text, 'yyyy-MM-dd HH:mm:ss', null, zone)))
+            }
+            const move = (entityName, keys, fields) => {
+                if (ec.entity.find(entityName).condition(keys).disableAuthz().one() == null) {
+                    ec.logger.warn('The campaign dates demo found no ' + entityName + ' ' + JSON.stringify(keys) + '; not moved')
+                    return
+                }
+                ec.service.sync().name('update#' + entityName).parameters(Object.assign({}, keys, fields)).disableAuthz().call()
+            }
+            const CAMPAIGN = 'mantle.marketing.campaign.MarketingCampaign'
+            move(CAMPAIGN, {marketingCampaignId: 'BOSS_MKT_CMP_SPRING'}, {fromDate: after(-14), thruDate: after(77), startDate: after(-13, 9)})
+            move(CAMPAIGN, {marketingCampaignId: 'BOSS_MKT_CMP_SPRING_EVENT'}, {fromDate: after(56), thruDate: after(58)})
+            move(CAMPAIGN, {marketingCampaignId: 'BOSS_MKT_CMP_HOLIDAY'}, {fromDate: after(16), thruDate: after(46)})
+            move(CAMPAIGN, {marketingCampaignId: 'BOSS_MKT_CMP_SERVICES'}, {fromDate: after(16), thruDate: after(105)})
+            const SEND = 'mantle.marketing.campaign.CampaignSend'
+            const send = ec.entity.find(SEND).condition({campaignSendId: 'BOSS_MKT_SEND_DEC'}).disableAuthz().one()
+            if (send == null) {
+                ec.logger.warn('The campaign dates demo found no send BOSS_MKT_SEND_DEC; not moved')
+            } else {
+                scheduledDate = afterIn(send.scheduleTimeZone || 'America/Chicago', 16, 8)
+                move(SEND, {campaignSendId: 'BOSS_MKT_SEND_DEC'}, {scheduledDate})
+            }
+        ]]></script></actions>
     </service>
     <service verb="load" noun="EventDatesDemo" authenticate="anonymous-all" allow-remote="false">
         <description>Moves the event demo's dates to the load (Marketing follow-up 3): the spring planting webinar to 18:00–19:00 on
