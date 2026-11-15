@@ -1,3 +1,4 @@
+Nov 15, 2026 — gate 7 built: P19–P21 and follow-ups 1–4 (stage M7, Marketing's first release M0–M7), promotions, Customer360 and engagement, attribution, reports and Insights, the campaign calendar with its projected collection, the shell providers and Assist, and a remote PASS checkout's visitor key, each phase reviewed by a fresh agent and merged on its focused specs. Next: P22 (SMS, in review) and follow-up 5, then P23.
 Nov 15, 2026 — gate 6 built: P16–P18 (stage M6), events (registration setup with the PASS Event page, registrations, tickets and
 payment with PASS Register, check-in with the door tablet and the registration triggers), each phase reviewed by a fresh agent and merged
 on its focused specs; follow-up 1 (capture on approval, cancellation terms, stable entry codes) in review. Next: P19 beside P20.
@@ -445,7 +446,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P18 Check-in | Mantle, BOSS | CheckIn | built and reviewed Nov 15, merged |
 | P19 Promotions, Customer360 and engagement | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail, Customer360, ContactDetail | built and reviewed Nov 15, merged |
 | P20 Attribution, reports and Insights | Mantle, BOSS | Reports, CampaignPerformance, DeliveryAnalysis, AudienceGrowth, Attribution | built and reviewed Nov 15, merged |
-| P21 Calendar, shell providers and Assist | Mantle, BOSS | Calendar, QuickCreate | — |
+| P21 Calendar, shell providers and Assist | Mantle, BOSS | Calendar, QuickCreate | built and reviewed Nov 15, merged |
 | P22 SMS | Mantle, BOSS, PASS | the SMS channel of Sends, Compose, AutomationDetail, SendingProfiles; PASS EmailPreferences' SMS scope | — |
 | P23 Finish | all | the sweeps and the review walks (acceptance) | — |
 
@@ -6077,7 +6078,7 @@ follow-up 3; mr-moqui and mr-pass unchanged, no Rust built. Built beside follow-
 - Inventories: usl-inventory's "Added in Marketing P21" table; ss-inventory's MyCalendar NewEventForm row (the calendar moves the events,
   creating none).
 - Design edits: design-marketing §3 Calendar and §14.3 QuickCreate (as built).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F408 to F413 in order:
   - the code over the plan above: one W service for the calendar's items and events (get#EventInstances, not get#FullCalendarData);
     `check#CalendarEvent` before a drag; the resource mode with four new kinds in Commons' Calendar.qvue; Calendar hidden from the menu
     (Home's shortcut and g k); the collection with events and publication dates; no test/work/CalendarDav (the new MarketingCalendar);
@@ -6148,7 +6149,7 @@ follow-up 3; mr-moqui and mr-pass unchanged, no Rust built. Built beside follow-
   - R2 (low; tests): MarketingShell checked another organization only through record-lookup's info, and its `!send.movable` read a
     field no item has. It now also checks that Services' author's calendarEvents over the send's and the webinar's days hold none of
     Retail's campaign, send or webinar, and that their palette does not find Retail's December send; the empty check is gone.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F414 to F418 in order:
   - the demo's December send keeps a fixed 2026-12-01 date (the worker's finding, confirmed): MarketingShell reads its range from the
     row and passes on any day, but the acceptance MarketingCalendarWalk's CalDAV feature finds the send only while it is within the
     projection's default window (30 days back, 180 ahead), so from 2026-12-31 on its listing and object checks fail (the campaign's
@@ -7392,6 +7393,17 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F405 | Follow-up 4 (Review Nov 15): after placement a customer's withdrawal leaves the digest on the order until retention (or forever without `statisticsRetentionDays`); attribution ignores it (its withdrawn early return), so it is never used, but it is kept; clearing it on withdrawal would need a hook in the consent write (left as is, low) | Follow-up 4: as its Review note says |
 | F406 | Follow-up 4 (Review Nov 15): PASS's `visitorKeyInput` (Do Not Track / GPC, the cookie's form) is reviewed but not exercised by a spec (the remote feature passes `visitorKey` to the facade directly; no spec drives the Shop submit transition with headers); TrackingLib's `doNotTrack` and `heldKey` are covered by MarketingTracking (low) | Follow-up 4: as its Review note says |
 | F407 | Follow-up 4 (Review Nov 15): deployment order: both facades refuse an input field the schema does not list, so a PASS with this change against an authority without it refuses every Shop submit that carries a key ("Unsupported field"); deploy the authority first (a note for release, nothing to fix in one repository set) | Follow-up 4: as its Review note says |
+| F408 | P21 (Built Nov 15): the code over the plan above: one W service for the calendar's items and events (get#EventInstances, not get#FullCalendarData); `check#CalendarEvent` before a drag; the resource mode with four new kinds in Commons' Calendar.qvue; Calendar hidden from the menu (Home's shortcut and g k); the collection with events and publication dates; no test/work/CalendarDav (the new MarketingCalendar); three more ContextServices (§2's list of four is stale); a failing Today source of Mantle's as a named item | P21: as its Built note says |
+| F409 | P21 (Built Nov 15): Home's Upcoming still answers its events and publication-date sources "Not available" (since P1; MarketingAccess reads that text): get#CalendarItems' sources could now answer them; left as they are (P23, or a follow-up, changes the spec with them) | P21: as its Built note says |
+| F410 | P21 (Built Nov 15): a third copy of the phone matching (`partiesOfNumber`: SalesComms.js, Maintenance's Stack.js, now Marketing.js): a Mantle helper would serve all three | P21: as its Built note says |
+| F411 | P21 (Built Nov 15): design §14.3 names EventRegistration a record-panel host, but the root admits only the campaign, the send and the contact (P17 did not add it), so "Log as note" files on a campaign or a send, and a registration's page offers no note | P21: as its Built note says |
+| F412 | P21 (Built Nov 15): a moved event's notification links Commons' EventDetail (as Projects' calendar does), not Marketing's mount | P21: as its Built note says |
+| F413 | P21 (Built Nov 15): the demo's December send keeps a fixed date (2026-12-01, not load-relative): MarketingShell reads its range from the row, so it passes on any day; the walk's collection holds it only while it is within 180 days of the run | P21: as its Built note says |
+| F414 | P21 (Review Nov 15): the demo's December send keeps a fixed 2026-12-01 date (the worker's finding, confirmed): MarketingShell reads its range from the row and passes on any day, but the acceptance MarketingCalendarWalk's CalDAV feature finds the send only while it is within the projection's default window (30 days back, 180 ahead), so from 2026-12-31 on its listing and object checks fail (the campaign's window from about 2027-01-30), while its month views and drags, which read the row's date, keep working; the answer is the demo's send dates relative to the load, as follow-up 3 made the events', which touches every spec that reads the December send (MarketingSends, MarketingApprovals and others): not this phase's, left | P21: as its Review note says |
+| F415 | P21 (Review Nov 15): EventRegistration is not a notes-and-files record (design §14.3 names it a record-panel host; P17 did not add it), so "Log as note" serves a campaign or a send: confirmed; the record host is P17's owner-contract work, not P21's, left for a follow-up | P21: as its Review note says |
+| F416 | P21 (Review Nov 15): a third copy of the phone matching (`partiesOfNumber`, as SalesComms.js and Maintenance's Stack.js): confirmed, a Mantle helper for the three belongs to a cross-app follow-up, not this phase | P21: as its Review note says |
+| F417 | P21 (Review Nov 15): a moved event's notification links Commons' EventDetail, as Projects' calendar does (the worker's): acceptable, the event is the calendar's | P21: as its Review note says |
+| F418 | P21 (Review Nov 15): Today's Marketing feature in MarketingShell checks the group is present but not that the dispatcher gets an item (the demo has no send due today); Mantle's MarketingCalendar covers the sends-due source | P21: as its Review note says |
 
 ## 7. Later
 
