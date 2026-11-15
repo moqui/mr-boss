@@ -6785,6 +6785,58 @@ follow-up 4's merge; mr-moqui unchanged, no Rust built. Built beside P21's revie
     `submitCheckout` or `startRegistrationPayment` `visitorKey`,";
   - the user's calls: none (the first finding is the plan's wording against the code).
 
+**Review Nov 15 (follow-up 5).** A fresh review of `mkt/fix5` (mr-mantle a2171049, mr-pass 1821307, mr-boss ae884055) against this
+section, follow-up 4's Built and Review notes, §2 and design-marketing §11 and §13 Register.
+- Checked and sound:
+  - the start rather than `completeRegistration`: right. `completeRegistration` (EventRegistrationPlaces `complete`) makes no order
+    (a free reservation is confirmed there with none); the ticket order and its promised payment are made in `startPayment`'s step
+    (`orderOf`), the counterpart of Shop's freeze, and a paid ticket is placed only from that order. Forwarding at the start keeps
+    nothing key-derived on a reservation that never gets an order; the section's intent (a ticket order through a remote frontend
+    attributed by its key, the same rules) is met. Plan wording, not a user's call;
+  - every placement re-checks: the only `place#Order` of a ticket order is `place()`, reached from `refresh()` (the provider's
+    return and the page through `getRegistration`, `reconcile`'s due lookups), `reconcile`'s failed-placement retries, and
+    `seatReviewed` (its `refresh#RegistrationPayment` on commit); no webhook or other path places a ticket order (PaymentAttempts
+    dispatches none). `keepOrderVisitorKey` runs first in `place()`'s placement step, the same transaction as `place#Order`; seen to
+    fail the new feature's late check with it removed;
+  - identity and repeat: the digest is computed after the `alreadyStarted` early return and before the step; a start that raced
+    one answers `already` before the write; so a repeat never changes the digest (the spec's repeat with another key). A start
+    replacing a declined or cancelled payment writes that Pay's digest or none, as a Shop re-freeze does. The key is not in the
+    priceKey check or the attempt's snapshot, never refuses the start (a malformed key dropped, a read failure logged and nothing
+    kept);
+  - scope: customer the reservation's buyer and seller the offer's organization, the same parties `orderOf` writes as the order
+    part's customer and vendor, which `keepOrderVisitorKey` reads at placement, so the two checks agree; `startRegistrationPayment`
+    still reaches the reservation by its capability first (`reach`), the key adds no right;
+  - raw key never stored or logged: it reaches only `checkoutVisitorKeyHash` (its log line names the label "Registration <id>" and
+    the error's first line); only the digest enters the step and `OrderHeader`; PASS's Register transition passes it through
+    Registrations.js `call` and Portal `attempt`, neither of which logs input;
+  - staff: `startPaymentStaff` calls `startPayment(reservationId)` with no key; DNT/GPC: TrackingLib `checkoutKeyInput` returns
+    nothing under `dnt` or `sec-gpc` = 1, without a request, or for a cookie not of the key's form (the spec covers each); the cookie
+    is `Path=/` so Register's transition receives it;
+  - Shop unchanged in effect: `checkoutVisitorKeyHash` is the old `visitorKeyHashOf` body (the extra early null for a missing vendor
+    answers what `visitorKeyAllowed` did); `keepOrderVisitorKey` is the old `keptVisitorKey` body, with the first part's read moved
+    inside the try (a failed read now clears the digest, fail closed, where it failed the placement step before: safer, not a
+    behaviour a caller relied on); PASS `visitorKeyInput` is `checkoutKeyInput(ec.web?.request)`, the same logic. Shop's
+    follow-up 4 specs pass unchanged;
+  - ForumSchema.js and PASS Schema.js byte-identical (`cmp`); follow-up 4's retention clearing applies to ticket orders too (OrderPart
+    vendor).
+- Fixed: nothing.
+- Provisional findings (for the lead to number):
+  - a staff `start#RegistrationPayment` replacing a buyer's declined remote payment writes no digest, so it clears one the buyer's
+    Pay kept (consistent with "a start replacing a payment writes that Pay's digest or none" and the privacy-conservative choice;
+    the ticket order is then attributed by recipient only; low, left as is);
+  - no spec drives a replacement start after a declined payment (digest rewritten) or Register's pay transition with headers and a
+    cookie (the worker's second finding; the helper is covered) (low).
+- Tests (release binary, `--nobuild`, this worktree's runtime): mr-mantle EventRegistrations 17 of 17 (5.7 s feature time),
+  ShopCheckout 9 of 9 (4.6 s), Attribution 4 of 4 (0.8 s), MarketingRetention 1 of 1; mr-pass MarketingRegistration 5 of 5,
+  ShopCheckout 4 of 4, MarketingTracking 4 of 4, Forum 13 of 13. EventRegistrations run again with `place()`'s
+  `keepOrderVisitorKey` removed: the new feature failed (restored). No screen changed by the review (no lint). Not run: test-apps,
+  any acceptance test.
+- For the lead:
+  - budget share: as the Built note (mr-mantle about +1.0 s, mr-pass about +0.01 s);
+  - merge hot spots: as the Built note;
+  - Attack-Surface: the Built note's replacement stands;
+  - the user's calls: none.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
