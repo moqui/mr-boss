@@ -374,4 +374,51 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.user.NotificationTopic topic="MarketingPageReview"
             linkTemplate="/qapps/Marketing/Content/PageDetail?sitePageId=${sitePageId}"/>
     <!-- ===== end of Marketing P15 ===== -->
+
+    <!-- ===== Marketing P18: check-in and the shared door tablet (impl-marketing P18, §4 Nov 13, §5 Q7; F83; design-marketing §9 CheckIn,
+        CX-DEVICE; owner contract with Admin, impl-admin P18) ===== -->
+    <!-- CheckIn is in the Events area (every Marketing reader's by the root's grant); its screen shows the door to an events manager only
+        (marketing.capabilities.checkInRead) and Mantle's check-in services ask MARKETING_EVENT_MANAGE in the offer's organization. The
+        door tablet: the route group MARKETING_CHECKIN (owner Marketing; its home CheckIn; the request parameter registrationPolicyId fixed
+        by each registration to one offer, required; a day's idle timeout, a year's lifetime) names BOSS_DEV_MKT_CHECKIN, the device's
+        allow-list, which grants nothing: CheckIn's render, its checkIn transition and the scanResolve transition its scan-input asks,
+        each by name and not inheritable, as People's BOSS_DEV_PPL_CLOCKING names ClockingKiosk's. The /qapps shell, Marketing's other
+        screens, the palette and the record panels are not members. -->
+    <moqui.security.ArtifactGroup artifactGroupId="BOSS_DEV_MKT_CHECKIN" description="Shared device route group: Marketing event check-in"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_MKT_CHECKIN" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/Marketing/Events/CheckIn.xml"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_MKT_CHECKIN" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/Marketing/Events/CheckIn.xml/checkIn"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_MKT_CHECKIN" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/Marketing/Events/CheckIn.xml/scanResolve"/>
+    <moqui.security.DeviceRouteGroup routeGroupId="MARKETING_CHECKIN" description="Marketing event check-in (door tablet)" ownerName="Marketing"
+            artifactGroupId="BOSS_DEV_MKT_CHECKIN" homePath="/apps/Marketing/Events/CheckIn" parameterName="registrationPolicyId"
+            parameterTitle="Event offer (one occurrence)" parameterRequired="Y" defaultIdleMinutes="1440" defaultLifetimeDays="365"
+            sequenceNum="30"/>
+    <!-- What a door tablet's display account holds (§5 Q7, as People's BOSS_PEOPLE_KIOSK): this bundle alone, which opens CheckIn, its two
+        transitions and the three check-in services it calls, by name and not inheritable, with the organization filters, and nothing
+        else of Marketing even if a route group were wider (the root calls no get#SharedContext for a device's request,
+        screen/Marketing.xml); and MARKETING_CHECKIN, which Mantle's preview#CheckIn, resolve#EntryCode and checkIn#Registration accept
+        only in the request of a device fixed to the offer, the display account belonging to its organization. It reaches no attendee
+        list, search, registration or record. A registered bundle with no delegable permission: ADMIN_ACCESS_MANAGE alone assigns it
+        (Admin's delegation rule), and the identity operator proposes it when making the display account. A person given it opens the
+        page, whose check-ins Mantle refuses outside a registered device. -->
+    <moqui.security.UserGroup userGroupId="BOSS_MARKETING_CHECKIN_DEVICE" description="Marketing event door tablet (display accounts)"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MARKETING_CHECKIN_DEVICE" userPermissionId="MARKETING_CHECKIN" fromDate="0"/>
+    <artifactGroups artifactGroupId="BOSS_MKT_CHECKIN_DEVICE" description="Marketing: the event check-in page alone">
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Events/CheckIn.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Events/CheckIn.xml/checkIn" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Events/CheckIn.xml/scanResolve" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.work\.EventRegistrationServices\.(preview#CheckIn|resolve#EntryCode|checkIn#Registration)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_MKT_CHECKIN_DISPLAY" userGroupId="BOSS_MARKETING_CHECKIN_DEVICE" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MARKETING_CHECKIN_DEVICE" appName="Marketing" description="Marketing event door tablet: checks in entry codes for one event occurrence on a shared device (display accounts only)" scopeDependency="organization; one event occurrence fixed by the device" sequenceNum="1690"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_CHECKIN_DEVICE" userPermissionId="MARKETING_CHECKIN" capabilityKindEnumId="CpkEdit"/>
+    <!-- ===== end of Marketing P18 ===== -->
 </entity-facade-xml>

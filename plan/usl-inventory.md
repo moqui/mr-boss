@@ -1073,6 +1073,17 @@ EventRegistrationPlaces.js, EventRegistrationPayments.js and EventRegistrationNo
 | work/EventRegistrationServices | handle#RegistrationOrderStatus, offer#WaitlistPlaces, refund#RegistrationPayment, refresh#RegistrationPayment, queue#RegistrationNotice, build#RegistrationDelivery | §9 order rules, §15.3, §18 | the EventRegistrationOrderStatus SECA, after-commit services and the ledger source MdsrcEventRegistration (Marketing P17) |
 | marketing/MarketingPortalServices | reserve#Registration, complete#Registration, start#RegistrationPayment, get#Registration, cancel#Registration | PASS:Marketing/Register (RegistrationChoice, RegistrationAnswers, RegistrationPayment, RegistrationReceipt), PASS:Marketing/Registration (MyRegistration, CancelRegistration) | PASS:Marketing/Register, PASS:Marketing/Registration (Marketing P17) |
 | order/OrderInfoServices | check#OrderPreApprove | Sales §5 (pre-approval warnings) | a storeless ticket order (OrpEventRegistration) skips the new-customer and shipping-address checks (Marketing P17) |
+
+Added in Marketing P18 (Nov 15, 2026; check-in in `mantle.work.EventRegistrationServices` over EventCheckIn.js, and the registration
+triggers of automations and lead rules, impl-marketing P18), called by built screens, a door tablet and the jobs:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/EventRegistrationServices | preview#CheckIn, resolve#EntryCode, checkIn#Registration | Marketing/Events/CheckIn (EntryLookup, EntryDecision, RecordEntry) | Marketing/Events/CheckIn (the scan-input's resolver, the checkIn transition, AttendeeLookup), under a staff sign-in or the MARKETING_CHECKIN door tablet (Marketing P18) |
+| work/EventRegistrationServices | get#Attendance | Marketing/Events/RegistrationDetail (Attendance) | Marketing/Events/RegistrationDetail (the Checked in fact; the check-ins in the history) (Marketing P18) |
+| marketing/AutomationServices | create#Automation, store#EnrollmentRule, run#AutomationAdmission | Marketing/Automations (NewAutomation, EnrollmentRule: registration and attendance triggers) | template/MarketingAutomations.xml NewAutomation, AutomationDetail's EnrollmentRule (the Event choice), the admission job's cursors over confirmed places and attendances (Marketing P18) |
+| marketing/MarketingFormServices | get#LeadRule, store#LeadRule, preview#LeadRule, run#LeadCaptures, capture#EventRegistration | Marketing/Leads/LeadRules, LeadRuleDetail (registration and attendance triggers) | Marketing/Leads/LeadRules (New lead rule › an event's attendees), LeadRuleDetail with an event offer, the capture job (Marketing P18) |
+| sales/OpportunityServices | store#LeadIntake | Sales §3 Leads (X16, intake sources) | the source kinds eventRegistration and eventAttendance (SlisEventRegistration, SlisEventAttendance) for Marketing's event lead rules (Marketing P18) |
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

@@ -83,7 +83,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="ruleValues" from="{marketingAutomationId:marketingAutomationId, expectedRevision:automation.revision, automationName:automation.automationName,
                 description:automation.description, contactListId:automation.contactListId, sendingProfileId:automation.sendingProfileId,
                 triggerEnumId:automation.triggerEnumId, triggerSegmentId:automation.triggerSegmentId, productStoreId:automation.productStoreId,
-                goalSegmentId:automation.goalSegmentId, reentryEnumId:automation.reentryEnumId, reentryCooldownDays:automation.reentryCooldownDays,
+                registrationPolicyId:automation.registrationPolicyId, goalSegmentId:automation.goalSegmentId, reentryEnumId:automation.reentryEnumId, reentryCooldownDays:automation.reentryCooldownDays,
                 timeZone:automation.timeZone}"/>
         <set field="stepValues" from="{marketingAutomationId:marketingAutomationId, expectedRevision:automation.revision, stepAction:'add',
                 position:stepList.length, kind:'send', waitUnitEnumId:'AwuDays', conditionFalseEnumId:'AcfSkipNextSend'}"/>
@@ -205,6 +205,16 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <option key="AtrStaff" text="Staff enrollment with evidence"/>
                                                     <option key="AtrOrderPlaced" text="Order placed"/>
                                                     <option key="AtrCartAbandoned" text="Cart abandoned"/>
+                                                    <option key="AtrRegistered" text="Registered for an event"/>
+                                                    <option key="AtrAttended" text="Attended an event"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="registrationPolicyId">
+                                            <default-field title="Event" tooltip="For a registration or attendance trigger">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'registrationOffers', organizationPartyId:automation.organizationPartyId, selected:automation.registrationPolicyId}"/>
                                                 </drop-down>
                                             </default-field>
                                         </field>
@@ -294,7 +304,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Enrollment rule"/>
                     <box-body>
-                        <label text="Trigger: ${automation.triggerText}${automation.triggerSegmentName ? ' · segment ' + automation.triggerSegmentName : ''}${automation.storeName ? ' · store ' + automation.storeName : ''}" type="p"/>
+                        <label text="Trigger: ${automation.triggerText}${automation.triggerSegmentName ? ' · segment ' + automation.triggerSegmentName : ''}${automation.storeName ? ' · store ' + automation.storeName : ''}${automation.offerName ? ' · event ' + automation.offerName : ''}" type="p"/>
                         <label text="Topic: ${automation.topicName} · from ${automation.profileName || 'no sending profile yet'} · re-entry: ${automation.reentryText} · goal: ${automation.goalSegmentName || 'none'}" type="p"/>
                         <label text="${automation.description}" type="p" style="m-muted" condition="automation.description"/>
                         <label text="It runs as the system for its organization: its segments read party, contact and engagement facts only, and no one's personal contact is enrolled." type="p" style="text-caption m-muted"/>

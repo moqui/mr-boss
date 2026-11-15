@@ -19,16 +19,22 @@ along with this software (see the LICENSE.md file). If not, see
     Sales source, the questions mapped to the lead's name, organization, email and phone and to its notes, a condition, the notice the
     page shows; a change starts a new rule from now, at the revision read), Preview (what the latest answer, or a sample, would hand to
     Sales) and Handoffs (the counts and each capture's state, attempts and reason, with Try again for a failed one: a reason, each
-    handoff under its own operation key, so Sales' first lead answers). Marketing's own context (`marketing`): the Leads area's
+    handoff under its own operation key, so Sales' first lead answers). P18: an event offer's rule (registrationPolicyId and
+    triggerEnumId, registered or attended) takes the team and source alone: the attendee's own name and address go to Sales, no
+    answer. Marketing's own context (`marketing`): the Leads area's
     `sharedLinks` are Sales'. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Lead rule" default-menu-include="false">
     <parameter name="leadRuleId"/>
     <parameter name="publicationId"/>
+    <parameter name="registrationPolicyId"/>
+    <parameter name="triggerEnumId"/>
     <transition name="storeLeadRule">
         <actions>
             <service-call name="mantle.marketing.MarketingFormServices.store#LeadRule" out-map="stored"
-                    in-map="{leadRuleId:(leadRuleId || null), publicationId:(leadRuleId ? null : publicationId), expectedRevision:(expectedRevision || null),
+                    in-map="{leadRuleId:(leadRuleId || null), publicationId:(leadRuleId ? null : (publicationId || null)),
+                        registrationPolicyId:(leadRuleId ? null : (registrationPolicyId || null)), triggerEnumId:(leadRuleId ? null : (triggerEnumId || null)),
+                        expectedRevision:(expectedRevision || null),
                         ruleName:(ruleName ?? ''), teamPartyId:(teamPartyId ?? ''), dataSourceId:(dataSourceId ?? ''),
                         nameFieldName:(nameFieldName ?? ''), organizationFieldName:(organizationFieldName ?? ''), emailFieldName:(emailFieldName ?? ''),
                         phoneFieldName:(phoneFieldName ?? ''),
@@ -37,7 +43,8 @@ along with this software (see the LICENSE.md file). If not, see
             <message type="success">${stored.created ? 'Made the lead rule: the form\'s answers go to the team\'s queue' : 'Saved: the changed rule applies from now'}</message>
         </actions>
         <default-response url="."><parameter name="leadRuleId" from="stored.leadRuleId"/></default-response>
-        <error-response url="."><parameter name="leadRuleId"/><parameter name="publicationId"/></error-response>
+        <error-response url="."><parameter name="leadRuleId"/><parameter name="publicationId"/><parameter name="registrationPolicyId"/>
+            <parameter name="triggerEnumId"/></error-response>
     </transition>
     <transition name="endLeadRule">
         <actions>
@@ -60,14 +67,18 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."><parameter name="leadRuleId"/></error-response>
     </transition>
     <actions>
-        <if condition="leadRuleId || publicationId">
+        <if condition="leadRuleId || publicationId || registrationPolicyId">
             <service-call name="mantle.marketing.MarketingFormServices.get#LeadRule" out-map="detail" transaction="force-new" ignore-error="true"
-                    in-map="{leadRuleId:(leadRuleId || null), publicationId:(leadRuleId ? null : publicationId)}"/>
+                    in-map="{leadRuleId:(leadRuleId || null), publicationId:(leadRuleId ? null : (publicationId || null)),
+                        registrationPolicyId:(leadRuleId || publicationId ? null : registrationPolicyId), triggerEnumId:(triggerEnumId || null)}"/>
             <script>ec.message.clearErrors()</script>
         </if>
-        <set field="recordFound" from="!!detail?.publication"/>
+        <!-- P18: an event offer's rule has an offer in place of a publication; the screen shows the offer as the source -->
+        <set field="offer" from="detail?.offer || null"/>
+        <set field="recordFound" from="!!(detail?.publication || offer)"/>
         <set field="rule" from="detail?.rule || null"/>
-        <set field="publication" from="detail?.publication || {}"/>
+        <set field="publication" from="detail?.publication || (offer ? {publicationText: offer.offerText + ' · ' + offer.triggerText.toLowerCase(),
+                formName: offer.whenText, state: offer.triggerText, organizationName: offer.organizationName} : {})"/>
         <set field="choices" from="detail?.choices || {fieldOptions: [], teamOptions: [], sourceOptions: []}"/>
         <set field="handoffs" from="detail?.handoffs || {}"/>
         <set field="captureList" from="detail?.captures || []"/>
@@ -83,7 +94,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="preview" from="previewed?.preview || null"/>
         <set field="previewValues" from="(preview?.values || []).filter(item =&gt; item.valueText)"/>
         <set field="ruleValues" from="rule ? Object.assign({}, rule, {expectedRevision: rule.revision, noteFieldNames: rule.noteFieldNames ? rule.noteFieldNames.split(',') : []})
-                : {publicationId: publication.publicationId, teamPartyId: (choices.defaultTeamPartyId || null)}"/>
+                : {publicationId: publication.publicationId, registrationPolicyId: offer?.registrationPolicyId || null, triggerEnumId: offer?.triggerEnumId || null,
+                    teamPartyId: (choices.defaultTeamPartyId || null)}"/>
         <set field="titleText" from="rule ? (rule.ruleName || publication.publicationText) : publication.publicationText"/>
         <set field="captionText" from="[publication.organizationName, publication.campaignName ? 'campaign ' + publication.campaignName : 'no campaign',
                 rule ? 'to ' + rule.teamName : null, rule ? 'from ' + rule.fromText : null, rule?.thruText ? 'until ' + rule.thruText : null].filter(Boolean).join(' · ')"/>
@@ -111,7 +123,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label text="${titleText}" type="h5" style="q-my-none"/>
                             </container>
                             <label text="${captionText}" type="div" style="text-caption m-muted"/>
-                            <label text="Lead form: ${publication.formName} · ${publication.state}" type="div" style="text-caption m-muted"/>
+                            <label text="Lead form: ${publication.formName} · ${publication.state}" type="div" style="text-caption m-muted" condition="!offer"/>
+                            <label text="Event: ${offer?.offerText} · ${offer?.whenText} · when they ${offer?.triggerEnumId == 'MltAttended' ? 'attend' : 'register'}" type="div"
+                                    style="text-caption m-muted" condition="offer"/>
                         </container>
                         <container style="col-12 col-md-auto m-record-status">
                             <render-mode>
@@ -124,7 +138,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
                         <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
                             <link url="${distributionPath}" text="Open the lead form" link-type="anchor-button" icon="sym_o_share"
-                                    parameter-map="{publicationId:publication.publicationId}" condition="distributionPath"/>
+                                    parameter-map="{publicationId:publication.publicationId}" condition="distributionPath &amp;&amp; !offer"/>
                             <link url="${campaignPath}" text="Open the campaign" link-type="anchor-button" icon="sym_o_campaign"
                                     parameter-map="{marketingCampaignId:publication.marketingCampaignId}" condition="campaignPath &amp;&amp; publication.marketingCampaignId"/>
                             <button-menu text="More" icon="more_horiz" condition="canEdit &amp;&amp; rule">
@@ -149,10 +163,14 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Lead rule"/>
                             <box-body>
                                 <label text="This lead form hands no answer to Sales yet: choose the sales team and map its questions." type="p" style="m-muted"
-                                        condition="!rule"/>
+                                        condition="!rule &amp;&amp; !offer"/>
+                                <label text="This event hands no attendee to Sales yet: choose the sales team. Each lead takes the attendee's own name and address and the event in its notes."
+                                        type="p" style="m-muted" condition="!rule &amp;&amp; offer"/>
                                 <form-single name="LeadRule" transition="storeLeadRule" map="ruleValues" condition="canEdit">
                                     <field name="leadRuleId"><default-field><hidden/></default-field></field>
                                     <field name="publicationId"><default-field><hidden/></default-field></field>
+                                    <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                    <field name="triggerEnumId"><default-field><hidden/></default-field></field>
                                     <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                     <!-- the team is a sales manager's choice (SALES_TEAM_MANAGE; the user's call of Nov 14, 2026): shown, not chosen,
                                         for anyone else, whose rule keeps its team or takes Sales' default -->
@@ -171,37 +189,47 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="nameFieldName">
+                                        <conditional-field condition="offer"><ignored/></conditional-field>
                                         <default-field title="Name from">
                                             <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
                                         </default-field>
                                     </field>
                                     <field name="organizationFieldName">
+                                        <conditional-field condition="offer"><ignored/></conditional-field>
                                         <default-field title="Organization from">
                                             <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
                                         </default-field>
                                     </field>
                                     <field name="emailFieldName">
+                                        <conditional-field condition="offer"><ignored/></conditional-field>
                                         <default-field title="Email from">
                                             <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
                                         </default-field>
                                     </field>
                                     <field name="phoneFieldName">
+                                        <conditional-field condition="offer"><ignored/></conditional-field>
                                         <default-field title="Phone from">
                                             <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
                                         </default-field>
                                     </field>
                                     <field name="noteFieldNames">
+                                        <conditional-field condition="offer"><ignored/></conditional-field>
                                         <default-field title="Notes from" tooltip="Only these answers go in the lead's notes; no other answer reaches Sales">
                                             <drop-down allow-empty="true" allow-multiple="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
                                         </default-field>
                                     </field>
                                     <field name="conditionFieldName">
+                                        <conditional-field condition="offer"><ignored/></conditional-field>
                                         <default-field title="Only when" tooltip="Hand an answer off only when this question has the answer below">
                                             <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
                                         </default-field>
                                     </field>
-                                    <field name="conditionValue"><default-field title="Is" tooltip="The answer, as its option's value"><text-line size="20"/></default-field></field>
+                                    <field name="conditionValue">
+                                        <conditional-field condition="offer"><ignored/></conditional-field>
+                                        <default-field title="Is" tooltip="The answer, as its option's value"><text-line size="20"/></default-field>
+                                    </field>
                                     <field name="noticeText">
+                                        <conditional-field condition="offer"><ignored/></conditional-field>
                                         <default-field title="Notice on the page" tooltip="What the visitor reads about the follow-up"><text-area rows="2" cols="50"/></default-field>
                                     </field>
                                     <field name="ruleName"><default-field title="Name"><text-line size="40"/></default-field></field>

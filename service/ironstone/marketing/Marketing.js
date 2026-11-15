@@ -151,6 +151,9 @@ function scope() {
     // P17: the registrations and their attendees are the events managers' (design §2 Registrations, RegistrationDetail: E), as Mantle's
     // EventRegistrationServices ask
     capabilities.registrationRead = !!capabilities.anyRead && !!capabilities.eventManage
+    // P18: check-in under a staff sign-in is the events managers' (design §2 CheckIn: E), as Mantle's preview#CheckIn and
+    // checkIn#Registration ask; a door tablet's display account is no Marketing user and gets no context (screen/Marketing.xml)
+    capabilities.checkInRead = !!capabilities.anyRead && !!capabilities.eventManage
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
@@ -269,7 +272,9 @@ const linkPaths = [
     "QuickCreate/NewEvent",
     // P17: the registrations of an offer or event and one registration (design §9 Registrations, RegistrationDetail)
     "Events/Registrations",
-    "Events/RegistrationDetail"
+    "Events/RegistrationDetail",
+    // P18: an offer's check-in (design §9 CheckIn)
+    "Events/CheckIn"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -1052,6 +1057,36 @@ const choiceSources = {
                 (row.workEffortName || row.workEffortId) +
                 (row.estimatedStartDate ? " · " + lib.dateText(row.estimatedStartDate) : "")
         }))
+    },
+    // P18: the event registration offers (one occurrence each) of the organization named, by title, for an automation's and a lead
+    // rule's registration and attendance triggers (AutomationServices and MarketingFormServices check the offer's organization again)
+    registrationOffers: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.anyRead) return []
+        const ids = choiceOrganizations(userScope, p)
+        if (!ids.length) return []
+        const label = row =>
+            (row.publicTitle || row.registrationPolicyId) + (row.occurrenceStart ? " · " + lib.dateText(row.occurrenceStart) : "")
+        let query = find("mantle.work.registration.EventRegistrationPolicy")
+            .condition("organizationPartyId", "in", ids)
+            .condition("statusId", "in", ["ErpPublished", "ErpClosed"])
+            .orderBy("-occurrenceStart")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["registrationPolicyId", "publicTitle"], term))
+        const options = Array.from(query.list()).map(row => ({value: row.registrationPolicyId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id =>
+                ids.includes(
+                    one("mantle.work.registration.EventRegistrationPolicy", {registrationPolicyId: id})?.organizationPartyId
+                ),
+            id =>
+                label(
+                    one("mantle.work.registration.EventRegistrationPolicy", {registrationPolicyId: id}) || {
+                        registrationPolicyId: id
+                    }
+                )
+        )
     },
     // P16: the ticket products an event's organization sells (not kept in inventory), by name
     ticketProducts: (userScope, term, selected, p) => {

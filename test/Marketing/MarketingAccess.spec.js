@@ -9,7 +9,9 @@
 // rows in Admin's registries (each bundle carrying exactly its group's grants, the readiness provider and the settings entry).
 // One feature per rule, each case of it a line of its problems, with artifact authorization enabled. Mantle's scope rules (the
 // organization filters, the list services' organization check, adoption) are Mantle's MarketingScope. The access and isolation
-// walk is the acceptance MarketingFoundationWalk. A later phase adds a case only for an access rule it adds.
+// walk is the acceptance MarketingFoundationWalk. A later phase adds a case only for an access rule it adds. P18: a door tablet of the
+// MARKETING_CHECKIN route group, its display account in the door group alone, opens CheckIn (its bare page, the one html render, and
+// its island, the one qvt render) for its offer, and every other Marketing screen and the shell are refused.
 // Run: ./moq test mr-boss --spec MarketingAccess
 const lib = ec.resource.script("component://mr-boss/test/Marketing/MarketingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page, screenRefusal, shell} = lib
@@ -637,7 +639,18 @@ feature(
                 const bundles = Array.from(
                     ec.entity.find("moqui.security.CapabilityBundle").condition("appName", "Marketing").list()
                 ).map(row => row.userGroupId)
-                const expected = ["AUTHOR", "AUDIENCE", "APPROVER", "DISPATCH", "EVENTS", "ANALYST", "READ", "ADMIN"]
+                // P18: the door tablet's display group (CHECKIN_DEVICE)
+                const expected = [
+                    "AUTHOR",
+                    "AUDIENCE",
+                    "APPROVER",
+                    "DISPATCH",
+                    "EVENTS",
+                    "ANALYST",
+                    "READ",
+                    "ADMIN",
+                    "CHECKIN_DEVICE"
+                ]
                     .map(name => "BOSS_MARKETING_" + name)
                     .concat(["BOSS_MARKETING"])
                 if (JSON.stringify(bundles.slice().sort()) !== JSON.stringify(expected.slice().sort()))
@@ -680,6 +693,8 @@ feature(
                 expectHolders("MESSAGE_SUPPRESSION_REVIEW", ["BOSS_MARKETING_ADMIN"])
                 expectHolders("MESSAGE_TEMPLATE_EDIT", ["BOSS_MARKETING_AUTHOR"])
                 expectHolders("MESSAGE_SENDING_CONFIGURE", ["BOSS_MARKETING_ADMIN"])
+                // P18: a door tablet's permission, its display group's alone
+                expectHolders("MARKETING_CHECKIN", ["BOSS_MARKETING_CHECKIN_DEVICE"])
                 const provider = ec.entity
                     .find("moqui.server.ReadinessProvider")
                     .condition("providerKey", "marketing.setup")
@@ -714,3 +729,89 @@ feature(
         }
     }
 )
+
+// P18 (design §9 CheckIn, F83): the shared door tablet. A display account of Retail holding the door bundle alone and a tablet registered
+// for the MARKETING_CHECKIN route group, fixed to the demo webinar's offer, and redeemed; as the tablet, CheckIn's bare page and its
+// island (the desk and the scan, no attendee search), a scan naming no ticket refused with its reason; Marketing's other screens, the
+// shell and another offer's door refused.
+feature("a door tablet opens CheckIn for its offer alone; every other Marketing screen and the shell are refused", {
+    when() {
+        const webroot = "component://webroot/screen/webroot.xml"
+        const door = "apps/Marketing/Events/CheckIn"
+        const state = {}
+        const request = (path, parameters, mode, method) => {
+            let test = ec.screen
+                .makeTest()
+                .rootScreen(webroot)
+                .header("cookie", "moqui.device=" + state.cookie)
+            if (mode) test = test.renderMode(mode)
+            const out = test.render(path, parameters || {}, method || "get")
+            ec.message.clearAll()
+            return {status: out.status, output: String(out.output || ""), errors: Array.from(out.errorMessages || []).join("\n")}
+        }
+        let display = system(() => ec.entity.find("moqui.security.UserAccount").condition("username", "display.spec.door").one())
+        if (!display) {
+            invoke("mantle.party.IdentityServices.create#DisplayAccount", {
+                displayName: "Spec door",
+                organizationPartyId: ids.organizationId,
+                bundleGroupIdList: ["BOSS_MARKETING_CHECKIN_DEVICE"]
+            })
+            display = system(() => ec.entity.find("moqui.security.UserAccount").condition("username", "display.spec.door").one())
+        }
+        const registered = invoke("mantle.party.IdentityServices.register#SharedDevice", {
+            deviceName: "Spec door webinar",
+            routeGroupId: "MARKETING_CHECKIN",
+            displayUserId: display?.userId,
+            parameterValue: "BOSS_MKT_OFFER_WEBINAR",
+            issueCode: false
+        })
+        const code = invoke("mantle.party.IdentityServices.reveal#SharedDeviceCode", {
+            deviceId: registered.deviceId
+        }).registrationCode
+        const redeemed = ec.screen.makeTest().rootScreen(webroot).render("Device/redeem", {code}, "post")
+        state.cookie = String(redeemed.header("Set-Cookie") || "")
+            .split(";")[0]
+            .replace("moqui.device=", "")
+        login("john.doe")
+        const out = {
+            registered,
+            html: request(door, {}),
+            island: request(door, {}, "qvt"),
+            // the framework puts the registered offer under registrationPolicyId whatever the browser sends
+            otherOffer: request(door, {registrationPolicyId: "BOSS_MKT_OFFER_WORKSHOP"}, "qvt"),
+            scan: request(door + "/scanResolve", {
+                scanForm: "EntryLookup",
+                scanField: "entryCode",
+                scanText: "EVNOSUCHTICKET000000000"
+            }),
+            refused: {
+                home: request("apps/Marketing/Home", {}),
+                events: request("apps/Marketing/Events/Events", {}),
+                registrations: request("apps/Marketing/Events/Registrations", {}),
+                setup: request("apps/Marketing/Events/RegistrationSetup", {workEffortId: "BOSS_MKT_EV_WEBINAR"}),
+                choices: request("apps/Marketing/Events/Registrations/choices", {}),
+                shell: request("qapps/Marketing/Events/CheckIn", {})
+            }
+        }
+        system(() => ec.entity.find("moqui.security.DeviceCredential").condition("deviceName", "Spec door webinar").deleteAll())
+        return out
+    },
+    then({registered, html, island, otherOffer, scan, refused}) {
+        registered.applied === true && registered.deviceId != null
+        html.status == 200 && html.errors == "" && html.output.includes('data-moqui-island="event-check-in"')
+        html.output.includes("/js/WebrootPublic.qvt.js") && !html.output.includes("header-menu")
+        island.status == 200 &&
+            island.errors == "" &&
+            island.output.includes("EntryLookup") &&
+            island.output.includes("m-scan-input")
+        !/Error rendering|Exception in render/.test(html.output + island.output)
+        island.output.includes("Spring planting webinar") && !island.output.includes("FindAttendee")
+        otherOffer.output.includes("Spring planting webinar") && !otherOffer.output.includes("Rose pruning")
+        scan.status == 400 && scan.output.includes("Not a current ticket")
+        // the route gate's refusal of a page outside the route group
+        Object.entries(refused)
+            .filter(([, out]) => !out.errors.includes("This device opens only MARKETING_CHECKIN"))
+            .map(([name, out]) => name + " " + out.status)
+            .join() == ""
+    }
+})

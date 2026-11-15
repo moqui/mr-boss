@@ -72,7 +72,8 @@ suite(
         // last: WarehouseReceiptFinishWalk receives into stock, which none of the walks above counts on
         "WarehouseReceiptFinishWalk",
         "ManufacturingWorkOrdersPhone",
-        "SalesBoardWalk"
+        "SalesBoardWalk",
+        "MarketingCheckInWalk"
     ],
     {
         server: {
@@ -90,7 +91,8 @@ suite(
                 "ManufacturingSubcontractFixtures",
                 "ManufacturingScheduleFixtures",
                 "ManufacturingShopFloorFixtures",
-                "InsightsClientFixtures"
+                "InsightsClientFixtures",
+                "MarketingCheckInFixtures"
             ],
             conf: "conf/MoquiDevConf.xml",
             // the walks that send (invoices, reminders, the close) keep their mail in the capture (docs/Build-Test.md)

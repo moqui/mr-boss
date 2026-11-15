@@ -1023,7 +1023,10 @@ skips that channel's sends only; quiet hours, a profile not ready and the freque
 subscription trigger reads accepted subscription requests of the topic from the first activation on; the segment trigger's first scan
 after activation is a baseline; staff enrollment is a dispatcher's or an audience editor's, with evidence and an operation key; the
 order trigger's events are filed by `handle#OrderPlaced` (the Mantle SECA `OrderPlacedRecordAttribution`, after the placement commits);
-the cart trigger reads the carts Commerce's recovery reads for a store whose recovery sender is the automation (Commerce §8). Steps are
+the cart trigger reads the carts Commerce's recovery reads for a store whose recovery sender is the automation (Commerce §8); the
+registration and attendance triggers (impl-marketing P18, the user's call of Nov 15) name an event registration offer of the
+organization and read, from the activation on, its places confirmed and its attendances checked in, each filed once per registration
+for its attendee. Steps are
 replaced as a set (Add step; a row's Change moves or removes one); AutomationDetail's sections are boxes. EnrollmentDetail is the
 dispatchers' and audience managers', the automations' list and detail the authors', approvers', dispatchers' and audience managers'.
 
@@ -1460,6 +1463,22 @@ result. Wrong-event, cancelled, expired or unconfirmed tickets cannot enter; man
 require a reason and never fabricate payment. TUI supports typed/scanned codes; phone layout shows
 the action and attendee without horizontal scrolling. **Needs:** MKT-EVENT; CX-DEVICE.
 
+As built (impl-marketing P18): at `Marketing/Events/CheckIn` for one offer (an occurrence; with an event alone its published or
+closed offers to choose), linked from EventDetail's Marketing links and RegistrationSetup. EntryLookup's `scan-input` resolves the
+code through E.`resolve#EntryCode`, whose match shows the attendee and the decision (EntryDecision) before Confirm posts it to
+E.`checkIn#Registration` (RecordEntry) with the scan's id as its operation key; the answer is a message and the screen loads again
+empty. An events manager also finds an attendee by name, address or registration (E.`preview#CheckIn` with a term) and checks them
+in with a reason, or admits a held or pending place by an override with a reason, which changes neither its state nor its payment;
+a wrong event, a cancelled, expired, waitlisted or review place, a cancelled event and a closed door (before a day ahead of the start
+or after twelve hours past the end) are never overridden. One attendance fact per registration (EventAttendance), its action in the
+registration's history (EraCheckedIn), so RegistrationDetail's Attendance is that history with a Checked in fact (E.`get#Attendance`).
+The shared door tablet: the route group MARKETING_CHECKIN (home CheckIn, the request parameter `registrationPolicyId` fixed to the
+offer at registration) admits CheckIn, its checkIn and scanResolve transitions alone; its display account holds the bundle
+BOSS_MARKETING_CHECKIN_DEVICE alone (MARKETING_CHECKIN); its requests get no Marketing context and see the desk, the scan and the
+attendee as a first name and initial, never a search, a buyer, a payment or answers. The check-in services accept MARKETING_CHECKIN
+only in the request of a device whose route group names that parameter, fixed to the offer, the display account belonging to the
+offer's organization; every lookup and check-in counts against a limit of the device (or the staff user), 60 a minute.
+
 **Source:** research §7; Odoo registration desk/barcode interaction.
 
 ## 10. Surveys, leads and engagement
@@ -1615,7 +1634,11 @@ of the same email as Sales' review item. Neither subscribes anyone. The Sales ro
 (a sales manager), who chooses or changes a rule's team among its current teams; a content author without it saves a rule only with
 the organization's default team of Sales' SalesPolicy, or with no team, which hands each lead to the default team in effect at the
 handoff (refused when Sales has none), and LeadRuleDetail shows the team read-only (the user's call of Nov 14, 2026; impl-marketing P13
-review).
+review). An event offer's rule (impl-marketing P18): New lead rule also routes an event's attendees, an offer of the organization and
+its trigger, registered (each place confirmed) or attended (each check-in), one current rule each; it takes the team and source alone
+and hands Sales, through the capture job, the attendee's own name and address (their own, else the reservation's when they bought
+it), the event, its date and ticket in the notes and the registration's campaign, never verified, one capture per rule and
+registration (Sales' source kinds `eventRegistration` and `eventAttendance`).
 
 ### Customer360 and ContactDetail — Context passed
 
@@ -2143,6 +2166,7 @@ there is no parallel Marketing version/snapshot system for configuration history
 | RegistrationEvent (impl-marketing P16, F107) | event, organization, who and when | The organization that offers an event's registration, kept once; the event stays the calendar's |
 | EventRegistrationPolicy / EventTicketType | event occurrence, effective offer/terms, site, registration window, capacity/hold/waitlist, ticket product and pricing source | One authoritative capacity domain per occurrence and per ticket; accepted terms referenced by registrations |
 | EventRegistration | registration ID, occurrence/ticket, attendee/buyer party, hold expiry/state, native order/item/payment references, source campaign, response ID, entry credential digest/revision | Attendee identity separate from payer/order; unique source/request allocation; financial facts remain in native records |
+| EventAttendance (impl-marketing P18) | registration (one fact each), offer, event, organization, attendee, ticket, method (entry code, found by name, a manager's override), the state then, the code's revision, reason, device, who and when, operation key | Check-in once per registration, a repeat answering the first; the attendance reports and the "attended" triggers read it |
 | EventReservation / EventRegistrationTerms (impl-marketing P17) | a request's buyer, request key (unique per offer), terms revision, order and payment; an offer's terms, cancellation terms and consent text per terms revision | A repeat answers the first; the words a registrant accepted survive a later change of the offer |
 | EventRegistrationAction / EventCommunicationSchedule | action ID, registration, action/actor/time/reason; event effective trigger/offset/template/purpose | Check-in/correction/cancellation evidence and one notice per registration/schedule/trigger, sent as a delivery-ledger source; no duplicate event store |
 | FormPublication / FormInvitation / FormSubmission (Commons, X16) | publication ID, DbForm, site/campaign or case/purpose/access/effective interval; invitation over `ExternalAccessCapability`; submission ID/request identity, response, verified party if any, source/effects status | One model for Marketing, Customer Service and Sales lead forms, owned by Commons; framework owns form/answers; publication controls exposure; submission is an acceptance/integration fact, not a copy of answers |
