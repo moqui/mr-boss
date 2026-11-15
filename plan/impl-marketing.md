@@ -3618,6 +3618,160 @@ MKT-LEAD; SAL-CRM. Every part of this phase is a connection to Sales (§1).
   site becomes one lead in Sales' queue with the campaign as its source though the form is posted twice; with Sales'
   intake failing the response is kept and the retry makes one lead; the visitor is on no list.
 
+**Built Nov 14 (P13).** mr-mantle, mr-boss and mr-pass on branch `mkt/p13` (hashes in the worker's reply), from master after P12's merge;
+mr-moqui unchanged, no Rust built. Built beside P14 (content and landing pages) and follow-up 4 (spec timing splits).
+- Checked first (the code over the plan; F68): impl-sales P5's Built and Review notes and SalesIntake.js as merged: `store#LeadIntake`
+  takes organizationPartyId, sourceKind `formResponse` with sourceId (the response), operationKey (at most 60 characters), teamPartyId,
+  utmSource and utmMedium, marketingCampaignId, trackingCodeId, defaultDataSourceId (offered to the organization), the submitted name,
+  organization, email and phone, opportunityName, description and verified; a repeated key answers the first result (alreadyApplied)
+  only when the request digest matches (else OPERATION_KEY_CONFLICT), one source identity one intake, a duplicate joins the open lead of
+  the same email (duplicate, SlioDuplicate); a system caller (no user, or authorization off) is trusted for organization, team and
+  verified and checks only that the team is current, the tracking code and campaign exist (not their organization). P12's Built and
+  Review notes (accept#Submission, applySubmissionEffects, the FppLead purpose, publish readiness), Sales.js `mountRoots` (Marketing
+  already admitted for Leads, Leads/Accounts and Settings/LeadSources), Leads.xml, LeadSources.xml, SalesOpportunityForms.xml,
+  OpportunityDetail.xml, find#Opportunities' rows (the campaign as an id), create#/update#Opportunity (the campaign checked for existence
+  only, no tracking code), P11's job and recovery pattern. The code over the plan:
+  - "a publication of purpose lead ... with its default source and team queue": the publication's source and queue are its lead rule (one
+    current rule per publication), and a lead form opens only once its rule is current (a readiness check of publish#Publication);
+  - the rule's "allowed field mapping" is four fields (name, organization, email, phone) and a list of note fields, each a customer-visible
+    question of the form; "consent text" is the rule's notice, shown on the page above Send (it records no consent);
+  - "the Sales routing grant" (design §2 LeadRules: A, S) is not a permission: a content author (MARKETING_CONTENT_EDIT) of the
+    organization picks among its current sales teams and offered sources (the user's call, below);
+  - "TrackingServices.find#TrackingLinks (the codes from P15)": built here minimally (a campaign's TrackingCode rows for a Marketing reader
+    of its organization) for Sales' lead forms; P15 extends it. A lead form's handoff passes the publication's campaign and no tracking
+    code or UTM pair: SubmitForm carries none until P15's capture;
+  - "process#LeadCaptures" is the staff ReprocessCapture; the job is `run#LeadCaptures`, with `capture#FormSubmission` and
+    `hand#LeadCapture` its internal steps (each with `operation` and `operation-ref`);
+  - "Leads ... mounted with Marketing's campaign and source filters": Sales' LeadList gains the campaign filter (Marketing's campaigns, for a
+    Marketing reader) beside its source filter, in both mounts, and the campaign column shows `campaignName` from find#Opportunities.
+- Mantle:
+  - `entity/MarketingEntities.xml` (a P13 block): MarketingLeadRule (package `mantle.marketing.lead`; the source kind MlsFormPublication,
+    trigger MltFormSubmitted, team, source, mapping, condition, notice; dated, `replacesLeadRuleId`), MarketingLeadCapture (unique by rule
+    and source event and by operation key; MlcPending, MlcHandedOff, MlcSkipped, MlcFailed; attempts, next try, reason, the lead and intake,
+    duplicate, reprocessed by and why) and the view MarketingLeadCaptureCount; `data/MarketingLeadSetupData.xml` (new, seed-initial): the
+    ServiceJob run_MarketingLeadCaptures (every five minutes), its JobRegistration and RecoveryDescriptor (MARKETING_CONTENT_EDIT).
+  - `service/mantle/marketing/MarketingLeads.js` (new) under `MarketingFormServices.xml` (a P13 block): find#LeadRules, get#LeadRule,
+    store#LeadRule, preview#LeadRule, find#LeadCaptures, get#LeadHandoffs, process#LeadCaptures, run#LeadCaptures, capture#FormSubmission,
+    hand#LeadCapture; `TrackingServices.xml` find#TrackingLinks. The handoff runs as the system (`runAsSystem`) in Sales' own transaction
+    under the capture's lock and key `mkt-lead:<leadCaptureId>`, with the publication's organization and campaign, the rule's team and
+    source, the answers to the questions published at submission (`formAt` of the submission's date), an email answer that is no address
+    dropped and noted, notes as "question: answer" lines, and verified only when the invitation's or the signed-in account's address equals
+    the email answered. A failure keeps the answer and the capture (its reason, a wait doubling from five minutes to a day, for 30 days).
+  - `MarketingPortal.js`: get#Form's `notice` for a lead form; applySubmissionEffects queues `capture#FormSubmission` after commit
+    (`registerOnCommit`), never in the answer's transaction. `MarketingForms.js` readinessOf: a lead form's current rule.
+  - Sales (owner contract): `SalesOpportunities.js` create#/update#Opportunity take `trackingCodeId` (a code of the deal's campaign,
+    TRACKING_INVALID; kept as a SalesOpportunityTracking row, never removed) and refuse another organization's campaign (CAMPAIGN_INVALID; a
+    legacy campaign of no organization passes); find#Opportunities' rows gain `campaignName` (one query), get#Opportunity `trackingCodeId`
+    and `trackingText`; `OpportunityServices.xml` the interface's `trackingCodeId`.
+- BOSS:
+  - `screen/Marketing/Leads/LeadRules.xml` and `LeadRuleDetail.xml` (new): LeadRuleList with New lead rule; the rule's header (End in
+    More), Lead rule (a change at its revision starts a new rule), Preview, Handoffs with Try again (ReprocessCapture, a reason).
+    `screen/Marketing/Leads.xml`: LeadRules and LeadRuleDetail, Leads and Accounts for a Sales reader only, LeadRules the default tab of a
+    user who reads no Sales, and the Sales context call `force-new` (finding below); `screen/Marketing.xml` the Leads item for authors and
+    the administrator; `screen/Marketing/Settings.xml` Sales' LeadSources (SALES_CONFIGURE) with Sales' context for this root.
+  - `Marketing.js`: `leadRuleRead`, area `leadRules`, links Leads/LeadRules, Leads/LeadRuleDetail, Settings/LeadSources.
+  - `CampaignDetail.xml` the Results box (get#LeadHandoffs, any Marketing reader); `SurveyDistribution.xml` a lead form's Lead handoff box.
+  - Sales' files, each in a marked Marketing block (owner contract): `Sales.js` choice sources `campaigns` and `trackingCodes` (over
+    Marketing's services as the user; none without MARKETING_VIEW), `ContextServices.xml` get#Choices' `marketingCampaignId`,
+    `template/SalesParts.xml` passing it; `Pipeline/Leads.xml` the campaign filter and name column; `template/SalesOpportunityForms.xml`
+    NewLead's campaign and tracking code; `Pipeline/OpportunityDetail.xml` Edit's campaign and tracking code (the stored value for anyone
+    else) and the header's tracking code; `Settings/LeadSources.xml` UtmSourceMap's source and medium from Marketing's vocabulary.
+  - `data/BossSetupMarketingData.xml` (a P13 block: BOSS_MKT_LEAD_RULES, the authors' ALWAYS); demo (`BossZZMarketingDemoData.xml`, a P13
+    block): Retail's garden plan request (a lead form) on ZIZI_SHOP for the spring campaign, its rule to Retail East with the website
+    enquiry source, and one answer of 10 November whose handoff failed and is no longer tried by the job (Try again makes its lead).
+- PASS: `screen/Marketing/SubmitForm.html.fancy` the notice above Send (`FormNotice`), `SubmitForm.xml`'s comment; `docs/Deployment.md`
+  (Marketing app: Lead forms). No operation added: the schema and route copies and the TOKEN_WRITES lists are unchanged.
+- Specs:
+  - Mantle `test/marketing/LeadCapture` (new, 4 features, about 1.2 s: an author routes a lead form to a team, a reader, another
+    organization's author and another organization's team refused, unknown and unmapped refused, one rule a form, the form opens only with
+    it and shows its notice; an answer posted twice under one key is one capture and one lead in the team's queue with the campaign and
+    source, the draft phone question and the unmapped budget never reach Sales, a second answer of the same email joins the lead, the job
+    adds nothing, a reader without Sales sees the counts and no lead id, another organization's reader refused, no subscription request,
+    consent or contact made; with the team ended the handoff fails and keeps the answer, the job leaves it until its time and then makes the
+    one lead, a reprocess needs the permission and a reason and leaves a handed-off capture alone; a lead takes a campaign of its
+    organization and a code of that campaign only, and find#TrackingLinks is the organization's).
+  - mr-boss `MarketingLeads` (new, 2 features, about 0.5 to 0.9 s: LeadRules' and LeadRuleDetail's one qvt render each for the author;
+    the author's Leads tabs, Sales' Leads telling them they read no leads, the reader's handoff counts, Sales' campaign choices for a
+    Marketing reader only); `MarketingAccess` (the capabilities `leadRuleRead` and `leadRules`, the author's and administrator's menus);
+    `MarketingSpecLib` (menus, the demo lead ids).
+  - Acceptance, written and not run: mr-boss `test/acceptance/Marketing/MarketingLeadScenario` (3 features, stepwise: scenario 11's lead
+    half through the screens' transitions: the lead form built, routed and opened; posted twice, one lead in East's queue with the
+    campaign; Sales' intake failing, the answer kept, Try again making the one lead; the visitor on no list).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle LeadCapture 4 of 4, with SalesLeadIntake,
+  SalesOpportunities, SalesLeadQualify, MarketingForms, FormPublications, MarketingSubscriptions, Campaigns (36 of 36); mr-boss
+  MarketingLeads 2 of 2, with MarketingAccess, MarketingCampaigns, MarketingSurveys, MarketingLists, SalesIntake, SalesOpportunities,
+  SalesHome, SalesSettings, SalesAccess (44 of 44); mr-pass SubmitForm, MarketingAccess, Transport (8 of 8). A throwaway walk (renders of
+  Settings/LeadSources qvt and tui, SurveyDistribution of the demo lead form, LeadRuleDetail tui and for the administrator, LeadRules tui,
+  a survey's publication as a lead rule (not available), Sales' OpportunityDetail and Leads, CampaignDetail html for a reader; Try again
+  through its transition making the demo capture's lead in Retail East; a rule change through storeLeadRule replacing the rule) passed and
+  was not kept. `moqui lint --screens` (release): 141 flagged sites, as before, none in a new or changed screen; parse failures 0.
+  Prettier clean on the new and changed JavaScript. Not run: test-apps, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P13" table; ss-inventory has no row for these screens.
+- Design edits: design-marketing §10 Leads and LeadRules, §12 LeadSources, §13 SubmitForm (as built); design-sales §3 Leads and §9
+  UtmSourceMap (owner contract).
+- Findings (provisional, numbered by the lead):
+  - the publication's default source and team queue are its lead rule, one current rule per lead form, and a lead form opens only with
+    one (the code over the plan above); a changed rule is a new rule from now, so an answer is captured by the rule in effect when it was
+    submitted and older answers are never captured again;
+  - no "Sales routing grant": a content author routes a lead form to any current sales team of the organization with any source offered
+    to it (the user's call, below);
+  - a lead form's handoff carries no tracking code or UTM pair (SubmitForm has none until P15), so the UTM map never decides a form lead's
+    source yet; find#TrackingLinks is a minimal read here, for Sales' choices, that P15 extends;
+  - `verified` is true only when an invitation's or the signed-in account's address equals the email answered; an anonymous lead form's
+    inquiry is always unverified, so Sales' purge blanks it if it never qualifies;
+  - an email answer that is not an address is left out of the inquiry (the lead is made without it) and noted on the capture;
+  - Sales' owner contract tightened: create#/update#Opportunity refuse another organization's campaign (a legacy campaign of no
+    organization passes; store#LeadIntake's system path still checks existence only), take a tracking code of the deal's campaign, and
+    keep it (a code is added, never removed);
+  - a failed capture is retried by the job for 30 days from its capture (a wait doubling to a day), then only by an author's Try again;
+    the registered recovery re-runs the job, which takes only what is due;
+  - the capture after commit and the job's collection may meet on one answer: one fails on the unique key and is logged, no second
+    capture is made;
+  - Marketing's Leads area called Sales' context without `force-new`: for a user who reads no Sales the refusal marked the request's
+    transaction for rollback, so any transition under Leads failed ("Transaction marked for rollback"); latent since P3 (its transitions
+    were Sales readers'), fixed here in Leads.xml and the new Settings call;
+  - a capture names its Sales lead only to a caller who can open it in Sales, and Marketing mounts no OpportunityDetail, so the lead shows
+    as an id; the preview's sample for a reader without MARKETING_AUDIENCE_VIEW is made of the questions, and the duplicate outcome is
+    Sales' policy in words, never looked up (no Sales record disclosed);
+  - Marketing's Settings is the Marketing administrator's and LeadSources needs SALES_CONFIGURE, so only a user holding both sees it
+    there (the demo marketing.admin does not).
+- For the lead:
+  - budget share: mr-mantle about 1.2 s (LeadCapture); mr-boss server about 0.5 to 0.9 s (MarketingLeads; MarketingAccess unchanged in
+    time); mr-pass none; no client spec;
+  - merge hot spots (P14 beside, P15 next, follow-up 4): mr-mantle `entity/MarketingEntities.xml` (a P13 block after P12's),
+    `service/mantle/marketing/MarketingFormServices.xml` (a P13 block at the end), `TrackingServices.xml` (find#TrackingLinks, P15's file),
+    `MarketingPortal.js` (getForm's notice, applySubmissionEffects; P14's embedded forms may touch it), `MarketingForms.js` (readinessOf),
+    `service/mantle/sales/SalesOpportunities.js` (campaignFor, trackingFor, the list's campaignName, get#Opportunity),
+    `OpportunityServices.xml` (the fields interface); new `MarketingLeads.js`, `data/MarketingLeadSetupData.xml`,
+    `test/marketing/LeadCapture.spec.js`. mr-boss `screen/Marketing.xml` (the Leads item), `screen/Marketing/Leads.xml`,
+    `screen/Marketing/Settings.xml`, `screen/Marketing/Campaigns/CampaignDetail.xml` (actions and the Results box), `screen/Marketing/
+    Surveys/SurveyDistribution.xml`, `service/ironstone/marketing/Marketing.js` (areas, areaReads, scope, linkPaths), Sales' `Sales.js` (a
+    block after P19's), `service/ironstone/sales/ContextServices.xml` (get#Choices), `template/SalesParts.xml`, `screen/Sales/Pipeline/
+    Leads.xml`, `OpportunityDetail.xml`, `template/SalesOpportunityForms.xml`, `screen/Sales/Settings/LeadSources.xml`,
+    `data/BossSetupMarketingData.xml` and `data/BossZZMarketingDemoData.xml` (P13 blocks at the ends), `test/Marketing/MarketingAccess.spec.js`,
+    `MarketingSpecLib.js`, `plan/usl-inventory.md`, `plan/design-marketing.md`, `plan/design-sales.md`, this file; new LeadRules and
+    LeadRuleDetail screens, MarketingLeads spec and MarketingLeadScenario. mr-pass `screen/Marketing/SubmitForm.html.fancy`, `SubmitForm.xml`,
+    `docs/Deployment.md`;
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`, after PASS Marketing's forms paragraph; no mr-moqui worktree): "A lead
+    form's answer reaches Sales only through Marketing's lead rule, never from the request: once `submitMarketingForm` has kept an answer
+    to a publication of the lead purpose, `mantle.marketing.MarketingFormServices.capture#FormSubmission` runs after the request commits
+    (on a service worker, in a transaction of its own; the page's answer and receipt never wait on it) and the capture job
+    `run_MarketingLeadCaptures` takes up any it missed; each captures the answer once per rule (MarketingLeadRule, a content author's of the
+    publication's organization: MARKETING_CONTENT_EDIT) and `hand#LeadCapture` hands it to Sales' `mantle.sales.OpportunityServices.store#LeadIntake`
+    as the system (`runAsSystem`), which trusts the organization, team and verification a system caller gives. So every value comes from
+    Marketing's records: the organization and campaign from the publication, the team (a current sales team of that organization, checked
+    when the rule is saved and by Sales at each handoff) and source (offered to it) from the rule, the inquiry's name, organization, email,
+    phone and notes only from the answers to the customer-visible questions published when the answer was submitted that the rule maps (an
+    unmapped, internal or unpublished answer never reaches Sales), and `verified` only when an invitation's address or the signed-in
+    account's address equals the email answered (a typed address identifies nobody). The handoff carries the capture's own operation key,
+    so a repeat (the job, an author's Try again with a reason, a second post under the same request key, which keeps no second answer)
+    answers Sales' first lead; a second answer with the same email joins the open lead as Sales' review item and is never told to the
+    visitor. A failed handoff keeps the answer and records a reason code (never an answer); nothing subscribes anyone. Staff read the rules,
+    captures and counts only through MarketingFormServices (the rules for a content author or the Marketing administrator, the counts for
+    any Marketing reader of the organization), and a capture names its Sales lead only to a caller who can open it in Sales.";
+  - the user's call: whether choosing a lead rule's sales team needs a Sales permission (design §2 says "Sales routing grant"; built: any
+    Marketing content author of the organization routes to any of its current teams); none blocking.
+
 ### P14 — Content, blog posts and landing pages
 
 Design §8 Content, ContentDetail, BlogPosts, BlogPostDetail, LandingPages and PageDetail, Knowledge, §18 (the blog

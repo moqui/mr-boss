@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
     when it is in the user's scope). Ending an offer leaves the leads that name the source. P5: UtmSourceMap, the organization's
     dated map from a tracked link's UTM source, and optionally its medium, to one of the sources it offers
     (store#LeadSourceMapping, find#LeadSourceMappings), which the lead intake reads (source and medium over source alone); a
-    mapping is ended, never changed. The source and medium are typed until Marketing offers its vocabulary (impl-marketing P13).
+    mapping is ended, never changed. The source and medium are chosen from Marketing's vocabulary for a user who reads Marketing in the
+    organization (impl-marketing P13: CampaignServices.find#Vocabulary's UTM sources and media), else typed.
     And Mail intake: each team's intake address (its plus tag: mail to sales+tag@ the intake mailbox, with a mail rule whose action
     is Make a sales lead, lands in the team's queue) and the source such a lead takes (store#TeamIntake, find#TeamIntakes).
     Built for a second mount (impl-sales §2; impl-marketing P13 mounts it under Marketing/Settings/LeadSources): its context is
@@ -99,6 +100,16 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="offeredSources" from="sourceList.filter(row =&gt; row.offered)"/>
         <set field="newMapping" from="{organizationPartyId: organizationPartyId}"/>
         <set field="newSource" from="{organizationPartyId: organizationPartyId, dataSourceTypeEnumId: 'LEAD_SOURCE'}"/>
+        <!-- impl-marketing P13: Marketing's UTM vocabulary as the map's choices, for a user who reads Marketing in the organization -->
+        <if condition="setupFound &amp;&amp; ec.user.hasPermission('MARKETING_VIEW')">
+            <service-call name="mantle.marketing.CampaignServices.find#Vocabulary" out-map="vocabulary" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="utmSourceOptions" from="(vocabulary?.vocabularyList || []).filter(row =&gt; row.vocabularyKindEnumId == 'MvkUtmSource')
+                .map(row =&gt; ({value: row.value, label: row.label ? row.label + ' (' + row.value + ')' : row.value}))"/>
+        <set field="utmMediumOptions" from="(vocabulary?.vocabularyList || []).filter(row =&gt; row.vocabularyKindEnumId == 'MvkUtmMedium')
+                .map(row =&gt; ({value: row.value, label: row.label ? row.label + ' (' + row.value + ')' : row.value}))"/>
     </actions>
     <widgets>
         <container style="row items-center q-col-gutter-sm">
@@ -188,8 +199,19 @@ along with this software (see the LICENSE.md file). If not, see
                         title="Map a tracked link's source" condition="offeredSources.length">
                     <form-single name="NewMapping" transition="storeMapping" map="newMapping">
                         <field name="organizationPartyId"><default-field><hidden/></default-field></field>
-                        <field name="utmSource"><default-field title="UTM source" tooltip="As the link carries it, such as newsletter"><text-line size="30"/></default-field></field>
-                        <field name="utmMedium"><default-field title="UTM medium" tooltip="Empty for every medium"><text-line size="30"/></default-field></field>
+                        <!-- impl-marketing P13: Marketing's vocabulary when there is one -->
+                        <field name="utmSource">
+                            <conditional-field title="UTM source" condition="utmSourceOptions.length">
+                                <drop-down allow-empty="false"><list-options list="utmSourceOptions" key="${value}" text="${label}"/></drop-down>
+                            </conditional-field>
+                            <default-field title="UTM source" tooltip="As the link carries it, such as newsletter"><text-line size="30"/></default-field>
+                        </field>
+                        <field name="utmMedium">
+                            <conditional-field title="UTM medium" condition="utmMediumOptions.length">
+                                <drop-down allow-empty="true"><list-options list="utmMediumOptions" key="${value}" text="${label}"/></drop-down>
+                            </conditional-field>
+                            <default-field title="UTM medium" tooltip="Empty for every medium"><text-line size="30"/></default-field>
+                        </field>
                         <field name="dataSourceId">
                             <default-field title="Lead source"><drop-down><list-options list="offeredSources" key="${dataSourceId}" text="${description}"/></drop-down></default-field>
                         </field>

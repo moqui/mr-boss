@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Leads › LeadRuleDetail (design-marketing §10 LeadRules: LeadRule, LeadRulePreview, ReprocessCapture; style-guide §3.3
+    Detail; impl-marketing P13): one lead rule of the user's organizations (leadRuleId), or a lead form's current rule or a new one
+    (publicationId) (mantle.marketing.MarketingFormServices get#LeadRule; else "Not available"). The record header: the lead form, its
+    organization, campaign, team and dates, the state chip; End in More for a content author. The boxes: Lead rule (the sales team, the
+    Sales source, the questions mapped to the lead's name, organization, email and phone and to its notes, a condition, the notice the
+    page shows; a change starts a new rule from now, at the revision read), Preview (what the latest answer, or a sample, would hand to
+    Sales) and Handoffs (the counts and each capture's state, attempts and reason, with Try again for a failed one: a reason, each
+    handoff under its own operation key, so Sales' first lead answers). Marketing's own context (`marketing`): the Leads area's
+    `sharedLinks` are Sales'. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Lead rule" default-menu-include="false">
+    <parameter name="leadRuleId"/>
+    <parameter name="publicationId"/>
+    <transition name="storeLeadRule">
+        <actions>
+            <service-call name="mantle.marketing.MarketingFormServices.store#LeadRule" out-map="stored"
+                    in-map="{leadRuleId:(leadRuleId || null), publicationId:(leadRuleId ? null : publicationId), expectedRevision:(expectedRevision || null),
+                        ruleName:(ruleName ?? ''), teamPartyId:(teamPartyId ?? ''), dataSourceId:(dataSourceId ?? ''),
+                        nameFieldName:(nameFieldName ?? ''), organizationFieldName:(organizationFieldName ?? ''), emailFieldName:(emailFieldName ?? ''),
+                        phoneFieldName:(phoneFieldName ?? ''),
+                        noteFieldNames:(noteFieldNames == null ? '' : typeof noteFieldNames == 'string' ? noteFieldNames : Array.from(noteFieldNames).join(',')),
+                        conditionFieldName:(conditionFieldName ?? ''), conditionValue:(conditionValue ?? ''), noticeText:(noticeText ?? '')}"/>
+            <message type="success">${stored.created ? 'Made the lead rule: the form\'s answers go to the team\'s queue' : 'Saved: the changed rule applies from now'}</message>
+        </actions>
+        <default-response url="."><parameter name="leadRuleId" from="stored.leadRuleId"/></default-response>
+        <error-response url="."><parameter name="leadRuleId"/><parameter name="publicationId"/></error-response>
+    </transition>
+    <transition name="endLeadRule">
+        <actions>
+            <service-call name="mantle.marketing.MarketingFormServices.store#LeadRule"
+                    in-map="{leadRuleId:leadRuleId, expectedRevision:(expectedRevision || null), end:true}"/>
+            <message type="success">Ended: later answers of the lead form are not handed to Sales</message>
+        </actions>
+        <default-response url="."><parameter name="leadRuleId"/></default-response>
+        <error-response url="."><parameter name="leadRuleId"/></error-response>
+    </transition>
+    <!-- ReprocessCapture: the chosen failed handoffs tried again, each on its own -->
+    <transition name="processLeadCaptures">
+        <actions>
+            <set field="captureIds" from="selectedKeys == null ? [] : typeof selectedKeys == 'string' ? selectedKeys.split(',') : Array.from(selectedKeys)"/>
+            <service-call name="mantle.marketing.MarketingFormServices.process#LeadCaptures" out-map="processed"
+                    in-map="{leadCaptureIds:captureIds, reason:(reason || null)}"/>
+            <message type="success">Handed off ${processed.handedOff}, failed again ${processed.failed}, left as they were ${processed.unchanged}</message>
+        </actions>
+        <default-response url="."><parameter name="leadRuleId"/></default-response>
+        <error-response url="."><parameter name="leadRuleId"/></error-response>
+    </transition>
+    <actions>
+        <if condition="leadRuleId || publicationId">
+            <service-call name="mantle.marketing.MarketingFormServices.get#LeadRule" out-map="detail" transaction="force-new" ignore-error="true"
+                    in-map="{leadRuleId:(leadRuleId || null), publicationId:(leadRuleId ? null : publicationId)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!detail?.publication"/>
+        <set field="rule" from="detail?.rule || null"/>
+        <set field="publication" from="detail?.publication || {}"/>
+        <set field="choices" from="detail?.choices || {fieldOptions: [], teamOptions: [], sourceOptions: []}"/>
+        <set field="handoffs" from="detail?.handoffs || {}"/>
+        <set field="captureList" from="detail?.captures || []"/>
+        <set field="canEdit" from="!!detail?.canEdit"/>
+        <set field="listPath" from="marketing.sharedLinks['Leads/LeadRules']"/>
+        <set field="distributionPath" from="marketing.sharedLinks['Surveys/SurveyDistribution'] || null"/>
+        <set field="campaignPath" from="marketing.sharedLinks['Campaigns/CampaignDetail'] || null"/>
+        <if condition="rule">
+            <service-call name="mantle.marketing.MarketingFormServices.preview#LeadRule" out-map="previewed" transaction="force-new" ignore-error="true"
+                    in-map="{leadRuleId:rule.leadRuleId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="preview" from="previewed?.preview || null"/>
+        <set field="previewValues" from="(preview?.values || []).filter(item =&gt; item.valueText)"/>
+        <set field="ruleValues" from="rule ? Object.assign({}, rule, {expectedRevision: rule.revision, noteFieldNames: rule.noteFieldNames ? rule.noteFieldNames.split(',') : []})
+                : {publicationId: publication.publicationId}"/>
+        <set field="titleText" from="rule ? (rule.ruleName || publication.publicationText) : publication.publicationText"/>
+        <set field="captionText" from="[publication.organizationName, publication.campaignName ? 'campaign ' + publication.campaignName : 'no campaign',
+                rule ? 'to ' + rule.teamName : null, rule ? 'from ' + rule.fromText : null, rule?.thruText ? 'until ' + rule.thruText : null].filter(Boolean).join(' · ')"/>
+        <set field="retryCount" from="captureList.filter(row =&gt; row.retryable).length"/>
+    </actions>
+    <widgets>
+        <section name="LeadRuleNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="This lead rule is not available: it does not exist, or it is not one of your organizations'." type="p"/>
+                        <link url="${listPath}" text="Back to lead rules" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="LeadRuleFound" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${rule?.leadRuleId || 'New'}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${titleText}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${captionText}" type="div" style="text-caption m-muted"/>
+                            <label text="Lead form: ${publication.formName} · ${publication.state}" type="div" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${rule?.stateColor || 'grey'}">${WebUtilities.encodeHtml(rule?.stateText || 'No rule yet')}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: String(rule?.stateText || "No rule yet")})}]]></text>
+                                <text type="html">${rule?.stateText || 'No rule yet'}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <link url="${distributionPath}" text="Open the lead form" link-type="anchor-button" icon="sym_o_share"
+                                    parameter-map="{publicationId:publication.publicationId}" condition="distributionPath"/>
+                            <link url="${campaignPath}" text="Open the campaign" link-type="anchor-button" icon="sym_o_campaign"
+                                    parameter-map="{marketingCampaignId:publication.marketingCampaignId}" condition="campaignPath &amp;&amp; publication.marketingCampaignId"/>
+                            <button-menu text="More" icon="more_horiz" condition="canEdit &amp;&amp; rule">
+                                <container-dialog id="EndLeadRuleDialog" button-text="End" icon="sym_o_block" title="End lead rule ${rule?.leadRuleId}" width="480">
+                                    <label text="Later answers of the lead form are not handed to Sales; the handoffs made stay." type="p" style="m-muted"/>
+                                    <form-single name="EndLeadRule" transition="endLeadRule" map="ruleValues">
+                                        <field name="leadRuleId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title=""><submit text="End" type="danger" confirmation="End the lead rule of ${publication.publicationText}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Lead rule"/>
+                            <box-body>
+                                <label text="This lead form hands no answer to Sales yet: choose the sales team and map its questions." type="p" style="m-muted"
+                                        condition="!rule"/>
+                                <form-single name="LeadRule" transition="storeLeadRule" map="ruleValues" condition="canEdit">
+                                    <field name="leadRuleId"><default-field><hidden/></default-field></field>
+                                    <field name="publicationId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="teamPartyId">
+                                        <default-field title="Sales team" tooltip="Each lead goes to this team's queue">
+                                            <drop-down allow-empty="false"><list-options list="choices.teamOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="dataSourceId">
+                                        <default-field title="Source" tooltip="The lead's source unless the organization's UTM map names another">
+                                            <drop-down allow-empty="true"><list-options list="choices.sourceOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="nameFieldName">
+                                        <default-field title="Name from">
+                                            <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="organizationFieldName">
+                                        <default-field title="Organization from">
+                                            <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="emailFieldName">
+                                        <default-field title="Email from">
+                                            <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="phoneFieldName">
+                                        <default-field title="Phone from">
+                                            <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="noteFieldNames">
+                                        <default-field title="Notes from" tooltip="Only these answers go in the lead's notes; no other answer reaches Sales">
+                                            <drop-down allow-empty="true" allow-multiple="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="conditionFieldName">
+                                        <default-field title="Only when" tooltip="Hand an answer off only when this question has the answer below">
+                                            <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="conditionValue"><default-field title="Is" tooltip="The answer, as its option's value"><text-line size="20"/></default-field></field>
+                                    <field name="noticeText">
+                                        <default-field title="Notice on the page" tooltip="What the visitor reads about the follow-up"><text-area rows="2" cols="50"/></default-field>
+                                    </field>
+                                    <field name="ruleName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="submitButton">
+                                        <conditional-field title="" condition="rule"><submit text="Save" confirmation="Save the changed rule? It applies to answers from now on."/></conditional-field>
+                                        <default-field title=""><submit text="Create lead rule"/></default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row><field-ref name="teamPartyId"/><field-ref name="dataSourceId"/></field-row>
+                                        <field-row><field-ref name="nameFieldName"/><field-ref name="organizationFieldName"/></field-row>
+                                        <field-row><field-ref name="emailFieldName"/><field-ref name="phoneFieldName"/></field-row>
+                                        <field-ref name="noteFieldNames"/>
+                                        <field-row><field-ref name="conditionFieldName"/><field-ref name="conditionValue"/></field-row>
+                                        <field-ref name="noticeText"/>
+                                        <field-ref name="ruleName"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                                <section name="RuleRead" condition="!canEdit &amp;&amp; rule">
+                                    <widgets>
+                                        <label text="Team: ${rule?.teamName} · source: ${rule?.sourceText || 'the UTM map, else none'}" type="p"/>
+                                        <label text="${rule?.mappingText}" type="p"/>
+                                        <label text="Only when ${rule?.conditionText}" type="p" condition="rule?.conditionText"/>
+                                        <label text="Notice: ${rule?.noticeText}" type="p" style="m-muted" condition="rule?.noticeText"/>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Preview"/>
+                            <box-body>
+                                <label text="Save the rule to see what an answer hands to Sales." type="p" style="m-muted" condition="!preview"/>
+                                <section name="PreviewShown" condition="preview">
+                                    <widgets>
+                                        <label text="${preview?.sampleText}: ${preview?.handedOff ? 'a lead in ' + preview?.queueText + '\'s queue' : 'not handed off'}" type="p" style="text-weight-medium"/>
+                                        <section-iterate name="PreviewValues" list="previewValues" entry="item">
+                                            <widgets><label text="${item.label}: ${item.valueText}" type="p" style="q-mb-xs"/></widgets>
+                                        </section-iterate>
+                                        <label text="Source: ${preview?.sourceText}" type="p" style="q-mb-xs"/>
+                                        <label text="Campaign: ${preview?.campaignText}" type="p" style="q-mb-xs" condition="preview?.campaignText"/>
+                                        <label text="${preview?.verifiedText}" type="p" style="q-mb-xs"/>
+                                        <label text="${preview?.duplicateText}" type="p" style="m-muted q-mb-xs"/>
+                                        <label text="Its handoff: ${preview?.captureText}" type="p" style="q-mb-xs" condition="preview?.captureText"/>
+                                        <label text="${(preview?.reasons || []).join(' · ')}" type="p" style="m-muted" condition="(preview?.reasons || []).length"/>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                </container-row>
+
+                <container-box>
+                    <box-header title="Handoffs"/>
+                    <box-body>
+                        <label text="${handoffs.handedOff || 0} handed to Sales (${handoffs.newLeads || 0} new leads, ${handoffs.joined || 0} joined open leads) · ${handoffs.failed || 0} failed · ${handoffs.pending || 0} waiting · ${handoffs.skipped || 0} not handed off"
+                                type="p" condition="rule"/>
+                        <label text="No answer has been handed off yet." type="p" style="m-muted" condition="!captureList.length"/>
+                        <form-list name="CaptureList" list="captureList" skip-form="true" paginate="false" condition="captureList.length">
+                            <row-selection id-field="leadCaptureId" parameter="selectedKeys" list-mode="true" condition="canEdit &amp;&amp; retryCount">
+                                <action>
+                                    <dialog button-text="Try again" button-icon="sym_o_replay" title="Try the chosen handoffs again"/>
+                                    <form-single name="ReprocessCapture" transition="processLeadCaptures">
+                                        <field name="reason"><default-field title="Why now"><text-line size="50" required="true"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Try again">
+                                                <submit icon="sym_o_replay" confirmation="Hand the chosen answers to Sales again? Each keeps its own key, so an answer Sales already took makes no second lead."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="leadCaptureId"><default-field title="Handoff"><display/></default-field></field>
+                            <field name="capturedText"><default-field title="Answered"><display/></default-field></field>
+                            <field name="status">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
+                            <field name="salesOpportunityId"><default-field title="Lead"><display/></default-field></field>
+                            <field name="attemptCount" align="right"><default-field title="Attempts"><display format="#,##0"/></default-field></field>
+                            <field name="errorText"><default-field title="Why"><display/></default-field></field>
+                            <field name="nextAttemptText"><default-field title="Next try"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="capturedText"/><field-ref name="outcomeText"/></column>
+                                <column><field-ref name="status"/><field-ref name="errorText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

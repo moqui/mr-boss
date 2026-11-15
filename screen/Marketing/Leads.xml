@@ -17,20 +17,32 @@ along with this software (see the LICENSE.md file). If not, see
     user's own Sales grant and scope decide what they read, and its sharedLinks name only what Marketing mounts, so a row whose
     detail Marketing does not mount shows unlinked), with Marketing's bulk action "Add to list (evidenced)" on both lists for a holder
     of MARKETING_AUDIENCE_EDIT (owner contract: Sales' screens include its transitions). Shown to a user who reads Sales (the root's
-    menu condition); a Marketing user without Sales sees the lists' own note. LeadRules and LeadSources join with P13. -->
+    menu condition); a Marketing user without Sales sees the lists' own note. P13: LeadRules and LeadRuleDetail (design §10 LeadRules), the
+    lead forms' routing to Sales and their handoffs, for a content author or the administrator (BOSS_MKT_LEAD_RULES), the default tab
+    of a user who reads no Sales; LeadSources is mounted in Settings. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Leads" default-menu-index="8" menu-image="sym_o_person_search" menu-image-type="icon">
     <always-actions>
         <!-- Sales' context for this root, or none for a user without Sales (the lists then say they do not read leads) -->
         <service-call name="ironstone.sales.ContextServices.get#SharedContext" in-map="{appRoot:'Marketing'}" out-map="salesFound"
-                ignore-error="true"/>
+                transaction="force-new" ignore-error="true"/>
         <script>ec.message.clearErrors()</script>
         <set field="sales" from="salesFound?.sharedLinks ? salesFound : {capabilities: {}, sharedLinks: {}, organizationPartyIds: []}"/>
         <set field="sharedLinks" from="sales.sharedLinks"/>
     </always-actions>
     <subscreens default-item="Leads" always-use-full-path="true">
-        <subscreens-item name="Leads" location="component://mr-boss/screen/Sales/Pipeline/Leads.xml" menu-index="1"/>
-        <subscreens-item name="Accounts" location="component://mr-boss/screen/Sales/Accounts/Accounts.xml" menu-index="2"/>
+        <!-- P13: a user who reads no Sales opens the lead rules -->
+        <conditional-default condition="ec.user.userId &amp;&amp; !(ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW')) &amp;&amp; (ec.user.hasPermission('MARKETING_CONTENT_EDIT') || ec.user.hasPermission('MARKETING_CONFIGURE'))"
+                item="LeadRules"/>
+        <subscreens-item name="Leads" location="component://mr-boss/screen/Sales/Pipeline/Leads.xml" menu-index="1"
+                menu-include="ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW')"/>
+        <subscreens-item name="Accounts" location="component://mr-boss/screen/Sales/Accounts/Accounts.xml" menu-index="2"
+                menu-include="ec.user.hasPermission('SALES_VIEW') || ec.user.hasPermission('SALES_TEAM_VIEW') || ec.user.hasPermission('SALES_REPORT_VIEW')"/>
+        <!-- P13: the lead rules (BOSS_MKT_LEAD_RULES: the authors'; the administrator through the root) and one rule -->
+        <subscreens-item name="LeadRules" location="component://mr-boss/screen/Marketing/Leads/LeadRules.xml" menu-index="3"
+                menu-include="ec.user.hasPermission('MARKETING_CONTENT_EDIT') || ec.user.hasPermission('MARKETING_CONFIGURE')"/>
+        <subscreens-item name="LeadRuleDetail" location="component://mr-boss/screen/Marketing/Leads/LeadRuleDetail.xml"
+                menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="MarketingLeadsPanel" type="tab"/>

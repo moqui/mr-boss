@@ -1000,6 +1000,22 @@ called by built screens, PASS pages and the delivery ledger:
 | marketing/MarketingPortalServices | get#Form, submit#Form | PASS:Marketing/SubmitForm (PublicForm, FormReceipt) | PASS:Marketing/SubmitForm (getMarketingForm, submitMarketingForm) (Marketing P12) |
 | marketing/AutomationServices | create#Automation, store#EnrollmentRule (trigger AtrFormSubmitted) | design §6 (the form-submission trigger) | the admission job's form trigger (collect#AdmissionEvents over FormSubmission) (Marketing P12) |
 
+Added in Marketing P13 (Nov 14, 2026; Marketing's lead rules and the Sales handoff in `mantle.marketing.MarketingFormServices` over
+MarketingLeads.js, a campaign's tracking codes in `mantle.marketing.TrackingServices`, and Sales' lead services as their owner contract,
+impl-marketing P13), called by built screens, the SubmitForm page's effects and the capture job:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/MarketingFormServices | find#LeadRules, get#LeadRule, store#LeadRule | Marketing/Leads/LeadRules (LeadRuleList, LeadRule) | Marketing/Leads/LeadRules (the list, New lead rule), Marketing/Leads/LeadRuleDetail (the Lead rule box, More: End); Marketing/Surveys/SurveyDistribution (Lead handoff) (Marketing P13) |
+| marketing/MarketingFormServices | preview#LeadRule | Marketing/Leads/LeadRules (LeadRulePreview) | Marketing/Leads/LeadRuleDetail (Preview) (Marketing P13) |
+| marketing/MarketingFormServices | find#LeadCaptures, process#LeadCaptures | Marketing/Leads/LeadRules (ReprocessCapture) | Marketing/Leads/LeadRuleDetail (Handoffs, Try again) (Marketing P13) |
+| marketing/MarketingFormServices | get#LeadHandoffs | Marketing/Leads (handoff counts, F66); Marketing/Campaigns/CampaignDetail (Results) | Marketing/Campaigns/CampaignDetail (Results); Marketing/Surveys/SurveyDistribution (Lead handoff) (Marketing P13) |
+| marketing/MarketingFormServices | run#LeadCaptures, capture#FormSubmission, hand#LeadCapture | design §15.3 (Capture handoff) | the job run_MarketingLeadCaptures; the SubmitForm page's effects (MarketingPortal.js, after commit) (Marketing P13) |
+| marketing/TrackingServices | find#TrackingLinks (a campaign's tracking codes) | Sales/Pipeline/Leads (NewLead), Sales/Pipeline/OpportunityDetail (the lead's campaign choices) | Sales.js choiceSources trackingCodes (NewLead, OpportunityDetail's Edit) (Marketing P13; P15 adds the links) |
+| marketing/CampaignServices | find#Campaigns, find#Vocabulary | Sales/Pipeline/Leads, Sales/Settings/LeadSources (UtmSourceMap) | Sales.js choiceSources campaigns (Leads' filter, NewLead, OpportunityDetail's Edit); Sales/Settings/LeadSources (UtmSourceMap's choices) (Marketing P13) |
+| sales/OpportunityServices | store#LeadIntake | Marketing §10 LeadRules (the handoff) | hand#LeadCapture, as the system (Marketing P13) |
+| sales/OpportunityServices | create#Opportunity, update#Opportunity (trackingCodeId; a campaign of the deal's organization) | Sales/Pipeline/Leads (NewLead), Sales/Pipeline/OpportunityDetail | NewLead, OpportunityDetail's Edit (Marketing P13, owner contract) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

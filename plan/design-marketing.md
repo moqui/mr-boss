@@ -1451,6 +1451,17 @@ with MARKETING_AUDIENCE_EDIT and never subscribes directly. Crosscut §3.29 row:
 
 **Source:** research §§9, 11; Sales §3. **Needs:** MKT-LEAD, MKT-REPORT.
 
+As built (impl-marketing P13): `Marketing/Leads` shows Sales' Leads and Accounts to a Sales reader and LeadRules to a content author
+or the administrator (its default tab for a user who reads no Sales, for whom Sales' Leads says they read no leads). LeadList's campaign
+filter offers Marketing's campaigns to a user who reads Marketing (Sales' `choices` source `campaigns`, over
+`CampaignServices.find#Campaigns` as the user) and its campaign column shows the campaign's name (find#Opportunities' `campaignName`).
+MARKETING_VIEW alone gives handoff counts (`MarketingFormServices.get#LeadHandoffs`, Marketing's own MarketingLeadCapture rows: new
+leads, joined open leads, waiting, failed, not handed off) on CampaignDetail's Results box and SurveyDistribution's Lead handoff box;
+a capture names its Sales lead only to a caller who can open it in Sales. Sales' NewLead and OpportunityDetail's Edit offer the
+campaign and a tracking code of it to a user who reads Marketing and show the stored value to anyone else; Sales'
+create#/update#Opportunity take `trackingCodeId` (a SalesOpportunityTracking row, added, never removed) and refuse another
+organization's campaign.
+
 ### LeadRules
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
@@ -1474,6 +1485,22 @@ and outcomes. The one public lead page is PASS SubmitForm (§13); Sales' LeadInt
 it (X15). **Needs:** MKT-LEAD, MKT-FORMS, MKT-PUBLIC; SAL-CRM.
 
 **Source:** research §§7, 9; Odoo event_crm/survey_crm rules and Frappe CRM public forms; shared Sales intake.
+
+As built (impl-marketing P13): `Marketing/Leads/LeadRules` (LeadRuleList, New lead rule) and `Marketing/Leads/LeadRuleDetail` (LeadRule,
+LeadRulePreview, Handoffs with ReprocessCapture as Try again), BOSS_MKT_LEAD_RULES (the authors'; the administrator through the root).
+A rule is MarketingLeadRule: one current rule per lead form publication (its source; the trigger Form answered; registration and
+attendance join with P17), the sales team whose queue a lead goes to (a current team of the organization), the Sales source when the
+organization's UTM map has none (offered to it), the questions mapped to the inquiry's name, organization, email and phone and to its
+notes (each a customer-visible question of the form; no other answer reaches Sales), an optional condition on one answer, and a notice
+the page shows above Send; a change starts a new rule from now and ends the one it replaces. The publication's "default source and team
+queue" are its rule, and a lead form opens only once its rule is current (a readiness check). An accepted answer is captured once per
+rule and submission (MarketingLeadCapture) after it commits and handed to Sales' `store#LeadIntake` as the system under the capture's
+operation key (`mkt-lead:<id>`), with the publication's organization and campaign, the rule's team and source, the answers to the
+questions published when it was submitted, and `verified` only when an invitation's or the signed-in account's address equals the email
+answered; a failed handoff keeps the answer and its reason and is tried again by the job `run_MarketingLeadCaptures` (every five
+minutes, a wait doubling from five minutes to a day, for 30 days) or an author's Try again with a reason; a duplicate joins the open lead
+of the same email as Sales' review item. Neither subscribes anyone. The Sales routing grant is not asked: a content author picks among
+the organization's current teams (impl-marketing P13, the user's call).
 
 ### Customer360 and ContactDetail — Context passed
 
@@ -1684,6 +1711,11 @@ vocabulary, and the shared Sales source editor supplies permitted Sales lead sou
 dictionaries never create duplicate Sales sources by matching labels. **Source:** research §§9–10;
 Sales §9. **Needs:** MKT-LEAD.
 
+As built (impl-marketing P13): `Marketing/Settings/LeadSources` mounts Sales' LeadSources in Sales' context for this root (a Sales
+administrator's, SALES_CONFIGURE); its UtmSourceMap offers the organization's Marketing UTM sources and media (Vocabularies,
+`CampaignServices.find#Vocabulary`) as choices to a user who reads Marketing there, in both mounts, and is typed otherwise. The
+campaign and tracking-code references are offered on Sales' lead forms (§10 Leads), not here.
+
 ### SendingProfiles
 
 Comms owns this shared business settings surface; this section defines its additional form summaries.
@@ -1869,7 +1901,8 @@ site's one and a wrong link answer one NotFound. Inputs are named `f_<field>` wi
 subscription choice is its own box and address, filed as Subscribe's public request with its verification message after the answer
 is kept. The receipt is the publication's completion words whatever was kept; an answer past the client's (30 in ten minutes) or
 site's (1,000 an hour) limit, over 64 KB or naming a field the page never offered keeps nothing; a value to fix answers what to fix.
-The lead purpose's handoff is P13's.
+The lead purpose's handoff is P13's: a lead form shows its lead rule's notice above Send, and its answer, once kept, is captured and
+handed to Sales on the server after the request commits (§10 LeadRules), the receipt the same whatever happens there.
 
 ### Event
 

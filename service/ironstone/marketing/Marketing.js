@@ -44,7 +44,9 @@ const areas = {
     // P11: Automations, the authors', approvers', dispatchers' and audience managers' (BOSS_MKT_AUTOMATIONS)
     automations: "Automations",
     // P12: Surveys (the builder, distribution and responses), the authors', audience managers' and analysts' (BOSS_MKT_SURVEYS)
-    surveys: "Surveys"
+    surveys: "Surveys",
+    // P13: LeadRules (the lead forms' routing to Sales and their handoffs), the authors' (BOSS_MKT_LEAD_RULES)
+    leadRules: "Leads/LeadRules"
 }
 // The capability an area's screens' services also ask, so a custom group given Marketing in Admin, which is no member of
 // BOSS_MARKETING and not reached by the area's deny, is shown no area its services refuse (impl-maintenance F346's lesson).
@@ -55,7 +57,8 @@ const areaReads = {
     audiencePreview: "previewRead",
     sends: "sendsRead",
     automations: "automationRead",
-    surveys: "surveyRead"
+    surveys: "surveyRead",
+    leadRules: "leadRuleRead"
 }
 
 // ===== scope =====
@@ -134,6 +137,9 @@ function scope() {
     // SurveyDetail the survey readers and editors, SurveyDistribution A, Responses U and R), as Marketing's form purposes admit
     capabilities.surveyRead =
         !!capabilities.anyRead && !!(capabilities.contentEdit || capabilities.audienceRead || capabilities.reportRead)
+    // P13: the lead rules are read by a content author or the administrator (design §2 LeadRules: A, S), as Mantle's find#LeadRules
+    // asks; a lead's own pipeline stays Sales' (the user's Sales read, Leads' mount)
+    capabilities.leadRuleRead = !!capabilities.anyRead && !!(capabilities.contentEdit || capabilities.configure)
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
@@ -226,7 +232,11 @@ const linkPaths = [
     "Surveys/SurveyDetail",
     "Surveys/SurveyDistribution",
     "Surveys/Responses",
-    "Surveys/ResponseDetail"
+    "Surveys/ResponseDetail",
+    // P13: the lead rules and one rule (design §10 LeadRules), and Sales' LeadSources mounted in Settings (design §12)
+    "Leads/LeadRules",
+    "Leads/LeadRuleDetail",
+    "Settings/LeadSources"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"

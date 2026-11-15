@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     boxes: FormPublication (who answers, how often, the site, the campaign, the subscription choice, the closing date and the page's
     words; a content author's form at the revision read), FormSharing (the public link with its QR, or "by invitation only", and the
     respondent's page as the preview shows it), Readiness and Invitations (each invitation send with its topic, state, invited and
-    answered counts, opening SendDetail, where it is approved and released as every send). Every change is Mantle's guarded service. -->
+    answered counts, opening SendDetail, where it is approved and released as every send). P13: a lead form's Lead handoff (its rule's team
+    and mapping and its handoff counts, opening LeadRuleDetail). Every change is Mantle's guarded service. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Distribution" default-menu-include="false">
     <parameter name="formId"/>
@@ -106,6 +107,22 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="surveyLink" from="sharedLinks?.['Surveys/SurveyDetail']"/>
         <set field="distributionLink" from="sharedLinks?.['Surveys/SurveyDistribution']"/>
         <set field="sendLink" from="sharedLinks?.['Sends/SendDetail']"/>
+        <!-- P13: a lead form's rule and its handoffs (MarketingFormServices get#LeadRule and get#LeadHandoffs), the rule opened in
+            LeadRuleDetail for a content author or the administrator -->
+        <set field="isLeadForm" from="publication?.purposeEnumId == 'FppLead'"/>
+        <if condition="isLeadForm &amp;&amp; marketing.capabilities.leadRuleRead">
+            <service-call name="mantle.marketing.MarketingFormServices.get#LeadRule" out-map="leadFound" transaction="force-new" ignore-error="true"
+                    in-map="{publicationId:publicationId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <if condition="isLeadForm">
+            <service-call name="mantle.marketing.MarketingFormServices.get#LeadHandoffs" out-map="leadHandoffsFound" transaction="force-new"
+                    ignore-error="true" in-map="{publicationId:publicationId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="leadRule" from="leadFound?.rule || null"/>
+        <set field="leadHandoffs" from="leadHandoffsFound?.handoffs || null"/>
+        <set field="leadRuleLink" from="marketing.capabilities.leadRules ? (sharedLinks?.['Leads/LeadRuleDetail'] || null) : null"/>
     </actions>
     <widgets>
         <section name="DistributionUnavailable" condition="!recordFound">
@@ -361,6 +378,17 @@ along with this software (see the LICENSE.md file). If not, see
                                 </section>
                                 <label type="p" condition="!publication.pageUrl"
                                         text="${publication.accessEnumId == 'FpaInvited' ? 'By invitation only: each recipient opens it from their own link.' : 'No public page yet: choose a site whose Marketing pages serve the organization.'}"/>
+                            </box-body>
+                        </container-box>
+                        <!-- P13: a lead form's handoff to Sales -->
+                        <container-box condition="isLeadForm">
+                            <box-header title="Lead handoff"/>
+                            <box-body>
+                                <label text="Its answers go to ${leadRule.teamName}'s queue in Sales: ${leadRule.mappingText}" type="p" condition="leadRule"/>
+                                <label text="No lead rule yet: its answers are not handed to Sales." type="p" style="m-muted" condition="!leadRule"/>
+                                <label text="${leadHandoffs?.summaryText}" type="p" style="text-caption m-muted" condition="leadHandoffs"/>
+                                <link url="${leadRuleLink}" text="${leadRule ? 'Open the lead rule' : 'Route its answers'}" link-type="anchor"
+                                        parameter-map="leadRule ? {leadRuleId: leadRule.leadRuleId} : {publicationId: publicationId}" condition="leadRuleLink"/>
                             </box-body>
                         </container-box>
                         <container-box>
