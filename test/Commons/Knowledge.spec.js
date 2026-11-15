@@ -180,10 +180,12 @@ feature("a Chinese page name is created and renamed, and a slash or .. is still 
         const renamed = post("renamePage", { wikiPageId: created.json.wikiPageId, pageName: renamedName })
         const slash = post("createPage", { wikiSpaceId: "BOSSKB", parentPath: "Office", pageName: "产品/说明" })
         const dots = post("createPage", { wikiSpaceId: "BOSSKB", parentPath: "Office", pageName: ".." })
+        // 81 characters, under Knowledge's 100, but 243 bytes, over the framework's 240: refused here, not by the wiki
+        const long = post("createPage", { wikiSpaceId: "BOSSKB", parentPath: "Office", pageName: "说".repeat(81) })
         const removed = post("deletePage", { wikiPageId: created.json.wikiPageId })
-        return { created, view, renamed, slash, dots, removed, name, renamedName }
+        return { created, view, renamed, slash, dots, long, removed, name, renamedName }
     },
-    then({ created, view, renamed, slash, dots, removed, name, renamedName }) {
+    then({ created, view, renamed, slash, dots, long, removed, name, renamedName }) {
         created.errors == ""
         created.json.pagePath == "Office/" + name
         view.text.startsWith("# " + name)
@@ -191,6 +193,7 @@ feature("a Chinese page name is created and renamed, and a slash or .. is still 
         renamed.json.pagePath == "Office/" + renamedName
         slash.errors.includes("letters")
         dots.errors.includes("letters")
+        long.errors.includes("A page name is too long")
         removed.errors == ""
     },
 })

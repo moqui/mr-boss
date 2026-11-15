@@ -219,10 +219,14 @@ along with this software (see the LICENSE.md file). If not, see
                 <if condition="ec.message.hasError()"><return/></if>
                 <set field="wikiSpaceId" from="spaceOut.wikiSpaceId"/>
                 <script><![CDATA[
-                    // a page name has letters, digits and .,'-_:()!? only; a name in use gets the time added
+                    // a page name has letters and digits of any script and .,'-_:()!? only (update#WikiPage's rule), at most
+                    // 200 bytes in UTF-8 by whole characters so a name in use has room for the time added under its 240
                     const fromText = String(noteText).split('\n').map((line) => line.replace(/^#+\s*/, '').trim()).find((line) => line) || ''
-                    let name = String(title || fromText.substring(0, 60)).replace(/[^\w\.\-,':()!\? ]+/g, ' ').replace(/\s+/g, ' ').trim()
-                    if (!name) name = ec.l10n.localize('Note')
+                    const chars = Array.from(String(title || Array.from(fromText).slice(0, 60).join(''))
+                            .replace(/[^\p{L}\p{Nd}_.\-,':()!? ]+/gu, ' ').replace(/\s+/g, ' ').trim())
+                    while (encodeURIComponent(chars.join('')).replace(/%[0-9A-F]{2}/g, '_').length > 200) chars.pop()
+                    let name = chars.join('').trim()
+                    if (!name || name === '.' || name === '..') name = ec.l10n.localize('Note')
                     const inUse = (pageName) => ec.entity.find('moqui.resource.wiki.WikiPage').condition('wikiSpaceId', wikiSpaceId)
                             .condition('pagePath', pageName).disableAuthz().count() > 0
                     if (inUse(name)) name = name + ' (' + ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH.mm.ss') + ')'
