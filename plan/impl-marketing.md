@@ -431,7 +431,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Experiments | Mantle, BOSS | ExperimentDetail | built and reviewed Nov 14, merged |
 | P11 Automation | Mantle, BOSS | Automations, AutomationDetail, EnrollmentDetail; Commerce's RecoveryPolicy | built and reviewed Nov 14, merged |
 | P12 Surveys and form publication | Mantle, BOSS, PASS | Surveys, SurveyDetail, SurveyDistribution, Responses, ResponseDetail; PASS SubmitForm | built and reviewed Nov 14, merged |
-| P13 Leads and the Sales handoff | Mantle, BOSS, PASS | Leads, LeadRules, LeadSources; PASS SubmitForm's lead purpose | — |
+| P13 Leads and the Sales handoff | Mantle, BOSS, PASS | Leads, LeadRules, LeadSources; PASS SubmitForm's lead purpose | built and reviewed Nov 14, merged |
 | P14 Content, blog posts and landing pages | Mantle, BOSS, PASS | Content, ContentDetail, BlogPosts, BlogPostDetail, LandingPages, PageDetail, Knowledge; PASS pages | — |
 | P15 Tracking links and capture | Mantle, BOSS, PASS | TrackingLinks, TrackingLinkDetail; CampaignDetail's Tracking links tab | — |
 | P16 Events and registration setup | Mantle, BOSS, PASS | Events, EventDetail, RegistrationSetup; PASS Event | — |
@@ -3709,7 +3709,7 @@ mr-moqui unchanged, no Rust built. Built beside P14 (content and landing pages) 
 - Inventories: usl-inventory's "Added in Marketing P13" table; ss-inventory has no row for these screens.
 - Design edits: design-marketing §10 Leads and LeadRules, §12 LeadSources, §13 SubmitForm (as built); design-sales §3 Leads and §9
   UtmSourceMap (owner contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F269 to F279 in order:
   - the publication's default source and team queue are its lead rule, one current rule per lead form, and a lead form opens only with
     one (the code over the plan above); a changed rule is a new rule from now, so an answer is captured by the rule in effect when it was
     submitted and older answers are never captured again;
@@ -3810,7 +3810,7 @@ master had nothing newer to merge. Read against the phase text, §2, §4, design
   - R2 (low): the capture job read a rule's first 500 answers of the window and then dropped the captured ones, so once a busy form had
     500 captured answers in 30 days its later uncaptured ones were never reached by the job; it now pages past captured answers (at most
     500 captured per rule a run, 40 pages).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F280 to F282 in order:
   - the handoff's request digest includes values that can change between attempts (the localized "Inquiry" in the lead's name, the
     publication's title, an account's address, and with R1 Sales' default team): only if Sales committed an intake and the capture's
     own update was then lost would a retry answer OPERATION_KEY_CONFLICT and stay failed (the lead exists, by the source identity);
@@ -4534,6 +4534,20 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F266 | P12 (Review Nov 14): the invitation link is made, and the FormInvitation marked sent with its attempt counted, before the build's later checks and the attempt itself, so a delivery suppressed after it (no unsubscribe address) or failed still reads as sent (Responses' "Delivered") | P12: as its Review note says |
 | F267 | P12 (Review Nov 14): the option score parser applies to every purpose's builder: a non-Marketing option line ending "\| <number>" now stores a score (unused there) instead of keeping it in its label | P12: as its Review note says |
 | F268 | P12 (Review Nov 14): the worker's findings stand (the operations camelCase, the purposes, the invitation as an ordinary send, scores 0–1000 on single choices, an anonymous publication taking each new key, the respondent named for audience readers, the trigger not spec'd, the demo site unpublished); its concurrent anonymous one is R1 | P12: as its Review note says |
+| F269 | P13 (Built Nov 14): the publication's default source and team queue are its lead rule, one current rule per lead form, and a lead form opens only with one (the code over the plan above); a changed rule is a new rule from now, so an answer is captured by the rule in effect when it was submitted and older answers are never captured again | P13: as its Built note says |
+| F270 | P13 (Built Nov 14): no "Sales routing grant": a content author routes a lead form to any current sales team of the organization with any source offered to it (the user's call, below) | P13: as its Built note says |
+| F271 | P13 (Built Nov 14): a lead form's handoff carries no tracking code or UTM pair (SubmitForm has none until P15), so the UTM map never decides a form lead's source yet; find#TrackingLinks is a minimal read here, for Sales' choices, that P15 extends | P13: as its Built note says |
+| F272 | P13 (Built Nov 14): `verified` is true only when an invitation's or the signed-in account's address equals the email answered; an anonymous lead form's inquiry is always unverified, so Sales' purge blanks it if it never qualifies | P13: as its Built note says |
+| F273 | P13 (Built Nov 14): an email answer that is not an address is left out of the inquiry (the lead is made without it) and noted on the capture | P13: as its Built note says |
+| F274 | P13 (Built Nov 14): Sales' owner contract tightened: create#/update#Opportunity refuse another organization's campaign (a legacy campaign of no organization passes; store#LeadIntake's system path still checks existence only), take a tracking code of the deal's campaign, and keep it (a code is added, never removed) | P13: as its Built note says |
+| F275 | P13 (Built Nov 14): a failed capture is retried by the job for 30 days from its capture (a wait doubling to a day), then only by an author's Try again; the registered recovery re-runs the job, which takes only what is due | P13: as its Built note says |
+| F276 | P13 (Built Nov 14): the capture after commit and the job's collection may meet on one answer: one fails on the unique key and is logged, no second capture is made | P13: as its Built note says |
+| F277 | P13 (Built Nov 14): Marketing's Leads area called Sales' context without `force-new`: for a user who reads no Sales the refusal marked the request's transaction for rollback, so any transition under Leads failed ("Transaction marked for rollback"); latent since P3 (its transitions were Sales readers'), fixed here in Leads.xml and the new Settings call | P13: as its Built note says |
+| F278 | P13 (Built Nov 14): a capture names its Sales lead only to a caller who can open it in Sales, and Marketing mounts no OpportunityDetail, so the lead shows as an id; the preview's sample for a reader without MARKETING_AUDIENCE_VIEW is made of the questions, and the duplicate outcome is Sales' policy in words, never looked up (no Sales record disclosed) | P13: as its Built note says |
+| F279 | P13 (Built Nov 14): Marketing's Settings is the Marketing administrator's and LeadSources needs SALES_CONFIGURE, so only a user holding both sees it there (the demo marketing.admin does not) | P13: as its Built note says |
+| F280 | P13 (Review Nov 14): the handoff's request digest includes values that can change between attempts (the localized "Inquiry" in the lead's name, the publication's title, an account's address, and with R1 Sales' default team): only if Sales committed an intake and the capture's own update was then lost would a retry answer OPERATION_KEY_CONFLICT and stay failed (the lead exists, by the source identity); rare, left as built | P13: as its Review note says |
+| F281 | P13 (Review Nov 14): the after-commit capture and the job colliding log an error for the loser (harmless, nothing kept); counted once as failed in that run's totals | P13: as its Review note says |
+| F282 | P13 (Review Nov 14): the Built note's findings stand as written, except the "Sales routing grant" one, now R1 | P13: as its Review note says |
 
 ## 7. Later
 
