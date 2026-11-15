@@ -6212,6 +6212,238 @@ built (F19). SMS is in this build, last, after the first release's gate (§4).
   members goes out with its segment estimate shown at approval, a member's STOP removes them from the next send,
   and an organization with no messaging number sees SMS not ready while its email sends work.
 
+**Built Nov 15 (P22).** mr-moqui, mr-mantle, mr-boss and mr-pass on branch `mkt/p22` (hashes in the worker's reply), from master after
+P20's merge; the framework part first, in mr-moqui, committed apart ("Marketing P22: a conf-level sms-consent provider and a day limit
+per sending number for promotional texts"). Built beside follow-up 4 (`mkt/fix4`) and P21 (`mkt/p21`; the hot spots below).
+- Checked first (the code over the plan): §5 Q6 and §4 (Nov 11, Nov 13), F19, F57, F72–F74; P6's, P8's, P9's, P11's and P20's Built and
+  Review notes; the framework's Sms.js (check#SmsSend, send#SmsMessage, the opt-out), screen/shell.rs and service/shell.rs
+  (call#Providers), the Telnyx adapter (a direct text's outcomes); Mantle's ledger (MessageDeliveries.js), sending profiles,
+  suppressions, ConsentServices record#PartyConsent, MarketingEligibility.js (the SMS channel already classified there), MarketingSends.js,
+  MarketingDispatch.js, MarketingAutomations.js, MarketingPortal.js and AccountHub.js. The code over the plan:
+  - the conf-level provider is `screen-facade/shell-providers` in a component's MoquiConf.xml, with the app root's element names
+    (`<sms-consent name service sequence/>`), admitted for the hooks in `CONF_PROVIDER_HOOKS` (sms-consent alone; another is logged and
+    left out) and asked by call#Providers after the apps' providers for every caller, the system with no user included, with
+    authorization disabled (the trusted conf names it); an app's provider of the same name is asked in its place; Sms.js now asks
+    call#Providers with authorization disabled (a system text with no user was refused before reaching a provider);
+  - the day limit per sending number is VoicePolicy `smsMaxPromotionalPerNumber` (1000 when empty; System, Voice, Fraud), counted as
+    `promo:<number>`: a promotional text with no user counts there alone (not against `smsSystemMaxPerDay`, so a campaign never spends
+    sign-in codes' budget), one with a user there too beside the user's limits; no per-number override (a finding);
+  - send#SmsMessage also answers `deliveryOutcome` (retryable, permanent, uncertain) as send#EmailTemplate does, so the ledger maps its
+    answer without parsing reason codes; the ledger calls it in a transaction of its own (its refusal is an error that would otherwise
+    roll back the attempt's record);
+  - "an SMS sending profile bound to one of the organization's messaging numbers": a number is the organization's when it is one of its
+    current telecom numbers (E.164 from its country code, else the deployment's rules) and one of our numbers (moqui.call.PhoneNumber)
+    with a messaging bridge there and not disabled; Mantle had no link between an organization and a number (a finding);
+  - "phone numbers normalized from the contact's own country": the TelecomNumber's own country code, else the deployment's home country
+    (CallHandlingServices normalize#PhoneNumber); Geo has no telephone code, so a postal address's country is not used; the recipient's
+    key (MarketingEligibility.js phoneOf) is now that E.164 number (it was + and the digits, which for a number with no country code was
+    no number);
+  - the sms-consent answer counts a `PcpSms` grant of one of the organization's topics (the latest row of a list it owns) as consent with
+    it, beside the organization's and the global purpose rows (a topic subscriber holds only the list row); a global or organization
+    withdrawal says no;
+  - a STOP becomes the withdrawal through an EECA on the framework's `moqui.call.SmsOptOut` (on create and update, optedOut Y with
+    lastKeyword STOP), in its own transaction, a failure logged (the opt-out the framework keeps never waits on it); the withdrawal is the
+    organization's `PcpSms` purpose row (source PcsSmsReply), once, for every party holding the number, and one suppression (MsrSmsStop,
+    MssSmsReply) per organization that owns our number; START ends neither;
+  - a send's channel is its topic's (a list of phone numbers), so `channelEnumId` is checked against it rather than chosen; the text is
+    the content's text alternative (no subject, body, attachment, tracking or unsubscribe link; "Reply STOP to opt out" added when it has
+    no STOP), at most 1600 characters (the bridge's default); the release's unsubscribe-link check passes an SMS profile;
+  - "the configured cost estimate": the profile's `segmentCost` and its currency (the provider's price belongs with the number), times
+    the segments, a message and for the prepared recipients; the estimate is of the text with its variables unfilled;
+  - the day's limit reached is not a retryable try: the delivery waits for the next UTC day untried; a STOP (`optedOut`) or the hook's no
+    (`consentRequired`) is suppressed, never retried;
+  - "the Send SMS step in AutomationDetail": an automation's channel is its topic's, so an automation of a list of phone numbers has Send
+    SMS steps (AskSendSms, the template's text alternative) and refuses Send email there (CHANNEL_INVALID), and the reverse;
+  - "PASS Email preferences' SMS topics": the organization's offered text message topics are shown; one the person is on may be left (as
+    an email topic), one they are not on is named with how to join, never turned on there (turning it on would file the email address
+    for a list of phone numbers; it needs a phone number's own evidence);
+  - DeliveryAnalysis already has no open rate for SMS (P20); nothing changed there. An experiment stays email only (P10).
+- mr-moqui (framework): `screen/shell.rs` (CONF_PROVIDER_HOOKS, `conf_providers_of`, `conf_providers`), `screen/cache.rs` (ScreenConf
+  `providers`), `context/conf.rs` (the merge by hook and name), `service/shell.rs` (call#Providers and get#Providers with the conf's),
+  `moqui-conf-3.xsd`, ShellServices.xml, ProviderInterfaces.xml (sms#Consent); Sms.js (the counters, `promo:<number>`,
+  `deliveryOutcome`, the providers asked with authorization disabled), SmsServices.xml (check#SmsSend, note#SmsSent and release#SmsSend
+  take fromNumber and isPromotional), org/moqui/SmsServices.xml (deliveryOutcome), VoiceEntities.xml, Voice.js, VoiceServices.xml and
+  basic-comms `System/Voice/Fraud.xml` (smsMaxPromotionalPerNumber); docs `interfaces/SMS.md`, `tools/Comms.md` ("Provider hooks": the
+  conf's), `dev/JS-Framework-Services.md`. No host (ec.*) member, so no moqui-host.d.ts change.
+- Mantle: `service/mantle/party/MessageSms.js` and `MessageSmsServices.xml` (new: numbers, the SMS profile's checks, the estimate, the
+  sms-consent answer check#SmsConsent, the STOP's note#SmsKeyword), `entity/MessageSmsEntities.xml` (new: MessageSendingProfile
+  fromPhoneNumber, segmentCost, segmentCostUomId), `entity/SmsOptOut.eecas.xml` (new), `data/MessageSmsSeedData.xml` (new: MdcSms,
+  PcsSmsReply, MsrSmsStop, MssSmsReply, AskSendSms; their types load after an entity file's seed), `MoquiConf.xml` (the sms-consent
+  provider); P22 blocks in `MessageSendingProfiles.js` (the SMS profile, its readiness, numberOptions, forDelivery's fromNumber),
+  `MessageDeliveries.js` (attemptSms), `MessageSuppressions.js` (the SMS channel), `MessageServices.xml`, `MarketingSends.js` (the
+  channel, the text, the estimate, the SMS test, prepare's and approval's checks), `CampaignSendServices.xml` (smsEstimate, smsText),
+  `MarketingDispatch.js` (smsDelivery, the E.164 address, the unsubscribe-link check), `MarketingEligibility.js` (phoneOf),
+  `MarketingAutomations.js` (Send SMS), `MarketingPortal.js` and `public/AccountHub.js` (text message topics).
+- BOSS: `Shared/SendingProfiles.xml` (the channel and sender columns, New text message profile, the readiness's fix place),
+  `Marketing/Sends/Compose.xml` (the text, its estimate; no subject, body or attachment for SMS), `Sends/SendDetail.xml` (the estimate in
+  the Summary and the approver's dialog; the text in place of the body), `Automations/AutomationDetail.xml` (Send SMS), `Marketing.js`
+  (a P22 block: `smsReadyOrganizations`; `sendTopics` offers lists of phone numbers once an SMS profile is ready, `sendProfiles` names an
+  SMS profile).
+- PASS: `screen/Account/Hub.js` (the text message topics on Email preferences).
+- Specs:
+  - mr-moqui (Rust): moqui-channels `a_campaign_text_is_asked_of_the_conf_provider_and_counts_for_its_number` (a conf's sms-consent yes
+    sent, a no and no answer refused before the provider, a conf's inbox-source left out and get#Providers listing the conf's; a lost
+    answer uncertain and a 503 retryable for the caller's ledger; the number's day of promotional texts reached while a sign-in code still
+    goes, the system's budget unspent), moqui-core `a_components_conf_providers_merge_by_hook_and_name`; `cargo test -p moqui-channels`
+    11 of 11, moqui-core's conf and shell tests (20 of 20), clippy on both crates clean, rustfmt on the changed files.
+  - Mantle `test/marketing/SmsSends` (new, 8 features, about 1.9 s: an SMS profile refused a number the organization does not have and
+    ready only with the number's bridge; no SMS send without a ready SMS profile, an email profile refused for a text (PROFILE_CHANNEL);
+    no text without PcpSms on the topic, the estimate before approval, a delivery queued for a member without consent suppressed at the
+    attempt with no hand-off; the dispatch as the system passing Mantle's sms-consent and reaching the framework (the closed local port
+    retried, its count given back); an uncertain text not handed off again; the answer no for a number with consent to another
+    organization only and for a number no organization owns; a STOP withdrawing and suppressing once, a START ending neither and the next
+    preparation leaving the person out; an automation of a list of phone numbers taking Send SMS and refusing Send email). The provider
+    is the framework's Telnyx adapter at 127.0.0.1:9, so nothing leaves the machine; the provider's own answers are moqui-channels'.
+  - Acceptance, written and not run: mr-boss `test/acceptance/Marketing/MarketingSmsScenario` (4 features, stepwise: the administrator's
+    SMS profile on Retail's number, ready; a text send to the consenting members with its segment and cost estimate on SendDetail at
+    approval, each consenting member's text handed to the framework and the one without consent no recipient; a STOP removing the member
+    from the next send; Ziziwork Services with no messaging number refused a text send and offered no list of phone numbers while its
+    email send is made).
+- Tests run (this worktree's Debug binary, `target/debug/moqui`, built with CARGO_BUILD_JOBS=4, through the mr-moqui worktree's `./moq
+  ... --debug --nobuild` with MOQUI_RUNTIME=.claude/worktrees/mkt-p22/runtime; the shared release binary lacks the framework change):
+  framework Voice (13 of 13); mr-mantle SmsSends (8 of 8), Sends, Dispatch, Automations, Experiments, MarketingSubscriptions,
+  DeliveryLedger, SendingProfiles, Suppressions, Eligibility, Audiences, AudienceImport, Consent, MarketingReports, MarketingForms (85 of
+  85), ShopCustomer, ShopCheckout, CartRecovery; mr-boss MarketingSends, MarketingAutomations, MarketingDelivery, MarketingTemplates,
+  MarketingAccess, MarketingReports (19 of 19); mr-pass ShopAccount. `moqui lint --screens` (Debug): parse failures 0, 143 flagged sites
+  as on master, none in a changed screen. Prettier (mr-moqui's config) on the changed Mantle and BOSS JavaScript that was clean before
+  (MarketingEligibility.js and PASS's Hub.js were not and are left so). Not run: test-apps, test-framework, the acceptance suite.
+- Inventories: usl-inventory's "Added in Marketing P22" table; ss-inventory has no row for these screens.
+- Design edits: design-marketing §12 (as built, after P6's paragraph).
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: the conf-level provider's form and authorization; the per-number limit as one policy value, a
+    campaign's texts apart from the system's budget; send#SmsMessage's deliveryOutcome; an organization's number as its telecom number
+    that is one of ours with a bridge; normalization from the number's own country code else the deployment's; topic grants counted by
+    the sms-consent answer; the STOP's EECA; a send's and an automation's channel from the topic; the cost a segment on the profile; the
+    day's limit waiting untried; Email preferences never turning a text topic on;
+  - Mantle had no relation between an organization and one of our numbers (moqui.call.PhoneNumber): an organization's messaging numbers
+    are its own telecom numbers that are ours; a number two organizations list belongs to both (the sms-consent answer asks every owner);
+  - a receipt for a campaign's text is still dropped (F73): the framework keeps no row of a direct text, so DeliveryAnalysis shows
+    hand-off outcomes for SMS (§7);
+  - no per-number override of the promotional day limit (one VoicePolicy value for every number), though 10DLC campaigns differ per
+    number;
+  - the estimate is of the text with its variables unfilled (a long first name may add a segment); the cost is the profile's configured
+    price, not the provider's;
+  - a person joins a text message topic only through an import or staff with evidence: PASS Marketing's public subscription (P7) offers
+    email topics, and Email preferences never turns a text topic on;
+  - a provider service written as an inline script finds its `toNumber` parameter shadowed by the scripts' global `toNumber` helper (it
+    must read `ec.context.toNumber`; Mantle's reads the parameter map);
+  - the uncertain SMS hand-off is set by hand in the Mantle spec (the framework's lost answer is moqui-channels' test; an app spec has no
+    provider that drops a connection: the adapter's HTTP client is moqui-lib's, outside the HTTP fixtures).
+- For the lead:
+  - budget share: mr-mantle about 1.9 s (SmsSends); mr-boss and mr-pass none (no regression spec changed); framework: two Rust tests
+    well under a second (moqui-channels about 0.2 s).
+  - merge hot spots: P21 (`mkt/p21`) beside: mr-boss `service/ironstone/marketing/Marketing.js` (a P22 block before `choiceSources`, and
+    `sendTopics` and `sendProfiles`), `screen/Marketing/Sends/SendDetail.xml` (P21's Assist prompt; P22's header comment, actions and the
+    Summary and content boxes), `plan/usl-inventory.md` (a table after P20's), `plan/design-marketing.md` (§12), this file; follow-up 4
+    (`mkt/fix4`) beside: mr-mantle `MarketingPortal.js` (topicView) and `public/AccountHub.js` (storeMarketing) may meet it. mr-mantle
+    `MarketingSends.js`, `MarketingDispatch.js`, `MarketingAutomations.js`, `MessageDeliveries.js`, `MessageSendingProfiles.js`,
+    `CampaignSendServices.xml` and `MessageServices.xml` (P22 blocks and branches), `MoquiConf.xml` (a screen-facade before
+    webapp-list); new files MessageSms.js, MessageSmsServices.xml, MessageSmsEntities.xml, SmsOptOut.eecas.xml, MessageSmsSeedData.xml,
+    SmsSends.spec.js, MarketingSmsScenario.spec.js. mr-moqui: the framework commit stands alone (moqui-core shell, conf and cache;
+    moqui-channels tests; Sms.js; docs); `./moq test-framework` has not run on it.
+  - Attack-Surface (mr-moqui `docs/security/Attack-Surface.md`), beside the Comms providers' and Marketing's paragraphs: "A component's
+    MoquiConf.xml may register a provider of the hooks the framework asks for whoever acts (`screen-facade/shell-providers`; only
+    `sms-consent`, `CONF_PROVIDER_HOOKS`; any other element is logged and left out). call#Providers asks it after the apps' providers for
+    every caller, the system with no user included, with authorization disabled, since the deployment's conf names it: such a provider
+    answers only what its hook asks (Mantle's check#SmsConsent reads consent and suppression rows and answers yes or no, nothing else). A
+    promotional text counts against its number's day of promotional texts (VoicePolicy smsMaxPromotionalPerNumber, 1000), and one with
+    no user not against the system's own budget, so a campaign cannot use up sign-in codes. Marketing's texts
+    (mantle.party.MessageSmsServices, all `allow-remote="false"`; the ledger's SMS channel) are sent as the system from an SMS sending
+    profile's number, which must be one of the organization's telecom numbers that is one of ours with a messaging bridge
+    (MESSAGE_SENDING_CONFIGURE sets it); each text is checked for `PcpSms` consent on the send's topic and the SMS suppression before the
+    call, and again by the framework's sms-consent hook (yes only for a party holding the number with PcpSms granted with an organization
+    that owns the sending number and no suppression there); a STOP the framework keeps becomes a PcpSms withdrawal and a suppression (an
+    EECA on SmsOptOut, in its own transaction), and a START ends neither; a lost answer is uncertain and never resent; no link, token or
+    tracking in a text. PASS Email preferences may leave a text message topic, never join one.";
+  - the user's calls: whether a per-number override of the promotional day limit is wanted (built: one policy value); whether PASS should
+    offer joining a text message topic with a verified phone number (built: not offered; joined through an import or staff with
+    evidence); the receipt for a direct text (F73, §7) stays a framework ask.
+
+**Review Nov 15 (P22).** A fresh review of `mkt/p22` (mr-moqui e0575e91, mr-mantle cd8a193d, mr-boss ec1c08b5, mr-pass cb49476) against
+the phase, §5 Q6 and §4 (Nov 13), §2 and docs/dev/Practices-Rust.md, framework first. Fixes committed per repository as "Marketing P22
+review: …" (mr-moqui 45d68705, mr-mantle 981bde71); mr-boss (this note) and mr-pass otherwise unchanged.
+- Checked and sound:
+  - only `sms-consent` can be declared at conf level: `CONF_PROVIDER_HOOKS` gates both the merge (conf.rs, another element logged)
+    and the parse (`conf_providers_of`), and a nameless or serviceless one is left out; there is no general remote service
+    interface (allow-remote is read by nothing; REST and agent exposure are opt-in), so the authorization-disabled conf provider is
+    reached only through check#SmsSend's `consented`, which passes just the two numbers; Mantle's check#SmsConsent reads only;
+  - "a no from any provider wins": `consented` needs a yes and no false across the apps' and the conf's answers, so a conf provider
+    cannot widen an app's no nor an app's yes widen the conf's no (but see R1, R2); the apps' providers still run as the user's
+    apps (`require_authz` kept before `declared_providers`), and Sms.js's added `disableAuthz` on call#Providers changes nothing
+    there;
+  - a user-sent text is unchanged: the Telnyx adapter's in-room check passes no `isPromotional`, so no consent hook, and
+    check#SmsSend's number-grant check, destination class, opt-out and the user's and everyone's limits are as on master
+    (`countersOf` gives a user's non-promotional text `user:`, `all` and the `all` lock, as before);
+  - the per-number limit: `isPromotional` is set only by send#SmsMessage callers (internal); Mantle's attemptSms sets it from the
+    delivery's `transactional`, which every Marketing hand-off (handOffRecipient, sends, automations, tests) queues as false, and
+    queue#Delivery stores Y only when not told false; a non-promotional text with no user still counts `system` alone, so only a
+    consented promotional text leaves `smsSystemMaxPerDay`, and it then counts `promo:<number>` under that row's lock (reserve and
+    release use the same E.164 number); a promotional text cannot be relabelled non-promotional by anything outside the server;
+  - Mantle: the ledger's attempt checks the topic's consent and the SMS suppression before attemptSms; the sms-consent answer asks
+    only internal organizations that hold the sending number and a party holding the recipient number with PcpSms (purpose row of
+    that organization, else global, or a list row of a topic it owns) and no suppression of every organization or that one; STOP is
+    normalized by the framework (`lastKeyword` STOP for every stop word), the EECA calls note#SmsKeyword in its own transaction, one
+    withdrawal per party not already withdrawn and one suppression per owner (addFromIntake `created`), START and HELP change
+    nothing; an uncertain answer (and an exception from the call) is uncertain and goes to review, never resent; the day's limit
+    sets `nextAttemptDate` without `record`, so no attempt is counted and the framework counted nothing; a STOP or the hook's no is
+    suppressed; the text carries no unsubscribe link, token or tracking (smsDelivery and the test build only the rendered text with
+    recipientValues' names and the opt-out line); the SMS profile's number must be one of the organization's numbers with a bridge
+    (MESSAGE_SENDING_CONFIGURE, organization scope as for email profiles); `storeMarketing` never turns a text topic on and
+    changeTopics keeps lists of email only.
+- Fixed:
+  - R1 (low; framework) an app root's `sms-consent` provider with the conf provider's name was asked in its place (`conf_only`),
+    so for a user who may open that app the conf's no (Mantle's) was never asked. A conf provider is now asked whatever an app's
+    provider is named (call#Providers and get#Providers); moqui-core `a_conf_provider_is_asked_beside_an_apps_provider_of_the_same_name`
+    (an app's yes and the conf's no of one name both answer; fails on the unfixed code, one answer);
+  - R2 (low; framework) a failed sms-consent provider was left out and another's yes let the text go: `consented` now refuses when
+    call#Providers lists a failed part (fail closed, as a no). moqui-channels' campaign-text test gains a second conf provider that
+    fails on a number the first says yes to: refused consentRequired (checked to fail on the unfixed Sms.js: the text was sent);
+    docs Comms.md and interfaces/SMS.md say so;
+  - R3 (medium; Mantle) PASS Email preferences never showed a text message topic: `preferencesContext` takes `offersOf`, whose
+    `offerOf` keeps lists of email only, so topicView's text branch and PASS Hub.js's were dead code. `offerOf`/`offersOf` take
+    `withText`, which only preferencesContext passes; changeTopics, the public subscription page and the checkout's topics stay
+    email only. MarketingSubscriptions feature "a text message topic offered on the site is on the preferences page to leave, never
+    to join" (shown as MdcSms, turning it on files no membership or request, a member leaves it, turning it on again does not
+    rejoin, the public page does not offer it; fails on the unfixed code, no such topic);
+  - R4 (low; Mantle) `phoneOf` fell back to "+" and the digits when a number had no E.164 form, the guess the Built note says it
+    removed (a national number read as another country's); now no key, so the person has no number for a text. No spec (the
+    deployment's normalize#PhoneNumber answers every number the spec data can write).
+- Provisional findings (for the lead to number):
+  - a text topic whose list policy names another purpose (storeSubscriptionPolicy accepts any PartyConsentPurpose; purposeOf takes
+    the policy's first) is checked at the ledger against that purpose, not PcpSms; the framework hook still needs PcpSms with the
+    organization, so nothing goes without PcpSms, but the topic's own PcpSms is then not what is checked. Refusing a non-PcpSms
+    purpose for a list of phone numbers would close it;
+  - an SMS send's test goes to an allowlisted number as a promotional text, so the hook refuses it (suppressed) unless the tester's
+    number holds PcpSms with the organization; no spec covers the SMS test;
+  - there is no deployment-wide cap on promotional texts with no user: each of our numbers has its own `smsMaxPromotionalPerNumber`
+    (1000), so the day's total grows with the numbers that have a bridge and a ready profile;
+  - the Built note's other findings stand (the organization's number as its telecom number, the receipt dropped F73, the estimate
+    with variables unfilled, the inline script's `toNumber` shadowing).
+- Tests (this worktree, Debug, CARGO_BUILD_JOBS=4; app specs `./moq test … --debug --nobuild` with this runtime):
+  - Rust: moqui-core `screen::tests::shell` (21 of 21, 7 s) and `a_components_conf_providers_merge_by_hook_and_name`;
+    moqui-channels (11 of 11, 1 s); clippy on both crates clean; rustfmt on the changed files;
+  - mr-mantle MarketingSubscriptions (6 of 6, the new feature 0.25 s), SmsSends (8 of 8), Eligibility (4 of 4), Dispatch (6 of 6),
+    Audiences (7 of 7), MarketingPartyMerge (3 of 3); mr-pass ShopAccount (3 of 3); framework Voice (13 of 13); each about 50-60 s
+    wall in Debug. Prettier (mr-moqui's config) on MarketingPortal.js and the spec
+    (MarketingEligibility.js was not clean before and is left so). Not run: test-apps, test-framework, acceptance.
+- For the lead:
+  - budget share: mr-mantle about 0.25 s more (MarketingSubscriptions); framework one Rust test of about 0.3 s;
+  - merge hot spots: mr-mantle `MarketingPortal.js` (offerOf, offersOf, preferencesContext: follow-up 4 touches topicView beside
+    it), `MarketingEligibility.js` (phoneOf), `test/marketing/MarketingSubscriptions.spec.js` (a feature at the end); mr-moqui
+    `service/shell.rs`, `screen/tests/shell.rs` (the tree's Open app gains an sms-consent provider and two test services), Sms.js
+    `consented`, docs Comms.md and SMS.md; the Attack-Surface paragraph the Built note proposes should drop "an app's provider of
+    the same name is asked in its place" and add that a failed sms-consent provider refuses;
+  - the user's calls, with a recommendation each:
+    - a per-number override of the promotional day limit: recommended later, not now. One policy value is a safe ceiling for the
+      first release; when a deployment registers numbers with different volumes (10DLC campaigns, verified toll-free), add an
+      optional `smsMaxPromotionalPerDay` on moqui.call.PhoneNumber (System, Voice, Numbers) that falls back to the policy value,
+      and consider a deployment-wide promotional cap beside it (the finding above);
+    - PASS joining a text message topic with a verified phone: recommended not now, as built. A verified PASS account proves an
+      email address, not the phone; marketing texts need the number holder's express consent, best evidenced by a confirmation the
+      number itself answers (a text "Reply YES to join"), which needs an inbound keyword hook the framework does not give Mantle
+      today (START ends nothing). Joining through an import or staff with evidence, and leaving by STOP or Email preferences,
+      covers the first release; a confirmed-by-text join can be its own later phase.
+
 ### P23 — Finish
 
 - The tui and server-static screen sweeps of Marketing, one acceptance test per mode (each screen's twin is built in

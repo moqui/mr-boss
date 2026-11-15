@@ -720,6 +720,25 @@ function topicMembers(contactListId, term, selected) {
         partyId => lib.partyNames([partyId])[partyId] || partyId
     )
 }
+// ===== Marketing P22: text messages =====
+// The organizations among ids with an SMS sending profile in effect, promotional or for both, that is ready (MessageSendingProfiles.js).
+function smsReadyOrganizations(ids) {
+    const profiles = ec.resource.script("component://mr-mantle/service/mantle/party/MessageSendingProfiles.js")
+    const factory = ec.entity.conditionFactory
+    const ready = new Set()
+    for (const row of Array.from(
+        find("mantle.party.MessageSendingProfile")
+            .condition("organizationPartyId", "in", ids)
+            .condition("channelEnumId", "MdcSms")
+            .condition(factory.makeCondition("purposeEnumId", "not-equals", "MtpTransactional", true))
+            .condition(factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp, true))
+            .limit(50)
+            .list()
+    ))
+        if (!ready.has(row.organizationPartyId) && profiles.readinessOf(row).ready) ready.add(row.organizationPartyId)
+    return Array.from(ready)
+}
+// ===== end of P22 =====
 const choiceSources = {
     // the organizations of the user's marketing scope
     organizations: (userScope, term, selected) =>
@@ -920,23 +939,30 @@ const choiceSources = {
             label: row.templateName || row.messageTemplateId
         }))
     },
-    // P8: the topics a send may take: the organization's Marketing lists of email, not archived, by name
+    // P8: the topics a send may take: the organization's Marketing lists of email, not archived, by name; P22: its lists of phone
+    // numbers too (a text message send) once one of its SMS sending profiles is ready (design §5 NewSend)
     sendTopics: (userScope, term, selected, p) => {
         const ids = choiceOrganizations(userScope, p)
         if (!ids.length) return []
         const factory = ec.entity.conditionFactory
+        const smsReady = smsReadyOrganizations(ids)
         let query = find("mantle.marketing.contact.ContactList")
             .condition("ownerPartyId", "in", ids)
             .condition("contactListTypeEnumId", "in", ["MARKETING", "NEWSLETTER", "ANNOUNCEMENT"])
-            .condition(factory.makeCondition("contactMechTypeEnumId", "not-equals", "CmtTelecomNumber", true))
             .condition(factory.makeCondition("archivedDate", "greater", ec.user.nowTimestamp, true))
             .orderBy("^contactListName")
             .limit(choiceLimit)
+        if (!smsReady.length)
+            query = query.condition(factory.makeCondition("contactMechTypeEnumId", "not-equals", "CmtTelecomNumber", true))
         if (term) query = query.condition(textCondition(["contactListId", "contactListName"], term))
-        const options = Array.from(query.list()).map(row => ({
-            value: row.contactListId,
-            label: row.contactListName || row.contactListId
-        }))
+        const options = Array.from(query.list())
+            .filter(row => row.contactMechTypeEnumId !== "CmtTelecomNumber" || smsReady.includes(row.ownerPartyId))
+            .map(row => ({
+                value: row.contactListId,
+                label:
+                    (row.contactListName || row.contactListId) +
+                    (row.contactMechTypeEnumId === "CmtTelecomNumber" ? " · text messages" : "")
+            }))
         return withSelected(
             options,
             selected,
@@ -959,7 +985,8 @@ const choiceSources = {
         if (term) query = query.condition(textCondition(["sendingProfileId", "profileName"], term))
         return Array.from(query.list()).map(row => ({
             value: row.sendingProfileId,
-            label: row.profileName || row.sendingProfileId
+            // P22: an SMS profile named as one
+            label: (row.profileName || row.sendingProfileId) + (row.channelEnumId === "MdcSms" ? " · text messages" : "")
         }))
     },
     // P8: the files a send's message may attach: the send's own and its campaign's, by name (each the caller sees through the send)

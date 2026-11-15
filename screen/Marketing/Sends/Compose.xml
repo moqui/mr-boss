@@ -19,7 +19,10 @@ along with this software (see the LICENSE.md file). If not, see
     (name | label | fallback | required; a recipient's first name, last name and name are the values a send has). MessageAssets: the
     files the message attaches, chosen from the send's and its campaign's files. MessagePreview: the draft rendered for a person on
     the topic (an audience reader) or with synthetic values, with what to check. TestSend: to an address of the organization's test
-    list, marked TEST. Save, Preview, Test; Request approval is on SendDetail, once it is prepared. A saved change ends an approval. -->
+    list, marked TEST. Save, Preview, Test; Request approval is on SendDetail, once it is prepared. A saved change ends an approval.
+    P22: a text message send (channel SMS) has one text and its variables, with its characters, encoding, segments and the profile's
+    cost estimate (get#Send smsEstimate); no subject, body or attachment; its preview is the text as the person gets it, with the
+    opt-out line, and its test goes to a number of the test list. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Compose" default-menu-include="false">
     <parameter name="campaignSendId" required="true"/>
@@ -65,6 +68,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="assetValues" from="{campaignSendId:campaignSendId, expectedRevision:send.revision}"/>
         <set field="testValues" from="{campaignSendId:campaignSendId, toAddress:testOptions.length == 1 ? testOptions[0].value : null}"/>
         <set field="sampleValues" from="{campaignSendId:campaignSendId, samplePartyId:samplePartyId}"/>
+        <!-- P22: a text message send -->
+        <set field="isSms" from="send.channelEnumId == 'MdcSms'"/>
+        <set field="smsEstimateText" from="preview?.smsEstimate?.estimateText || detail?.smsEstimate?.estimateText || ''"/>
     </actions>
     <widgets>
         <section name="ComposeNotFound" condition="!recordFound">
@@ -113,7 +119,22 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body>
                         <label text="Variables are written as ${'$'}{name} and declared below: firstName, lastName and fullName are each recipient's own; any other takes its fallback. A link to a staff page or a stored file is refused: attach the file instead."
                                 type="p" style="m-muted"/>
-                        <form-single name="MessageContent" transition="storeSendContent" map="contentValues" condition="can.canEdit">
+                        <!-- P22: a text message's one text -->
+                        <form-single name="MessageSmsContent" transition="storeSendContent" map="contentValues" condition="can.canEdit &amp;&amp; isSms">
+                            <field name="campaignSendId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="bodyText">
+                                <default-field title="Text" tooltip="At most 1600 characters; Reply STOP to opt out is added when the text has no STOP">
+                                    <text-area rows="5" cols="80"/></default-field>
+                            </field>
+                            <field name="variablesText">
+                                <default-field title="Variables" tooltip="One a line: name | label | fallback | required">
+                                    <text-area rows="3" cols="80"/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
+                        </form-single>
+                        <label text="${smsEstimateText}" type="p" style="text-caption m-muted" condition="isSms &amp;&amp; smsEstimateText"/>
+                        <form-single name="MessageContent" transition="storeSendContent" map="contentValues" condition="can.canEdit &amp;&amp; !isSms">
                             <field name="campaignSendId"><default-field><hidden/></default-field></field>
                             <field name="expectedRevision"><default-field><hidden/></default-field></field>
                             <field name="subject"><default-field title="Subject"><text-line size="60"/></default-field></field>
@@ -128,14 +149,14 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-single>
                         <section name="ContentReadOnly" condition="!can.canEdit">
                             <widgets>
-                                <label text="Subject: ${content.subject}" type="p"/>
+                                <label text="Subject: ${content.subject}" type="p" condition="!isSms"/>
                                 <label text="Text: ${content.bodyText}" type="p" style="m-muted"/>
                             </widgets>
                         </section>
                     </box-body>
                 </container-box>
 
-                <container-box>
+                <container-box condition="!isSms">
                     <box-header title="Attachments"/>
                     <box-toolbar>
                         <container-dialog id="AttachFileDialog" button-text="Attach a file" icon="sym_o_attach_file" title="Attach a file to ${send.sendName}"
@@ -206,12 +227,17 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-single>
                         <label text="${sampleError}" type="p" style="text-negative" condition="sampleError"/>
                         <label text="As ${preview?.sampleText}" type="p" style="text-caption m-muted"/>
-                        <label text="Subject: ${preview?.renderedSubject}" type="p" style="text-weight-medium"/>
+                        <label text="Subject: ${preview?.renderedSubject}" type="p" style="text-weight-medium" condition="!isSms"/>
                         <label text="${preview?.renderedPreheader}" type="p" style="m-muted" condition="preview?.renderedPreheader"/>
-                        <render-mode>
-                            <text type="qvt,html"><![CDATA[<div v-pre class="q-pa-sm" style="border: 1px solid rgba(128,128,128,.3); border-radius: 4px; max-width: 390px">${safeBody}</div>]]></text>
-                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(preview?.renderedText || "")})}]]></text>
-                        </render-mode>
+                        <label text="${smsEstimateText}" type="p" style="text-caption m-muted" condition="isSms &amp;&amp; smsEstimateText"/>
+                        <section name="PreviewBody" condition="!isSms">
+                            <widgets>
+                                <render-mode>
+                                    <text type="qvt,html"><![CDATA[<div v-pre class="q-pa-sm" style="border: 1px solid rgba(128,128,128,.3); border-radius: 4px; max-width: 390px">${safeBody}</div>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(preview?.renderedText || "")})}]]></text>
+                                </render-mode>
+                            </widgets>
+                        </section>
                         <label text="Text: ${preview?.renderedText}" type="p" style="m-muted" condition="preview?.renderedText"/>
                         <form-list name="PreviewFindings" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
                             <field name="text"><default-field title="To check"><display/></default-field></field>
