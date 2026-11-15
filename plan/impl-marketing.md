@@ -5340,7 +5340,7 @@ commit); mr-boss changed only by this note.
     fact and a day-early scan at a door is unlikely); first name and initial (the least a door can greet by; safe); overrides for held
     and pending only (safe and the right line: a waitlisted or review place has no seat; the user should know an overridden held place's
     hold can still expire, above); ADMIN holding MARKETING_CHECKIN (safe: ADMIN is privileged, so never a display account, and off a
-    device the permission is DEVICE_REQUIRED; it only lets an administrator see the registry entry, as PEOPLE_KIOSK_PUNCH).
+    device the permission is DEVICE_REQUIRED; as PEOPLE_KIOSK_PUNCH).
 
 ### P19 — Promotions, Customer360 and engagement
 
