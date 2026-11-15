@@ -438,7 +438,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P14 Content, blog posts and landing pages | Mantle, BOSS, PASS | Content, ContentDetail, BlogPosts, BlogPostDetail, LandingPages, PageDetail, Knowledge; PASS pages | built and reviewed Nov 14, merged |
 | P15 Tracking links and capture | Mantle, BOSS, PASS | TrackingLinks, TrackingLinkDetail; CampaignDetail's Tracking links tab | built and reviewed Nov 15, merged |
 | P16 Events and registration setup | Mantle, BOSS, PASS | Events, EventDetail, RegistrationSetup; PASS Event | built and reviewed Nov 15, merged |
-| P17 Registrations, tickets and payment | Mantle, BOSS, PASS | Registrations, RegistrationDetail; PASS Register, Registration | — |
+| P17 Registrations, tickets and payment | Mantle, BOSS, PASS | Registrations, RegistrationDetail; PASS Register, Registration | built and reviewed Nov 15, merged |
 | P18 Check-in | Mantle, BOSS | CheckIn | — |
 | P19 Promotions, Customer360 and engagement | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail, Customer360, ContactDetail | — |
 | P20 Attribution, reports and Insights | Mantle, BOSS | Reports, CampaignPerformance, DeliveryAnalysis, AudienceGrowth, Attribution | — |
@@ -4891,7 +4891,7 @@ merge; mr-moqui unchanged, no Rust built.
 - Design edits: design-marketing §9 RegistrationSetup's order rules, Registrations and RegistrationDetail (as built), §13 Register and
   Registration (as built), §14.1 EventReservation and EventRegistrationTerms; design-sales §5 (the storeless ticket order's
   pre-approval checks, an owner contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F322 to F331 in order:
   - the code over the plan above: the reservation and terms records, the order placed after the verified payment, the order-status
     SECA, EvrReview, refunds through the payment services, the code never stored and shown anew, the camelCase POST operations, the
     EventRegistration kind naming a reservation;
@@ -5025,7 +5025,7 @@ TOKEN_WRITES lists equal (before and after the fixes). Fixes in mr-mantle, mr-pa
     LOCAL uses the seller's nexus), so it is left for the user (below). Sales StorelessOrderTax, SalesQuoteIssue, SalesOrderApproval,
     StorelessOrderConfirmation, Shop's ShopCheckout, ShopCart and ShopOperations and EventRegistrations pass unchanged;
   - P18's phase text names the registration and attendance triggers (the user's call).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F332 to F337 in order:
   - nothing captures a ticket order's authorized payment: a storeless ticket order is never invoiced or shipped, and capture happens in
     apply#OrderPaymentsToInvoice (or Shop's digital fulfilment), so the organization's money stays an authorization that lapses at the
     gateway, and a partial cancellation's refund (ErfRequested, waiting for a capture) waits forever. Design §15 says Marketing adds no
@@ -5660,6 +5660,22 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F319 | P16 (Review Nov 15): a ticket type with places taken may be ended (its places stay counted in the offer); P17 decides what its holders see | P16: as its Review note says |
 | F320 | P16 (Review Nov 15): find#Events and get#EventSetup give a registration event's name, dates and place to every Marketing reader of the organization, whatever the calendar's visibility (its notes now follow it, R4) | P16: as its Review note says |
 | F321 | P16 (Review Nov 15): an author may still publish registration questions alone through Commons (P12's registration purpose); only an offer's own publication is kept off SubmitForm | P16: as its Review note says |
+| F322 | P17 (Built Nov 15): the code over the plan above: the reservation and terms records, the order placed after the verified payment, the order-status SECA, EvrReview, refunds through the payment services, the code never stored and shown anew, the camelCase POST operations, the EventRegistration kind naming a reservation | P17: as its Built note says |
+| F323 | P17 (Built Nov 15): `check#OrderPreApprove` skips the new-customer and shipping-address warnings for a storeless ticket order; without it no first-time buyer's ticket order would ever auto-approve with the approval setting off (the user's call) | P17: as its Built note says |
+| F324 | P17 (Built Nov 15): the registration and lead-rule triggers of P11 and P13 are not built: they need a field naming the offer on MarketingAutomation and MarketingLeadRule, their screens' choices and a source cursor over confirmed registrations; attendance's trigger waits for P18 | P17: as its Built note says |
+| F325 | P17 (Built Nov 15): the demo's Retail has no accounting preference of its own, so no tax gateway was named for it (the plan's demo row) and the workshop's ticket orders are untaxed in the demo; the acceptance scenario uses its own organizations | P17: as its Built note says |
+| F326 | P17 (Built Nov 15): Register follows a provider page by address only; a gateway whose hosted step is a posted form (Authorize.Net Accept Hosted, Shop's PaymentRelay) is not offered on Register yet | P17: as its Built note says |
+| F327 | P17 (Built Nov 15): a partial cancellation of a payment only authorized waits for the capture to refund; the order's line is not cancelled, so the order's total stays as paid; a hold that ends while the payer is at the provider leaves the unplaced order open (a late success is review, refunded or seated by staff, never automatically) | P17: as its Built note says |
+| F328 | P17 (Built Nov 15): a price changed between the reservation and the payment's start is charged at the new price without a review step (Shop's checkout reviews it) | P17: as its Built note says |
+| F329 | P17 (Built Nov 15): each ticket notice attempt and each Show my entry code revokes the earlier code, so an earlier email's code stops working | P17: as its Built note says |
+| F330 | P17 (Built Nov 15): the public cancellation is allowed until the occurrence starts whatever the cancellation terms say (they are words, not a rule) | P17: as its Built note says |
+| F331 | P17 (Built Nov 15): Register posts an attendee's questions only for a publication open with the offer; a registration's answers open in Surveys' ResponseDetail, whose own access decides who reads them | P17: as its Built note says |
+| F332 | P17 (Review Nov 15): nothing captures a ticket order's authorized payment: a storeless ticket order is never invoiced or shipped, and capture happens in apply#OrderPaymentsToInvoice (or Shop's digital fulfilment), so the organization's money stays an authorization that lapses at the gateway, and a partial cancellation's refund (ErfRequested, waiting for a capture) waits forever. Design §15 says Marketing adds no invoice or capture processor, so this is Accounting's or Sales' to settle (invoice and capture on approval, as Shop's digital lines do); the user's call | P17: as its Review note says |
+| F333 | P17 (Review Nov 15): the cancellation terms are words only (design §9 RegistrationPolicy, §13 CancelRegistration): a buyer may cancel until the occurrence starts and every paid cancellation hands a full refund over, whatever the terms say. Enforcing them needs a structured rule on the offer (cancel until an offset before the start, refundable or not, a fee); the design defines none, so it is kept and put to the user (the worker's finding stands) | P17: as its Review note says |
+| F334 | P17 (Review Nov 15): the entry code rotates at every issue (each ticket delivery attempt, Send again, Show my entry code, a substitution): kept, since the plan asks for the digest and revision only and no keyed derivation exists for a stable code; a stable code per revision needs the code kept encrypted or a server-keyed HMAC (framework). Note that the buyer's Show my entry code revokes the code mailed to that attendee | P17: as its Review note says |
+| F335 | P17 (Review Nov 15): a placement that fails five times leaves its places pending (holding their seats) with the payment authorized, seen only as the reservation's failureMessage and the log; no staff list or alert names it | P17: as its Review note says |
+| F336 | P17 (Review Nov 15): the ExternalAccess kind lets an events manager issue a reservation capability through the generic issue service (its permission list), though its comment says only the registration services issue it | P17: as its Review note says |
+| F337 | P17 (Review Nov 15): a closed offer's waiting places are never ended (the job ends a published offer's at the start only) | P17: as its Review note says |
 
 ## 7. Later
 
