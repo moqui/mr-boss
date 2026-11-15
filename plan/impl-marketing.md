@@ -5895,6 +5895,71 @@ failed on master since follow-up 1 gave Retail a Utah nexus (R3).
     mr-moqui `framework_gaps_tests.rs`;
   - the user's call open (the Built note's): whether the 2027 event and quote dates get the load-relative treatment now.
 
+### Follow-up 3 — The 2027 demo dates specs depend on, relative to the load
+
+The user's call of Nov 15 (§4): the remaining demo dates that regression and acceptance specs depend on become relative to the load,
+as follow-up 2 did for the Products price switch: Marketing's webinar (2027-01-28) and workshop (2027-03-13, closing 03-12), Wingtip's
+quote valid to 2027-01-31, and PeopleLeave's requests of 2027-04-06/07 (F366, F369). Branch `mkt/fix3` in mr-boss (mr-mantle and
+mr-pass unchanged).
+
+**Built Nov 15 (follow-up 3).** mr-boss on branch `mkt/fix3` from master after follow-up 2's merge.
+- Checked first (the code over the plan): follow-up 2's loader (load#ScheduledPriceDemo: 2099 placeholders in the data file, moved by
+  a demo service called after the rows, in the server's zone; the test snapshot keyed by the load day); every spec and acceptance spec
+  that names the events, offers, ticket types or demo quotes, or the 2027 dates (grep of mr-boss, mr-mantle and mr-pass); the offer's
+  dated fields (occurrenceStart and End, closesDate; the check-in window is reckoned from the occurrence, EventCheckIn.js, with no
+  field of its own; no demo registration exists); the webinar's call link (P16's load#EventDemo, 90 days from the load); the order
+  part change rule (OrderPartHandleChange). The code over the plan:
+  - no mr-mantle or mr-pass spec depends on the BOSS demo's events: PASS's MarketingFixtures and Mantle's event specs make their own
+    offers dated from now, so the PASS expectations needed no change, and no BOSS regression spec asserts an event's date (they
+    register, render and scan); the dependency was the date passing;
+  - updating a demo quote's validity through update#OrderPart runs OrderPartHandleChange, which counts a new revision; the quote specs
+    act on revision 1 (SalesAccess, SalesApprovals), so the quote loader writes with entity ECA rules off, as the loaded row;
+  - Fabrikam's quote (valid to 2027-02-28, rendered by SalesQuotes and refused in SalesAccess) is moved with Wingtip's, the same case
+    a month later.
+- Demo (mr-boss):
+  - BossZZMarketingDemoData.xml: the events' and offers' dates are 2099 placeholders that the new
+    `ironstone.marketing.DemoServices.load#EventDatesDemo` (service/ironstone/marketing/DemoServices.xml, called before load#EventDemo)
+    moves together: the webinar to 18:00–19:00 on the first Thursday 70 days or more after the load day (inside its call link's 90
+    days), the workshop to 09:00–12:00 on the first Saturday 118 days or more after it, closing the day before at 17:00; each event's
+    estimated start and end are its offer's occurrence. A load on Nov 15, 2026 gives exactly the old dates (Thursday Jan 28 and
+    Saturday Mar 13, closing Friday Mar 12); loading again moves them. The story stands: an upcoming webinar, a workshop a few months
+    out;
+  - BossZSalesDemoData.xml: the two quotes' validThruDate are placeholders that the new `ironstone.sales.DemoServices.load#QuoteDatesDemo`
+    (service/ironstone/sales/DemoServices.xml, new, called after the Fabrikam quote) moves to 77 days (Wingtip) and 105 days
+    (Fabrikam) after the load day at 00:00 (Jan 31 and Feb 28, 2027 for a load on Nov 15); revision 1 kept;
+  - both loaders as load#ScheduledPriceDemo: anonymous-all, allow-remote false, a signed-in caller must be ADMIN, a missing row logged
+    and skipped.
+- Specs (mr-boss):
+  - PeopleLeave: its requests (spec data, not demo) fall on the first Tuesday 140 days or more ahead of the run (Tomas's morning) and
+    the Wednesday after (Ines's day), the calendar's range, the twin's date and its Earlier and Later around them (Apr 6 and 7, 2027 on
+    Nov 15, as before). Leave is not refused for a past day, but the year's turn would have aged the spec; Retail's holidays are on a
+    calendar nobody in the demo follows, so a Tuesday and a Wednesday are always charged;
+  - MarketingEvents checks the loader ran (a broken one would leave 2099 and pass, follow-up 2's R1): each event's start and end are
+    its offer's, the webinar a Thursday 18:00 ten to eleven weeks ahead, the workshop a Saturday 09:00 116 to 126 days ahead, closing
+    16 hours before; SalesQuotes checks Wingtip's validity ends 75 to 78 days ahead and Fabrikam's 103 to 106.
+- Acceptance specs that read these records (grep): MarketingRegistrationScenario registers for the demo webinar and reads its call
+  link, MarketingEventSetupWalk reads the events' owner; none hard-codes their dates or the quotes', so no expectation changed. Not
+  run, as the call said.
+- Not moved (no spec depends on them; for the lead): the spring campaign's thruDate (2027-01-31), its launch evening (Jan 10–12) and
+  Services' campaign (to Feb 28), the Sales opportunities' estimated close dates (Jan 31, Feb 28, Mar 15), Retail's holidays (Jan 4,
+  Jun 14). A load after January shows the workshop after its campaign's end, a story seam only.
+- Tests run (release, `--nobuild`, this worktree's runtime): MarketingEvents, SalesQuotes, PeopleLeave (9 of 9; the two new features
+  0.00 s each); every Marketing and Sales regression spec of mr-boss on 4 workers (34 specs, 95 of 95, 40.3 s of feature time); every
+  Insights and People spec (41 specs, 176 of 176); mr-pass MarketingEvents, MarketingRegistration, MarketingAccess (9 of 9); mr-mantle
+  EventRegistrations, EventCheckIn, EventRegistrationSetup (22 of 22). Prettier (mr-moqui's config) on the changed specs. Not run:
+  test-apps, test-framework, acceptance.
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: no Mantle or PASS spec depended on the BOSS events, and moving a quote's validity through the
+    entity service raises its revision, so the loader runs without entity ECA rules; Fabrikam's quote is moved too;
+  - the dates left fixed (the campaigns', the opportunities', Retail's holidays): no spec depends on them; the spring campaign ends
+    Jan 31, 2027 whatever the load, so a later load shows its events after it.
+- For the lead:
+  - budget share: none measurable (two entity reads and two quote reads in two new features; the loaders run once per load);
+  - merge hot spots: mr-boss `data/BossZZMarketingDemoData.xml` (P16 block), `data/BossZSalesDemoData.xml` (P7 block),
+    `service/ironstone/marketing/DemoServices.xml`, `service/ironstone/sales/DemoServices.xml` (new), `test/Marketing/MarketingEvents.spec.js`,
+    `test/Sales/SalesQuotes.spec.js`, `test/People/PeopleLeave.spec.js`, this file. P19 and P20 touch none of these but this file;
+  - the user's call, if wanted: whether the campaigns' and opportunities' dates follow the load too (no spec needs it).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -5965,6 +6030,7 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | A framework `hmac` host member replaces the nested digest of the entry code (EventRegistrationPlaces.js codeOf, one function); the lead builds it in mr-moqui after follow-up 1's review | The user's call (follow-up 1's review) |
 | Nov 15, 2026 | Mantle's OrderToCashBasicFlow and ReturnToResponseBasicFlow keep suspending Retail's Utah nexus during their run (test/order/DemoTaxNexus.js) rather than move the chain to a Mantle-owned seller | The user's call (follow-up 1's review) |
 | Nov 15, 2026 | Demo data dates that specs depend on are made relative to load time (or far future) and the specs read as of a fixed date, starting with BOSS_PRICE_SALES/BOSS_PRICE_NEXT; built in follow-up 2 with the framework hmac member | The user's call |
+| Nov 15, 2026 | The 2027 demo dates specs depend on become load-relative: the Marketing webinar and workshop (their events, offers' occurrences and the workshop's closing, together), the Sales demo quotes' validity, and PeopleLeave's request days; built in follow-up 3 | The user's call (Nov 15), after follow-up 2's F366 and F369 |
 
 ## 5. Open questions
 

@@ -13,8 +13,9 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- IronStone Marketing's demo loader (impl-marketing P14; MarketingDemo.js), called from data/BossZZMarketingDemoData.xml: what demo
-    data cannot write as rows, the wiki pages of the content demo, through the wiki services, and (P16) the webinar's call link. Data, not a business service: only data
-    loading or a system administrator runs it. -->
+    data cannot write as rows, the wiki pages of the content demo, through the wiki services, (P16) the webinar's call link, and
+    (follow-up 3) the events' dates relative to the load. Data, not a business service: only data loading or a system administrator
+    runs it. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="load" noun="ContentDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
         <description>Idempotent Marketing content demo for ORG_ZIZI_RETAIL, by fixed ID: the garden blog space (Marketing Author writes
@@ -31,6 +32,48 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="complete" from="demoResult.complete"/>
             <set field="errors" from="demoResult.errors"/>
         </actions>
+    </service>
+    <service verb="load" noun="EventDatesDemo" authenticate="anonymous-all" allow-remote="false">
+        <description>Moves the event demo's dates to the load (Marketing follow-up 3): the spring planting webinar to 18:00–19:00 on
+            the first Thursday ten weeks or more after the load day, and the rose pruning workshop to 09:00–12:00 on the first Saturday
+            118 days or more after it, its registration closing the day before at 17:00; each event's start and end and its offer's
+            occurrence move together (a load on Nov 15, 2026 gives Jan 28 and Mar 13, 2027). The webinar stays inside its call link's
+            90 days. Loading again moves them; a missing row is logged and skipped. Only data loading or a system administrator may
+            run it.</description>
+        <out-parameters>
+            <parameter name="webinarStart" type="Timestamp"/>
+            <parameter name="workshopStart" type="Timestamp"/>
+        </out-parameters>
+        <actions><script><![CDATA[
+            if (ec.user.userId && !ec.user.isInGroup('ADMIN')) throw new Error('Demo loading requires system administration')
+            // the server's local day, as the demo data's fixed dates are read
+            const now = new Date(ec.user.timestampMillis(ec.user.nowTimestamp))
+            const dayOn = (afterDays, weekDay) => {
+                const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + afterDays)
+                return new Date(day.getFullYear(), day.getMonth(), day.getDate() + ((weekDay - day.getDay() + 7) % 7))
+            }
+            const at = (day, hour, plusDays = 0) => String(new Date(day.getFullYear(), day.getMonth(), day.getDate() + plusDays, hour).getTime())
+            const move = (entityName, keys, fields) => {
+                const found = ec.entity.find(entityName).condition(keys).disableAuthz().one()
+                if (found == null) {
+                    ec.logger.warn('The event dates demo found no ' + entityName + ' ' + JSON.stringify(keys) + '; not moved')
+                    return
+                }
+                ec.service.sync().name('update#' + entityName).parameters(Object.assign({}, keys, fields)).disableAuthz().call()
+            }
+            const webinar = dayOn(70, 4)
+            const workshop = dayOn(118, 6)
+            webinarStart = at(webinar, 18)
+            workshopStart = at(workshop, 9)
+            move('mantle.work.effort.WorkEffort', {workEffortId: 'BOSS_MKT_EV_WEBINAR'},
+                {estimatedStartDate: webinarStart, estimatedCompletionDate: at(webinar, 19)})
+            move('mantle.work.registration.EventRegistrationPolicy', {registrationPolicyId: 'BOSS_MKT_OFFER_WEBINAR'},
+                {occurrenceStart: webinarStart, occurrenceEnd: at(webinar, 19)})
+            move('mantle.work.effort.WorkEffort', {workEffortId: 'BOSS_MKT_EV_WORKSHOP'},
+                {estimatedStartDate: workshopStart, estimatedCompletionDate: at(workshop, 12)})
+            move('mantle.work.registration.EventRegistrationPolicy', {registrationPolicyId: 'BOSS_MKT_OFFER_WORKSHOP'},
+                {occurrenceStart: workshopStart, occurrenceEnd: at(workshop, 12), closesDate: at(workshop, 17, -1)})
+        ]]></script></actions>
     </service>
     <service verb="load" noun="EventDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
         <description>Idempotent Marketing event demo (impl-marketing P16): the spring planting webinar's video call, a call link of the

@@ -301,7 +301,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.order.OrderHeader orderId="BOSS_SAL_QTE_WINGTIP" orderName="Wingtip store refit" orderPurposeEnumId="OrpSalesQuote"
             statusId="OrderOpen" currencyUomId="USD" entryDate="2026-11-12 10:00:00" orderRevision="1"/>
     <mantle.order.OrderPart orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" statusId="OrderOpen" vendorPartyId="ORG_ZIZI_RETAIL"
-            customerPartyId="BOSS_SAL_ACC_WINGTIP" validFromDate="2026-11-12 00:00:00" validThruDate="2027-01-31 00:00:00"/>
+            customerPartyId="BOSS_SAL_ACC_WINGTIP" validFromDate="2026-11-12 00:00:00" validThruDate="2099-01-31 00:00:00"/>
     <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" partyId="BOSS_SAL_REP" roleTypeId="SalesRepresentative"/>
     <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" partyId="BOSS_SAL_TEAM_EAST" roleTypeId="SalesTeam"/>
     <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_WINGTIP" orderPartSeqId="01" partyId="BOSS_SAL_CON_DANA" roleTypeId="Contact"/>
@@ -321,7 +321,7 @@ along with this software (see the LICENSE.md file). If not, see
             statusId="OrderOpen" currencyUomId="USD" entryDate="2026-11-12 11:00:00" orderRevision="1"/>
     <mantle.order.OrderPart orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01" statusId="OrderOpen" vendorPartyId="ORG_ZIZI_SALES"
             customerPartyId="BOSS_SAL_ACC_FABRIKAM" postalContactMechId="BOSS_SAL_FABRIKAM_ADDR"
-            validFromDate="2026-11-12 00:00:00" validThruDate="2027-02-28 00:00:00"/>
+            validFromDate="2026-11-12 00:00:00" validThruDate="2099-02-28 00:00:00"/>
     <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01" partyId="BOSS_SAL_REP3" roleTypeId="SalesRepresentative"/>
     <mantle.order.OrderPartParty orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01" partyId="BOSS_SAL_TEAM_DIRECT" roleTypeId="SalesTeam"/>
     <mantle.sales.opportunity.SalesOpportunityOrder salesOpportunityId="BOSS_SAL_OPP_FABRIKAM_LINE" orderId="BOSS_SAL_QTE_FABRIKAM"/>
@@ -337,6 +337,11 @@ along with this software (see the LICENSE.md file). If not, see
             itemDescription="Freight" quantity="1" unitAmount="80" priceSource="manual"/>
     <mantle.order.OrderServices.handle-OrderMajorChange orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01"/>
     <mantle.order.OrderServices.update-OrderPartTotal orderId="BOSS_SAL_QTE_FABRIKAM" orderPartSeqId="01"/>
+    <!-- Marketing follow-up 3 (impl-marketing §4 Nov 15, the user's call): the two quotes' validity ends relative to the load, Wingtip's
+        77 days and Fabrikam's 105 days after the load day at 00:00 (a load on Nov 15, 2026 gives Jan 31 and Feb 28, 2027; loading again
+        moves them), so they stay open whenever the demo is loaded; the 2099 dates above are only placeholders
+        ironstone.sales.DemoServices.load#QuoteDatesDemo moves. -->
+    <ironstone.sales.DemoServices.load-QuoteDatesDemo/>
     <!-- ===== end of Sales P7 ===== -->
 
     <!-- ===== Sales P8 (design-sales §5 QuoteRequests, CX-MAIL-INTAKE; impl-sales P8): requests for quote ===== -->

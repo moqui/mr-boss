@@ -87,3 +87,24 @@ feature("PriceExplain explains a quote line's price to a rep without PRICE_VIEW,
         !explained.output.includes("Transaction price context")
     }
 })
+
+// Marketing follow-up 3 (impl-marketing §4 Nov 15, the user's call): the demo quotes' validity ends relative to the load
+// (ironstone.sales.DemoServices load#QuoteDatesDemo moves the 2099 placeholders), so both are open on any day: Wingtip's 77 days and
+// Fabrikam's 105 days after the load day
+feature("the demo quotes are valid from the load: Wingtip's for eleven weeks, Fabrikam's for fifteen", {
+    when() {
+        const thru = orderId =>
+            Number(
+                String(
+                    ec.entity.find("mantle.order.OrderPart").condition({orderId, orderPartSeqId: "01"}).disableAuthz().one()
+                        .validThruDate
+                )
+            )
+        return {now: Date.now(), wingtip: thru(quotes.wingtip), fabrikam: thru(quotes.fabrikam)}
+    },
+    then({now, wingtip, fabrikam}) {
+        const day = 86400000
+        wingtip > now + 75 * day && wingtip < now + 78 * day
+        fabrikam > now + 103 * day && fabrikam < now + 106 * day
+    }
+})
