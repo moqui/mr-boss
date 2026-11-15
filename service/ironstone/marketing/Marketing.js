@@ -154,9 +154,41 @@ function scope() {
     // P18: check-in under a staff sign-in is the events managers' (design §2 CheckIn: E), as Mantle's preview#CheckIn and
     // checkIn#Registration ask; a door tablet's display account is no Marketing user and gets no context (screen/Marketing.xml)
     capabilities.checkInRead = !!capabilities.anyRead && !!capabilities.eventManage
+    // P19: the store promotions (Commerce's shared promotion screens in Marketing's registration) are read with Commerce's COMMERCE_VIEW
+    // and changed with its COMMERCE_PROMOTION_EDIT, as Mantle's StorePromotionServices ask (design §7: the Commerce promotion
+    // permissions decide every read and write); the menu entry shows only when a store of the user's Marketing organizations is
+    // within Commerce's store scope (promotions). Customer360 and ContactDetail are the audience readers' (design §2: U), each
+    // engagement source answering with its own permission (get#Engagement)
+    capabilities.promotionRead = !!capabilities.anyRead && access.has("COMMERCE_VIEW")
+    capabilities.promotionEdit = capabilities.promotionRead && access.has("COMMERCE_PROMOTION_EDIT")
+    capabilities.promotions = capabilities.promotionRead && promotionStoreIds(mantle, null, 1).length > 0
+    capabilities.customerRead = !!capabilities.anyRead && !!capabilities.audienceRead
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
+}
+// P19: the stores a Marketing user works promotions of: Commerce's store scope (StoreAdmin.js: COMMERCE_VIEW, the user's organizations, a
+// store-limited staff member's own stores) within the organizations of the user's Marketing scope; none without COMMERCE_VIEW.
+function promotionStoreIds(mantle, term, limit) {
+    if (!mantle || !access.has("COMMERCE_VIEW")) return []
+    const stores = ec.resource.script("component://mr-mantle/service/mantle/product/StoreAdmin.js")
+    let storeScope
+    try {
+        storeScope = stores.storeQuery(stores.scope("view"))
+    } catch (error) {
+        if (lib.reasonCode(error) === "PERMISSION_DENIED") return []
+        throw error
+    }
+    const ids = marketingAccess.organizationIds(mantle)
+    if (!ids.length) return []
+    let query = storeScope.condition("organizationPartyId", "in", ids).orderBy("^storeName")
+    if (term) query = query.condition(textCondition(["productStoreId", "storeName"], term))
+    if (limit) query = query.limit(limit)
+    return Array.from(query.list()).map(row => ({
+        value: row.productStoreId,
+        label: row.storeName || row.productStoreId,
+        organizationPartyId: row.organizationPartyId
+    }))
 }
 function required(userScope = scope()) {
     if (!userScope.read) denied("MARKETING_UNAVAILABLE", "Marketing is not available")
@@ -274,7 +306,17 @@ const linkPaths = [
     "Events/Registrations",
     "Events/RegistrationDetail",
     // P18: an offer's check-in (design §9 CheckIn)
-    "Events/CheckIn"
+    "Events/CheckIn",
+    // P19: Commerce's shared promotion screens in Marketing's registration (design §7; PromoCodeDetail a sibling, as Commerce mounts it),
+    // the shared Customer360 with Marketing's Engagement tab and the Commons contact record (design §10)
+    "Promotions",
+    "Promotions/Promotions",
+    "Promotions/PromotionDetail",
+    "Promotions/PromoCodes",
+    "Promotions/PromoCodeDetail",
+    "Customers",
+    "Customers/Customer360",
+    "Contacts/ContactDetail"
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
@@ -476,7 +518,107 @@ const recordKinds = {
                 detail: row.useText || ""
             }
         }
+    },
+    // P19: a person or organization of the scope's audiences (Customer360 and ContactDetail, design §10): an audience reader's, a
+    // directory party (never another user's personal contact, an internal organization or a disabled one) shared or owned by an
+    // organization of the scope, and (P19 review) one Marketing of the scope already knows: a list member, a subscription request,
+    // a segment member, a recipient, a registrant or a form submitter of an organization of the scope (audienceParty). The record's
+    // notes and files open under this root on this check, so it is no wider than the audiences, as Sales' are its accounts and
+    // their contacts; each engagement source and the contact record check their own rights again
+    contact: {
+        name: "Contact",
+        icon: "sym_o_person",
+        destination: {path: "Customers/Customer360", parameter: "customerPartyId"},
+        read: (userScope, partyId) => {
+            if (!userScope.capabilities.customerRead) return null
+            const party = directoryParty(userScope, partyId) && audienceParty(userScope, partyId)
+            return party
+                ? {organizationPartyId: null, label: lib.partyNames([partyId])[partyId] || partyId, detail: "Contact"}
+                : null
+        }
+    },
+    // P19: a customer a promotion code may be limited to (PromoCodeDetail's Customers in Marketing's registration): a Customer-role
+    // directory party of the scope, for a holder of Commerce's promotion permission (Commerce's own customer rule, Marketing's
+    // organizations); Mantle's store#PromoCodeParty checks the party again
+    promotionCustomer: {
+        name: "Customer",
+        icon: "sym_o_person",
+        destination: null,
+        read: (userScope, partyId) => {
+            if (!userScope.capabilities.promotionEdit) return null
+            const party = directoryParty(userScope, partyId)
+            if (!party || !one("mantle.party.PartyRole", {partyId, roleTypeId: "Customer"})) return null
+            return {organizationPartyId: null, label: lib.partyNames([partyId])[partyId] || partyId, detail: "Customer"}
+        }
     }
+}
+// P19: a directory party the scope reaches: found, not disabled, not another user's personal contact, not an internal organization,
+// shared (_NA_ or no owner) or owned by an organization of the scope.
+function directoryParty(userScope, partyId) {
+    const party = partyId ? one("mantle.party.Party", {partyId}) : null
+    if (!party || party.disabled === "Y") return null
+    if (party.privateOwnerUserId && party.privateOwnerUserId !== ec.user.userId) return null
+    if (one("mantle.party.PartyRole", {partyId, roleTypeId: "OrgInternal"})) return null
+    if (party.ownerPartyId && party.ownerPartyId !== "_NA_" && !covers(userScope, party.ownerPartyId)) return null
+    return party
+}
+// P19 review: whether a party is in the scope's audiences: a member (any state) of a list of an organization of the scope that is not
+// a mailbox, a subscription request, explicit segment member, recipient, registrant (attendee or buyer) or submitter to a Marketing
+// form of one.
+function audienceParty(userScope, partyId) {
+    const idsOf = (entityName, conditions, field) =>
+        Array.from(find(entityName, conditions).selectField(field).distinct(true).list())
+            .map(row => row[field])
+            .filter(Boolean)
+    const ownedIn = (entityName, keyField, keys, ownerField, also = () => true) =>
+        keys.length > 0 &&
+        Array.from(find(entityName).condition(keyField, "in", keys).list()).some(
+            row => also(row) && covers(userScope, row[ownerField])
+        )
+    const P = "mantle.marketing."
+    if (
+        ownedIn(
+            P + "contact.ContactList",
+            "contactListId",
+            idsOf(P + "contact.ContactListParty", {partyId}, "contactListId"),
+            "ownerPartyId",
+            row => row.contactListTypeEnumId !== "MAILBOX"
+        )
+    )
+        return true
+    if (idsOf(P + "contact.SubscriptionRequest", {partyId}, "organizationPartyId").some(id => covers(userScope, id))) return true
+    if (
+        ownedIn(
+            P + "segment.MarketSegment",
+            "marketSegmentId",
+            idsOf(P + "segment.MarketSegmentParty", {partyId}, "marketSegmentId"),
+            "ownerPartyId"
+        )
+    )
+        return true
+    if (
+        ownedIn(
+            SEND,
+            "campaignSendId",
+            idsOf(P + "campaign.CampaignRecipient", {partyId}, "campaignSendId"),
+            "organizationPartyId"
+        )
+    )
+        return true
+    const policyIds = idsOf(
+        "mantle.work.registration.EventRegistration",
+        {attendeePartyId: partyId},
+        "registrationPolicyId"
+    ).concat(idsOf("mantle.work.registration.EventRegistration", {buyerPartyId: partyId}, "registrationPolicyId"))
+    if (ownedIn("mantle.work.registration.EventRegistrationPolicy", "registrationPolicyId", policyIds, "organizationPartyId"))
+        return true
+    return ownedIn(
+        "mantle.party.FormPublication",
+        "publicationId",
+        idsOf("mantle.party.FormSubmission", {partyId}, "publicationId"),
+        "organizationPartyId",
+        row => ["FppSurvey", "FppLead", "FppRegistration"].includes(row.purposeEnumId)
+    )
 }
 const SEND = "mantle.marketing.campaign.CampaignSend"
 const AUTOMATION = "mantle.marketing.automation.MarketingAutomation"
@@ -1204,6 +1346,88 @@ const choiceSources = {
             id => !!one("moqui.basic.email.EmailTemplate", {emailTemplateId: id}),
             id => one("moqui.basic.email.EmailTemplate", {emailTemplateId: id})?.description || id
         )
+    },
+    // P19: the stores a promotion may take in Marketing's registration of the shared promotion screens (Commerce's store scope within the
+    // Marketing organizations), by name
+    promotionStores: (userScope, term, selected) => {
+        if (!userScope.capabilities.promotionRead) return []
+        const all = promotionStoreIds(userScope.mantle, null, null)
+        const options = promotionStoreIds(userScope.mantle, term, choiceLimit).map(row => ({value: row.value, label: row.label}))
+        return withSelected(
+            options,
+            selected,
+            id => all.some(row => row.value === id),
+            id => all.find(row => row.value === id)?.label || id
+        )
+    },
+    // P19: the customers a promotion code may be limited to (promotionCustomer's rule), by name or id
+    promotionCustomers: (userScope, term, selected) => {
+        if (!userScope.capabilities.promotionEdit) return []
+        let query = find("mantle.party.PartyDetailAndRole", {roleTypeId: "Customer"})
+            .condition("ownerPartyId", "in", ["_NA_"].concat(organizationIds(userScope)))
+            .selectField("partyId")
+            .orderBy("partyId")
+            .limit(choiceLimit * 2)
+        if (term)
+            query = query.condition(textCondition(["partyId", "pseudoId", "organizationName", "firstName", "lastName"], term))
+        const ids = Array.from(query.list()).map(row => row.partyId)
+        const ordered = selected ? [selected].concat(ids.filter(id => id !== selected)) : ids
+        const admitted = ordered
+            .filter(partyId => !!recordKinds.promotionCustomer.read(userScope, partyId))
+            .slice(0, choiceLimit + 1)
+        const names = lib.partyNames(admitted)
+        return admitted.map(partyId => ({value: partyId, label: names[partyId] || partyId}))
+    },
+    // P19: the products a promotion may name (Mantle's rule: a product of a Marketing organization or the shared catalog), by name or
+    // id, for a holder of Commerce's promotion permission
+    promotionProducts: (userScope, term, selected) => {
+        if (!userScope.capabilities.promotionEdit) return []
+        let query = find("mantle.product.Product")
+            .condition("ownerPartyId", "in", ["_NA_"].concat(organizationIds(userScope)))
+            .orderBy("^productName")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["productId", "pseudoId", "productName"], term))
+        const label = row => (row.productName ? row.productName + " (" + (row.pseudoId || row.productId) + ")" : row.productId)
+        const options = Array.from(query.list()).map(row => ({value: row.productId, label: label(row)}))
+        return withSelected(
+            options,
+            selected,
+            id => {
+                const product = one("mantle.product.Product", {productId: id})
+                return !!product && (product.ownerPartyId === "_NA_" || covers(userScope, product.ownerPartyId))
+            },
+            id => label(one("mantle.product.Product", {productId: id}))
+        )
+    },
+    // P19: the open campaigns of a promotion's store organization (PromotionDetail's Link to a campaign), by name
+    promotionCampaigns: (userScope, term, selected, p) => {
+        const store = p.productStoreId ? one("mantle.product.store.ProductStore", {productStoreId: p.productStoreId}) : null
+        if (!store || !userScope.capabilities.campaignEdit || !covers(userScope, store.organizationPartyId)) return []
+        return choiceSources.campaigns(userScope, term, selected, {organizationPartyId: store.organizationPartyId})
+    },
+    // P19: the store promotions of a campaign's organization (CampaignDetail's Link a promotion), by description or id, for a campaign
+    // editor who holds Commerce's promotion permission (Mantle's store#CampaignAssociation asks both again)
+    promotions: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.promotionEdit || !userScope.capabilities.campaignEdit) return []
+        const storeIds = promotionStoreIds(userScope.mantle, null, null)
+            .filter(row => !p.organizationPartyId || row.organizationPartyId === p.organizationPartyId)
+            .map(row => row.value)
+        if (!storeIds.length) return []
+        let query = find("mantle.product.store.ProductStorePromotion")
+            .condition("productStoreId", "in", storeIds)
+            .orderBy("^itemDescription")
+            .limit(choiceLimit)
+        if (term) query = query.condition(textCondition(["storePromotionId", "itemDescription"], term))
+        const options = Array.from(query.list()).map(row => ({
+            value: row.storePromotionId,
+            label: row.itemDescription || row.storePromotionId
+        }))
+        return withSelected(
+            options,
+            selected,
+            id => storeIds.includes(one("mantle.product.store.ProductStorePromotion", {storePromotionId: id})?.productStoreId),
+            id => one("mantle.product.store.ProductStorePromotion", {storePromotionId: id})?.itemDescription || id
+        )
     }
 }
 function choices(p) {
@@ -1389,4 +1613,11 @@ function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown Marketing operation " + op)
     return operations[op](p || {})
 }
-;({execute: run, recordLink})
+// P19: whether the Promotions menu entry shows (the root's menu-include, which reads no screen context): a Marketing reader with
+// Commerce's promotion read, when a store of their Marketing organizations is within Commerce's store scope.
+function promotionsShown() {
+    if (!ec.user.userId || !access.has("COMMERCE_VIEW")) return false
+    const userScope = scope()
+    return !!userScope.read && !!userScope.capabilities.promotions
+}
+;({execute: run, recordLink, promotionsShown})

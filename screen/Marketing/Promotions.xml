@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Promotions area of IronStone Marketing (design-marketing §7 Promotions, PromotionDetail, PromoCodes and PromoCodeDetail, §1.2
+    "Promotions"; impl-marketing P19, F22): Commerce's shared promotion screens in Marketing's registration
+    (service/ironstone/shared/PromotionApps.js): Promotions (the default), PromotionDetail with its Campaigns box (the campaigns that
+    link it, CampaignServices find# and store#CampaignAssociation), PromoCodes and PromoCodeDetail (a sibling, as Commerce mounts it).
+    The stores are those of the user's Marketing organizations within Commerce's store scope; Commerce's promotion permissions decide
+    every read and write (Mantle's StorePromotionServices: COMMERCE_VIEW, COMMERCE_PROMOTION_EDIT and the store's scope), and a
+    campaign link also asks the campaign's edit. Shown when such a store is configured (the root's menu condition). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Promotions" default-menu-index="5" menu-image="sym_o_local_offer" menu-image-type="icon">
+    <always-actions>
+        <script>if(!marketing.capabilities.promotionRead)throw new Error('PERMISSION_DENIED: Promotions need Commerce\'s promotion read')</script>
+    </always-actions>
+    <subscreens default-item="Promotions" always-use-full-path="true">
+        <subscreens-item name="Promotions" location="component://mr-boss/screen/Shared/Promotions.xml" menu-title="Promotions" menu-index="1"/>
+        <subscreens-item name="PromotionDetail" location="component://mr-boss/screen/Shared/PromotionDetail.xml" menu-include="false"/>
+        <subscreens-item name="PromoCodes" location="component://mr-boss/screen/Shared/PromoCodes.xml" menu-title="Promotion codes" menu-index="2"/>
+        <subscreens-item name="PromoCodeDetail" location="component://mr-boss/screen/Shared/PromoCodeDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="MarketingPromotionsPanel" type="tab"/>
+    </widgets>
+</screen>
