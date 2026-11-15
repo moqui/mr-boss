@@ -24,7 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
     due within a day, or sending) and the failed or uncertain deliveries cards opening Sends, the scheduled sends in Upcoming opening each
     SendDetail, and a dispatcher's attention rows for a send with a failed or uncertain delivery opening its CampaignDelivery. P21: the
     calendar shortcut (design §1.2), opening the campaign calendar; its review: Upcoming's events and publication dates (the calendar's
-    sources), each opening EventDetail or ContentDetail. -->
+    sources), each opening EventDetail or ContentDetail. Follow-up 9: a send (SendDetail, CampaignDelivery) and the Sends cards linked only
+    for a user who may open them (sharedLinks and capabilities sendLink, sends); the events manager sees them unlinked. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
@@ -56,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="places" from="{marketingAdoption: sharedLinks['Settings/Adoption'], marketingSettings: sharedLinks['Settings/Index'],
                 marketingCampaigns: sharedLinks['Campaigns/Campaigns'], marketingApprovals: sharedLinks['Campaigns/Approvals'],
                 marketingCampaign: sharedLinks['Campaigns/CampaignDetail'], marketingCampaignDefaults: sharedLinks['Settings/CampaignDefaults'],
-                marketingLists: sharedLinks['Audiences/Lists'], marketingSends: sharedLinks['Sends/Sends'],
+                marketingLists: sharedLinks['Audiences/Lists'], marketingSends: can.sends ? sharedLinks['Sends/Sends'] : null,
                 marketingSend: sharedLinks['Sends/SendDetail'], marketingDelivery: sharedLinks['Sends/CampaignDelivery'],
                 marketingEvents: sharedLinks['Events/Events'], marketingEvent: sharedLinks['Events/EventDetail'],
                 marketingContent: sharedLinks['Content/ContentDetail'], marketingReports: marketing.capabilities.reports ? sharedLinks['Reports/Catalog'] : null}"/>

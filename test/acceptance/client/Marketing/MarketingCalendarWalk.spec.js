@@ -1,9 +1,10 @@
 // Marketing P21's campaign calendar in the live client (impl-marketing P21 "usable when"; design-marketing §3 Calendar, §1.3 CX-SYNC,
 // §14.3 palette), an acceptance walk as marketing.events, the webinar's organizer: the calendar shows the running campaign's window, its
 // scheduled December newsletter and the spring planting webinar; dragging the webinar to another day moves it (Commons'
-// update#EventOccurrence), while dragging the send moves nothing; a reader of sends (the author) opens the send's SendDetail from the
-// calendar; a phone given an app password lists the "Campaign calendar" collection over CalDAV with the same items, and its write is
-// refused; the palette finds the campaign by name, and the send for the author. The demo's own records
+// update#EventOccurrence), while dragging the send moves nothing; the send is unlinked for the events manager, who may not open SendDetail
+// (follow-up 9: Sends is not the events manager's area, design §1.2), in the calendar and Home's Upcoming; a phone given an app password
+// lists the "Campaign calendar" collection over CalDAV with the same items, and its write is refused; the palette finds the campaign by
+// name and no send. The demo's own records
 // (data/BossZZMarketingDemoData.xml), dated from the load (follow-up 6: the campaign 14 days before the load day to 77 after, the send
 // 16 days after; follow-up 3: the webinar ten weeks or more after), so the days are read from the calendar itself and the projected
 // collection (30 days back, 180 ahead) holds them on any day; the rules are mr-mantle's MarketingCalendar and mr-boss's MarketingShell.
@@ -119,7 +120,7 @@ feature("the calendar shows the campaign's window, its scheduled send and its ev
     }
 })
 
-feature("dragging the event moves it; dragging the send moves nothing, and the send opens SendDetail", {
+feature("dragging the event moves it; dragging the send moves nothing, and the send is unlinked for the events manager", {
     expect() {
         // the webinar to the next day
         state.movedTo = addDays(state.webinarDay, 1)
@@ -140,17 +141,19 @@ feature("dragging the event moves it; dragging the send moves nothing, and the s
         drag("Send: " + ids.sendName, addDays(state.sendDay, 2)).found == true
         sleep(500)
         msOf(field("mantle.marketing.campaign.CampaignSend", ids.send, "scheduledDate")) == msOf(state.sendDate)
-        // the send opens SendDetail for a reader of sends (the author; Sends is not the events manager's area, design §1.2)
-        const author = browser.newPage({user: "marketing.author", viewport: {width: 1440, height: 1000}, timeout: 30})
-        author.allowProblems(/userPhoto\?userId=/)
-        author.goto(monthOf(state.sendDay))
-        author.waitFor(text => (document.body.innerText || "").includes(text), {arg: ids.sendName})
-        author
-            .getByText("Send: " + ids.sendName)
+        // follow-up 9: the send is unlinked for the events manager (no SendDetail, which refuses them): a click stays on the calendar,
+        // and Home's Upcoming shows it as text
+        page.goto(monthOf(state.sendDay))
+        waitForText(ids.sendName)
+        page.getByText("Send: " + ids.sendName)
             .first()
             .click()
-        author.waitForURL(/\/qapps\/Marketing\/Sends\/SendDetail\?campaignSendId=BOSS_MKT_SEND_DEC/)
-        author.waitFor(text => (document.body.innerText || "").includes(text), {arg: ids.sendName})
+        sleep(500)
+        page.url().includes("/qapps/Marketing/Calendar")
+        !page.text().includes("View not permitted")
+        page.goto("/qapps/Marketing/Home").status == 200
+        waitForText(ids.sendName)
+        page.locator("a[href*='SendDetail']").count() == 0
     }
 })
 
@@ -184,7 +187,7 @@ feature("a phone with an app password lists the Campaign calendar's items read o
     }
 })
 
-feature("the palette finds the campaign and the send by name", {
+feature("the palette finds the campaign by name, and no send for the events manager", {
     expect() {
         page.goto("/qapps/Marketing/Home").status == 200
         page.click("#m-search")
@@ -193,15 +196,10 @@ feature("the palette finds the campaign and the send by name", {
         query.fill("Spring garden")
         waitForText("Campaign · ")
         page.text().includes(ids.campaignName)
+        // follow-up 9: no send for the events manager, who may not open SendDetail (the palette's results settle on the campaign's)
+        query.fill("Garden")
+        waitForText("Campaign · ")
+        !page.text().includes("Send · ")
         page.press("Escape")
-        // a send is found by a reader of sends (the author; not the events manager's area, design §1.2)
-        const author = browser.newPage({user: "marketing.author", viewport: {width: 1440, height: 1000}, timeout: 30})
-        author.allowProblems(/userPhoto\?userId=/)
-        author.goto("/qapps/Marketing/Home").status == 200
-        author.click("#m-search")
-        author.locator("input[placeholder^='Search screens']").fill("Garden newsletter, December")
-        author.waitFor(text => (document.body.innerText || "").includes(text), {arg: "Send · "})
-        author.text().includes(ids.sendName)
-        author.press("Escape")
     }
 })

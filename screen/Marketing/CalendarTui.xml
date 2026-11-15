@@ -31,10 +31,11 @@ along with this software (see the LICENSE.md file). If not, see
                     out-map="agenda" transaction="force-new" ignore-error="true"/>
             <script>ec.message.clearErrors()</script>
         </if>
+        <!-- follow-up 9: a send's link only for who may open SendDetail -->
         <set field="links" from="ec.resource.script('component://mr-boss/service/ironstone/marketing/Marketing.js')"/>
         <set field="agendaRows" from="Array.from(agenda?.items || []).map((item) =&gt; ({when: item.allDay ? item.startDay
                 + (item.endDay &amp;&amp; item.endDay &gt; item.startDay ? ' to ' + item.endDay : '') : item.startText,
-                title: item.title, state: item.stateText || '', itemUrl: links.placeOf(appRoot, item.route, item.recordParameter, item.recordId) || ''}))"/>
+                title: item.title, state: item.stateText || '', itemUrl: links.placeOf(appRoot, item.route, item.recordParameter, item.recordId, marketing.capabilities) || ''}))"/>
         <set field="failedText" from="Array.from(agenda?.failedSources || []).join(', ')"/>
     </actions>
     <widgets>

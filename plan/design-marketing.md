@@ -328,7 +328,9 @@ approved publication dates (a campaign's blog post whose page has a published ve
 or with a version scheduled) and the events Marketing offers (a registration event of the user's organizations or an event linked
 to one of their campaigns, series expanded by `get#EventInstances`), rather than `get#FullCalendarData`, which reads calendars and
 parties, not a campaign's events. Only an event drags, after `W.check#CalendarEvent` (an event the scope's calendar holds) and
-Commons' edit rule; a send opens SendDetail. The terminal twin is `CalendarTui`, four weeks. The projected collection is
+Commons' edit rule; a send opens SendDetail for a user who may open it (follow-up 9: the Sends area and a reader of sends; anyone else,
+the events manager among them, sees it unlinked, as in Home's Upcoming, the Comms card and the palette, which finds no send for them).
+The terminal twin is `CalendarTui`, four weeks. The projected collection is
 `get#CampaignCalendar` over the same sources (CalendarProjection `MarketingCampaigns`, MARKETING_VIEW), events and publication
 dates included.
 

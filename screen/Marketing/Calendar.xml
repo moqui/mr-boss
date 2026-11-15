@@ -48,7 +48,8 @@ along with this software (see the LICENSE.md file). If not, see
             const out = ec.service.sync().name('mantle.marketing.MarketingWorkspaceServices.get#CalendarItems').parameters({start: start || '',
                 end: end || ''}).call() || {}
             if (ec.message.hasError()) { ec.web.sendJsonResponse({}); return }
-            const links = ec.resource.script('component://mr-boss/service/ironstone/marketing/Marketing.js')
+            // follow-up 9: a send's link only for who may open SendDetail (placesFor: the user's capabilities read once)
+            const place = ec.resource.script('component://mr-boss/service/ironstone/marketing/Marketing.js').placesFor(appRoot)
             const editable = {}
             const canEdit = (workEffortId) => {
                 if (!Object.hasOwn(editable, workEffortId)) {
@@ -67,7 +68,7 @@ along with this software (see the LICENSE.md file). If not, see
                     recurringEventId: isEvent ? item.seriesWorkEffortId : null, instanceStart: isEvent ? item.instanceStart : null,
                     location: item.location || null, color: null, freeBusyOnly: false,
                     canEdit: isEvent ? canEdit(item.workEffortId) : false,
-                    url: links.placeOf(appRoot, item.route, item.recordParameter, item.recordId)}
+                    url: place(item.route, item.recordParameter, item.recordId)}
             })
             ec.web.sendJsonResponse({eventList: eventList, failedSources: out.failedSources || [], skippedCalendarIdList: []})
         ]]></script></actions>

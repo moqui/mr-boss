@@ -83,7 +83,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <container style="col-auto row items-center q-gutter-xs">
                         <link url="${detailPath}" text="Open the send" link-type="anchor-button" icon="sym_o_forward_to_inbox"
-                                parameter-map="{campaignSendId:campaignSendId}"/>
+                                parameter-map="{campaignSendId:campaignSendId}" condition="detailPath"/>
                         <link url="/qapps/Admin/Protocols/MailQueue" text="Mail queue" link-type="anchor-button" icon="sym_o_outbox"
                                 condition="ec.user.hasPermission('ADMIN_OPERATION_MANAGE')"/>
                     </container>

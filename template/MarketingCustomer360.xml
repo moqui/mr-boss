@@ -99,9 +99,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body-nopad>
                                 <form-list name="EngagementSends" list="engagementBy.sends.rows" skip-form="true" paginate="false">
                                     <field name="sendName">
-                                        <default-field title="Send">
+                                        <conditional-field title="Send" condition="sendPath">
                                             <link url="${sendPath}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
-                                        </default-field>
+                                        </conditional-field>
+                                        <default-field title="Send"><display/></default-field>
                                     </field>
                                     <field name="selectedDateText"><default-field title="Selected"><display/></default-field></field>
                                     <field name="recipientStatusText"><default-field title="Recipient"><display/></default-field></field>

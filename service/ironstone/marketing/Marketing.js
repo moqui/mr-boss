@@ -169,6 +169,10 @@ function scope() {
     capabilities.customerRead = !!capabilities.anyRead && !!capabilities.audienceRead
     for (const [name, area] of Object.entries(areas))
         capabilities[name] = areaGrant(grants, area) && (!areaReads[name] || !!capabilities[areaReads[name]])
+    // Follow-up 9: a send's places (SendDetail, CampaignDelivery) are linked only for a user who may open them: the Sends area's
+    // screen grant (sends, as SendDetail's own authorization) and a reader of sends (sendRead, as the palette and the sends ask); anyone
+    // else (the events manager, an analyst) sees a send it shows unlinked
+    capabilities.sendLink = !!capabilities.sends && !!capabilities.sendRead
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
 }
 // P19: the stores a Marketing user works promotions of: Commerce's store scope (StoreAdmin.js: COMMERCE_VIEW, the user's organizations, a
@@ -334,6 +338,8 @@ const linkPaths = [
     "LogNote",
     "SendMessage"
 ]
+// Follow-up 9: the places of a send, linked only for a user who may open them (capabilities.sendLink)
+const sendPaths = ["Sends/SendDetail", "Sends/CampaignDelivery"]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
     if (!Object.hasOwn(mountRoots, appRoot)) denied("MARKETING_CONTEXT", "Marketing context is not available")
@@ -351,7 +357,13 @@ function sharedContext(p) {
         appRoot,
         linkBase,
         webBase: "/qapps/" + appRoot,
-        sharedLinks: Object.fromEntries(linkPaths.map(path => [path, linkBase + "/" + path]))
+        // follow-up 9: a send's places only for a user who may open them (sendLink); null for anyone else, who sees the send unlinked
+        sharedLinks: Object.fromEntries(
+            linkPaths.map(path => [
+                path,
+                sendPaths.includes(path) && !userScope.capabilities.sendLink ? null : linkBase + "/" + path
+            ])
+        )
     }
 }
 
@@ -417,7 +429,7 @@ const recordKinds = {
     send: {
         name: "Send",
         icon: "sym_o_forward_to_inbox",
-        destination: {path: "Sends/SendDetail", parameter: "campaignSendId"},
+        destination: {path: "Sends/SendDetail", parameter: "campaignSendId", capability: "sendLink"},
         read: (userScope, campaignSendId) => {
             if (!userScope.capabilities.anyRead) return null
             const row = one(SEND, {campaignSendId})
@@ -1610,11 +1622,11 @@ const searchFinds = [
             }))
         }
     },
-    // P8: the sends of the scope by id, name or subject, for a reader of sends
+    // P8: the sends of the scope by id, name or subject, for a reader of sends (follow-up 9: who may open SendDetail, sendLink)
     {
         kind: "send",
         rows: (userScope, text, limit) => {
-            if (!userScope.capabilities.sendRead) return []
+            if (!userScope.capabilities.sendLink) return []
             const ids = organizationIds(userScope)
             if (!ids.length) return []
             const path = sharedPath("Marketing", "Sends/SendDetail")
@@ -1717,13 +1729,17 @@ const searchFinds = [
 ]
 // The web path of a Marketing screen under a root.
 const sharedPath = (appRoot, path) => "/qapps/" + appRoot + "/" + path
+// Follow-up 9: whether a kind's destination is one the user may open (a send's: capabilities.sendLink)
+const linked = (userScope, definition) =>
+    !!definition.destination &&
+    (!definition.destination.capability || !!userScope.capabilities[definition.destination.capability])
 // A record's link (the palette's get#RecordLink): its kind's screen under Marketing, with its icon, for a Marketing user who may see
-// it; else none.
+// it and open it; else none.
 function recordLink(kind, recordId) {
     const definition = Object.hasOwn(recordKinds, kind) ? recordKinds[kind] : null
     if (!definition?.destination || !recordId) return null
     const userScope = scope()
-    if (!userScope.read || !definition.read(userScope, recordId)) return null
+    if (!userScope.read || !linked(userScope, definition) || !definition.read(userScope, recordId)) return null
     return {
         url:
             sharedPath("Marketing", definition.destination.path) +
@@ -1767,9 +1783,13 @@ const routePaths = {
     marketingDelivery: "Sends/CampaignDelivery",
     marketingRegistrations: "Events/Registrations"
 }
-function placeOf(appRoot, route, recordParameter, recordId) {
+// Follow-up 9: the capability a route's place asks before it is linked (a send's: the Sends area and a reader of sends)
+const routeCapabilities = {marketingSend: "sendLink", marketingDelivery: "sendLink"}
+// A route's place for a user of these capabilities (scope().capabilities), or null when there is none or they may not open it.
+function placeOf(appRoot, route, recordParameter, recordId, capabilities) {
     const path = route && Object.hasOwn(routePaths, route) ? routePaths[route] : null
     if (!path) return null
+    if (Object.hasOwn(routeCapabilities, route) && !capabilities?.[routeCapabilities[route]]) return null
     return (
         sharedPath(appRoot || "Marketing", path) +
         (recordParameter && recordId ? "?" + recordParameter + "=" + encodeURIComponent(recordId) : "")
@@ -1804,12 +1824,14 @@ function lookupCard(userScope, kind, recordId) {
         typeLabel: L(definition.name),
         status,
         icon: definition.icon,
-        url:
-            sharedPath("Marketing", definition.destination.path) +
-            "?" +
-            definition.destination.parameter +
-            "=" +
-            encodeURIComponent(recordId),
+        // follow-up 9: the card unlinked for a user who may not open its record (a send's for a non-reader of sends)
+        url: linked(userScope, definition)
+            ? sharedPath("Marketing", definition.destination.path) +
+              "?" +
+              definition.destination.parameter +
+              "=" +
+              encodeURIComponent(recordId)
+            : null,
         lines: [organizationName(found.organizationPartyId)].filter(Boolean)
     }
 }
@@ -2017,7 +2039,7 @@ function today(p) {
     const items = Array.from(found.items || []).map(row =>
         item(
             {kind: row.kind, title: row.title, dueDate: row.dueDate || null},
-            placeOf("Marketing", row.route, row.recordParameter, row.recordId),
+            placeOf("Marketing", row.route, row.recordParameter, row.recordId, userScope.capabilities),
             row.recordEntity ? {recordEntityName: row.recordEntity, recordId: row.recordId, recordName: row.recordName} : null
         )
     )
@@ -2041,4 +2063,9 @@ function promotionsShown() {
     const userScope = scope()
     return !!userScope.read && !!userScope.capabilities.promotions
 }
-;({execute: run, recordLink, promotionsShown, placeOf})
+// The places of the current user's routes (follow-up 9: their capabilities read once): place(route, recordParameter, recordId).
+function placesFor(appRoot) {
+    const capabilities = scope().capabilities
+    return (route, recordParameter, recordId) => placeOf(appRoot, route, recordParameter, recordId, capabilities)
+}
+;({execute: run, recordLink, promotionsShown, placeOf, placesFor})

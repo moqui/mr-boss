@@ -148,9 +148,10 @@ along with this software (see the LICENSE.md file). If not, see
                     <label text="No send carries it yet." type="p" style="m-muted" condition="!distribution.length"/>
                     <form-list name="Distribution" list="distribution" skip-form="true" paginate="false" condition="distribution.length">
                         <field name="sendName">
-                            <default-field title="Send">
+                            <conditional-field title="Send" condition="sendPath">
                                 <link url="${sendPath}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
-                            </default-field>
+                            </conditional-field>
+                            <default-field title="Send"><display/></default-field>
                         </field>
                         <field name="topicName"><default-field title="Topic"><display/></default-field></field>
                         <field name="categoryName"><default-field title="Blog category"><display/></default-field></field>

@@ -7726,6 +7726,37 @@ The user's call of Nov 15 (§4, the acceptance run): the calendar, Home's Upcomi
 user who may read sends; the events manager sees it unlinked; MarketingCalendarWalk's send steps return to the events manager where
 the walk's story has them, asserting the unlinked item. Branch `mkt/fix9` in mr-mantle and mr-boss.
 
+**Built Nov 15 (follow-up 9).**
+- Checked first (the code over the plan): SendDetail's refusal is the screen's own authorization (the Sends area, which denies the root
+  and grants BOSS_MKT_SENDS: "View not permitted"), not check#Record (any Marketing reader of the organization) or get#Send; Mantle's
+  rows only name a route key (`marketingSend`), so the fix is mr-boss's alone and mr-mantle is unchanged. Before it, Home's Upcoming
+  linked the send for the events manager too (its places came from sharedLinks, given to everyone), as did the Comms card
+  (lookup#Records) and the CampaignDelivery and Customer360 links, though nothing there reaches an events manager today.
+- Built (mr-boss): Marketing.js `capabilities.sendLink` (the Sends area's grant, `sends`, and a reader of sends, `sendRead`: who may open
+  SendDetail); `sharedLinks['Sends/SendDetail']` and `['Sends/CampaignDelivery']` null without it, so Home's Upcoming, ContentDetail's
+  distribution, Customer360's sends, CampaignDetail, DeliveryAnalysis, SurveyDistribution and CampaignDelivery's Open the send show the
+  send unlinked (ContentDetail and Customer360 gained a conditional field, CampaignDelivery a condition); `placeOf` takes the
+  capabilities and links `marketingSend` and `marketingDelivery` only with sendLink (Calendar's events through `placesFor`, CalendarTui
+  with `marketing.capabilities`, Today with the scope's); the send record kind's destination asks sendLink, so recordLink (the palette's
+  get#RecordLink) gives none and the Comms card answers url null (m-record-card shows the title unlinked); the palette's send rows ask
+  sendLink rather than sendRead. Home's Sends cards open Sends only for `can.sends`. Design §3 Calendar's As built line.
+- Tests run (release, `--nobuild`, this worktree's runtime): MarketingShell 4 of 4 (feature 1.6 s; new checks: the events manager's
+  calendar send has no url, their sharedLinks SendDetail null and the author's set, their palette no send, their Comms card visible and
+  unlinked); MarketingAccess, Content, Delivery, Sends, Campaigns, Reports, Surveys, Events, Registrations, Promotions, Automations: 31 of
+  31, 9.0 s; client MarketingSendWalk 1 of 1 (8.5 s); acceptance MarketingCalendarWalk 4 of 4 (7.5 s; re-run as changed: its send steps
+  are the events manager's again, the click on the send staying on the calendar, Home with no SendDetail link, the palette finding the
+  campaign and no send); screen lint: nothing in the touched screens. Not run: test-apps, test-framework, the rest of acceptance.
+- Findings (provisional, numbered by the lead):
+  - Calendar.qvue (Commons) keeps the pointer cursor on a read-only item with no url, so the events manager's send looks clickable though
+    a click does nothing (low; left as is, it is Commons' shared component).
+  - the same pattern holds for the other restricted areas' route keys (`marketingApprovals`, `marketingAutomation`): linked by placeOf for
+    anyone, though only their readers receive such rows today (low; not changed).
+- For the lead:
+  - budget share: none (MarketingShell +0.1 s);
+  - merge hot spots: mr-boss service/ironstone/marketing/Marketing.js (scope, sharedContext, placeOf), screen/Marketing/Home.xml,
+    Calendar.xml, CalendarTui.xml, test/Marketing/MarketingShell.spec.js; this file;
+  - the user's call: none.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
