@@ -7573,7 +7573,7 @@ registry feature, MarketingAccess's registries feature and the client MarketingS
   46, 6.8 s of feature time; the client walk `./moq test-client mr-boss --serve --spec MarketingSendWalk` at 05:04 Chicago time, inside
   the quiet hours: passed, 8.02 s (was 13.40 s failed in the suite, 13.81 s here before the fix), under the approved 9 s. Screen lint
   clean (exit 0, the same advisory list). Not run: test-apps, test-framework, acceptance.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F453 to F456 in order:
   - a `container-box` `condition` attribute is ignored by the framework's renderers (qvt at least: containerBoxMacro), and mr-boss
     uses it on about fifty boxes (Sales Settings, Shared MessageTemplateDetail and SendingProfiles, Marketing Home, CampaignDetail,
     ExperimentDetail, Reports, RegistrationDetail, SalesOrderDetail and others): each shows its box when its condition is false,
@@ -7655,7 +7655,7 @@ failing run's log (`wave-logs/sm-final-apps.log`) and its worker logs (`runtime/
   - R3 (low) `test/Marketing/MarketingSends.spec.js`: SendDetail's one render (the approved, unreleased November send) now checks
     there is no Delivery box ("handed off:", "Released undefined"); it fails on master's SendDetail.xml (checked) and passes on the
     branch. The walk's `waitForText("Released")` was the only check of the fix.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F457 to F460 in order:
   - the container-box `condition` finding (as the Built note's, now with the full list above; medium; the user's call, framework work);
   - MarketingAccess's holders check was order-dependent on every Marketing spec's spec-local groups, not EventCheckIn's alone (R1,
     medium, fixed here);
@@ -8223,6 +8223,14 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F450 | P23 (Review Nov 15): a list member with no preferred address exports an empty Address (the export reads only `preferredContactMechId`); the intake paths set one, but a member loaded or adopted without it is blank in the export with nothing saying why | P23: as its Review note says |
 | F451 | P23 (Review Nov 15): Marketing has no section in mr-mantle `docs/Upgrading.md` (the worker's finding; not written here: it needs the list of Marketing's seed, setup and report files) | P23: as its Review note says |
 | F452 | P23 (Review Nov 15): the ticket has no PDF of its own (design §18 html-print/PDF), the worker's finding; the PASS page prints from the browser | P23: as its Review note says |
+| F453 | Follow-up 7 (Built Nov 15): a `container-box` `condition` attribute is ignored by the framework's renderers (qvt at least: containerBoxMacro), and mr-boss uses it on about fifty boxes (Sales Settings, Shared MessageTemplateDetail and SendingProfiles, Marketing Home, CampaignDetail, ExperimentDetail, Reports, RegistrationDetail, SalesOrderDetail and others): each shows its box when its condition is false, often with empty or undefined values. Only SendDetail's Delivery box is fixed here. Either the framework honours the condition (as it does on labels, dialogs and the other widgets) or screen lint flags it and the screens move to sections (medium; the user's call, framework work) | Follow-up 7: as its Built note says |
+| F454 | Follow-up 7 (Built Nov 15): EventCheckIn left a Marketing bundle and MARKETING_CHECKIN grants behind for any later spec of its worker (fixed here, low) | Follow-up 7: as its Built note says |
+| F455 | Follow-up 7 (Built Nov 15): Consent's registry feature depended on a fresh database's first page (fixed here, low) | Follow-up 7: as its Built note says |
+| F456 | Follow-up 7 (Built Nov 15): the walk proved delivery by day only (the demo profile's quiet hours, fixed here for the walk). The acceptance MarketingDispatchScenario sends through the same profile with run#Deliveries and is likely to wait the same way at night; not run (the brief), not changed (low) | Follow-up 7: as its Built note says |
+| F457 | Follow-up 7 (Review Nov 15): the container-box `condition` finding (as the Built note's, now with the full list above; medium; the user's call, framework work) | Follow-up 7: as its Review note says |
+| F458 | Follow-up 7 (Review Nov 15): MarketingAccess's holders check was order-dependent on every Marketing spec's spec-local groups, not EventCheckIn's alone (R1, medium, fixed here) | Follow-up 7: as its Review note says |
+| F459 | Follow-up 7 (Review Nov 15): Consent's registry chips were satisfied by the filter's options (R2, low, fixed here) | Follow-up 7: as its Review note says |
+| F460 | Follow-up 7 (Review Nov 15): SendDetail's Delivery fix had no server check (R3, low, fixed here) | Follow-up 7: as its Review note says |
 
 ## 7. Later
 
