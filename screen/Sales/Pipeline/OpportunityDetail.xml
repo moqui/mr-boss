@@ -330,6 +330,27 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </drop-down>
                                             </default-field>
                                         </field>
+                                        <!-- impl-marketing P13 (owner contract): Marketing's campaign and a tracking code of it for a user who reads
+                                            Marketing; anyone else sees the stored value only -->
+                                        <field name="marketingCampaignId">
+                                            <conditional-field title="Campaign" condition="ec.user.hasPermission('MARKETING_VIEW')">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'campaigns', selected:marketingCampaignId, organizationPartyId:deal.organizationPartyId}"/>
+                                                </drop-down>
+                                            </conditional-field>
+                                            <default-field title="Campaign"><display text="${deal.campaignText || deal.marketingCampaignId || ''}" also-hidden="false"/></default-field>
+                                        </field>
+                                        <field name="trackingCodeId">
+                                            <conditional-field title="Tracking code" condition="ec.user.hasPermission('MARKETING_VIEW')">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'trackingCodes', selected:trackingCodeId}">
+                                                        <depends-on field="marketingCampaignId"/></dynamic-options>
+                                                </drop-down>
+                                            </conditional-field>
+                                            <default-field title="Tracking code"><display text="${deal.trackingText || ''}" also-hidden="false"/></default-field>
+                                        </field>
                                         <field name="nextStep"><default-field title="Next step"><text-line size="50"/></default-field></field>
                                         <field name="description"><default-field title="Description"><text-area rows="3" cols="60"/></default-field></field>
                                         <field name="submitButton"><default-field title=""><submit text="Save"/></default-field></field>
@@ -339,6 +360,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field-row><field-ref name="probabilityModeEnumId"/><field-ref name="estimatedProbability"/></field-row>
                                             <field-row><field-ref name="estimatedCloseDate"/><field-ref name="dataSourceId"/></field-row>
                                             <field-row><field-ref name="recurringAmount"/><field-ref name="recurringPlanEnumId"/></field-row>
+                                            <field-row><field-ref name="marketingCampaignId"/><field-ref name="trackingCodeId"/></field-row>
                                             <field-ref name="nextStep"/>
                                             <field-ref name="description"/>
                                             <field-ref name="submitButton"/>
@@ -353,7 +375,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label text="Owner: ${deal.ownerName}${deal.teamName ? ' · team ' + deal.teamName : ''}" type="p" style="q-mb-xs"
                                         condition="deal.ownerName || deal.teamName"/>
                                 <label text="Source: ${deal.sourceText}" type="p" style="q-mb-xs" condition="deal.sourceText"/>
-                                <label text="Campaign: ${deal.campaignText || deal.marketingCampaignId}" type="p" style="q-mb-xs" condition="deal.marketingCampaignId"/>
+                                <label text="Campaign: ${deal.campaignText || deal.marketingCampaignId}${deal.trackingText ? ' · tracking code ' + deal.trackingText : ''}" type="p" style="q-mb-xs" condition="deal.marketingCampaignId"/>
                                 <label text="Next step: ${deal.nextStep}" type="p" style="q-mb-xs" condition="deal.nextStep"/>
                                 <label text="${deal.description}" type="p" style="m-muted" condition="deal.description"/>
                                 <label text="Qualified ${deal.convertedText}" type="p" style="text-caption m-muted" condition="deal.convertedText"/>

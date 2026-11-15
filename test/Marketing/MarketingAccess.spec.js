@@ -256,7 +256,10 @@ const capabilityNames = [
     "automations",
     // P12: the surveys' read (a Marketing reader who edits content or reads audiences or reports) and their area
     "surveyRead",
-    "surveys"
+    "surveys",
+    // P13: the lead rules' read (a content author or the administrator) and their area
+    "leadRuleRead",
+    "leadRules"
 ]
 const audienceGrants = ["audienceView", "audienceEdit", "audienceImport", "audienceExport", "consentEdit"]
 // design §1.1's table; every user in BOSS_MARKETING holds view
@@ -281,7 +284,9 @@ const capabilityUsers = [
             "automationRead",
             "automations",
             "surveyRead",
-            "surveys"
+            "surveys",
+            "leadRuleRead",
+            "leadRules"
         ]
     },
     {

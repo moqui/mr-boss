@@ -622,4 +622,58 @@ along with this software (see the LICENSE.md file). If not, see
             partyId="BOSS_MKT_CON_MAYA" siteId="ZIZI_SHOP" requestKey="demo-visit-2" payloadDigest="demo"
             submittedDate="2026-11-08 18:00:00" statusEnumId="FsbApplied"/>
     <!-- ===== end of Marketing P12 ===== -->
+
+    <!-- ===== Marketing P13: leads and the Sales handoff (impl-marketing P13; design-marketing §10 Leads, LeadRules) ===== -->
+    <!-- Retail's garden plan request (a lead form: name, company, email and what they want), published to anyone on ZIZI_SHOP for the
+        spring campaign, its lead rule handing each answer to Sales' Retail East queue with the website enquiry source (the name,
+        company and email mapped, the wish in the notes); one answer of 10 November whose handoff failed while East was being set up and
+        is no longer tried by the job: an author tries it again from LeadRuleDetail. -->
+    <moqui.screen.form.DbForm formId="BOSS_MKT_FORM_QUOTE" purposeEnumId="DbfpLead" isDated="Y" ownerPartyId="ORG_ZIZI_RETAIL"
+            description="Garden plan request" comments="Ask the garden centre for a planting or design plan"/>
+    <moqui.screen.form.DbFormField formId="BOSS_MKT_FORM_QUOTE" fieldName="fullName" title="Your name" fieldTypeEnumId="DBFFT_text-line"
+            isRequired="Y" audienceEnumId="CfaCustomer" layoutSequenceNum="10" fromDate="2026-11-01 09:00:00"/>
+    <moqui.screen.form.DbFormField formId="BOSS_MKT_FORM_QUOTE" fieldName="company" title="Company" fieldTypeEnumId="DBFFT_text-line"
+            isRequired="N" audienceEnumId="CfaCustomer" layoutSequenceNum="20" fromDate="2026-11-01 09:00:00"/>
+    <moqui.screen.form.DbFormField formId="BOSS_MKT_FORM_QUOTE" fieldName="email" title="Email" fieldTypeEnumId="DBFFT_text-line"
+            isRequired="Y" audienceEnumId="CfaCustomer" layoutSequenceNum="30" fromDate="2026-11-01 09:00:00"/>
+    <moqui.screen.form.DbFormField formId="BOSS_MKT_FORM_QUOTE" fieldName="wish" title="What would you like?" fieldTypeEnumId="DBFFT_radio"
+            isRequired="Y" audienceEnumId="CfaCustomer" layoutSequenceNum="40" fromDate="2026-11-01 09:00:00"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_MKT_FORM_QUOTE" fieldName="wish" sequenceNum="1" keyValue="planting" text="A planting plan"
+            fromDate="2026-11-01 09:00:00"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_MKT_FORM_QUOTE" fieldName="wish" sequenceNum="2" keyValue="design" text="A garden design"
+            fromDate="2026-11-01 09:00:00"/>
+    <mantle.party.FormPublication publicationId="BOSS_MKT_PUB_QUOTE" formId="BOSS_MKT_FORM_QUOTE" purposeEnumId="FppLead"
+            organizationPartyId="ORG_ZIZI_RETAIL" contextEntityName="mantle.marketing.campaign.MarketingCampaign" contextId="BOSS_MKT_CMP_SPRING"
+            siteId="ZIZI_SHOP" accessEnumId="FpaAnonymous" repeatEnumId="FprMany" description="Garden plan request on the shop"
+            titleText="Ask for a garden plan" introText="Tell us what you have in mind and a garden adviser will be in touch."
+            completionMessage="Thank you: a garden adviser will contact you." fromDate="2026-11-02 09:00:00" publishedDate="2026-11-02 09:00:00"
+            publishedByUserId="BOSS_MKT_AUTHOR" createdDate="2026-11-01 10:00:00" createdByUserId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.campaign.CampaignAssociation campaignAssociationId="BOSS_MKT_CAS_QUOTE" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            associationKindEnumId="CakForm" sourceId="BOSS_MKT_PUB_QUOTE" purpose="Survey" fromDate="2026-11-01 10:00:00"
+            createdByUserId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.lead.MarketingLeadRule leadRuleId="BOSS_MKT_LRULE_QUOTE" organizationPartyId="ORG_ZIZI_RETAIL" ruleName="Garden plans to Retail East"
+            sourceKindEnumId="MlsFormPublication" sourceId="BOSS_MKT_PUB_QUOTE" triggerEnumId="MltFormSubmitted" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            dataSourceId="BOSS_SAL_SRC_WEB" teamPartyId="BOSS_SAL_TEAM_EAST" nameFieldName="fullName" organizationFieldName="company"
+            emailFieldName="email" noteFieldNames="wish" noticeText="A garden adviser from our Retail East team will contact you about your plan."
+            fromDate="2026-11-01 11:00:00" createdDate="2026-11-01 11:00:00" createdByUserId="BOSS_MKT_AUTHOR"/>
+    <!-- an answer of 10 November whose handoff failed (its tries over) -->
+    <moqui.screen.form.FormResponse formResponseId="BOSS_MKT_FR_QUOTE_1" formId="BOSS_MKT_FORM_QUOTE" formLocation="DbForm#BOSS_MKT_FORM_QUOTE"
+            responseDate="2026-11-10 11:00:00"/>
+    <moqui.screen.form.FormResponseAnswer formResponseAnswerId="BOSS_MKT_FRA_QUOTE_1A" formResponseId="BOSS_MKT_FR_QUOTE_1"
+            formId="BOSS_MKT_FORM_QUOTE" fieldName="fullName" valueText="Ivy Thornton"/>
+    <moqui.screen.form.FormResponseAnswer formResponseAnswerId="BOSS_MKT_FRA_QUOTE_1B" formResponseId="BOSS_MKT_FR_QUOTE_1"
+            formId="BOSS_MKT_FORM_QUOTE" fieldName="company" valueText="Thornton Cafe"/>
+    <moqui.screen.form.FormResponseAnswer formResponseAnswerId="BOSS_MKT_FRA_QUOTE_1C" formResponseId="BOSS_MKT_FR_QUOTE_1"
+            formId="BOSS_MKT_FORM_QUOTE" fieldName="email" valueText="ivy@thornton-cafe.example"/>
+    <moqui.screen.form.FormResponseAnswer formResponseAnswerId="BOSS_MKT_FRA_QUOTE_1D" formResponseId="BOSS_MKT_FR_QUOTE_1"
+            formId="BOSS_MKT_FORM_QUOTE" fieldName="wish" valueText="design"/>
+    <mantle.party.FormSubmission formSubmissionId="BOSS_MKT_FSB_QUOTE_1" publicationId="BOSS_MKT_PUB_QUOTE" formId="BOSS_MKT_FORM_QUOTE"
+            organizationPartyId="ORG_ZIZI_RETAIL" formResponseId="BOSS_MKT_FR_QUOTE_1" siteId="ZIZI_SHOP" requestKey="demo-quote-1"
+            payloadDigest="demo" submittedDate="2026-11-10 11:00:00" statusEnumId="FsbApplied" effectsText="lead: handed to the capture"/>
+    <mantle.marketing.lead.MarketingLeadCapture leadCaptureId="BOSS_MKT_LCAP_QUOTE_1" leadRuleId="BOSS_MKT_LRULE_QUOTE"
+            organizationPartyId="ORG_ZIZI_RETAIL" sourceKindEnumId="MlcsFormSubmission" sourceId="BOSS_MKT_FSB_QUOTE_1"
+            publicationId="BOSS_MKT_PUB_QUOTE" formResponseId="BOSS_MKT_FR_QUOTE_1" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            statusEnumId="MlcFailed" operationKey="mkt-lead:BOSS_MKT_LCAP_QUOTE_1" attemptCount="8" lastAttemptDate="2026-11-12 11:00:00"
+            errorText="TEAM_UNAVAILABLE: Choose a current team of the organization as the queue" capturedDate="2026-11-10 11:00:00"/>
+    <!-- ===== end of Marketing P13 ===== -->
 </entity-facade-xml>

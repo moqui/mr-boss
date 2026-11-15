@@ -14,11 +14,14 @@ const ids = {
     // P11: Automations for the authors, approvers, dispatchers, audience managers and the administrator
     // P12: Surveys for the authors, audience managers, analysts and the administrator
     audienceMenu: ["Home", "Campaigns", "Audiences", "Automations", "Surveys"],
-    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Surveys", "Settings"],
+    // P13: Leads (its lead rules) for the authors and the administrator too
+    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Surveys", "Leads", "Settings"],
     systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Surveys", "Leads", "Settings"],
     analystMenu: ["Home", "Campaigns", "Surveys"],
     // P6: Sends (Comms' templates) for the authors and the administrator
-    authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Surveys"],
+    authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Surveys", "Leads"],
+    // P13: the Leads tabs of an author who reads no Sales
+    authorLeadsMenu: ["LeadRules"],
     sendsMenu: ["Sends", "MessageTemplates"],
     // P5: Segments and AudiencePreview join the Audiences tabs
     audiencesMenu: ["Lists", "Segments", "Consent", "Suppressions", "AudiencePreview"],
@@ -77,7 +80,13 @@ const ids = {
     invitedPublicationId: "BOSS_MKT_PUB_VISIT_INVITED",
     surveySendId: "BOSS_MKT_SEND_SURVEY",
     anonymousResponseId: "BOSS_MKT_FR_VISIT_1",
-    invitedResponseId: "BOSS_MKT_FR_VISIT_2"
+    invitedResponseId: "BOSS_MKT_FR_VISIT_2",
+    // P13's demo lead form: Retail's garden plan request on ZIZI_SHOP, its rule to Retail East and one answer whose handoff failed
+    leadFormId: "BOSS_MKT_FORM_QUOTE",
+    leadPublicationId: "BOSS_MKT_PUB_QUOTE",
+    leadRuleId: "BOSS_MKT_LRULE_QUOTE",
+    failedCaptureId: "BOSS_MKT_LCAP_QUOTE_1",
+    eastTeamId: "BOSS_SAL_TEAM_EAST"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's
