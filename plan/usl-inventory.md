@@ -1030,6 +1030,19 @@ screens and PASS pages:
 | public/ThemeServices | find#SitePages, store#SitePage, get#SitePageHistory (app marketing) | Marketing/Content/LandingPages, Marketing/Content/LandingPages/PageDetail | Marketing/Content/LandingPages, Marketing/Content/PageDetail (Shared/Pages and PageDetail with Marketing's registration, PageApps.js) (Marketing P14) |
 | public/SiteServices | publish#SitePage, get#SitePage (a marketing mount's page) | Marketing/Content/LandingPages/PageDetail; PASS Marketing landing pages | Marketing/Content/PageDetail/PagePublication; MarketingPortalServices get#Page (Marketing P14) |
 
+Added in Marketing P15 (Nov 14, 2026; Marketing's tracking links and capture `mantle.marketing.TrackingServices` over
+MarketingTracking.js, PASS's tracking web scripts, a landing page's optional review on Marketing's approvals, and the organization's
+tracking settings, impl-marketing P15), called by built screens, PASS scripts and pages:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| marketing/TrackingServices | find#TrackingLinks (the links of the organizations, extended from P13's) | Marketing/Content/TrackingLinks (LinkFind, LinkList); Marketing/Campaigns/CampaignDetail (Tracking links) | Marketing/Content/TrackingLinks, Marketing/Campaigns/CampaignDetail (Tracking links box); Sales.js choiceSources trackingCodes as before (Marketing P15) |
+| marketing/TrackingServices | get#TrackingLink, store#TrackingLink | Marketing/Content/TrackingLinks (NewLink); Marketing/Content/TrackingLinks/TrackingLinkDetail (LinkDefinition, LinkOutput, LinkObservations) | Marketing/Content/TrackingLinkDetail (Edit link, Share with the QR code, Observations), template/MarketingTracking.xml storeTrackingLink and qrCode (Marketing P15) |
+| marketing/TrackingServices | resolve#TrackingLink, record#TrackingEvent | design §8 "Capture on the authority", §13.1 | PASS:script/TrackingRedirect.js, TrackingPixel.js (resolveTrackingLink, recordTrackingEvent); PASS:Marketing/Page (a code's page visit) (Marketing P15) |
+| marketing/TrackingServices | count#StoreVisits | Commerce/Home (impl-commerce §7, F28) | ironstone.commerce.ReportingServices get#HomePeriod (Commerce/Home's Visits) (Marketing P15) |
+| marketing/MarketingContentServices | get#PageReview | Marketing/Content/LandingPages/PageDetail (Request review, §4 Nov 14) | Shared/PageDetail with Marketing's registration (Request review, Review), through CampaignServices request# and decide#MarketingApproval (targetKind page) (Marketing P15) |
+| marketing/CampaignServices | store#MarketingPolicy, preview#MarketingPolicy (trackingDomains, visitorKeys; testAddresses now declared) | Marketing/Settings/CampaignDefaults | Marketing/Settings/CampaignDefaults (Tracking link hosts, Visitor keys) (Marketing P15) |
+
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

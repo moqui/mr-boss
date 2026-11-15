@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Content › TrackingLinkDetail (design-marketing §8 TrackingLinkDetail: LinkDefinition, LinkOutput, LinkObservations;
+    §18 the tracking URL and QR; style-guide §3.3 Detail; impl-marketing P15): one tracking link of the user's organizations
+    (mantle.marketing.TrackingServices.get#TrackingLink; else "Not available", linking back). The record header: the link's public code,
+    its description, campaign, site and destination, its state as a chip; Edit link the primary action (MARKETING_CAMPAIGN_EDIT on an open
+    campaign). LinkDefinition (the destination, safe destination, UTM values and dates, read only here), LinkOutput (the canonical
+    public address and its QR code, from the built barcode helper, to download) and LinkObservations (aggregates for a reader of reports
+    or an author: clicks, page visits, visitors by key, the share with a key, recipients who clicked, automated fetches set apart; no
+    person). A link goes only to its registered destination; nothing of a visitor's request names one. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Tracking link" default-menu-include="false">
+    <parameter name="trackingCodeId" required="true"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="storeTrackingLink" location="component://mr-boss/template/MarketingTracking.xml"/>
+    <transition-include name="qrCode" location="component://mr-boss/template/MarketingTracking.xml"/>
+    <transition name="linkList"><default-response url="../TrackingLinks"/></transition>
+    <actions>
+        <service-call name="mantle.marketing.TrackingServices.get#TrackingLink" out-map="detail" transaction="force-new" ignore-error="true"
+                in-map="{trackingCodeId:trackingCodeId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!detail?.trackingLink"/>
+        <set field="link" from="detail?.trackingLink || {}"/>
+        <set field="observations" from="detail?.observations || null"/>
+        <set field="canEdit" from="!!detail?.capabilities?.canEdit"/>
+        <set field="captionText" from="[link.campaignName, link.siteName, link.utmText].filter(Boolean).join(' · ')"/>
+        <set field="campaignPath" from="sharedLinks['Campaigns/CampaignDetail']"/>
+        <set field="pagePath" from="sharedLinks['Content/PageDetail']"/>
+        <set field="qrPath" from="'qrCode?trackingCodeId=' + encodeURIComponent(trackingCodeId)"/>
+        <set field="linkValues" from="{trackingCodeId:trackingCodeId, expectedRevision:link.revision, marketingCampaignId:link.marketingCampaignId,
+                campaignFixed:true, description:link.description, siteId:link.siteId, destinationKindEnumId:link.destinationKindEnumId,
+                sitePageId:link.sitePageId, redirectUrl:link.redirectUrl, safeUrl:link.safeUrl, trackingCodeTypeEnumId:link.trackingCodeTypeEnumId,
+                utmSource:link.utmSource, utmMedium:link.utmMedium, utmContent:link.utmContent, disabled:link.disabled,
+                fromDate:link.fromDate, thruDate:link.thruDate}"/>
+    </actions>
+    <widgets>
+        <section name="LinkNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Tracking link ${trackingCodeId} is not available: it does not exist or is not one of your organization's campaigns."/>
+                <link url="linkList" text="Back to tracking links" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="LinkFound" condition="recordFound"><widgets>
+            <context record-entity="mantle.marketing.tracking.TrackingCode" record-id="${trackingCodeId}" title="${link.label}"/>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <container style="row items-center no-wrap">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${WebUtilities.encodeHtml(link.trackingCodeId)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "LinkKey", style: "strong", text: link.trackingCodeId})}]]></text>
+                            </render-mode>
+                            <label text="${link.label}" type="h5"/>
+                        </container>
+                        <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${link.stateColor}">${WebUtilities.encodeHtml(link.stateText)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "LinkState", text: link.stateText})}]]></text>
+                            <text type="html">${link.stateText}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <link url="${campaignPath}" text="${link.campaignName}" link-type="anchor" parameter-map="{marketingCampaignId:link.marketingCampaignId}"
+                                condition="link.marketingCampaignId"/>
+                        <label text="From ${link.fromDateText}${link.thruDateText ? ' until ' + link.thruDateText : ''}" type="span" style="text-caption m-muted q-ml-sm"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-xs m-record-actions">
+                        <container-dialog id="EditLinkDialog" button-text="Edit link" icon="sym_o_edit" type="primary" width="760"
+                                title="Edit tracking link ${link.label}" condition="canEdit">
+                            <section-include name="TrackingLinkForm" location="component://mr-boss/template/MarketingTracking.xml"/>
+                        </container-dialog>
+                    </container>
+                </container>
+            </container>
+
+            <container-box>
+                <box-header title="Link"/>
+                <box-body>
+                    <label type="p" text="Goes to: ${link.destinationNow || 'the page saying the link is not available'}"/>
+                    <label type="p" style="text-caption m-muted" text="Destination: ${link.destinationText}${link.pageText ? ' (' + link.pageText + ')' : ''}"/>
+                    <link url="${pagePath}" text="Open the landing page" link-type="anchor" parameter-map="{sitePageId:link.sitePageId}"
+                            condition="link.sitePageId &amp;&amp; pagePath"/>
+                    <label type="p" style="text-caption m-muted" text="When ended: ${link.safeUrl || 'a page saying the link is not available'}"/>
+                    <label type="p" style="text-caption m-muted" text="Source, medium and content: ${link.utmText || 'none'}"/>
+                </box-body>
+            </container-box>
+
+            <container-box>
+                <box-header title="Share"/>
+                <box-body>
+                    <section name="LinkAddress" condition="link.publicUrl"><widgets>
+                        <label type="p" style="text-mono" text="${link.publicUrl}"/>
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<img src="${WebUtilities.encodeHtml(qrPath)}" alt="QR code of the link" width="160" height="160" style="background:#fff;padding:8px"/>]]></text>
+                            <text type="html"><![CDATA[<img src="${WebUtilities.encodeHtml(qrPath)}" alt="QR code of the link" width="160" height="160"/>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "LinkQr", text: "QR code: download it in the browser"})}]]></text>
+                        </render-mode>
+                        <link url="qrCode" text="Download QR code" icon="sym_o_qr_code_2" link-type="anchor" parameter-map="{trackingCodeId:trackingCodeId, download:'Y'}"/>
+                    </widgets></section>
+                    <label type="p" style="m-muted" text="This link has no address yet: its site needs a canonical host." condition="!link.publicUrl"/>
+                </box-body>
+            </container-box>
+
+            <section name="LinkObservations" condition="observations"><widgets>
+                <container-box>
+                    <box-header title="Observations, last ${observations.periodDays} days"/>
+                    <box-body>
+                        <dashboard min-width="140">
+                            <number-card title="Clicks" value="${observations.period.clicks}" icon="sym_o_ads_click" size="sm"/>
+                            <number-card title="Page visits" value="${observations.period.visits}" icon="sym_o_travel_explore" size="sm"/>
+                            <number-card title="Visitors" value="${observations.period.visitors}" icon="sym_o_group" size="sm"/>
+                            <number-card title="Recipients who clicked" value="${observations.period.recipients}" icon="sym_o_mark_email_read" size="sm"/>
+                            <number-card title="Automated fetches" value="${observations.period.automated}" icon="sym_o_smart_toy" size="sm"/>
+                        </dashboard>
+                        <label type="p" style="text-caption m-muted" text="Visitors counts each visitor key once and each visit without a key on its own (${observations.period.coverageText}). Automated fetches (link scanners, previews) are set apart and are never a conversion. In all: ${observations.total.clicks} clicks, ${observations.total.visitors} visitors."/>
+                    </box-body>
+                </container-box>
+            </widgets></section>
+        </widgets></section>
+    </widgets>
+</screen>

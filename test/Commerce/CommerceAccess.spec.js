@@ -170,7 +170,8 @@ feature("Home shows the work and the period not configured for the reader's stor
         own.output.includes("Not configured")
         own.output.includes("Ziziwork Retail Store,")
         !own.output.includes("New store")
-        !own.output.includes("Visits")
+        // impl-marketing P15: the store's site sells for it, so Home counts its visits from Marketing's tracking
+        own.output.includes("Visits")
         other.status == 200
         other.output.includes("Store " + ids.otherStoreId + " is not available to you.")
         !other.output.includes("Ziziwork Digital Store")

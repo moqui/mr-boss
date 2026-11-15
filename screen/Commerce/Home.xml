@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.commerce.ContextServices.get#Choices) and the period, the store checked by check#Record; WorkCards (approval,
     payment holds, fulfillment, unpaid, carts, reviews, integration errors) and PeriodStrip (orders, net sales and top product
     for the period against the previous one), each "Not configured" until the phases that measure them (P8 the work, P11 the
-    strip), never zero; visits and conversion stay hidden without Marketing's tracking (impl-commerce §4). The first-use state
+    strip), never zero; visits are Marketing's tracking events of the stores' sites (impl-marketing P15), conversion waits for its
+    attribution (impl-commerce §4). The first-use state
     (no store in the user's scope) opens Stores' NewStore for a store manager (P2). P8: the work counts
     (mantle.order.StoreOperationsServices.get#StoreWorkSummary: to approve, payment holds, to fulfill, unpaid, open carts,
     stuck placements and undelivered notices, each opening the scoped list for an order reader) and RecentOrders. P11: the
@@ -202,6 +203,15 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label text="${card.previousText}" type="p" style="text-caption m-muted"/>
                             </widgets>
                         </section-iterate>
+                        <!-- impl-marketing P15: the visits of the stores' sites from Marketing's tracking (shown when a site sells for
+                            them); conversion follows with Marketing's attribution -->
+                        <section name="PeriodVisits" condition="period?.visits"><widgets>
+                            <dashboard min-width="160">
+                                <number-card title="Visits" value="${period.visits.visitsText}" icon="sym_o_travel_explore" size="sm"
+                                        delta="${period.visits.visitsDelta}"/>
+                            </dashboard>
+                            <label text="${period.visits.previousText}" type="p" style="text-caption m-muted"/>
+                        </widgets></section>
                     </box-body>
                 </container-box>
             </widgets>

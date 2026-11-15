@@ -5,7 +5,7 @@
 // capabilities of its context that show the edit and publish actions, its route to the page detail (a sharedLinks key), whether
 // its pages take a policy role and a theme template, and its words. Commerce's is the first (its Website area, as built in its
 // P4); Marketing's the second (its Content area's landing pages: no store, no policy role or template, its content grant both
-// edits and publishes; themes stay Commerce's).
+// edits and publishes; themes stay Commerce's; P15: an optional review, its services named by the registration).
 //
 // A registration is data, never authority: the site page services check the user's permissions and scope themselves (a page's
 // app is its mount's), and a capability only shows or hides an action. An app with no registration sees "not available".
@@ -30,6 +30,14 @@ const apps = {
         capabilities: {edit: "contentEdit", publish: "contentEdit"},
         detailLink: "Content/PageDetail",
         storePages: false,
+        // P15 (impl-marketing §4 Nov 14): a landing page's optional review: an author asks, an approver of the organization is notified
+        // and may approve or refuse at the text version; publishing stays the content grant's act with or without it
+        review: {
+            readService: "mantle.marketing.MarketingContentServices.get#PageReview",
+            requestService: "mantle.marketing.CampaignServices.request#MarketingApproval",
+            decideService: "mantle.marketing.CampaignServices.decide#MarketingApproval",
+            targetKind: "page"
+        },
         words: {
             routeTip: "The address under the Marketing mount's pages/, such as spring-sale",
             empty: "No landing pages match. A landing page is on a site whose Marketing mount serves one of your organizations.",
@@ -52,7 +60,8 @@ function context(appRoot) {
         choicesService: app.choicesService,
         can: {themeEdit: !!caps[app.capabilities.edit], publish: !!caps[app.capabilities.publish]},
         sharedLinks: out.sharedLinks || {},
-        detailUrl: (out.sharedLinks || {})[app.detailLink] || null
+        detailUrl: (out.sharedLinks || {})[app.detailLink] || null,
+        review: app.review || null
     }
 }
 ;({apps, context})

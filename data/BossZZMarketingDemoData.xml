@@ -685,4 +685,30 @@ along with this software (see the LICENSE.md file). If not, see
         newsletter. The wiki pages are written through the wiki services (ironstone.marketing.DemoServices.load#ContentDemo). -->
     <ironstone.marketing.DemoServices.load-ContentDemo/>
     <!-- ===== end of Marketing P14 ===== -->
+
+    <!-- ===== Marketing P15: tracking links and capture (impl-marketing P15; design-marketing §8 TrackingLinks, §12 Vocabularies) ===== -->
+    <!-- Retail's link vocabulary (sources poster and newsletter, mediums qr and email, a content tag), its tracking settings (unique
+        visitors counted by a first-party key; one external host allowed), and two links of the spring campaign on ZIZI_SHOP: the poster's
+        QR code to the spring garden landing page (shop.zizi.localhost/trk/ZIZI_SHOP/SpringQr2026) and the newsletter's link to the
+        same page by address. -->
+    <mantle.marketing.campaign.MarketingVocabulary marketingVocabularyId="BOSS_MKT_VOC_SRC_POSTER" organizationPartyId="ORG_ZIZI_RETAIL"
+            vocabularyKindEnumId="MvkUtmSource" vocabularyCode="poster" label="Shop poster" sequenceNum="1" fromDate="2026-10-01 00:00:00"/>
+    <mantle.marketing.campaign.MarketingVocabulary marketingVocabularyId="BOSS_MKT_VOC_SRC_NEWS" organizationPartyId="ORG_ZIZI_RETAIL"
+            vocabularyKindEnumId="MvkUtmSource" vocabularyCode="newsletter" label="Garden newsletter" sequenceNum="2" fromDate="2026-10-01 00:00:00"/>
+    <mantle.marketing.campaign.MarketingVocabulary marketingVocabularyId="BOSS_MKT_VOC_MED_QR" organizationPartyId="ORG_ZIZI_RETAIL"
+            vocabularyKindEnumId="MvkUtmMedium" vocabularyCode="qr" label="QR code" sequenceNum="1" fromDate="2026-10-01 00:00:00"/>
+    <mantle.marketing.campaign.MarketingVocabulary marketingVocabularyId="BOSS_MKT_VOC_MED_EMAIL" organizationPartyId="ORG_ZIZI_RETAIL"
+            vocabularyKindEnumId="MvkUtmMedium" vocabularyCode="email" label="Email" sequenceNum="2" fromDate="2026-10-01 00:00:00"/>
+    <mantle.marketing.campaign.MarketingVocabulary marketingVocabularyId="BOSS_MKT_VOC_CNT_SPRING" organizationPartyId="ORG_ZIZI_RETAIL"
+            vocabularyKindEnumId="MvkUtmContent" vocabularyCode="spring-garden" label="Spring garden" sequenceNum="1" fromDate="2026-10-01 00:00:00"/>
+    <mantle.marketing.campaign.MarketingPolicy marketingPolicyId="BOSS_MKT_POLICY_RETAIL" visitorKeys="Y" trackingDomains="ziziwork.example"/>
+    <mantle.marketing.tracking.TrackingCode trackingCodeId="BOSS_MKT_TRK_POSTER" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            organizationPartyId="ORG_ZIZI_RETAIL" siteId="ZIZI_SHOP" publicCode="SpringQr2026" description="Spring garden poster (QR code)"
+            destinationKindEnumId="TdkSitePage" sitePageId="BOSS_MKT_PAGE_SPRING" utmSource="poster" utmMedium="qr" utmContent="spring-garden"
+            disabled="N" fromDate="2026-10-01 09:00:00" createdByUserId="BOSS_MKT_AUTHOR"/>
+    <mantle.marketing.tracking.TrackingCode trackingCodeId="BOSS_MKT_TRK_NEWS" marketingCampaignId="BOSS_MKT_CMP_SPRING"
+            organizationPartyId="ORG_ZIZI_RETAIL" siteId="ZIZI_SHOP" publicCode="SpringNews2026" description="Garden newsletter: the spring page"
+            destinationKindEnumId="TdkUrl" redirectUrl="https://shop.zizi.localhost/marketing/pages/spring-garden" utmSource="newsletter"
+            utmMedium="email" disabled="N" fromDate="2026-10-01 09:00:00" createdByUserId="BOSS_MKT_AUTHOR"/>
+    <!-- ===== end of Marketing P15 ===== -->
 </entity-facade-xml>

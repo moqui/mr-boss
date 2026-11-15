@@ -65,9 +65,9 @@ feature("ExperimentDetail shows a draft's A/B test: its setup, its variants and 
         // the variants: A the send's content, B its own subject
         detail.output.includes("Variant B: Urgent") && detail.output.includes("Last days of the spring sale")
         detail.output.includes("none: the send's content")
-        // the results: clicks not available, the decision undecided
+        // the results: no click yet (P15 counts them), conversions not available, the decision undecided with no accepted recipient
         detail.output.includes("Unique clicks") && detail.output.includes("Not available")
-        detail.output.includes("No observations")
+        detail.output.includes("No accepted, tracking-enabled recipient in a variant yet")
         // the author edits the variants and the setup; no winner is chosen or released before the sample
         detail.output.includes("EditVariant_BOSS_MKT_EXPT_SPRING_B") && detail.output.includes("Edit the setup")
         !detail.output.includes("ChooseWinnerDialog") && !detail.output.includes("ReleaseWinnerDialog")

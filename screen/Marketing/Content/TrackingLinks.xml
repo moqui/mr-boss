@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Content › Tracking links (design-marketing §8 TrackingLinks: LinkFind, LinkList, NewLink; style-guide §3.2 List;
+    impl-marketing P15): the campaign links of the user's organizations, each with its campaign, state, registered destination, public
+    address and clicks, by text, campaign, source and medium, a page at a time (mantle.marketing.TrackingServices.find#TrackingLinks,
+    scoped in the query). New link is the primary action (MARKETING_CAMPAIGN_EDIT); each row opens TrackingLinkDetail, where the address
+    and QR code are shared. A link goes only to its registered destination. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Tracking links" default-menu-index="5">
+    <parameter name="marketingCampaignId"/>
+    <parameter name="utmSource"/>
+    <parameter name="utmMedium"/>
+    <parameter name="term"/>
+    <parameter name="includeEnded"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
+    <transition-include name="storeTrackingLink" location="component://mr-boss/template/MarketingTracking.xml"/>
+    <actions>
+        <service-call name="mantle.marketing.TrackingServices.find#TrackingLinks" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{marketingCampaignId:(marketingCampaignId || null), utmSource:(utmSource || null), utmMedium:(utmMedium || null),
+                    term:(term || null), includeEnded:(includeEnded == 'Y' ? 'Y' : null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="links" from="found?.trackingLinkList || []"/>
+        <set field="linksCount" from="found?.trackingLinkListCount || 0"/>
+        <set field="linksPageIndex" from="found?.trackingLinkListPageIndex || 0"/>
+        <set field="linksPageSize" from="found?.trackingLinkListPageSize || 20"/>
+        <set field="linksPageMaxIndex" from="found?.trackingLinkListPageMaxIndex || 0"/>
+        <set field="linksPageRangeLow" from="found?.trackingLinkListPageRangeLow || 0"/>
+        <set field="linksPageRangeHigh" from="found?.trackingLinkListPageRangeHigh || 0"/>
+        <set field="canEdit" from="!!marketing.capabilities.campaignEdit"/>
+        <set field="detailPath" from="sharedLinks['Content/TrackingLinkDetail']"/>
+        <set field="campaignPath" from="sharedLinks['Campaigns/CampaignDetail']"/>
+        <set field="findValues" from="{marketingCampaignId:marketingCampaignId, utmSource:utmSource, utmMedium:utmMedium, term:term, includeEnded:includeEnded}"/>
+        <set field="linkValues" from="{marketingCampaignId:(marketingCampaignId || null), destinationKindEnumId:'TdkSitePage', campaignFixed:false}"/>
+        <set field="filtered" from="!!(marketingCampaignId || utmSource || utmMedium || term || includeEnded)"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Tracking links" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none"
+                        text="Campaign links and QR codes: each goes to its registered destination and counts the visits it brings."/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="NewLinkDialog" button-text="New link" icon="sym_o_add_link" type="primary" width="760"
+                        title="New tracking link" condition="canEdit">
+                    <section-include name="TrackingLinkForm" location="component://mr-boss/template/MarketingTracking.xml"/>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="LinkFind" transition="." map="findValues">
+            <field name="term"><default-field title="Find"><text-line size="20"/></default-field></field>
+            <field name="marketingCampaignId">
+                <default-field title="Campaign">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'campaigns', selected:marketingCampaignId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="utmSource">
+                <default-field title="Source">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'vocabulary', vocabularyKindEnumId:'MvkUtmSource', selected:utmSource}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="utmMedium">
+                <default-field title="Medium">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'vocabulary', vocabularyKindEnumId:'MvkUtmMedium', selected:utmMedium}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="includeEnded">
+                <default-field title="Ended"><check><option key="Y" text="Include ended"/></check></default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="term"/>
+                    <field-ref name="marketingCampaignId"/>
+                    <field-ref name="utmSource"/>
+                    <field-ref name="utmMedium"/>
+                    <field-ref name="includeEnded"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="LinkList" list="links" skip-form="true" select-columns="true">
+                    <field name="label">
+                        <default-field title="Link">
+                            <link url="${detailPath}" text="${label}" link-type="anchor" parameter-map="{trackingCodeId:trackingCodeId}"/>
+                        </default-field>
+                    </field>
+                    <field name="campaignName">
+                        <default-field title="Campaign">
+                            <link url="${campaignPath}" text="${campaignName}" link-type="anchor" parameter-map="{marketingCampaignId:marketingCampaignId}"/>
+                        </default-field>
+                    </field>
+                    <field name="destinationText"><default-field title="Destination"><display/></default-field></field>
+                    <field name="utmText"><default-field title="Source / medium / content"><display/></default-field></field>
+                    <field name="publicUrl"><default-field title="Address"><display style="text-mono"/></default-field></field>
+                    <field name="clickCount" align="right"><default-field title="Clicks"><display format="#,##0"/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="label"/><field-ref name="campaignName"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="clickCount"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <label text="${filtered ? 'No link matches these filters.' : 'No tracking link yet.' + (canEdit ? ' Make one with New link to share a campaign page by address or QR code.' : '')}"
+                type="p" style="text-caption m-muted" condition="!links.length"/>
+    </widgets>
+</screen>

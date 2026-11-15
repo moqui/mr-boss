@@ -127,6 +127,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="Delivery ${recipient.deliveryId}: ${recipient.deliveryStateText} · ${recipient.attempts} attempts${recipient.providerMessageId ? ' · message ' + recipient.providerMessageId : ''}"
                                 type="p" condition="recipient.deliveryId"/>
                         <label text="Consent at the hand-off: ${recipient.consentText}" type="p" condition="recipient.consentText"/>
+                        <label text="${recipient.clicksText}" type="p" condition="recipient.clicksText"/>
                         <label text="${recipient.resolvedText}" type="p" style="m-muted" condition="recipient.resolvedText"/>
                         <label text="Not handed off: no delivery was made for this recipient." type="p" style="m-muted" condition="!recipient.deliveryId"/>
                     </box-body>
