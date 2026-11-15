@@ -84,18 +84,23 @@ function message(requestId, typeId, mailStatusId) {
 
 spec({
     setupSpec() {
-        // the Monday after the walk's Friday (the 9th as written) is Retail's holiday
-        system(() =>
-            call("create#mantle.work.effort.WorkEffort", {
-                workEffortTypeEnumId: "WetEvent",
-                purposeEnumId: "WepHoliday",
-                workEffortName: "Walk holiday",
-                ownerPartyId: ids.organizationId,
-                allDayStart: day("2026-11-09")
-            })
+        // the Monday after the walk's Friday (the 9th as written) is Retail's holiday, removed after the walk (an employer-owned
+        // holiday takes the day from every Retail employee's capacity, which later specs read)
+        state.holidayId = system(
+            () =>
+                call("create#mantle.work.effort.WorkEffort", {
+                    workEffortTypeEnumId: "WetEvent",
+                    purposeEnumId: "WepHoliday",
+                    workEffortName: "Walk holiday",
+                    ownerPartyId: ids.organizationId,
+                    allDayStart: day("2026-11-09")
+                }).workEffortId
         )
     },
     cleanupSpec() {
+        ec.message.clearErrors()
+        if (state.holidayId)
+            system(() => call("delete#mantle.work.effort.WorkEffort", {workEffortId: state.holidayId}))
         ec.message.clearErrors()
         login("john.doe")
         ec.artifactExecution.enableAuthz()

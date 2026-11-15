@@ -86,6 +86,9 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="filtered" from="!!(productStoreId || customerPartyId || productId || subscriptionResourceId || stateEnumId || renewalFromDate || renewalThruDate)"/>
             <set field="findValues" from="{productStoreId:productStoreId, customerPartyId:customerPartyId, productId:productId,
                     subscriptionResourceId:subscriptionResourceId, stateEnumId:stateEnumId, renewalFromDate:renewalFromDate, renewalThruDate:renewalThruDate}"/>
+            <!-- the mount's links; none outside a mount (the screen opened on its own), where the rows link nowhere -->
+            <set field="contractPath" from="(sharedLinks || {})['Customers/SubscriptionDetail'] || null"/>
+            <set field="contractCustomerPath" from="(sharedLinks || {})['Customers/Customer360'] || null"/>
         </if>
     </actions>
     <widgets>
@@ -278,16 +281,18 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body-nopad>
                         <form-list name="SubscriptionList" list="subscriptions" skip-form="true">
                             <field name="contractId">
-                                <default-field title="Contract">
-                                    <link url="${sharedLinks['Customers/SubscriptionDetail']}" text="${contractId}" link-type="anchor"
+                                <conditional-field title="Contract" condition="contractPath">
+                                    <link url="${contractPath}" text="${contractId}" link-type="anchor"
                                             style="text-mono" parameter-map="{contractId:contractId}"/>
-                                </default-field>
+                                </conditional-field>
+                                <default-field title="Contract"><display style="text-mono"/></default-field>
                             </field>
                             <field name="customerName">
-                                <default-field title="Customer">
-                                    <link url="${sharedLinks['Customers/Customer360']}" text="${customerName}" link-type="anchor"
+                                <conditional-field title="Customer" condition="contractCustomerPath">
+                                    <link url="${contractCustomerPath}" text="${customerName}" link-type="anchor"
                                             parameter-map="{customerPartyId:customerPartyId}"/>
-                                </default-field>
+                                </conditional-field>
+                                <default-field title="Customer"><display/></default-field>
                             </field>
                             <field name="productName"><default-field title="Product"><display text="${productName} · ${planText}"/></default-field></field>
                             <field name="storeName"><default-field title="Store"><display/></default-field></field>

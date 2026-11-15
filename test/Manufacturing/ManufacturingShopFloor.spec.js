@@ -306,7 +306,11 @@ feature("the supervisor approves the handler's week on ProductionTime, writing t
             reason: "Wrong operation"
         })
         const afterReopen = rows(EVENT, {sourceEntityName: TIME, sourceId: entry.timeEntryId})
-        return {timePage, submitted, approved, afterApproval, reopened, afterReopen, entry}
+        // the find has no order: the reversal is the event that is not the approval's
+        const original = afterApproval[0]?.productionCostEventId
+        const kept = afterReopen.filter(row => row.productionCostEventId === original)
+        const reversal = afterReopen.find(row => row.productionCostEventId !== original)
+        return {timePage, submitted, approved, afterApproval, reopened, afterReopen, kept, reversal, entry}
     },
     then(x) {
         x.timePage.errors.length == 0
@@ -319,7 +323,8 @@ feature("the supervisor approves the handler's week on ProductionTime, writing t
         Math.abs(Number(String(x.afterApproval[0].amount)) - Number(String(x.entry.hours)) * 25) < 0.01
         x.reopened.errors == ""
         x.afterReopen.length == 2
-        Number(String(x.afterReopen[1].quantity)) == -Number(String(x.entry.hours))
+        x.kept.length == 1
+        Number(String(x.reversal.quantity)) == -Number(String(x.entry.hours))
     }
 })
 
