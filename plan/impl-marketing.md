@@ -5044,14 +5044,14 @@ TOKEN_WRITES lists equal (before and after the fixes). Fixes in mr-mantle, mr-pa
   - the ExternalAccess kind lets an events manager issue a reservation capability through the generic issue service (its permission
     list), though its comment says only the registration services issue it;
   - a closed offer's waiting places are never ended (the job ends a published offer's at the start only).
-- Tests (release binary, `--nobuild`, this worktree's runtime): mr-mantle EventRegistrations (12 of 12, about 2.6 s of features; six
+- Tests (release binary, `--nobuild`, this worktree's runtime): mr-mantle EventRegistrations (12 of 12, about 2.8 s of features; six
   new features), SalesOrderApproval, StorelessOrderTax, ShopCheckout, PassAuthority, EventRegistrationSetup, PaymentAttemptPurpose,
   AccountingCredit, SalesQuoteIssue, StorelessOrderConfirmation, AuthorizeNetGateway (all passed); mr-pass MarketingRegistration,
   Transport, MarketingEvents, ShopCart, ShopOperations, ShopAccount (passed); mr-boss MarketingRegistrations (passed); each run about 23-27 s with startup. With R1 and R2 reverted, their two features failed. `moqui lint --screens`: parse
   failures 0, nothing flagged in a changed screen. Prettier (mr-moqui's config) on the changed JavaScript. Not run: test-apps, the
   acceptance suite (MarketingRegistrationScenario's pay helper changed for priceKey, not run).
 - For the lead:
-  - budget share: mr-mantle EventRegistrations about 2.6 s (the worker's 1.5 s plus the six checks); mr-pass and mr-boss unchanged;
+  - budget share: mr-mantle EventRegistrations about 2.8 s (the worker's 1.5 s plus the six checks); mr-pass and mr-boss unchanged;
   - merge hot spots: the Built note's, plus `ForumSchema.js` / mr-pass `Schema.js` (startRegistrationPayment's `priceKey`,
     getRegistrationPaymentForm), `PassRoutes.js` / `Routes.js` and the three TOKEN_WRITES lists (getRegistrationPaymentForm), mr-mantle
     `PaymentTestServices.xml` and `StoreCheckout.js` (the test gateway's posted form), mr-pass `Register.xml`, `Register.html.fancy`,
