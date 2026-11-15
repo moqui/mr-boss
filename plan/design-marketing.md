@@ -1,5 +1,7 @@
 # IronStone BOSS — Marketing design
 
+Nov 15, 2026 — impl-marketing P23: built Nov 13–15 in phases P1–P22 and follow-ups 1–5, each reviewed and merged; §2's Impl column names the phase that built each screen, each built path checked in the code (a shared, Commons, Comms or Sales screen by its subscreens-item under `screen/Marketing/`). Paths that differ from the design: a list area's default is its own file (Marketing/Campaigns/Campaigns, Sends/Sends, Automations/Automations, Content/Content, Events/Events, Surveys/Surveys, Leads/Leads, Promotions/Promotions, Settings/Index, Reports/Catalog); ConsentDetail is Comms' Consent's Contact tab (Marketing/Audiences/Consent/Contact); MessageTemplateDetail is a sibling (Marketing/Sends/MessageTemplateDetail). Screens built beside §2's: Settings/Adoption (P1), Campaigns/CampaignPlan (the plan print, P2), Leads/LeadRuleDetail (P13), CalendarTui (the calendar's terminal twin, P21), Marketing/LogNote and Marketing/SendMessage (the Comms and Assist actions, P21), the old placeholders Newsletters and Segments kept as redirects, and in PASS Marketing/Page (P14) and Marketing/RegistrationRelay (P17). The inventories' Marketing columns were checked the same day (usl-inventory, ss-inventory).
+
 Nov 13, 2026 — impl-marketing's P0 checks done (its F64–F89): Sales' Accounts mounted at Marketing/Leads/Accounts for
 the bulk action (§§2, 10); a campaign cost cites a purchase invoice item or a ledger entry of the campaign's
 organization, and no Accounting budget applies (§3); the shared door tablet is registered with CheckIn, Admin's
@@ -201,80 +203,80 @@ Shared forms have one definition at the cited owner; each mounted route is count
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Home | Marketing/Home | landing | xml | Running work, upcoming activity and attention | W.get#Home | own | app | new | organization and period |
-| Calendar | Marketing/Calendar | calendar | qvue | Campaign and participation schedule | WorkEffort; campaign/send projections | Commons §7, crosscut §3.13 | app | new | authorized date range |
-| Campaigns | Marketing/Campaigns | list | xml | Find campaigns and compare budgets | MarketingCampaign | own | app | new | filters and campaign rows |
-| CampaignDetail | Marketing/Campaigns/CampaignDetail | detail | xml | Plan and operate a campaign | MarketingCampaign | own | app | new | campaign ID |
-| Approvals | Marketing/Campaigns/Approvals | list | xml | Decide assigned Marketing approvals | NotificationMessage; N MarketingDecision | Commons Notifications (§4), crosscut §3.15 | V | new | recipient and topics |
-| Lists | Marketing/Audiences/Lists | list | xml | Manage distribution lists | ContactList | own | U | new | list filters |
-| ListDetail | Marketing/Audiences/Lists/ListDetail | detail | xml | Maintain list policy and members | ContactList | own | U | new | list ID |
-| MemberDetail | Marketing/Audiences/Lists/MemberDetail | detail | xml | Inspect membership and evidence | ContactListParty | own | U | new | list, party, membership date |
-| AudienceImport | Marketing/Audiences/AudienceImport | wizard | xml | Preview and import contacts/members | N AudienceImport | own; owner wizard registered in Admin §11's import targets (Z2) | U with MARKETING_AUDIENCE_IMPORT | new | import ID; no raw file in shell |
-| AudienceMerge | Marketing/Audiences/AudienceMerge | task | xml | Consolidate lists without changing consent | ContactList | own | U | new | source/target lists |
-| Segments | Marketing/Audiences/Segments | list | xml | Find rule and curated audiences | MarketSegment | own | U | new | segment filters |
-| SegmentDetail | Marketing/Audiences/Segments/SegmentDetail | detail | xml | Define and explain segment membership | MarketSegment | own | U | new | segment and as-of |
-| AudiencePreview | Marketing/Audiences/AudiencePreview | task | xml | Explain eligible and excluded recipients | Q.preview#Audience | own | A, U, D | new | source IDs; aggregate counts |
-| Consent | Marketing/Audiences/Consent | list | xml | Inspect and manage consent | PartyConsent | Comms §16 | U | new | authorized party filters |
-| ConsentDetail | Marketing/Audiences/Consent/ConsentDetail | detail | xml | Inspect purpose/list consent history | PartyConsent; PartyContactMech | Comms §16 | U | new | party ID |
-| Suppressions | Marketing/Audiences/Suppressions | list | xml | Inspect channel blocks and evidence | N MessageSuppression | Suppressions, crosscut §3.29 (Comms owner; defined §4) | U, S | new | channel/reason filters |
-| Sends | Marketing/Sends | list | xml | Find email and SMS sends | N CampaignSend | own | app | new | campaign/channel/state filters |
-| SendDetail | Marketing/Sends/SendDetail | detail | xml | Review and release a send | N CampaignSend | own | app | new | send ID |
-| Compose | Marketing/Sends/Compose | editor | xml | Author campaign email or SMS | N CampaignSend; EmailTemplate | own | A | new | send ID; no recipient body data |
-| MessageTemplates | Marketing/Sends/MessageTemplates | list | xml | Choose reusable channel templates | EmailTemplate; N MessageTemplate | MessageTemplates, crosscut §3.29 (Comms owner; defined §5) | A, S | new | kind/channel filters |
-| MessageTemplateDetail | Marketing/Sends/MessageTemplates/MessageTemplateDetail | detail | xml | Edit a safe shared template | EmailTemplate; N MessageTemplate | MessageTemplateDetail, crosscut §3.29 (Comms owner; defined §5) | template editors | new | template ID |
-| ExperimentDetail | Marketing/Sends/ExperimentDetail | task | xml | Review variants and release a winner | N CampaignExperiment | own | A, V, D | new | experiment ID |
-| CampaignDelivery | Marketing/Sends/CampaignDelivery | list | xml | Inspect delivery and exclusions | N CampaignRecipient; Comms delivery ledger | own, defined §5; registered Shared/CampaignDelivery, crosscut §3.29 | D; U for PII | new | send and state filters |
-| RecipientDetail | Marketing/Sends/RecipientDetail | detail | xml | Explain one delivery attempt history | N CampaignRecipient; Comms delivery ledger | own | D and U | new | recipient ID |
-| Automations | Marketing/Automations | list | xml | Find campaigns' drip sequences | N MarketingAutomation | own | app | new | sequence filters |
-| AutomationDetail | Marketing/Automations/AutomationDetail | detail | xml | Author, simulate and activate ordered steps | N MarketingAutomation | own | A, V, D | new | automation ID |
-| EnrollmentDetail | Marketing/Automations/EnrollmentDetail | detail | xml | Inspect one participant's execution | N AutomationEnrollment | own | D and U | new | enrollment ID |
-| Promotions | Marketing/Promotions | list | xml | Find store promotions linked to campaigns | ProductStorePromotion | Commerce §7, crosscut §3.28 | promotion readers | parity | store/campaign filters |
-| PromotionDetail | Marketing/Promotions/PromotionDetail | detail | xml | Edit one store rule and campaign links | ProductStorePromotion | Commerce §7, crosscut §3.28 | promotion editors | parity | store promotion ID |
-| PromoCodes | Marketing/Promotions/PromoCodes | list | xml | Find/generate store promotion codes | ProductStorePromoCode | Commerce §7, crosscut §3.28 | promotion editors | parity | promotion and selection |
-| PromoCodeDetail | Marketing/Promotions/PromoCodeDetail (a sibling, as Commerce mounts it; built in P19) | detail | xml | Inspect code limits and use | ProductStorePromoCode | Commerce §7, crosscut §3.28 | promotion readers/editors | parity | code ID |
-| Content | Marketing/Content | list | xml | Plan campaign assets and publication links | N CampaignContent | own | app | new | campaign/type filters |
-| ContentDetail | Marketing/Content/ContentDetail | detail | xml | Link approved content to campaign outputs | N CampaignContent; WikiPage/WikiBlog | own | A | new | content association ID |
-| BlogPosts | Marketing/Content/BlogPosts | list | xml | Find and start blog posts | WikiBlog | own | app; A to create | parity | wiki space, category and date filters |
-| BlogPostDetail | Marketing/Content/BlogPostDetail | detail | xml | Maintain one post's metadata, categories and campaign use | WikiBlog | own | A | parity | wikiBlogId |
-| LandingPages | Marketing/Content/LandingPages | list | xml | Find campaign landing pages | PublicSitePage, extended (X14) | Commerce §5 Pages (Shared, X14) | content readers | new | site and campaign |
-| PageDetail | Marketing/Content/PageDetail | editor | xml | Author a campaign landing page | PublicSitePage, extended (X14); WikiPage | Commerce §5 PageDetail (Shared, X14) | content editors | new | site/page ID |
-| Knowledge | Marketing/Content/Knowledge | editor | qvue | Author/review the linked wiki page | WikiPage | Commons §10 | content editors | parity | authorized wiki page |
-| TrackingLinks | Marketing/Content/TrackingLinks | list | xml | Find campaign links and QR targets | TrackingCode | own | app | new | campaign/source filters |
-| TrackingLinkDetail | Marketing/Content/TrackingLinkDetail (a sibling, as built in P15) | detail | xml | Maintain and inspect a tracking link | TrackingCode | own | A, R | new | tracking code ID |
-| Events | Marketing/Events | list | xml | Find campaign events and registrations | WorkEffort WetEvent | own | app | new | campaign/event filters |
-| EventDetail | Marketing/Events/EventDetail | detail | xml | Edit the common calendar event | WorkEffort | Commons §7 | E and event rights | parity | event and campaign |
-| RegistrationSetup | Marketing/Events/RegistrationSetup | settings | xml | Set tickets, capacity, forms and notices | N EventRegistrationPolicy | own | E | new | event ID |
-| Registrations | Marketing/Events/Registrations | list | xml | Operate attendees and waitlist | N EventRegistration | own | E | new | event and states |
-| RegistrationDetail | Marketing/Events/RegistrationDetail | detail | xml | Inspect ticket, payment, answers and attendance | N EventRegistration | own | E | new | registration ID |
-| CheckIn | Marketing/Events/CheckIn | task | xml | Check in an eligible attendee | N EventRegistration | own | E | new | event; no token in shell |
-| Surveys | Marketing/Surveys | list | xml | Find shared survey definitions | DbForm | Commons owner; Customer Service §9 | survey readers/editors | parity | purpose/organization filters |
-| SurveyDetail | Marketing/Surveys/SurveyDetail | detail | xml | Edit shared questions and access | DbForm | Commons owner; Customer Service §9 | survey editors | parity | form ID and effective time |
-| SurveyDistribution | Marketing/Surveys/SurveyDistribution | detail | xml | Publish/share a campaign survey or lead form | N FormPublication; N FormInvitation | Commons form publication (X16); first summaries §10 | A | new | publication ID |
-| Responses | Marketing/Surveys/Responses | report | xml | Inspect scoped responses and aggregates | FormResponse | Commons owner; Customer Service §7 | U, R | parity | form/publication/date filters |
-| ResponseDetail | Marketing/Surveys/ResponseDetail | detail | xml | Read one historical response | FormResponse | Commons owner; Customer Service §7 | authorized response readers | parity | response ID |
-| Leads | Marketing/Leads | list | xml | Follow campaign lead handoff | SalesOpportunity | Sales §3 | Sales readers | new | campaign/source filters |
-| Accounts | Marketing/Leads/Accounts | list | xml | Add a Sales account's contacts to a list with evidence | Party (account) | Sales §4 | Sales readers; Add to list with A-audience | new | Sales scope |
-| LeadRules | Marketing/Leads/LeadRules | settings | xml | Route explicitly captured interest | N MarketingLeadRule | own | A, S; Sales routing grant (SALES_TEAM_MANAGE chooses the team) | new | rule ID |
-| Customer360 | Marketing/Customers/Customer360 | 360 | xml | Inspect authorized engagement | Party | crosscut §3.2 | U | parity | party ID |
-| ContactDetail | Marketing/Contacts/ContactDetail | detail | xml | Inspect contact data and subscription links | Party | crosscut §3.1, Commons §6 | U | parity | party ID |
-| Reports | Marketing/Reports | landing | xml | Choose measures and drill-downs | R.get#ReportCatalog | own | R | new | organization/period |
-| CampaignPerformance | Marketing/Reports/CampaignPerformance | report | xml | Compare plans, reach and outcomes | R.get#CampaignPerformance | own | R | new | campaign/period/currency |
-| DeliveryAnalysis | Marketing/Reports/DeliveryAnalysis | report | xml | Explain delivery and observed engagement | R.get#DeliveryAnalysis | own | R | new | send/channel/cohort |
-| AudienceGrowth | Marketing/Reports/AudienceGrowth | report | xml | Explain subscriptions and withdrawals | R.get#AudienceGrowth | own | R | new | list/purpose/period |
-| Attribution | Marketing/Reports/Attribution | report | xml | Reconcile source links to business outcomes | R.get#Attribution | own | R and source rights | new | campaign/basis/period |
-| Settings | Marketing/Settings | settings | xml | Find Marketing and shared settings | W.get#Settings | own | S | new | organization |
-| CampaignDefaults | Marketing/Settings/CampaignDefaults | settings | xml | Set operational defaults and approvals | N MarketingPolicy | own | S | new | organization/effective time |
-| Vocabularies | Marketing/Settings/Vocabularies | settings | xml | Maintain offered channel/source values | Enumeration; N MarketingVocabulary | own | S | new | organization/type |
-| LeadSources | Marketing/Settings/LeadSources | settings | xml | Edit shared Sales lead sources | Sales source records | Sales §9 | Sales source editors | new | organization |
-| SendingProfiles | Marketing/Settings/SendingProfiles | settings | xml | Select approved senders and readiness | N MessageSendingProfile | Comms-owned, defined §12 | shared sending-config grant | new | organization/profile |
-| QuickCreate | Marketing/QuickCreate | dialog | xml | Start authorized Marketing work | campaign/send/list/event | shell provider, defined §14 | by operation | new | authorized host |
-| Subscribe | PASS:Marketing/Subscribe | task | xml | Request a published list subscription | N SubscriptionRequest | own public §13 | public publication | new | none |
-| VerifySubscription | PASS:Marketing/VerifySubscription | task | xml | Confirm address control and subscription intent | N SubscriptionRequest | own public §13 | bearer token | new | none |
-| EmailPreferences | PASS:Account/EmailPreferences | task | xml | Change the recipient's list, topic, channel and forum mail preferences | ContactListToken; PartyConsent | Commons §16, the one PASS Account page (X15); Marketing context §13 | bearer token or signed-in | new | none |
-| SubmitForm | PASS:Marketing/SubmitForm | task | xml | Submit a published survey or lead form; the one public lead page | DbForm; FormResponse | own public §13; Sales LeadIntake context | published access policy | new | none |
-| Event | PASS:Marketing/Event | detail | xml | View a published event's registration offer | WorkEffort; N EventRegistrationPolicy | own public §13 | public publication | new | none |
-| Register | PASS:Marketing/Register | wizard | xml | Reserve and complete registration | N EventRegistration | own public §13 | published access policy | new | none |
-| Registration | PASS:Marketing/Registration | detail | xml | Read or cancel one's registration | N EventRegistration | own public §13 | verified owner/capability | new | none |
+| Home | Marketing/Home | landing | xml (built P1; its sources grow by phase) | Running work, upcoming activity and attention | W.get#Home | own | app | new | organization and period |
+| Calendar | Marketing/Calendar | calendar | qvue (built P21) | Campaign and participation schedule | WorkEffort; campaign/send projections | Commons §7, crosscut §3.13 | app | new | authorized date range |
+| Campaigns | Marketing/Campaigns | list | xml (built P2; at Marketing/Campaigns/Campaigns) | Find campaigns and compare budgets | MarketingCampaign | own | app | new | filters and campaign rows |
+| CampaignDetail | Marketing/Campaigns/CampaignDetail | detail | xml (built P2; its boxes by phase) | Plan and operate a campaign | MarketingCampaign | own | app | new | campaign ID |
+| Approvals | Marketing/Campaigns/Approvals | list | xml (built P2) | Decide assigned Marketing approvals | NotificationMessage; N MarketingDecision | Commons Notifications (§4), crosscut §3.15 | V | new | recipient and topics |
+| Lists | Marketing/Audiences/Lists | list | xml (built P3) | Manage distribution lists | ContactList | own | U | new | list filters |
+| ListDetail | Marketing/Audiences/Lists/ListDetail | detail | xml (built P3; import, merge and export P4) | Maintain list policy and members | ContactList | own | U | new | list ID |
+| MemberDetail | Marketing/Audiences/Lists/MemberDetail | detail | xml (built P3) | Inspect membership and evidence | ContactListParty | own | U | new | list, party, membership date |
+| AudienceImport | Marketing/Audiences/AudienceImport | wizard | xml (built P4) | Preview and import contacts/members | N AudienceImport | own; owner wizard registered in Admin §11's import targets (Z2) | U with MARKETING_AUDIENCE_IMPORT | new | import ID; no raw file in shell |
+| AudienceMerge | Marketing/Audiences/AudienceMerge | task | xml (built P4) | Consolidate lists without changing consent | ContactList | own | U | new | source/target lists |
+| Segments | Marketing/Audiences/Segments | list | xml (built P5) | Find rule and curated audiences | MarketSegment | own | U | new | segment filters |
+| SegmentDetail | Marketing/Audiences/Segments/SegmentDetail | detail | xml (built P5) | Define and explain segment membership | MarketSegment | own | U | new | segment and as-of |
+| AudiencePreview | Marketing/Audiences/AudiencePreview | task | xml (built P5) | Explain eligible and excluded recipients | Q.preview#Audience | own | A, U, D | new | source IDs; aggregate counts |
+| Consent | Marketing/Audiences/Consent | list | xml (built P3; Comms' Consent mounted) | Inspect and manage consent | PartyConsent | Comms §16 | U | new | authorized party filters |
+| ConsentDetail | Marketing/Audiences/Consent/ConsentDetail | detail | xml (built P3; Comms' Consent's Contact tab, at Marketing/Audiences/Consent/Contact) | Inspect purpose/list consent history | PartyConsent; PartyContactMech | Comms §16 | U | new | party ID |
+| Suppressions | Marketing/Audiences/Suppressions | list | xml (built P3) | Inspect channel blocks and evidence | N MessageSuppression | Suppressions, crosscut §3.29 (Comms owner; defined §4) | U, S | new | channel/reason filters |
+| Sends | Marketing/Sends | list | xml (built P8; at Marketing/Sends/Sends; SMS P22) | Find email and SMS sends | N CampaignSend | own | app | new | campaign/channel/state filters |
+| SendDetail | Marketing/Sends/SendDetail | detail | xml (built P8; release P9; SMS P22) | Review and release a send | N CampaignSend | own | app | new | send ID |
+| Compose | Marketing/Sends/Compose | editor | xml (built P8; SMS P22) | Author campaign email or SMS | N CampaignSend; EmailTemplate | own | A | new | send ID; no recipient body data |
+| MessageTemplates | Marketing/Sends/MessageTemplates | list | xml (built P6) | Choose reusable channel templates | EmailTemplate; N MessageTemplate | MessageTemplates, crosscut §3.29 (Comms owner; defined §5) | A, S | new | kind/channel filters |
+| MessageTemplateDetail | Marketing/Sends/MessageTemplates/MessageTemplateDetail | detail | xml (built P6; a sibling, at Marketing/Sends/MessageTemplateDetail) | Edit a safe shared template | EmailTemplate; N MessageTemplate | MessageTemplateDetail, crosscut §3.29 (Comms owner; defined §5) | template editors | new | template ID |
+| ExperimentDetail | Marketing/Sends/ExperimentDetail | task | xml (built P10) | Review variants and release a winner | N CampaignExperiment | own | A, V, D | new | experiment ID |
+| CampaignDelivery | Marketing/Sends/CampaignDelivery | list | xml (built P9) | Inspect delivery and exclusions | N CampaignRecipient; Comms delivery ledger | own, defined §5; registered Shared/CampaignDelivery, crosscut §3.29 | D; U for PII | new | send and state filters |
+| RecipientDetail | Marketing/Sends/RecipientDetail | detail | xml (built P9) | Explain one delivery attempt history | N CampaignRecipient; Comms delivery ledger | own | D and U | new | recipient ID |
+| Automations | Marketing/Automations | list | xml (built P11; at Marketing/Automations/Automations) | Find campaigns' drip sequences | N MarketingAutomation | own | app | new | sequence filters |
+| AutomationDetail | Marketing/Automations/AutomationDetail | detail | xml (built P11; SMS steps P22) | Author, simulate and activate ordered steps | N MarketingAutomation | own | A, V, D | new | automation ID |
+| EnrollmentDetail | Marketing/Automations/EnrollmentDetail | detail | xml (built P11) | Inspect one participant's execution | N AutomationEnrollment | own | D and U | new | enrollment ID |
+| Promotions | Marketing/Promotions | list | xml (built P19; at Marketing/Promotions/Promotions) | Find store promotions linked to campaigns | ProductStorePromotion | Commerce §7, crosscut §3.28 | promotion readers | parity | store/campaign filters |
+| PromotionDetail | Marketing/Promotions/PromotionDetail | detail | xml (built P19) | Edit one store rule and campaign links | ProductStorePromotion | Commerce §7, crosscut §3.28 | promotion editors | parity | store promotion ID |
+| PromoCodes | Marketing/Promotions/PromoCodes | list | xml (built P19) | Find/generate store promotion codes | ProductStorePromoCode | Commerce §7, crosscut §3.28 | promotion editors | parity | promotion and selection |
+| PromoCodeDetail | Marketing/Promotions/PromoCodeDetail (a sibling, as Commerce mounts it; built in P19) | detail | xml (built P19) | Inspect code limits and use | ProductStorePromoCode | Commerce §7, crosscut §3.28 | promotion readers/editors | parity | code ID |
+| Content | Marketing/Content | list | xml (built P14; at Marketing/Content/Content) | Plan campaign assets and publication links | N CampaignContent | own | app | new | campaign/type filters |
+| ContentDetail | Marketing/Content/ContentDetail | detail | xml (built P14) | Link approved content to campaign outputs | N CampaignContent; WikiPage/WikiBlog | own | A | new | content association ID |
+| BlogPosts | Marketing/Content/BlogPosts | list | xml (built P14) | Find and start blog posts | WikiBlog | own | app; A to create | parity | wiki space, category and date filters |
+| BlogPostDetail | Marketing/Content/BlogPostDetail | detail | xml (built P14) | Maintain one post's metadata, categories and campaign use | WikiBlog | own | A | parity | wikiBlogId |
+| LandingPages | Marketing/Content/LandingPages | list | xml (built P14) | Find campaign landing pages | PublicSitePage, extended (X14) | Commerce §5 Pages (Shared, X14) | content readers | new | site and campaign |
+| PageDetail | Marketing/Content/PageDetail | editor | xml (built P14; Request review P15) | Author a campaign landing page | PublicSitePage, extended (X14); WikiPage | Commerce §5 PageDetail (Shared, X14) | content editors | new | site/page ID |
+| Knowledge | Marketing/Content/Knowledge | editor | qvue (built P14) | Author/review the linked wiki page | WikiPage | Commons §10 | content editors | parity | authorized wiki page |
+| TrackingLinks | Marketing/Content/TrackingLinks | list | xml (built P15) | Find campaign links and QR targets | TrackingCode | own | app | new | campaign/source filters |
+| TrackingLinkDetail | Marketing/Content/TrackingLinkDetail (a sibling, as built in P15) | detail | xml (built P15) | Maintain and inspect a tracking link | TrackingCode | own | A, R | new | tracking code ID |
+| Events | Marketing/Events | list | xml (built P16; at Marketing/Events/Events) | Find campaign events and registrations | WorkEffort WetEvent | own | app | new | campaign/event filters |
+| EventDetail | Marketing/Events/EventDetail | detail | xml (built P16) | Edit the common calendar event | WorkEffort | Commons §7 | E and event rights | parity | event and campaign |
+| RegistrationSetup | Marketing/Events/RegistrationSetup | settings | xml (built P16; order rules P17) | Set tickets, capacity, forms and notices | N EventRegistrationPolicy | own | E | new | event ID |
+| Registrations | Marketing/Events/Registrations | list | xml (built P17) | Operate attendees and waitlist | N EventRegistration | own | E | new | event and states |
+| RegistrationDetail | Marketing/Events/RegistrationDetail | detail | xml (built P17) | Inspect ticket, payment, answers and attendance | N EventRegistration | own | E | new | registration ID |
+| CheckIn | Marketing/Events/CheckIn | task | xml (built P18) | Check in an eligible attendee | N EventRegistration | own | E | new | event; no token in shell |
+| Surveys | Marketing/Surveys | list | xml (built P12; at Marketing/Surveys/Surveys) | Find shared survey definitions | DbForm | Commons owner; Customer Service §9 | survey readers/editors | parity | purpose/organization filters |
+| SurveyDetail | Marketing/Surveys/SurveyDetail | detail | xml (built P12) | Edit shared questions and access | DbForm | Commons owner; Customer Service §9 | survey editors | parity | form ID and effective time |
+| SurveyDistribution | Marketing/Surveys/SurveyDistribution | detail | xml (built P12; lead forms P13) | Publish/share a campaign survey or lead form | N FormPublication; N FormInvitation | Commons form publication (X16); first summaries §10 | A | new | publication ID |
+| Responses | Marketing/Surveys/Responses | report | xml (built P12; results CSV P23) | Inspect scoped responses and aggregates | FormResponse | Commons owner; Customer Service §7 | U, R | parity | form/publication/date filters |
+| ResponseDetail | Marketing/Surveys/ResponseDetail | detail | xml (built P12) | Read one historical response | FormResponse | Commons owner; Customer Service §7 | authorized response readers | parity | response ID |
+| Leads | Marketing/Leads | list | xml (built P13; at Marketing/Leads/Leads) | Follow campaign lead handoff | SalesOpportunity | Sales §3 | Sales readers | new | campaign/source filters |
+| Accounts | Marketing/Leads/Accounts | list | xml (built P3) | Add a Sales account's contacts to a list with evidence | Party (account) | Sales §4 | Sales readers; Add to list with A-audience | new | Sales scope |
+| LeadRules | Marketing/Leads/LeadRules | settings | xml (built P13; registration triggers P18) | Route explicitly captured interest | N MarketingLeadRule | own | A, S; Sales routing grant (SALES_TEAM_MANAGE chooses the team) | new | rule ID |
+| Customer360 | Marketing/Customers/Customer360 | 360 | xml (built P19) | Inspect authorized engagement | Party | crosscut §3.2 | U | parity | party ID |
+| ContactDetail | Marketing/Contacts/ContactDetail | detail | xml (built P19) | Inspect contact data and subscription links | Party | crosscut §3.1, Commons §6 | U | parity | party ID |
+| Reports | Marketing/Reports | landing | xml (built P20; its Catalog default) | Choose measures and drill-downs | R.get#ReportCatalog | own | R | new | organization/period |
+| CampaignPerformance | Marketing/Reports/CampaignPerformance | report | xml (built P20) | Compare plans, reach and outcomes | R.get#CampaignPerformance | own | R | new | campaign/period/currency |
+| DeliveryAnalysis | Marketing/Reports/DeliveryAnalysis | report | xml (built P20) | Explain delivery and observed engagement | R.get#DeliveryAnalysis | own | R | new | send/channel/cohort |
+| AudienceGrowth | Marketing/Reports/AudienceGrowth | report | xml (built P20) | Explain subscriptions and withdrawals | R.get#AudienceGrowth | own | R | new | list/purpose/period |
+| Attribution | Marketing/Reports/Attribution | report | xml (built P20) | Reconcile source links to business outcomes | R.get#Attribution | own | R and source rights | new | campaign/basis/period |
+| Settings | Marketing/Settings | settings | xml (built P1; at Marketing/Settings/Index) | Find Marketing and shared settings | W.get#Settings | own | S | new | organization |
+| CampaignDefaults | Marketing/Settings/CampaignDefaults | settings | xml (built P2) | Set operational defaults and approvals | N MarketingPolicy | own | S | new | organization/effective time |
+| Vocabularies | Marketing/Settings/Vocabularies | settings | xml (built P2) | Maintain offered channel/source values | Enumeration; N MarketingVocabulary | own | S | new | organization/type |
+| LeadSources | Marketing/Settings/LeadSources | settings | xml (built P13) | Edit shared Sales lead sources | Sales source records | Sales §9 | Sales source editors | new | organization |
+| SendingProfiles | Marketing/Settings/SendingProfiles | settings | xml (built P6; SMS P22) | Select approved senders and readiness | N MessageSendingProfile | Comms-owned, defined §12 | shared sending-config grant | new | organization/profile |
+| QuickCreate | Marketing/QuickCreate | dialog | xml (built P1; its forms by phase (NewCampaign, NewList, NewSend, NewEvent)) | Start authorized Marketing work | campaign/send/list/event | shell provider, defined §14 | by operation | new | authorized host |
+| Subscribe | PASS:Marketing/Subscribe | task | xml (built P7) | Request a published list subscription | N SubscriptionRequest | own public §13 | public publication | new | none |
+| VerifySubscription | PASS:Marketing/VerifySubscription | task | xml (built P7) | Confirm address control and subscription intent | N SubscriptionRequest | own public §13 | bearer token | new | none |
+| EmailPreferences | PASS:Account/EmailPreferences | task | xml (built P7; SMS scope P22) | Change the recipient's list, topic, channel and forum mail preferences | ContactListToken; PartyConsent | Commons §16, the one PASS Account page (X15); Marketing context §13 | bearer token or signed-in | new | none |
+| SubmitForm | PASS:Marketing/SubmitForm | task | xml (built P12; lead purpose P13) | Submit a published survey or lead form; the one public lead page | DbForm; FormResponse | own public §13; Sales LeadIntake context | published access policy | new | none |
+| Event | PASS:Marketing/Event | detail | xml (built P16) | View a published event's registration offer | WorkEffort; N EventRegistrationPolicy | own public §13 | public publication | new | none |
+| Register | PASS:Marketing/Register | wizard | xml (built P17) | Reserve and complete registration | N EventRegistration | own public §13 | published access policy | new | none |
+| Registration | PASS:Marketing/Registration | detail | xml (built P17) | Read or cancel one's registration | N EventRegistration | own public §13 | verified owner/capability | new | none |
 
 ## 3. Home and campaigns
 
@@ -2646,6 +2648,8 @@ certification/live quizzes.
 Prints retain effective date/time and authorized source references. Exports omit token secrets,
 provider credentials and inaccessible fields. Public tickets/receipts contain the minimum attendee
 and event data; a registration email is not permission to include the attendee in a campaign.
+
+As built (impl-marketing P23): every output above is built in the phase that names it; the survey results' CSV (the choices and the responses lists of Responses, Marketing's branch) was the one left and was built in P23. The ticket is the email and PASS Registration's page with the entry QR, printable from the browser; no PDF of it is made.
 
 ## 19. Framework and data needs
 

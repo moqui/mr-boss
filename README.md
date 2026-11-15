@@ -60,6 +60,18 @@ walks SalesLeadToInvoiceWalk and SalesAccessWalk are in `test/acceptance/Sales/`
 `test/acceptance/client/Sales/`. A database made before Sales' datasets loads them as
 [Upgrading](../mr-mantle/docs/Upgrading.md#sales-report-datasets-sales-p20-november-2026) says.
 
+Marketing (`screen/Marketing/`) is built: campaigns with budgets, costs and approvals, lists with evidenced consent,
+suppressions, the audience import and list merge, segments and the audience preview, message templates and sending
+profiles with bounce intake, sends with the composer, separate approval and dispatch through Comms' delivery ledger, A/B
+experiments, drip automations, surveys and form publication, leads handed to Sales, content, blog posts and storeless
+landing pages, tracking links and visits, events with registration, tickets, payment and check-in, promotions,
+Customer360 and engagement, attribution and reports with Insights' datasets and alert templates, the campaign calendar, the
+shell providers and Assist, and SMS; the public side is PASS Marketing in mr-pass ([design](plan/design-marketing.md),
+[impl-marketing](plan/impl-marketing.md)). Its rules are tested in mr-mantle's `test/marketing/`, `test/party/` and
+`test/work/` and here in `test/Marketing/` with the golden-path walk `test/client/Marketing/MarketingSendWalk`; its scenario
+walks, the screen sweeps MarketingTui and MarketingServerStatic and the access walk MarketingAccessWalk are in
+`test/acceptance/Marketing/`, the calendar and door check-in walks in `test/acceptance/client/Marketing/`.
+
 UI review and refinement plans use `plan/ui-review-*.md`, starting with
 [drawers, Commons and Comms](plan/ui-review-drawers-commons.md): screen coverage, complete user processes,
 refinement criteria, findings and verification. The [document guide](plan/design-doc-guide.md#ui-review-and-refinement-phase)

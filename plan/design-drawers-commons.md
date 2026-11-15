@@ -2205,7 +2205,11 @@ name a sending profile, and receipts are facts apart from the hand-off outcome t
 earlier one back; a source may give the subject and body; a delivery carries its organization and
 its topic's consent; and an SMS channel hands a text to the framework's `send#SmsMessage`, the
 attempt checking `PcpSms` consent on the topic first. A Marketing send registers no mail outcome
-owner of its own, since the ledger is registered as one.
+owner of its own, since the ledger is registered as one. As built (impl-marketing P22): the SMS attempt is sent as the system from an SMS sending
+profile's number; the framework asks Mantle's conf-level `sms-consent` provider (`mantle.party.MessageSmsServices.check#SmsConsent`,
+registered in Mantle's MoquiConf.xml) before each text; a STOP withdraws the number's consent for the organization the number
+belongs to (`note#SmsKeyword`, the `SmsStopWithdrawsConsent` entity ECA); promotional texts count against the per-number day
+limit (VoicePolicy `smsMaxPromotionalPerNumber`), never the system's own budget.
 
 ### Settings
 
