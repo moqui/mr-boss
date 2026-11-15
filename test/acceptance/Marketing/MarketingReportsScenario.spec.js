@@ -2,13 +2,17 @@
 // artifact authorization on: the demo running campaign gets a released send with its deliveries and a tracked click, a Shop order
 // placed from the click's visit and a Sales order from a lead of the campaign; each order is attributed once through the placement's
 // handler (a second call answers the first); a partial refund reduces the attributed net once; the four reports reconcile to the
-// recipients, the events and the orders; a visit through a remote PASS counts through its visitor key; an Insights reader with
-// Marketing's report permission opens Campaign performance from the catalog and a user without it does not see it.
+// recipients, the events and the orders; a visit through a remote PASS counts through its visitor key, and an order placed through
+// it is attributed by the key's digest its checkout kept (follow-up 4); an Insights reader with Marketing's report permission opens
+// Campaign performance from the catalog and a user without it does not see it.
 // Run: ./moq accept mr-boss --spec MarketingReportsScenario
 const lib = ec.resource.script("component://mr-boss/test/Marketing/MarketingSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
 const R = "mantle.marketing.MarketingReportServices."
 const K = "mantle.marketing.TrackingServices."
+const tracking = () => ec.resource.script("component://mr-mantle/service/mantle/marketing/MarketingTracking.js")
+// the remote PASS visitor's first-party key (its mkt_vk cookie); the authority keeps only its digest
+const VISITOR_KEY = "BossMktP20Visitor_0123456789"
 const prefix = "BOSS_MKT_P20"
 const dayMs = 86400000
 const ago = days => new Date(Date.now() - days * dayMs)
@@ -71,10 +75,15 @@ spec({
         // the poster link's visit: a click by key K (through a remote PASS: no local visit), then the landing page in a local visit
         make("moqui.server.Visit", {visitId: prefix + "_VISIT", fromDate: ago(2)})
         for (const [n, fields] of [
-            ["CLICK", {eventKindEnumId: "MteClick", visitorKeyHash: prefix + "-key", eventDate: ago(2)}],
+            ["CLICK", {eventKindEnumId: "MteClick", visitorKeyHash: tracking().visitorKeyHash(VISITOR_KEY), eventDate: ago(2)}],
             [
                 "PAGE",
-                {eventKindEnumId: "MteVisit", visitorKeyHash: prefix + "-key", visitId: prefix + "_VISIT", eventDate: ago(2)}
+                {
+                    eventKindEnumId: "MteVisit",
+                    visitorKeyHash: tracking().visitorKeyHash(VISITOR_KEY),
+                    visitId: prefix + "_VISIT",
+                    eventDate: ago(2)
+                }
             ]
         ])
             make(
@@ -187,6 +196,45 @@ feature("a partial refund reduces the attributed net once; the four reports reco
         attribution.summaryRows.find(row => row.marketingCampaignId == ids.runningCampaignId).orderCount == campaign.orderCount
         attribution.summaryRows.find(row => row.marketingCampaignId == ids.runningCampaignId).amounts[0].net == 100
         growth.listRows.some(row => row.contactListId == ids.gardenListId)
+    }
+})
+
+feature("an order placed through a remote PASS (no local visit) is attributed by the visitor key's digest its checkout kept", {
+    when() {
+        // the remote frontend's checkout sent the visitor's key; the authority kept its digest where Retail's policy keeps visitor
+        // keys (ShopCheckout.js freeze over MarketingTracking.js orderVisitorKeyHash), never the key itself
+        const kept = system(() => tracking().orderVisitorKeyHash(VISITOR_KEY, ids.salesContactId, ids.organizationId))
+        make("mantle.order.OrderHeader", {
+            orderId: prefix + "_REMOTE",
+            statusId: "OrderPlaced",
+            placedDate: ago(1),
+            currencyUomId: "USD",
+            grandTotal: 80,
+            orderPurposeEnumId: "OrpSalesOrder",
+            marketingVisitorKeyHash: kept
+        })
+        make("mantle.order.OrderPart", {
+            orderId: prefix + "_REMOTE",
+            orderPartSeqId: "01",
+            vendorPartyId: ids.organizationId,
+            customerPartyId: ids.salesContactId
+        })
+        const decided = system(() => invoke(K + "handle#OrderPlaced", {orderId: prefix + "_REMOTE"}))
+        const decisions = system(() =>
+            Array.from(
+                ec.entity
+                    .find("mantle.marketing.tracking.MarketingOutcomeLink")
+                    .condition({orderId: prefix + "_REMOTE"})
+                    .list()
+            )
+        )
+        return {kept, decided, decisions}
+    },
+    then({kept, decided, decisions}) {
+        kept == tracking().visitorKeyHash(VISITOR_KEY) && kept != VISITOR_KEY
+        decisions.length == 1 && decisions[0].outcomeLinkId == decided.outcomeLinkId
+        decisions[0].basisEnumId == "MobTrackingEvent" && decisions[0].marketingCampaignId == ids.runningCampaignId
+        decisions[0].trackingEventId == prefix + "_EV_CLICK" || decisions[0].trackingEventId == prefix + "_EV_PAGE"
     }
 })
 
