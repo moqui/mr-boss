@@ -34,11 +34,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="sharedLinks" from="pagesContext.sharedLinks"/>
         <set field="storePages" from="pagesContext.storePages"/>
         <set field="pagesWords" from="pagesContext.words"/>
-        <service-call name="mantle.public.ThemeServices.find#SitePages" out-map="pageFound" transaction="force-new" ignore-error="true"
-                in-map="{sitePageId:(sitePageId || '')}"/>
+        <if condition="pagesContext.app">
+            <service-call name="mantle.public.ThemeServices.find#SitePages" out-map="pageFound" transaction="force-new" ignore-error="true"
+                    in-map="{sitePageId:(sitePageId || '')}"/>
+        </if>
         <script>ec.message.clearErrors()</script>
         <!-- a page of the registration's app only (Commerce's pages under Commerce, the landing pages under Marketing) -->
-        <set field="sitePage" from="pageFound?.pages?.[0]?.app == pagesContext.pageApp ? pageFound.pages[0] : null"/>
+        <set field="sitePage" from="pagesContext.app &amp;&amp; pageFound?.pages?.[0]?.app == pagesContext.pageApp ? pageFound.pages[0] : null"/>
         <set field="recordFound" from="!!sitePage"/>
     </always-actions>
     <subscreens default-item="PageContent" always-use-full-path="true"/>

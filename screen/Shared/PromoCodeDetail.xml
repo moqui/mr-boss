@@ -84,8 +84,10 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <actions>
-        <service-call name="mantle.product.StorePromotionServices.get#PromoCode" out-map="codeOut" transaction="force-new"
-                ignore-error="true" in-map="{promoCodeId:promoCodeId}"/>
+        <if condition="sharedMountContext.available">
+            <service-call name="mantle.product.StorePromotionServices.get#PromoCode" out-map="codeOut" transaction="force-new"
+                    ignore-error="true" in-map="{promoCodeId:promoCodeId}"/>
+        </if>
         <script>ec.message.clearErrors()</script>
         <set field="recordFound" from="!!codeOut?.code"/>
         <if condition="recordFound">
