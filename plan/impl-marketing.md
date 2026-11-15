@@ -447,7 +447,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P19 Promotions, Customer360 and engagement | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail, Customer360, ContactDetail | built and reviewed Nov 15, merged |
 | P20 Attribution, reports and Insights | Mantle, BOSS | Reports, CampaignPerformance, DeliveryAnalysis, AudienceGrowth, Attribution | built and reviewed Nov 15, merged |
 | P21 Calendar, shell providers and Assist | Mantle, BOSS | Calendar, QuickCreate | built and reviewed Nov 15, merged |
-| P22 SMS | Mantle, BOSS, PASS | the SMS channel of Sends, Compose, AutomationDetail, SendingProfiles; PASS EmailPreferences' SMS scope | — |
+| P22 SMS | Mantle, BOSS, PASS | the SMS channel of Sends, Compose, AutomationDetail, SendingProfiles; PASS EmailPreferences' SMS scope | built and reviewed Nov 15, merged |
 | P23 Finish | all | the sweeps and the review walks (acceptance) | — |
 
 ### P0 — Checks
@@ -6309,7 +6309,7 @@ per sending number for promotional texts"). Built beside follow-up 4 (`mkt/fix4`
   (MarketingEligibility.js and PASS's Hub.js were not and are left so). Not run: test-apps, test-framework, the acceptance suite.
 - Inventories: usl-inventory's "Added in Marketing P22" table; ss-inventory has no row for these screens.
 - Design edits: design-marketing §12 (as built, after P6's paragraph).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F424 to F431 in order:
   - the code over the plan above: the conf-level provider's form and authorization; the per-number limit as one policy value, a
     campaign's texts apart from the system's budget; send#SmsMessage's deliveryOutcome; an organization's number as its telecom number
     that is one of ours with a bridge; normalization from the number's own country code else the deployment's; topic grants counted by
@@ -6408,7 +6408,7 @@ review: …" (mr-moqui 45d68705, mr-mantle 981bde71); mr-boss (this note) and mr
   - R4 (low; Mantle) `phoneOf` fell back to "+" and the digits when a number had no E.164 form, the guess the Built note says it
     removed (a national number read as another country's); now no key, so the person has no number for a text. No spec (the
     deployment's normalize#PhoneNumber answers every number the spec data can write).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F432 to F435 in order:
   - a text topic whose list policy names another purpose (storeSubscriptionPolicy accepts any PartyConsentPurpose; purposeOf takes
     the policy's first) is checked at the ledger against that purpose, not PcpSms; the framework hook still needs PcpSms with the
     organization, so nothing goes without PcpSms, but the topic's own PcpSms is then not what is checked. Refusing a non-PcpSms
@@ -7767,6 +7767,18 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F421 | Follow-up 5 (Built Nov 15): deployment order, as for follow-up 4: a PASS with this change against an authority without it refuses every Register Pay that carries a key ("Unsupported operation or input"); deploy the authority first | Follow-up 5: as its Built note says |
 | F422 | Follow-up 5 (Review Nov 15): a staff `start#RegistrationPayment` replacing a buyer's declined remote payment writes no digest, so it clears one the buyer's Pay kept (consistent with "a start replacing a payment writes that Pay's digest or none" and the privacy-conservative choice; the ticket order is then attributed by recipient only; low, left as is) | Follow-up 5: as its Review note says |
 | F423 | Follow-up 5 (Review Nov 15): no spec drives a replacement start after a declined payment (digest rewritten) or Register's pay transition with headers and a cookie (the worker's second finding; the helper is covered) (low) | Follow-up 5: as its Review note says |
+| F424 | P22 (Built Nov 15): the code over the plan above: the conf-level provider's form and authorization; the per-number limit as one policy value, a campaign's texts apart from the system's budget; send#SmsMessage's deliveryOutcome; an organization's number as its telecom number that is one of ours with a bridge; normalization from the number's own country code else the deployment's; topic grants counted by the sms-consent answer; the STOP's EECA; a send's and an automation's channel from the topic; the cost a segment on the profile; the day's limit waiting untried; Email preferences never turning a text topic on | P22: as its Built note says |
+| F425 | P22 (Built Nov 15): Mantle had no relation between an organization and one of our numbers (moqui.call.PhoneNumber): an organization's messaging numbers are its own telecom numbers that are ours; a number two organizations list belongs to both (the sms-consent answer asks every owner) | P22: as its Built note says |
+| F426 | P22 (Built Nov 15): a receipt for a campaign's text is still dropped (F73): the framework keeps no row of a direct text, so DeliveryAnalysis shows hand-off outcomes for SMS (§7) | P22: as its Built note says |
+| F427 | P22 (Built Nov 15): no per-number override of the promotional day limit (one VoicePolicy value for every number), though 10DLC campaigns differ per number | P22: as its Built note says |
+| F428 | P22 (Built Nov 15): the estimate is of the text with its variables unfilled (a long first name may add a segment); the cost is the profile's configured price, not the provider's | P22: as its Built note says |
+| F429 | P22 (Built Nov 15): a person joins a text message topic only through an import or staff with evidence: PASS Marketing's public subscription (P7) offers email topics, and Email preferences never turns a text topic on | P22: as its Built note says |
+| F430 | P22 (Built Nov 15): a provider service written as an inline script finds its `toNumber` parameter shadowed by the scripts' global `toNumber` helper (it must read `ec.context.toNumber`; Mantle's reads the parameter map) | P22: as its Built note says |
+| F431 | P22 (Built Nov 15): the uncertain SMS hand-off is set by hand in the Mantle spec (the framework's lost answer is moqui-channels' test; an app spec has no provider that drops a connection: the adapter's HTTP client is moqui-lib's, outside the HTTP fixtures) | P22: as its Built note says |
+| F432 | P22 (Review Nov 15): a text topic whose list policy names another purpose (storeSubscriptionPolicy accepts any PartyConsentPurpose; purposeOf takes the policy's first) is checked at the ledger against that purpose, not PcpSms; the framework hook still needs PcpSms with the organization, so nothing goes without PcpSms, but the topic's own PcpSms is then not what is checked. Refusing a non-PcpSms purpose for a list of phone numbers would close it | P22: as its Review note says |
+| F433 | P22 (Review Nov 15): an SMS send's test goes to an allowlisted number as a promotional text, so the hook refuses it (suppressed) unless the tester's number holds PcpSms with the organization; no spec covers the SMS test | P22: as its Review note says |
+| F434 | P22 (Review Nov 15): there is no deployment-wide cap on promotional texts with no user: each of our numbers has its own `smsMaxPromotionalPerNumber` (1000), so the day's total grows with the numbers that have a bridge and a ready profile | P22: as its Review note says |
+| F435 | P22 (Review Nov 15): the Built note's other findings stand (the organization's number as its telecom number, the receipt dropped F73, the estimate with variables unfilled, the inline script's `toNumber` shadowing) | P22: as its Review note says |
 
 ## 7. Later
 
