@@ -389,10 +389,10 @@ Totals are computed over the authorized filtered result, not just the rendered p
 | NewOpportunity | dialog | Create a qualified deal | name, account/contact, organization, pipeline/stage, owner/team, amount/currency, expected close | choice lookups | O.create#Opportunity | Moqui Sales FindOpportunity; research §3 |
 | ChangeStage | dialog | Move with current source state | opportunity, expected stamp, target stage, probability mode, note | row action and board transition | O.move#Opportunity | Odoo stage movement |
 | OpportunityBatch | list, bulk | Assign or move independent deals | selection, operation, target, reason | count confirmation; per-row results | O.apply#OpportunityBatch | Frappe CRM bulk actions |
+| OpportunityImport | wizard step | Preview and import lead/deal rows | file/source, column mapping, duplicate strategy, preview, selected rows | per-row errors and confirmation | O.validate#OpportunityImportRow, O.apply#OpportunityImportRow | Admin Shared/DataImport with Admin §11's `opportunities` target (Z2); complete fields in §16 |
 
 After Change stage or a batch the list comes back with its own filters, not the stage or owner chosen as a filter (impl-sales
 follow-up 5: the forms post the list's filters with them).
-| OpportunityImport | wizard step | Preview and import lead/deal rows | file/source, column mapping, duplicate strategy, preview, selected rows | per-row errors and confirmation | O.validate#OpportunityImportRow, O.apply#OpportunityImportRow | Admin Shared/DataImport with Admin §11's `opportunities` target (Z2); complete fields in §16 |
 
 Import runs in Admin's Shared/DataImport (stage, configure, validate, apply, result) with Sales'
 registered target `opportunities` ([Admin §11](design-admin.md#111-shared-transfer-contract)); no
@@ -1120,7 +1120,8 @@ actions.
 
 Ships from (impl-sales follow-up 5): Overview shows the part's facility, its seller's default when it was made (§9), and More's
 Change ships from sets another warehouse, store or plant of the seller through Q.update#SalesOrderFacility, on a quote draft and on
-an order while nothing of it is reserved or shipped (a reservation is Warehouse's to move).
+an order of Sales' own (direct, from a quote, a Sales recurring occurrence; a store's or another app's keeps its owner's
+facility) while nothing of it is reserved or shipped (a reservation is Warehouse's to move).
 
 Editing a placed/approved order's commercial facts opens OrderChangeDetail. No hidden direct-edit
 route bypasses that proposal. Existing Projects estimate approvals and project billing shares

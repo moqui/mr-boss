@@ -6059,6 +6059,60 @@ the default now covers them. The Opportunities list's Change stage keeps the lis
     building is refused); and a facility change once the order is reserved is left to Warehouse (FACILITY_LOCKED) rather than Sales
     moving the reservations.
 
+**Review Nov 15 (follow-up 5).** Fresh review of `sal/fix5` (mr-mantle, mr-boss) against this section, §2, §4's two Nov 15 rows and
+design §3, §6, §9.
+- Checked and sound:
+  - store#SalesPolicy's defaultFacilityId: SALES_CONFIGURE and the organization through the existing policy path, FACILITY_INVALID for
+    another organization's facility, an office or room, or a closed one; audit-logged; a published successor, revisions as before.
+    get#SalesPolicy's facilityName for a configurer only. Sales.js' `facilities` choice: configure, orderEdit or quoteEdit, an
+    organization of the scope (choiceOrganization), a selected value admitted only when it qualifies.
+  - update#SalesOrderFacility: SALES_ORDER_EDIT through requireOrder(edit) (an approver-only reader refused), SALES_QUOTE_EDIT and a
+    draft through requireQuote(edit); another organization's order or quote is RECORD_UNAVAILABLE; the revision checked before the
+    write, and the part update counts a revision (Order EECA); FACILITY_LOCKED on any AssetReservation or ShipmentItemSource row.
+  - Every path that makes a Sales part fills only an empty facility: createQuote (quotes, direct orders, RFQ through
+    create#QuoteFromRequest, templates through cloneForQuote), clone#Quote, clone#SalesOrder, place#SalesOrder and respond#Quote
+    before place#Order, create#RecurringOrder for an OrpRecurringTemplate base only (Shop bases return earlier); a template's own
+    part (no customer) and internal customers are skipped. A store-bound Sales quote keeps its store's inventory facility (create#Order
+    fills it first). Commerce placement, approve#Order and autoApprove#Order are untouched (no call added there).
+  - Opportunities/Leads filters: the redirect stays `url="."`; only a fixed list of the list's filter names is put back, each as a
+    string or null, after the service call (so nothing posted reaches the service); bad JSON is ignored. Nothing a user could not put
+    in the list's own URL.
+  - Demo: BOSS_SAL_WH and twelve upgrade kits disturb no Warehouse, Insights, Products or Accounting valuation spec (all run, below);
+    no spec publishes a first SalesPolicy for ORG_ZIZI_SALES (the specs' policies are of their own organizations), so the new demo row
+    breaks no REVISION_REQUIRED path.
+  - Acceptance workarounds: SalesOrderScenarios and SalesAccessWalk still place Ziziwork Sales' DEMO_1_1 orders (now at BOSS_SAL_WH,
+    issue over on-hand); SalesChangeScenarios' picked change still needs a Warehouse origin and now also proves Retail's default
+    gave it. Not rerun (unchanged by this review).
+- Fixed:
+  - R1 (medium; owner contracts): update#SalesOrderFacility and get#SalesOrder's `can.changeFacility` reached every sales order orderOf
+    covers, so a Sales editor could change the facility of a Commerce store order or another app's placed order (Projects', a
+    replacement) while it was unreserved. Now only Sales' own orders (a direct order, an accepted quote, an occurrence of a Sales
+    recurring base); another is ORDER_NOT_SALES and offers no Change ships from (SalesOrders.js `salesOwned`). SalesOrderFacility
+    checks a placed order with no Sales purpose (fails on the unfixed code: the change succeeded).
+  - R2 (low; spec): "never overrides a set one" was not tested (the copy's facility equalled the default). SalesOrderFacility now
+    places the order changed to the second warehouse and checks it still ships from there.
+  - R3 (low; doc): design §3's follow-up 5 paragraph was inserted between two rows of the Opportunities forms table, splitting it;
+    moved after the table. Design §6's Ships from paragraph names Sales' own orders (R1).
+- Provisional findings (for the lead to number):
+  - R1 above: a Sales operation over the orders orderOf covers needs its own kind check where the field is another app's to set.
+  - The spec covers create, copy and place; respond#Quote's, clone#Quote's and create#RecurringOrder's fill are reviewed by reading
+    only (each the same applyDefaultFacility call).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-boss every Warehouse, Insights and Products spec with
+  SalesOpportunities, SalesSettings, SalesOrders, SalesQuotes, SalesAccess, MarketingLeads, AccountingValuation and AccountingAccess
+  (432 of 432, 55 specs, 84.2 s feature time); after R1, SalesOrders, SalesRecurrence, SalesOrderChanges, CustomerServiceOrders (10
+  of 10). mr-mantle SalesOrderFacility (3 of 3, 1.3 s after R1, R2), AssetReservationMultipleThreads, AssetReservationMisc,
+  WarehouseReports, WarehouseCounts, WarehouseStockChecks, WarehouseFacilities, Sourcing, SalesOrderApproval, SalesQuoteResponse,
+  SalesRecurrence, SalesQuoteTemplates, SalesOrderChanges, SalesQuoteRequests, SalesPortal with dependencies (132 of 132). Prettier
+  clean. No acceptance spec run (none changed here); no screen changed, no lint.
+- For the lead:
+  - Budget: mr-mantle SalesOrderFacility about 1.3 s (was 2.1 s in the Built note's loaded run); mr-boss unchanged.
+  - Merge hot spots: those of the Built note; SalesOrders.js updateFacility and getOrder's `can` (R1).
+  - The user's calls: the two choices fit the design and need no decision before merge. The kinds (warehouse, retail store, plant)
+    match what Mantle's Maintenance and supply planning treat as stocking sites, and a drop-ship facility is the supplier's so the
+    owner check refuses it. FACILITY_LOCKED keeps Sales from moving Warehouse's reservations (design §6, borrowed authority); in
+    practice an inventory order is reserved when placed, so Ships from is changed before placement and Warehouse moves it after.
+    Worth telling the user as a consequence, not asking.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into design-sales.md or
