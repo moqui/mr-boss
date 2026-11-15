@@ -6551,6 +6551,18 @@ text, §2, §4 (the Nov 15 call) and follow-up 2's loader pattern.
   - the user's calls: whether the demo should renew the webinar's call link on a reload; the Built note's (campaign and opportunity
     dates) stands.
 
+### Follow-up 4 — A remote PASS checkout's visitor key for attribution
+
+The user's call of Nov 15 (§4, P20's review): a remote PASS frontend forwards the consented visitor key with the checkout, so an order
+placed through a remote frontend is attributed as a local one is (F386-F401, P20's Review note "the user's call 1"). The authority's
+checkout service stores only the key's digest with the order (the same digest P15 keeps on events, `digest("mkt-visitor:" + key)`), in
+the placement's own transaction before `place#Order`, and only where P15 would have recorded the key: the seller's MarketingPolicy
+`visitorKeys` Y or the customer allowing tracking with the seller, never for a customer who has withdrawn tracking; the raw key is never
+stored. PASS's checkout operation sends the frontend's first-party key (`^[A-Za-z0-9_-]{16,64}$`, else dropped) through the facade, whose
+schema gains the parameter (the byte-identical copies kept equal). `record#OrderAttribution` reads events by that digest beside the
+visit's keys, the recipient check still applying. Branch `mkt/fix4` in mr-mantle and mr-pass (mr-boss for the plan and the acceptance
+scenario).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
