@@ -6557,6 +6557,79 @@ demo send's date.
     tests run once at the end of the build.";
   - nothing needs the user's call.
 
+**Review Nov 15 (P23).** Master (follow-up 6, the demo's campaign windows and the December send dated relative to the load) merged into
+mr-boss first, cleanly; mr-pass, mr-moqui and mr-mantle had nothing new on master. The acceptance tests were read against the routes,
+services, demo users and helpers and their expectations checked in a throwaway regression spec on this worktree's runtime (the sweep
+helpers' lists, the access walk's setup and each route, palette, choice, check, write, masking, CSV and PASS answer as the walk's
+users and the controls), deleted after; no acceptance test was run.
+- Checked and sound:
+  - The sweeps: MarketingTui and MarketingServerStatic are the only Marketing sweep in each mode (TuiRender and ServerStatic leave
+    Marketing out), in acceptance, with no regression render added. `mountedScreens` finds the 26 mounts (Notifications under
+    Approvals among them, its default item, as Approvals renders it anyway), `redirectScreens` Newsletters and Segments, `mountTabs`
+    PageDetail's four tabs and Customer360's; every `sweepRecords` key is a menu path under the root; `sweepMade` confirms a staff
+    registration of the webinar; nothing reads a demo send's date (follow-up 6 merged).
+  - The access walk's refusals, apart from the fixes below: every route of the other side leaks no secret (its users are refused or
+    shown nothing), the screen transitions answer RECORD_UNAVAILABLE or the transition's authorization, the direct Mantle reads and
+    writes RECORD_UNAVAILABLE, ORGANIZATION_DENIED or PERMISSION_DENIED, check#Record refuses each kind, the files panel refuses;
+    Assist's two registered tools (`marketing_audience_counts`, `marketing_campaign_performance`) refuse the other organization.
+  - The survey results' CSV (`screen/Shared/SurveyResponses.xml`, Marketing's publication branch): the same actions and rows as the
+    page, so the same access (find#Responses refuses another organization's form, RECORD_UNAVAILABLE, and the CSV is empty) and the
+    same naming (the analyst's rows read "A respondent" and "Anonymous"); the case branch has no CSV.
+  - Attack-Surface's ten corrections against the code: the `[[event ID]]` embed and the limit of five (MarketingPortal.js
+    embedPattern, embedLimit); `get#CallContext` an events manager's alone, at most 20, no address; `send#SmsMessage`, check#SmsConsent
+    and note#SmsKeyword (`allow-remote="false"`); `get#Attendance` requiring eventManage; the event offer's lead rule through
+    `capture#EventRegistration` with the buyer's address only when the attendee is the buyer; the test message's number; the
+    unsubscribe link email-only; handle#OrderPlaced filing the admission event and the attribution; find#DeliveryReceipts (the three
+    reviewer permissions, the member organizations, every one for a system administrator or MARKETING_ALL_ORGANIZATIONS). P20's,
+    P21's, P22's and follow-ups 4's and 5's paragraphs are all kept (their lines found unchanged or extended).
+  - Docs: mr-pass `docs/Deployment.md`'s deploy order (PassAuthority.js refuses an operation naming a field its schema lacks,
+    "Unsupported request field"), the six registration operations in all three TOKEN_WRITES lists; the READMEs and Remaining-Work's
+    Marketing row; the inventories' Implemented-in paths are built screens or Marketing's mounts of shared ones.
+  - MarketingPhonePages: the routes, fixtures (PASS_HTTP_MK_PREFS, PASS_HTTP_MR_OFFER_FREE, the "Open survey" publication, the
+    "spring" page) and GET-only reads match the existing Marketing HTTP walks; registered in the client suite.
+- Fixed in the review:
+  - R1 (major, a test that could not pass and a vacuous one): MarketingAccessWalk's PASS feature ran against ZIZI_SHOP closed (the demo
+    site is `disabled` until a walk publishes it, as P7's, P16's and P17's walks do), so the offered list's control answered NotFound
+    and every refusal compared equal for the wrong reason; the setup now publishes the site.
+  - R2 (major, a control that could not pass): the masking feature's control was the audience manager, who is refused Sends ("Sends are
+    for the Marketing authors, approvers and dispatchers"); the Marketing administrator is the control now, on all three views, and the
+    author, approver and dispatcher must open each with the address masked (`m***@zizi-customers.example`), the events manager,
+    analyst and reader refused, so masking is asserted and not only the address's absence.
+  - R3 (major, a control that could not pass): the walk's members had no preferred address, so the members' export wrote an empty
+    Address column (the export reads `preferredContactMechId`) and the audience manager's export control failed; the membership names
+    its address now (and a second run sets it on the existing row).
+  - R4 (moderate, non-disclosure checked without a working route): most routes, the palette and the choices were checked only for the
+    absence of a secret, which a broken route passes; the first feature now requires the Marketing administrator to see a secret of
+    each side on every route but Home, Attribution and Log as note (which name none), to find each side's campaign in the palette and
+    its records in the four choices, and to be admitted by check#Record of each kind. The transitions, the import and the direct writes
+    now require a refusal (RECORD_UNAVAILABLE, ORGANIZATION_DENIED, PERMISSION_DENIED, not authorized), not any error, so a stale
+    revision or a validation error no longer passes for one.
+  - R5 (minor): Attack-Surface's shell providers: the record-lookup answers a campaign, send or registration (the palette also lists,
+    segments and events), and the today-source lists by role the sends due, approvals, failed deliveries and registrations awaiting the
+    organizer of the user's organizations, not "the user's own"; mr-mantle `MessageServices.xml`'s bounce intake comment names
+    `MessageReports.emecas.xml`; MarketingTui's count comment names PageDetail's and Customer360's tabs (Consent has none in the menu).
+- Provisional findings (for the lead to number):
+  - the phase text says eleven PASS operations; there are sixteen (the Built note is right); §4's follow-up 5 row names
+    completeRegistration where the code forwards the visitor key in startRegistrationPayment (a note here, §4 not edited);
+  - the plan's and the walk's "shown to the audience manager" for a send's recipients: Marketing's audience managers are refused Sends
+    entirely, so only the administrator (or a user in both an audience group and a sends group) reads a recipient's address; by
+    design as built, but no demo user but the administrator shows it;
+  - a list member with no preferred address exports an empty Address (the export reads only `preferredContactMechId`); the intake
+    paths set one, but a member loaded or adopted without it is blank in the export with nothing saying why;
+  - Marketing has no section in mr-mantle `docs/Upgrading.md` (the worker's finding; not written here: it needs the list of Marketing's
+    seed, setup and report files);
+  - the ticket has no PDF of its own (design §18 html-print/PDF), the worker's finding; the PASS page prints from the browser.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-boss MarketingAccess, MarketingSurveys, MarketingRegistrations,
+  MarketingShell and CustomerServiceFeedback 18 of 18 (28 s run) after the merge; three runs of the throwaway probe (25–29 s, deleted).
+  Not run: the acceptance tests (MarketingAccessWalk changed here; the probe observed each changed assertion's data), test-apps,
+  test-framework.
+- For the lead:
+  - budget share: none (no regression spec added);
+  - merge hot spots: as the Built note's, plus mr-boss `test/acceptance/Marketing/MarketingAccessWalk.spec.js`, mr-mantle
+    `service/mantle/party/MessageServices.xml` (a comment) and mr-moqui `docs/security/Attack-Surface.md`'s shell-providers sentence;
+  - the walk leaves ZIZI_SHOP published, as the other Marketing walks do;
+  - nothing needs the user's call.
+
 ### Follow-up 1 — Ticket capture, cancellation terms, stable entry codes and Retail's Utah tax
 
 The user's four calls of P17's review (§4 Nov 15): a ticket order's payment captured when the order is approved, through Accounting's

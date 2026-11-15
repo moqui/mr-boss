@@ -104,7 +104,7 @@ feature("every Marketing screen, mount and mounted tab renders in tui as a model
         return {failures, screens, redirects}
     },
     then({failures, screens, redirects}) {
-        // 67 screen files under the root (the two redirects apart), 26 mounts and their tabs (Consent's, PageDetail's)
+        // 67 screen files under the root (the two redirects apart), 26 mounts and their menus' tabs (PageDetail's, Customer360's)
         screens.length > 85
         screens.includes("Home")
         screens.includes("CalendarTui")

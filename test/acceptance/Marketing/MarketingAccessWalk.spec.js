@@ -14,11 +14,16 @@
 //   AgentToolExposure services, run as the user) and the Mantle services the screens call (reads and writes, called directly with the
 //   service's own rule); the PASS operations answer another organization's list, unpublished on the demo site, as one that does not
 //   exist;
-// - addresses: on the November newsletter's delivery (CampaignDelivery, its CSV, RecipientDetail) Maya's address shows to the audience
-//   manager and to no Retail user without MARKETING_AUDIENCE_VIEW (the author, approver, dispatcher, events manager, analyst, reader).
-// The Marketing administrator (MARKETING_ALL_ORGANIZATIONS) and each side's own author see their records, so a refusal is not a broken
-// route. No date of a demo send is read (follow-up 6 makes them relative to the load). The rules are MarketingAccess's (one case each)
-// and Mantle's MarketingScope; menus per group are MarketingFoundationWalk's.
+// - addresses: on the November newsletter's delivery (CampaignDelivery, its CSV, RecipientDetail) Maya's address shows to the Marketing
+//   administrator and to no Retail user without MARKETING_AUDIENCE_VIEW: the author, approver and dispatcher open the three masked
+//   (m***@ and the domain), the events manager, analyst and reader are refused Sends (the audience manager, who holds the audience read,
+//   is refused Sends too).
+// The Marketing administrator (MARKETING_ALL_ORGANIZATIONS) sees each side's records on every route but Home, Attribution and Log as
+// note (which name none of them), finds them in the palette and the choices and is admitted by check#Record, and each side's own author
+// sees its campaign and send, so a refusal is not a broken route. The demo site ZIZI_SHOP is published for the walk, as the other
+// Marketing walks do, so the PASS answers are the offer's and not a closed site's. No date of a demo send is read (follow-up 6 makes
+// them relative to the load). The rules are MarketingAccess's (one case each) and Mantle's MarketingScope; menus per group are
+// MarketingFoundationWalk's.
 // Run: ./moq accept mr-boss --spec MarketingAccessWalk
 const lib = ec.resource.script("component://mr-boss/test/Marketing/MarketingSpecLib.js")
 const {ids, users, asUser, system} = lib
@@ -28,6 +33,7 @@ const C = "ironstone.marketing.ContextServices."
 const PORTAL = "mantle.marketing.MarketingPortalServices."
 const webroot = "component://webroot/screen/webroot.xml"
 const mayaAddress = "maya.lindqvist@zizi-customers.example"
+const mayaMasked = "m***@zizi-customers.example"
 const groups = {
     author: "BOSS_MARKETING_AUTHOR",
     audience: "BOSS_MARKETING_AUDIENCE",
@@ -217,6 +223,10 @@ function makeRecords(s) {
                 .find("mantle.party.contact.ContactMech")
                 .condition("contactMechId", s.memberId + "_EM")
                 .updateAll({infoString: s.address})
+            ec.entity
+                .find("mantle.marketing.contact.ContactListParty")
+                .condition({contactListId: s.listId, partyId: s.memberId})
+                .updateAll({preferredContactMechId: s.memberId + "_EM"})
             return
         }
         make(CAMPAIGN, {
@@ -252,7 +262,8 @@ function makeRecords(s) {
             contactListId: s.listId,
             partyId: s.memberId,
             fromDate: ec.user.nowTimestamp,
-            statusId: "CLPT_ACCEPTED"
+            statusId: "CLPT_ACCEPTED",
+            preferredContactMechId: s.memberId + "_EM"
         })
         make("mantle.marketing.segment.MarketSegment", {
             marketSegmentId: s.segmentId,
@@ -341,6 +352,12 @@ function routes(s) {
     return list.map(([path, parameters, mode]) => ({path, parameters, mode: mode || "html"}))
 }
 const routeName = route => `${route.path} ${route.mode} ${JSON.stringify(route.parameters)}`
+// the routes that name none of a side's records even to the administrator (Home's counts, Attribution's orders, Log as note's id)
+const quietRoutes = ["Home", "Reports/Attribution", "LogNote"]
+// a refusal's message: the record answering as missing, a permission or the screen's authorization; never a stale revision or a
+// validation error, which would mean the call reached the record
+const refusedText = text =>
+    /RECORD_UNAVAILABLE|ORGANIZATION_DENIED|PERMISSION_DENIED|not authorized|not available/i.test(String(text || ""))
 
 spec({
     setupSpec() {
@@ -349,6 +366,15 @@ spec({
             makeServicesUsers()
             for (const s of Object.values(sides)) makeRecords(s)
             makeRegistration(sides.retail)
+            // the demo site opened for the walk, as P7's and P16's walks do (a closed site answers every PASS operation NotFound)
+            system(() =>
+                ec.service
+                    .sync()
+                    .name("update#mantle.public.PublicSite")
+                    .parameters({siteId: "ZIZI_SHOP", state: "published"})
+                    .disableAuthz()
+                    .call()
+            )
         } catch (error) {
             state.setupErrors.push(String(error.message))
         }
@@ -388,6 +414,38 @@ feature("each side's records are made; its own author and the Marketing administ
                 const got = render(users.admin, path, parameters)
                 if (!got.output.includes(secret))
                     problems.push(`the administrator does not see ${secret} on ${path}: ${got.errors}`)
+            }
+        }
+        // the administrator sees each side's records on every route that names them, finds them and is admitted to them
+        for (const s of Object.values(sides)) {
+            for (const route of routes(s)) {
+                if (quietRoutes.includes(route.path)) continue
+                const got = render(users.admin, route.path, route.parameters, route.mode)
+                if (!leaks(s, got.output).length)
+                    problems.push(`the administrator sees nothing of ${s.name} on ${routeName(route)}: ${got.errors}`)
+            }
+            const palette = ask(users.admin, C + "search#Records", {text: query(s.secrets.campaign)})
+            if (!leaks(s, plain(palette.rows)).length) problems.push(`the administrator's palette misses ${s.name}'s campaign`)
+            for (const [choice, term] of [
+                ["campaigns", query(s.secrets.campaign)],
+                ["lists", query(s.secrets.list)],
+                ["segments", query(s.secrets.segment)],
+                ["reportCampaigns", query(s.secrets.campaign)]
+            ]) {
+                const searched = ask(users.admin, C + "get#Choices", {choice, term})
+                if (!leaks(s, plain(searched.options)).length)
+                    problems.push(`the administrator's ${choice} miss ${s.name}'s record`)
+            }
+            for (const [recordType, recordId] of [
+                ["campaign", s.campaignId],
+                ["list", s.listId],
+                ["segment", s.segmentId],
+                ["send", s.sendId],
+                ["contact", s.memberId],
+                ["organization", s.org]
+            ]) {
+                const checked = ask(users.admin, C + "check#Record", {recordType, recordId})
+                if (checked.error) problems.push(`the administrator's check#Record ${recordType} of ${s.name}: ${checked.error}`)
             }
         }
         // Retail's audience manager sees Retail's list, and the events manager the registration
@@ -436,12 +494,12 @@ feature("the transitions, the audience import and the members' export refuse ano
                     expectedRevision: "1",
                     campaignName: "Taken over by " + viewer
                 })
-                if (!campaign) problems.push(`${viewer} saved ${s.name}'s campaign`)
+                if (!refusedText(campaign)) problems.push(`${viewer} saved ${s.name}'s campaign: ${campaign || "accepted"}`)
                 const list = post(viewer, "Audiences/ListDetail/storeList", {
                     contactListId: s.listId,
                     contactListName: "Taken over by " + viewer
                 })
-                if (!list) problems.push(`${viewer} saved ${s.name}'s list`)
+                if (!refusedText(list)) problems.push(`${viewer} saved ${s.name}'s list: ${list || "accepted"}`)
                 // the members' export answers no file of the other side's list
                 const exported = render(viewer, "Audiences/ListDetail/exportMembers", {contactListId: s.listId})
                 if (exported.output.includes(s.address)) problems.push(`${viewer} exports ${s.name}'s members`)
@@ -453,7 +511,8 @@ feature("the transitions, the audience import and the members' export refuse ano
                     evidenceText: "Isolation walk",
                     evidenceDate: new Date(Date.now() - 2 * 86400000)
                 })
-                if (!staged.error || staged.audienceImportId) problems.push(`${viewer} stages an import into ${s.name}'s list`)
+                if (!refusedText(staged.error) || staged.audienceImportId)
+                    problems.push(`${viewer} stages an import into ${s.name}'s list: ${staged.error || "staged"}`)
             }
             if (one(CAMPAIGN, {marketingCampaignId: s.campaignId})?.campaignName !== s.secrets.campaign)
                 problems.push(`${s.name}'s campaign was renamed`)
@@ -620,7 +679,8 @@ feature("Mantle's Marketing services, called as the user, read and change nothin
                     ]
                 ]) {
                     const out = direct(viewer, service, parameters)
-                    if (!out.error) problems.push(`${viewer} writes ${s.name}'s record through ${service}`)
+                    if (!refused(out))
+                        problems.push(`${viewer} writes ${s.name}'s record through ${service}: ${out.error || "accepted"}`)
                 }
             }
             if (one(CAMPAIGN, {marketingCampaignId: s.campaignId})?.campaignName !== s.secrets.campaign)
@@ -660,7 +720,7 @@ feature(
 )
 
 feature(
-    "Maya's address on the November newsletter's delivery shows to the audience manager and to no Retail user without the audience read",
+    "Maya's address on the November newsletter's delivery shows to the administrator and to no Retail user without the audience read",
     {
         when() {
             const problems = []
@@ -673,10 +733,15 @@ feature(
                 ],
                 ["Sends/RecipientDetail", {campaignRecipientId: "BOSS_MKT_RCPT_NOV_MAYA"}, "html"]
             ]
+            // the author, approver and dispatcher open each of them with the address masked; the others are refused Sends
+            const opening = [users.author, users.approver, users.dispatch]
             for (const viewer of maskedUsers)
                 for (const [path, parameters, mode] of delivery) {
                     const got = render(viewer, path, parameters, mode)
                     if (got.output.includes(mayaAddress)) problems.push(`${viewer} sees Maya's address on ${path} ${mode}`)
+                    if (opening.includes(viewer) && !(opens(got) && got.output.includes(mayaMasked)))
+                        problems.push(`${viewer} does not open ${path} ${mode} with the address masked: ${got.errors}`)
+                    if (!opening.includes(viewer) && opens(got)) problems.push(`${viewer} opens ${path} ${mode}`)
                 }
             // the services too, as the user: no address without the audience read
             for (const viewer of [users.dispatch, users.approver]) {
@@ -685,15 +750,15 @@ feature(
                 })
                 if (plain(out).includes(mayaAddress)) problems.push(`${viewer} reads Maya's address through get#Recipient`)
             }
-            const audience = render(users.audience, "Sends/RecipientDetail", {campaignRecipientId: "BOSS_MKT_RCPT_NOV_MAYA"})
-            const dispatcher = render(users.dispatch, "Sends/RecipientDetail", {campaignRecipientId: "BOSS_MKT_RCPT_NOV_MAYA"})
-            return {problems, audience, dispatcher}
+            // the control: the administrator (every Marketing permission) reads the address on the three
+            const shown = delivery.map(([path, parameters, mode]) =>
+                render(users.admin, path, parameters, mode).output.includes(mayaAddress)
+            )
+            return {problems, shown}
         },
-        then({problems, audience, dispatcher}) {
+        then({problems, shown}) {
             problems.join("\n") == ""
-            // the controls: the audience manager reads it; the dispatcher opens the recipient, its address masked
-            audience.output.includes(mayaAddress)
-            opens(dispatcher)
+            shown.every(Boolean)
         }
     }
 )
