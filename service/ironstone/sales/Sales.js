@@ -1076,6 +1076,52 @@ Object.assign(choiceSources, {
 // ===== P19: reports (impl-sales P19; design-sales §8 Reports, PipelineAnalysis, WinLoss) =====
 linkPaths.push("Reports/Catalogue", "Reports/PipelineAnalysis", "Reports/WinLoss")
 // ===== end of P19 =====
+// ===== impl-marketing P13: a lead's campaign and tracking code (owner contract; impl-sales §7) =====
+// Marketing's campaigns and their tracking codes as a lead's choices, from Mantle's CampaignServices.find#Campaigns and
+// TrackingServices.find#TrackingLinks under the user's own Marketing scope (open campaigns of the lead's organization): a user who reads
+// no Marketing gets none, and the lead form shows the stored value only. Nothing here grants a campaign: create#Opportunity and
+// update#Opportunity check it against the deal's organization.
+const marketingProbe = (service, parameters) => {
+    try {
+        return lib.probe(service, parameters)
+    } catch (error) {
+        return null
+    }
+}
+Object.assign(choiceSources, {
+    campaigns: (userScope, term, selected, p) => {
+        if (!ec.user.hasPermission("MARKETING_VIEW")) return []
+        const organizationPartyId = choiceOrganization(userScope, p)
+        if (!organizationPartyId) return []
+        const found = marketingProbe("mantle.marketing.CampaignServices.find#Campaigns", {
+            organizationPartyId,
+            text: term || null,
+            statusId: "open",
+            pageSize: choiceLimit
+        })
+        const options = Array.from(found?.campaignList || []).map(row => ({
+            value: row.marketingCampaignId,
+            label: row.campaignName || row.marketingCampaignId
+        }))
+        if (selected && !options.some(option => option.value === selected)) {
+            const campaign = one("mantle.marketing.campaign.MarketingCampaign", {marketingCampaignId: selected})
+            if (campaign && campaign.organizationPartyId === organizationPartyId)
+                options.push({value: selected, label: campaign.campaignName || selected})
+        }
+        return options
+    },
+    trackingCodes: (userScope, term, selected, p) => {
+        if (!ec.user.hasPermission("MARKETING_VIEW") || !p.marketingCampaignId) return []
+        const found = marketingProbe("mantle.marketing.TrackingServices.find#TrackingLinks", {
+            marketingCampaignId: p.marketingCampaignId
+        })
+        return byTerm(
+            Array.from(found?.trackingLinkList || []).map(row => ({value: row.trackingCodeId, label: row.label})),
+            term
+        )
+    }
+})
+// ===== end of impl-marketing P13 =====
 // The current contacts of an account (PrtContact to it); null (any person of the scope) when it has none.
 function accountContactIds(accountPartyId) {
     const ids = Array.from(

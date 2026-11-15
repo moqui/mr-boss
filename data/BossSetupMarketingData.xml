@@ -349,4 +349,22 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <!-- ===== end of Marketing P12 ===== -->
+
+    <!-- ===== Marketing P13: leads and the Sales handoff (impl-marketing P13; design-marketing §2, §10 Leads, LeadRules, §12) ===== -->
+    <!-- LeadRules and LeadRuleDetail (design §2 LeadRules: A, S): the lead rules deny the root user group and give the authors an ALWAYS,
+        with the root's filter sets; the administrator and ADMIN open them through their ALWAYS on the root; the Leads tab shows them to
+        a content author or the administrator, and the area's check asks the capability (leadRules). Mantle's MarketingFormServices
+        check MARKETING_CONTENT_EDIT (or MARKETING_CONFIGURE to read) and the organization again. Sales' Leads, Accounts and LeadSources
+        under Marketing stay Sales' own: the user's Sales grant and scope decide. -->
+    <artifactGroups artifactGroupId="BOSS_MKT_LEAD_RULES" description="Marketing lead rules">
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Leads/LeadRules.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Marketing/Leads/LeadRuleDetail.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MKT_LEAD_RULES_DENY" userGroupId="BOSS_MARKETING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MKT_LEAD_RULES_AUTHOR" userGroupId="BOSS_MARKETING_AUTHOR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- ===== end of Marketing P13 ===== -->
 </entity-facade-xml>

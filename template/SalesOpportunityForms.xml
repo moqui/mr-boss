@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     includes from template/SalesOpportunities.xml, and its drop-downs are the screen's `choices` (template/SalesParts.xml), so a
     second root that mounts Leads (Marketing's) offers the same forms. Mantle checks every value again.
     - NewOpportunityForm: map newDefaults (typeEnumId SotOpportunity, the organization).
-    - NewLeadForm: map newLeadDefaults (the organization): a lead with no account needed.
+    - NewLeadForm: map newLeadDefaults (the organization): a lead with no account needed. impl-marketing P13 (owner contract): the
+      campaign and its tracking code chosen from Marketing's for a user who reads Marketing (the choices campaigns and trackingCodes).
     - QualifyLeadForm: map qualifyValues ({salesOpportunityId, expectedRevision, organizationPartyId, accountPartyId}): an existing
       account or a new prospect, an existing contact or a new one, the pipeline and stage, owner, amount and close. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -183,6 +184,27 @@ along with this software (see the LICENSE.md file). If not, see
                             </drop-down>
                         </default-field>
                     </field>
+                    <!-- impl-marketing P13: Marketing's campaign and its tracking code, for a user who reads Marketing -->
+                    <field name="marketingCampaignId">
+                        <conditional-field title="Campaign" condition="ec.user.hasPermission('MARKETING_VIEW')">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'campaigns', selected:marketingCampaignId}">
+                                    <depends-on field="organizationPartyId"/></dynamic-options>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="trackingCodeId">
+                        <conditional-field title="Tracking code" condition="ec.user.hasPermission('MARKETING_VIEW')">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'trackingCodes', selected:trackingCodeId}">
+                                    <depends-on field="marketingCampaignId"/></dynamic-options>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
                     <field name="description"><default-field title="Notes"><text-area rows="3" cols="60"/></default-field></field>
                     <field name="submitButton"><default-field title=""><submit text="Create lead"/></default-field></field>
                     <field-layout>
@@ -190,6 +212,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field-row><field-ref name="accountPartyId"/><field-ref name="contactPartyId"/></field-row>
                         <field-row><field-ref name="ownerPartyId"/><field-ref name="teamPartyId"/></field-row>
                         <field-ref name="dataSourceId"/>
+                        <field-row><field-ref name="marketingCampaignId"/><field-ref name="trackingCodeId"/></field-row>
                         <field-ref name="description"/>
                         <field-ref name="submitButton"/>
                     </field-layout>

@@ -15,11 +15,14 @@ const ids = {
     // P11: Automations for the authors, approvers, dispatchers, audience managers and the administrator
     // P12: Surveys for the authors, audience managers, analysts and the administrator
     audienceMenu: ["Home", "Campaigns", "Audiences", "Automations", "Content", "Surveys"],
-    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Surveys", "Settings"],
+    // P13: Leads (its lead rules) for the authors and the administrator too
+    adminMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Surveys", "Leads", "Settings"],
     systemMenu: ["Home", "Campaigns", "Audiences", "Sends", "Automations", "Content", "Surveys", "Leads", "Settings"],
     analystMenu: ["Home", "Campaigns", "Content", "Surveys"],
     // P6: Sends (Comms' templates) for the authors and the administrator
-    authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Content", "Surveys"],
+    authorMenu: ["Home", "Campaigns", "Sends", "Automations", "Content", "Surveys", "Leads"],
+    // P13: the Leads tabs of an author who reads no Sales
+    authorLeadsMenu: ["LeadRules"],
     // P14: Content's tabs
     contentMenu: ["Content", "BlogPosts", "LandingPages", "Knowledge"],
     sendsMenu: ["Sends", "MessageTemplates"],
@@ -81,6 +84,12 @@ const ids = {
     surveySendId: "BOSS_MKT_SEND_SURVEY",
     anonymousResponseId: "BOSS_MKT_FR_VISIT_1",
     invitedResponseId: "BOSS_MKT_FR_VISIT_2",
+    // P13's demo lead form: Retail's garden plan request on ZIZI_SHOP, its rule to Retail East and one answer whose handoff failed
+    leadFormId: "BOSS_MKT_FORM_QUOTE",
+    leadPublicationId: "BOSS_MKT_PUB_QUOTE",
+    leadRuleId: "BOSS_MKT_LRULE_QUOTE",
+    failedCaptureId: "BOSS_MKT_LCAP_QUOTE_1",
+    eastTeamId: "BOSS_SAL_TEAM_EAST",
     // P14's demo content: Retail's garden blog space with three posts in its garden news category (two published), the first linked to
     // the running campaign, and the spring landing page on ZIZI_SHOP's Marketing mount with an embedded subscribe box
     blogSpaceId: "MKTBLOG",

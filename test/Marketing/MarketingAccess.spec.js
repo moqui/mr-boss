@@ -257,6 +257,9 @@ const capabilityNames = [
     // P12: the surveys' read (a Marketing reader who edits content or reads audiences or reports) and their area
     "surveyRead",
     "surveys",
+    // P13: the lead rules' read (a content author or the administrator) and their area
+    "leadRuleRead",
+    "leadRules",
     // P14: the content's read (every Marketing reader)
     "contentRead"
 ]
@@ -284,6 +287,8 @@ const capabilityUsers = [
             "automations",
             "surveyRead",
             "surveys",
+            "leadRuleRead",
+            "leadRules",
             "contentRead"
         ]
     },

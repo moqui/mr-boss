@@ -22,9 +22,9 @@ along with this software (see the LICENSE.md file). If not, see
     segments it plans with), Decisions (requests and decisions, a self-approval marked, those ended by a later change) and Activity
     (the native notes, read only, the conversation and the files: the campaign is a Chatter and files host). Every change is Mantle's
     guarded service at the revision read; a material change (organization, parent, dates, budget, managers) returns an approved plan
-    to review. Sends lists its sends with QuickSend (P8), Automations its automations (P11), Content its planned content with Link
-    content (P14: blog posts, landing pages and files; linking publishes nothing); the Audience, Tracking links, Promotions, Events and
-    Results boxes join with their phases. -->
+    to review. Sends lists its sends with QuickSend (P8), Automations its automations (P11), Results the lead forms' handoffs to Sales
+    (P13, any Marketing reader), Content its planned content with Link content (P14: blog posts, landing pages and files; linking
+    publishes nothing); the Audience, Tracking links, Promotions and Events boxes join with their phases. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Campaign" default-menu-include="false">
     <parameter name="marketingCampaignId" required="true"/>
@@ -98,6 +98,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="campaignAutomationList" from="automationsFound?.automationList || []"/>
         <set field="automationDetailPath" from="sharedLinks['Automations/AutomationDetail'] || null"/>
         <set field="newAutomationValues" from="{marketingCampaignId:marketingCampaignId, organizationPartyId:campaign.organizationPartyId, campaignFixed:true}"/>
+        <!-- P13: the campaign's lead handoffs (design §3 CampaignDetail's Results, §10 Leads): Marketing's own capture counts, for any
+            Marketing reader (F66: no Sales read needed, and no pipeline shown) -->
+        <if condition="recordFound">
+            <service-call name="mantle.marketing.MarketingFormServices.get#LeadHandoffs" out-map="handoffsFound" transaction="force-new" ignore-error="true"
+                    in-map="{marketingCampaignId:marketingCampaignId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="leadHandoffs" from="handoffsFound?.handoffs || null"/>
+        <set field="leadRulesPath" from="marketing.capabilities.leadRules ? (sharedLinks['Leads/LeadRules'] || null) : null"/>
         <!-- P14: the campaign's content (design §3 CampaignDetail's Content, §8), with Link content (the campaign fixed) -->
         <if condition="recordFound">
             <service-call name="mantle.marketing.MarketingContentServices.find#CampaignContent" out-map="contentFound" transaction="force-new"
@@ -579,6 +588,17 @@ along with this software (see the LICENSE.md file). If not, see
                                 <column><field-ref name="statusText"/><field-ref name="activeCount"/></column>
                             </columns>
                         </form-list>
+                    </box-body>
+                </container-box>
+
+                <!-- P13: the campaign's results so far: its lead forms' handoffs to Sales -->
+                <container-box condition="leadHandoffs">
+                    <box-header title="Results"/>
+                    <box-body>
+                        <label text="Leads from its forms: ${leadHandoffs?.summaryText}" type="p"/>
+                        <label text="${leadHandoffs?.captured} answers captured · ${leadHandoffs?.handedOff} handed to Sales" type="p" style="text-caption m-muted"
+                                condition="leadHandoffs?.captured"/>
+                        <link url="${leadRulesPath}" text="Lead rules" link-type="anchor" condition="leadRulesPath"/>
                     </box-body>
                 </container-box>
 

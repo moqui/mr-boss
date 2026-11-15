@@ -454,6 +454,14 @@ from the first inquiry. LeadList's intake columns are Came by, Received and Veri
 is the caller's (`verified`); Sales sends no verification mail.
 **Source:** research §2. **Needs:** SAL-CRM, SAL-ACCOUNTS, SAL-SHELL, SAL-MAIL-INTAKE.
 
+As built (impl-marketing P13, owner contract): LeadList's campaign filter offers Marketing's open campaigns of the organization to a
+user who reads Marketing (Sales' choices `campaigns` and `trackingCodes`, over Marketing's `find#Campaigns` and `find#TrackingLinks` as
+the user) and its campaign column shows the name; NewLead and OpportunityDetail's Edit offer the campaign and a tracking code of it to
+such a user and show the stored value to anyone else. `create#Opportunity` and `update#Opportunity` take `trackingCodeId` (kept as a
+SalesOpportunityTracking row, added and never removed) and refuse a campaign of another organization (CAMPAIGN_INVALID; a legacy
+campaign with no organization still passes) and a code of another campaign (TRACKING_INVALID). Marketing's lead rules hand their
+answers to `store#LeadIntake` as the system (impl-marketing P13).
+
 ### OpportunityDetail
 
 **Layout.** Record header with type, outcome, stage, account, amount/currency and expected close.
@@ -1723,6 +1731,10 @@ As built (impl-sales P5): UtmSourceMap is `SalesLeadSourceMap` (organization, UT
 organization is offered, dated; ended, never changed), on LeadSources with its Map a source and End, the source and medium typed
 until Marketing offers its vocabulary. LeadSources also shows Mail intake: each team's plus tag (`sales+tag@` the intake mailbox,
 whose rule's action is Make a sales lead) and the source its mail takes, PartySettings of the team (`store#TeamIntake`).
+
+As built (impl-marketing P13, owner contract): the UTM source and medium are chosen from the organization's Marketing vocabulary
+(`mantle.marketing.CampaignServices.find#Vocabulary`, its UTM source and medium values) for a user who reads Marketing in the
+organization, and typed otherwise; Marketing mounts LeadSources at `Marketing/Settings/LeadSources`.
 
 As built (impl-sales P2): the binding is `SalesLeadSourceBinding` (dataSourceId, organization, dates); a new source is offered to
 its organization at once, an offer is added or ended per organization of the caller's, and a source's name or type is changed

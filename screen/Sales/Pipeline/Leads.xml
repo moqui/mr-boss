@@ -25,7 +25,9 @@ along with this software (see the LICENSE.md file). If not, see
     "Add to list (evidenced)" joins it as an owner contract (impl-marketing P3). P5: the intake columns (Came by, Received,
     Verification) of a lead that came in through store#LeadIntake: mail to a team's intake address, Comms' Create lead, Marketing's
     lead forms. P6: the filtered result as CSV or XLSX, and Import (the shared wizard's `opportunities` target) for a manager who
-    imports; under Marketing's mount, whose sharedLinks hold no import, Import is not shown. -->
+    imports; under Marketing's mount, whose sharedLinks hold no import, Import is not shown. impl-marketing P13 (owner contract): the
+    campaign filter offers Marketing's campaigns to a user who reads Marketing (one campaign and one source a find), and the campaign
+    column shows the campaign's name. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Leads" default-menu-index="2">
     <parameter name="text"/>
@@ -206,6 +208,15 @@ along with this software (see the LICENSE.md file). If not, see
                                     </drop-down>
                                 </header-field>
                             </field>
+                            <!-- impl-marketing P13: Marketing's campaigns, for a user who reads Marketing -->
+                            <field name="marketingCampaignId">
+                                <header-field title="Campaign">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'campaigns', selected:marketingCampaignId, organizationPartyId:(organizationPartyId || sales.defaultOrganizationPartyId)}"/>
+                                    </drop-down>
+                                </header-field>
+                            </field>
                             <field name="dataSourceId">
                                 <header-field title="Source">
                                     <drop-down allow-empty="true">
@@ -228,7 +239,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="intakeKindText"><default-field title="Came by"><display/></default-field></field>
                             <field name="receivedText"><default-field title="Received"><display/></default-field></field>
                             <field name="verificationText"><default-field title="Verification"><display/></default-field></field>
-                            <field name="marketingCampaignId"><default-field title="Campaign"><display/></default-field></field>
+                            <!-- impl-marketing P13: the campaign by its name (F66) -->
+                            <field name="campaignName"><default-field title="Campaign"><display/></default-field></field>
                             <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
                             <field name="teamName"><default-field title="Team"><display/></default-field></field>
                             <field name="ageText" align="right"><default-field title="Age"><display/></default-field></field>
@@ -260,7 +272,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <columns>
                                 <column><field-ref name="opportunityName"/><field-ref name="accountName"/></column>
-                                <column><field-ref name="sourceText"/><field-ref name="marketingCampaignId"/></column>
+                                <column><field-ref name="sourceText"/><field-ref name="campaignName"/></column>
                                 <column><field-ref name="intakeKindText"/><field-ref name="receivedText"/><field-ref name="verificationText"/></column>
                                 <column><field-ref name="ownerName"/><field-ref name="teamName"/></column>
                                 <column><field-ref name="ageText"/></column>
