@@ -619,8 +619,13 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
             const name = String(pageName || '').replace(/\s+/g, ' ').trim()
-            if (!name || !StringUtilities.isAlphaNumeric(name, ".,'-_:()!? ") || name === '.' || name === '..' || name.length > 100) {
+            if (!name || !StringUtilities.isAlphaNumeric(name, ".,'-_:()!? ") || name === '.' || name === '..') {
                 ec.message.addError(L("A page name has letters, digits, spaces and . , ' - _ : ( ) ! ? only"))
+                return
+            }
+            // at most 100 characters, and 240 bytes in UTF-8 as the framework's update#WikiPage takes (its URI encoding, each %XX one)
+            if (name.length > 100 || encodeURIComponent(name).replace(/%[0-9A-F]{2}/g, '_').length > 240) {
+                ec.message.addError(L('A page name is too long'))
                 return
             }
             let parent = String(parentPath || '').split('/').filter((part) => part).join('/')
@@ -686,8 +691,13 @@ along with this software (see the LICENSE.md file). If not, see
             if (!src.exists) { ec.message.addError(L('This page has no text yet to copy')); return }
             const spaceId = toWikiSpaceId || src.wikiSpaceId
             const name = String(toPageName || '').replace(/\s+/g, ' ').trim()
-            if (!name || !StringUtilities.isAlphaNumeric(name, ".,'-_:()!? ") || name === '.' || name === '..' || name.length > 100) {
+            if (!name || !StringUtilities.isAlphaNumeric(name, ".,'-_:()!? ") || name === '.' || name === '..') {
                 ec.message.addError(L("A page name has letters, digits, spaces and . , ' - _ : ( ) ! ? only"))
+                return
+            }
+            // at most 100 characters, and 240 bytes in UTF-8 as the framework's update#WikiPage takes (its URI encoding, each %XX one)
+            if (name.length > 100 || encodeURIComponent(name).replace(/%[0-9A-F]{2}/g, '_').length > 240) {
+                ec.message.addError(L('A page name is too long'))
                 return
             }
             let parent = String(toParentPath || '').split('/').map((part) => part.trim()).filter((part) => part).join('/')
@@ -1498,7 +1508,10 @@ along with this software (see the LICENSE.md file). If not, see
             const space = ec.service.sync().name('org.moqui.resource.WikiServices.ensure#UserNotesSpace').call()
             if (ec.message.hasError() || !space?.wikiSpaceId) return
             wikiSpaceId = space.wikiSpaceId
-            const cleanTitle = String(title || '').replace(/[^\p{L}\p{Nd}_.\-,':()!? ]+/gu, ' ').replace(/\s+/g, ' ').trim().substring(0, 80)
+            // at most 80 characters and 200 bytes in UTF-8 (by whole characters), room for " (n)" under create#Page's 240
+            const cleanChars = Array.from(String(title || '').replace(/[^\p{L}\p{Nd}_.\-,':()!? ]+/gu, ' ').replace(/\s+/g, ' ').trim()).slice(0, 80)
+            while (encodeURIComponent(cleanChars.join('')).replace(/%[0-9A-F]{2}/g, '_').length > 200) cleanChars.pop()
+            const cleanTitle = cleanChars.join('').trim()
             const base = cleanTitle || (L('Note') + ' ' + ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH.mm'))
             const inUse = (name) => ec.entity.find('moqui.resource.wiki.WikiPage').condition('wikiSpaceId', wikiSpaceId).condition('pagePath', name).count() > 0
             let name = base
