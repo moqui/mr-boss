@@ -1860,7 +1860,7 @@ event would have kept it and never for a customer who withdrew tracking; impl-ma
 who allows tracking now, never inferred across devices; a staff correction (MARKETING_CONFIGURE) is a successor with its reason. The visits metric is `count#Visits`
 (and Sales' `count#SalesVisits`). Retention (`run#MarketingRetention`, nightly): a purged import's row names and masked addresses,
 unconfirmed public requests a week past their expiry, tracking events past the organization's statistics retention (never one an
-attribution names) and expired link tokens, each on its own. Insights: the catalog entries, the metrics `Marketing.Visits` and
+attribution names) and the visitor-key digest of its orders placed before then (follow-up 4 review), and expired link tokens, each on its own. Insights: the catalog entries, the metrics `Marketing.Visits` and
 `Marketing.AttributedOrders`, the datasets `boss-marketing-deliveries` and `boss-marketing-audience` (their row filter Marketing's
 scope, `MantleMarketingScope`), the dashboard `boss-marketing-campaigns`, the alert templates for complaints, hard bounces and the
 uncertain backlog, the weekly campaign digest, four attention providers, the flow targets `Marketing.Campaigns` and `Marketing.Sends`
