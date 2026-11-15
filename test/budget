@@ -21,4 +21,6 @@ server = 405
 # golden-path walk PeopleHireWalk 7.2 s of it and the rest other apps' changes (CalcGrid among them), rounded up.
 # Nov 14, 2026: raised to the final suites of the Dogfood build (DG0 to DG10, Dev AIDE P11 to P13) with the Sales and
 # Marketing apps merged, with the user's agreement: 89.2 s measured, rounded up. A review of regression vs acceptance follows.
-client = 90
+# Nov 15, 2026: raised to the final ./moq test-apps of the Sales and Marketing build after its fixes (the user's agreement,
+# impl-marketing §4): 93.4 s measured, MarketingSendWalk 8.0 s of it, rounded up.
+client = 94
