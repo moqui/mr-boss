@@ -467,6 +467,11 @@ SalesOpportunityTracking row, added and never removed) and refuse a campaign of 
 campaign with no organization still passes) and a code of another campaign (TRACKING_INVALID). Marketing's lead rules hand their
 answers to `store#LeadIntake` as the system (impl-marketing P13).
 
+As built (impl-marketing P18, owner contract): `store#LeadIntake` takes two more source kinds, `eventRegistration` and
+`eventAttendance` (SlisEventRegistration, SlisEventAttendance; the source id the registration), for Marketing's lead rules whose
+source is an event registration offer: one intake per registration and kind, the attendee's own name and address and the event in
+its notes, never verified.
+
 ### OpportunityDetail
 
 **Layout.** Record header with type, outcome, stage, account, amount/currency and expected close.

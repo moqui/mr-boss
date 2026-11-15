@@ -27,7 +27,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.marketing.AutomationServices.create#Automation" out-map="created"
                     in-map="{marketingCampaignId:marketingCampaignId, automationName:automationName, description:(description || null),
                         contactListId:contactListId, sendingProfileId:(sendingProfileId || null), triggerEnumId:(triggerEnumId || null),
-                        triggerSegmentId:(triggerSegmentId || null), productStoreId:(productStoreId || null), timeZone:(timeZone || null)}"/>
+                        triggerSegmentId:(triggerSegmentId || null), productStoreId:(productStoreId || null),
+                        registrationPolicyId:(registrationPolicyId || null), timeZone:(timeZone || null)}"/>
             <set field="detailPath" from="sharedLinks?.['Automations/AutomationDetail'] || null"/>
             <if condition="!ec.message.hasError()"><message type="success">Automation ${created.marketingAutomationId} started as a draft: add its steps</message></if>
         </actions>
@@ -44,7 +45,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{marketingAutomationId:marketingAutomationId, expectedRevision:expectedRevision, automationName:automationName,
                         description:description, contactListId:(contactListId || null), sendingProfileId:sendingProfileId,
                         triggerEnumId:(triggerEnumId || null), triggerSegmentId:triggerSegmentId, productStoreId:productStoreId,
-                        goalSegmentId:goalSegmentId, reentryEnumId:(reentryEnumId || null), reentryCooldownDays:(reentryCooldownDays || null),
+                        registrationPolicyId:registrationPolicyId, goalSegmentId:goalSegmentId, reentryEnumId:(reentryEnumId || null), reentryCooldownDays:(reentryCooldownDays || null),
                         timeZone:(timeZone || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">Enrollment rule saved${stored?.approvalEnded ? '; its approval ended: ask again' : ''}</message></if>
         </actions>
@@ -184,6 +185,16 @@ along with this software (see the LICENSE.md file). If not, see
                                 <option key="AtrStaff" text="Staff enrollment with evidence"/>
                                 <option key="AtrOrderPlaced" text="Order placed"/>
                                 <option key="AtrCartAbandoned" text="Cart abandoned"/>
+                                <option key="AtrRegistered" text="Registered for an event"/>
+                                <option key="AtrAttended" text="Attended an event"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="registrationPolicyId">
+                        <default-field title="Event" tooltip="For a registration or attendance trigger: the event occurrence whose attendees are enrolled">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'registrationOffers', organizationPartyId:newAutomationValues.organizationPartyId}"/>
                             </drop-down>
                         </default-field>
                     </field>

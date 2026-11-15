@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Events › Check in (design-marketing §9 CheckIn; style-guide §3 task, §7 handheld; impl-marketing P18, F83; CX-DEVICE): one
+    offer's door (registrationPolicyId: one occurrence's EventRegistrationPolicy; with workEffortId alone, the event's offers to choose).
+    Online only. The desk says how many are in; EntryLookup reads an entry code by scan-input (a keyboard-wedge scanner or the code
+    typed; the resolver, resolve#EntryCode, shows who it is and whether they may enter, which is EntryDecision) and Confirm checks them
+    in (RecordEntry, checkIn#Registration, the scan's id as the operation key, so a double scan answers the first). An events manager
+    (MARKETING_EVENT_MANAGE) also finds an attendee by name or address and checks them in with a reason, or overrides a held or pending
+    place with a reason (AttendeeLookup). A refusal is a message, never an error response, so nothing scanned is kept in the session for
+    the next attendee; the screen loads again, empty.
+    Two doors use it: an events manager under their own sign-in (in the Marketing shell, on a phone at 390 px), and the offer's shared
+    door tablet, a registered device of the MARKETING_CHECKIN route group whose home is this screen and whose fixed parameter is the
+    offer (data/BossSetupMarketingData.xml): its requests run as a display account holding MARKETING_CHECKIN alone, with no Marketing
+    context (screen/Marketing.xml), and see only the desk, the scan and a decision naming the attendee by first name and initial. Its
+    html mode is a bare page that loads the qvt client's files and mounts this screen's qvt render as an island (People's clocking
+    kiosk, WebrootPublic.qvt.js), with no navigation, menu or account; it empties a half-typed code after a minute and reloads after
+    half an hour idle, so a revoked device shows the server's refusal page. Every rule (who keeps the door, the place, the window, once
+    per registration, the limit) is Mantle's (mantle.work.EventRegistrationServices, EventCheckIn.js). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Check in" default-menu-include="false" standalone="true" history="false" density="handheld"
+        screen-theme-type-enum-id="STT_INTERNAL_QUASAR">
+    <parameter name="registrationPolicyId"/>
+    <parameter name="workEffortId"/>
+    <parameter name="term"/>
+
+    <!-- RecordEntry: the scanned code (or, staff, a registration found by name, with a reason, or an override) checked in; the answer a
+        message, the screen loaded again empty -->
+    <transition name="checkIn">
+        <actions><script><![CDATA[
+            const given = name => (typeof ec.context[name] === 'undefined' || ec.context[name] === '' ? null : ec.context[name])
+            let checked = null
+            let refusal = null
+            ec.message.pushErrors()
+            try {
+                checked = ec.service.sync().name('mantle.work.EventRegistrationServices.checkIn#Registration').parameters({
+                    registrationPolicyId: given('registrationPolicyId'), entryCode: given('entryCode') || given('entryCode_scanText'),
+                    registrationId: given('registrationId'), reason: given('reason'), override: given('override') === 'Y',
+                    expectedRevision: given('expectedRevision'), operationKey: given('operationKey')
+                }).requireNewTransaction(true).call()
+                if (ec.message.hasError()) refusal = ec.message.getErrorsString()
+            } catch (error) {
+                refusal = String(error.message || error)
+            } finally {
+                ec.message.clearErrors()
+                ec.message.popErrors()
+            }
+            if (refusal) {
+                // a refusal names its reason (CODE: message); anything else is a failure the door cannot fix here
+                const coded = /\b([A-Z][A-Z0-9_]{3,}):\s*([^\n]*)/.exec(refusal)
+                if (!coded) ec.logger.warn('Event check-in failed: ' + refusal)
+                ec.message.addMessage(coded ? ec.l10n.localize(coded[2]) : ec.l10n.localize('Not checked in. Try again.'), 'danger')
+            } else {
+                const decision = checked.decision || {}
+                ec.message.addMessage((decision.attendeeText || '') + ': ' + (checked.repeated
+                    ? ec.l10n.localize('already checked in at') + ' ' + (decision.attendance?.checkInTime || '')
+                    : ec.l10n.localize('checked in') + (decision.ticketText ? ' · ' + decision.ticketText : '')), checked.repeated ? 'warning' : 'success')
+            }
+        ]]></script></actions>
+        <default-response url="."><parameter name="registrationPolicyId"/></default-response>
+    </transition>
+
+    <actions>
+        <script><![CDATA[
+            onDevice = !!UserSecurityChecks.currentDevice()
+            canStaff = !onDevice && !!marketing.capabilities?.checkInRead
+            offerList = []
+            if (canStaff && !registrationPolicyId && workEffortId) {
+                // an event's offers to choose (published or closed); one alone is chosen
+                ec.message.pushErrors()
+                try {
+                    const setup = ec.service.sync().name('mantle.work.EventRegistrationServices.get#EventSetup')
+                        .parameters({workEffortId}).requireNewTransaction(true).call() || {}
+                    offerList = Array.from(setup.offers || []).filter(offer => offer.statusId === 'ErpPublished' || offer.statusId === 'ErpClosed')
+                } catch (error) {
+                    offerList = []
+                } finally {
+                    ec.message.clearErrors()
+                    ec.message.popErrors()
+                }
+                if (offerList.length === 1) registrationPolicyId = offerList[0].registrationPolicyId
+            }
+            desk = null
+            candidates = []
+            notAvailable = null
+            if (registrationPolicyId && (onDevice || canStaff)) {
+                ec.message.pushErrors()
+                try {
+                    const previewed = ec.service.sync().name('mantle.work.EventRegistrationServices.preview#CheckIn')
+                        .parameters({registrationPolicyId, term: canStaff && term ? term : null}).requireNewTransaction(true).call() || {}
+                    if (ec.message.hasError()) notAvailable = ec.message.getErrorsString()
+                    desk = previewed.desk || null
+                    candidates = Array.from(previewed.candidates || [])
+                } catch (error) {
+                    notAvailable = String(error.message || error)
+                } finally {
+                    ec.message.clearErrors()
+                    ec.message.popErrors()
+                }
+                if (notAvailable) {
+                    const coded = /\b([A-Z][A-Z0-9_]{3,}):\s*([^\n]*)/.exec(notAvailable)
+                    notAvailable = coded ? coded[2] : ec.l10n.localize('Check-in is not available now.')
+                }
+            }
+            eventsPath = marketing.sharedLinks?.['Events/Events'] || null
+            lookupValues = {registrationPolicyId, term}
+            deskText = desk ? desk.checkedInCount + (desk.expectedCount != null ? ' ' + ec.l10n.localize('of') + ' ' + desk.expectedCount : '') + ' '
+                + ec.l10n.localize('checked in') : ''
+            if (sri.getRenderMode() == 'html') {
+                // the html page: the theme's style sheets, the qvt client's files and this screen as an island (WebrootPublic.qvt.js)
+                const qvtLib = ec.resource.script('component://webroot/screen/includes/QvtConfig.js')
+                const localeTag = String(ec.user.locale || 'en_US').replace('_', '-')
+                const quasarLang = qvtLib.quasarLangOf(localeTag)
+                const sheets = Array.from(sri.getThemeValues('STRT_STYLESHEET'))
+                const scripts = ['/libs/vue/vue.global.prod.js', '/libs/quasar/quasar.umd.prod.js', '/libs/quasar/lang/' + quasarLang + '.umd.prod.js']
+                if (sheets.some(sheet => String(sheet).includes('/libs/material-symbols/'))) scripts.push('/libs/quasar/icon-set/material-symbols-outlined.umd.prod.js')
+                scripts.push('/js/MoquiLib.js', '/js/MoquiL10n.js', '/js/WebrootVue.qvt.render.js', '/js/WebrootVue.qvt.js', '/js/WebrootPublic.qvt.js')
+                const version = '?v=' + ec.web.getResourceDistinctValue()
+                const href = location => WebUtilities.encodeHtml(sri.buildUrl(location).url + version)
+                doorHead = sheets.map(sheet => '<link rel="stylesheet" href="' + href(sheet) + '">').join('')
+                doorScripts = scripts.map(script => '<script src="' + href(script) + '"></script>').join('')
+                doorLang = WebUtilities.encodeHtml(localeTag)
+                doorTitle = WebUtilities.encodeHtml(ec.l10n.localize('Event check-in'))
+                const island = {
+                    shell: 'island', sessionToken: ec.web.sessionToken, appRootPath: '', locale: localeTag, timeZone: ec.user.timeZone,
+                    quasarLang: quasarLang.replace(/-([a-zA-Z])/g, (m, ch) => ch.toUpperCase()),
+                    quasar: {notify: {progress: true, position: 'top', timeout: 6000}},
+                    qvt: {build: 'compiler', handles: ['merged-fragment', 'static-template']},
+                    route: {name: 'event-check-in', basePath: sri.buildUrl('.').path, title: ec.l10n.localize('Event check-in'), renderModes: ['qvt']},
+                    context: {}, labels: {loading: ec.l10n.localize('Loading'), notFound: ec.l10n.localize('This check-in is not available.')}
+                }
+                doorIsland = JSON.stringify(island).split('<').join('\\u003c')
+            }
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="DoorPage" condition="sri.getRenderMode() == 'html'">
+            <widgets>
+                <render-mode>
+                    <!-- the bare page: a minute without input empties a half-typed code (the island loads the screen again); half an hour
+                        idle reloads the page, so a revoked device shows the server's refusal page and a quiet one stays seen -->
+                    <text type="html" no-boundary-comment="true"><![CDATA[<!DOCTYPE html>
+<html lang="${doorLang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>${doorTitle}</title>${doorHead}
+<style>.m-event-check-in .q-notification { font-size: 1.5rem; padding: 16px 24px; } .m-event-check-in #event-check-in { max-width: 640px; margin: 0 auto; }</style></head>
+<body class="m-event-check-in m-density-handheld"><script type="application/json" data-moqui-island="event-check-in">${doorIsland}</script>
+<div id="event-check-in" class="q-pa-md"></div><noscript><p>This check-in needs JavaScript.</p></noscript>${doorScripts}
+<script>(function () {
+    var last = Date.now(), loaded = Date.now();
+    ['keydown', 'pointerdown', 'input'].forEach(function (type) { document.addEventListener(type, function () { last = Date.now(); }, true); });
+    setInterval(function () {
+        var idle = Date.now() - last;
+        if (idle >= 1800000 && Date.now() - loaded >= 1800000) { window.location.reload(); return; }
+        if (idle < 60000) return;
+        var typed = Array.prototype.some.call(document.querySelectorAll('#event-check-in input'), function (input) {
+            return input.value && input.type !== 'radio' && input.type !== 'hidden';
+        });
+        if (typed && window.moqui && window.moqui.webrootVue) { last = Date.now(); window.moqui.webrootVue.load(); }
+    }, 5000);
+})();</script></body></html>
+]]></text>
+                </render-mode>
+            </widgets>
+        </section>
+        <section name="CheckInPage" condition="sri.getRenderMode() != 'html'">
+            <widgets>
+                <section name="CheckInClosed" condition="!onDevice &amp;&amp; !canStaff">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label text="Check-in is for events managers, and for an event's door tablet registered in Admin › Security › Devices." type="p"/>
+                                <link url="${eventsPath}" text="Back to events" link-type="anchor" condition="eventsPath"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ChooseOffer" condition="canStaff &amp;&amp; !registrationPolicyId">
+                    <widgets>
+                        <label text="Check in" type="h5"/>
+                        <label text="Choose the occurrence whose door you keep." type="p" style="m-muted" condition="offerList.length"/>
+                        <label text="This event has no published registration to check in. Open an event's Check in from its Registration setup." type="p"
+                                style="m-muted" condition="!offerList.length"/>
+                        <section-iterate name="OfferChoices" list="offerList" entry="offer">
+                            <widgets>
+                                <link url="." text="${offer.publicTitle || offer.registrationPolicyId} · ${offer.occurrenceText}" link-type="anchor-button"
+                                        icon="sym_o_door_open" parameter-map="{registrationPolicyId:offer.registrationPolicyId, workEffortId:null}"/>
+                            </widgets>
+                        </section-iterate>
+                        <link url="${eventsPath}" text="Back to events" link-type="anchor" condition="eventsPath"/>
+                    </widgets>
+                </section>
+                <section name="DoorNotAvailable" condition="registrationPolicyId &amp;&amp; (onDevice || canStaff) &amp;&amp; !desk">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label text="${notAvailable || 'This check-in is not available.'}" type="p"/>
+                                <link url="${eventsPath}" text="Back to events" link-type="anchor" condition="eventsPath"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="Door" condition="desk">
+                    <widgets>
+                        <container style="m-record-header">
+                            <label text="${desk?.title}" type="h5" style="q-my-none"/>
+                            <label text="${desk?.whenText}" type="div" style="text-caption m-muted"/>
+                            <label text="${deskText}" type="div" style="text-weight-medium"/>
+                            <label text="${desk?.closedText}" type="div" style="text-negative" condition="desk &amp;&amp; !desk.openNow"/>
+                        </container>
+                        <!-- EntryLookup, EntryDecision and RecordEntry: the scan shows who it is and whether they may enter; Confirm checks
+                            them in -->
+                        <form-single name="EntryLookup" transition="checkIn" focus-field="entryCode">
+                            <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                            <field name="entryCode">
+                                <default-field title="Entry code" tooltip="Scan the attendee's ticket, or type the code on it">
+                                    <scan-input resolver="mantle.work.EventRegistrationServices.resolve#EntryCode" allowed-types="ticket"
+                                            confirm="true" scan-id-field="operationKey" placeholder="Scan a ticket">
+                                        <parameter name="registrationPolicyId"/>
+                                    </scan-input>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title=""><submit text="Check in" icon="sym_o_how_to_reg"/></default-field></field>
+                        </form-single>
+                        <!-- AttendeeLookup: an events manager's search by name, address or registration, each place's decision and its
+                            check-in with a reason (an override for a held or pending place) -->
+                        <section name="AttendeeLookup" condition="canStaff">
+                            <widgets>
+                                <form-single name="FindAttendee" transition="." map="lookupValues">
+                                    <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                    <field name="term"><default-field title="Find an attendee" tooltip="A name, an address or a registration"><text-find size="24" hide-options="true"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Find"/></default-field></field>
+                                </form-single>
+                                <label text="No attendee of this occurrence matches." type="p" style="m-muted" condition="term &amp;&amp; !candidates.length"/>
+                                <form-list name="Candidates" list="candidates" skip-form="true" paginate="false" condition="candidates.length">
+                                    <field name="attendeeText"><default-field title="Attendee"><display/></default-field></field>
+                                    <field name="ticketText"><default-field title="Ticket"><display/></default-field></field>
+                                    <field name="decision">
+                                        <default-field title="At the door">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${eligible ? 'positive' : reasonCode == 'ALREADY_CHECKED_IN' ? 'info' : 'negative'}">${WebUtilities.encodeHtml(decisionText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(decisionText ?? "")})}]]></text>
+                                                <text type="html">${decisionText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="CheckInByName_${registrationId}" button-text="${eligible ? 'Check in' : 'Admit anyway'}"
+                                                    title="Check in ${attendeeText}" width="420" condition="eligible || overridable">
+                                                <label text="${eligible ? 'Their place is confirmed; say why they come in without their entry code.' : decisionText + ': an override records the attendance and changes neither the place nor its payment.'}"
+                                                        type="p" style="m-muted"/>
+                                                <form-single name="CheckInByName" transition="checkIn"
+                                                        map="{registrationPolicyId:registrationPolicyId, registrationId:registrationId, expectedRevision:expectedRevision, override:(eligible ? 'N' : 'Y'), operationKey:('name-' + registrationId + '-' + ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmss'))}">
+                                                    <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                                    <field name="registrationId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="override"><default-field><hidden/></default-field></field>
+                                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                    <field name="reason"><default-field title="Why"><text-line size="40" required="true"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title=""><submit text="Check in" confirmation="Check in ${attendeeText}?"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="attendeeText"/><field-ref name="ticketText"/></column>
+                                        <column><field-ref name="decision"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

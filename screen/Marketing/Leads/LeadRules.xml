@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     rules of the user's organizations (mantle.marketing.MarketingFormServices.find#LeadRules: a content author's or the administrator's),
     current ones by default: each lead form with its campaign, the sales team whose queue it fills, the Sales source, the mapping and its
     handoffs (handed off, failed, waiting). New lead rule (a content author's) picks a lead form without one and opens LeadRuleDetail;
-    each row opens its rule. Marketing's own context (`marketing`): the Leads area's `sharedLinks` are Sales'. -->
+    each row opens its rule. P18: New lead rule also routes an event's registrations or attendances (an offer of one occurrence and its
+    trigger), whose leads take the attendee's own name and address. Marketing's own context (`marketing`): the Leads area's `sharedLinks` are Sales'. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Lead rules" default-menu-index="3">
     <parameter name="organizationPartyId"/>
@@ -25,6 +26,10 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- New lead rule: the chosen lead form's rule opened (a link: LeadRuleDetail with the publication) -->
     <transition name="newLeadRule">
         <default-response url="../LeadRuleDetail"><parameter name="publicationId"/></default-response>
+    </transition>
+    <!-- P18: an event offer's rule opened (LeadRuleDetail with the offer and its trigger) -->
+    <transition name="newEventLeadRule">
+        <default-response url="../LeadRuleDetail"><parameter name="registrationPolicyId"/><parameter name="triggerEnumId"/></default-response>
     </transition>
     <actions>
         <set field="can" from="marketing.capabilities"/>
@@ -37,6 +42,7 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <set field="ruleList" from="found?.ruleList || []"/>
         <set field="publicationOptions" from="offered?.publicationOptions || []"/>
+        <set field="offerOptions" from="offered?.offerOptions || []"/>
         <set field="canEdit" from="!!can.contentEdit"/>
         <set field="detailPath" from="marketing.sharedLinks['Leads/LeadRuleDetail'] || null"/>
         <set field="distributionPath" from="marketing.sharedLinks['Surveys/SurveyDistribution'] || null"/>
@@ -68,6 +74,23 @@ along with this software (see the LICENSE.md file). If not, see
                                 </field>
                                 <field name="submitButton"><default-field title=""><submit text="Route its answers"/></default-field></field>
                             </form-single>
+                            <label text="Or route an event's attendees" type="p" style="text-weight-medium q-mt-md" condition="offerOptions.length"/>
+                            <form-single name="NewEventLeadRule" transition="newEventLeadRule" condition="offerOptions.length">
+                                <field name="registrationPolicyId">
+                                    <default-field title="Event">
+                                        <drop-down allow-empty="false"><list-options list="offerOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="triggerEnumId">
+                                    <default-field title="When">
+                                        <radio no-current-selected-key="MltRegistered">
+                                            <option key="MltRegistered" text="They register"/>
+                                            <option key="MltAttended" text="They attend"/>
+                                        </radio>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title=""><submit text="Route its attendees"/></default-field></field>
+                            </form-single>
                         </container-dialog>
                         <link url="." text="Ended too" link-type="anchor-button" icon="sym_o_history" parameter-map="{includeEnded:'Y'}"/>
                     </container>
@@ -88,10 +111,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 <header-field title="Ended"><check><option key="Y" text="Ended rules too"/></check></header-field>
                             </field>
                             <field name="publicationText">
-                                <conditional-field title="Lead form" condition="detailPath">
+                                <conditional-field title="Lead form or event" condition="detailPath">
                                     <link url="${detailPath}" text="${publicationText}" link-type="anchor" parameter-map="{leadRuleId:leadRuleId}"/>
                                 </conditional-field>
-                                <default-field title="Lead form"><display/></default-field>
+                                <default-field title="Lead form or event"><display/></default-field>
                             </field>
                             <field name="campaignName"><default-field title="Campaign"><display/></default-field></field>
                             <field name="teamName"><default-field title="Sales team"><display/></default-field></field>
