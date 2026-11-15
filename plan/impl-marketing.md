@@ -1,3 +1,4 @@
+Nov 15, 2026 — gate 8 and the build's phases done: P22 (SMS, with the framework's conf-level sms-consent provider and the promotional day limit per number), P23 (the tui and server-static sweeps, the access walk, the PASS phone check, the docs) and follow-ups 5–6, each reviewed by a fresh agent and merged on its focused specs. Next: the full suites, then the acceptance suites once.
 Nov 15, 2026 — gate 7 built: P19–P21 and follow-ups 1–4 (stage M7, Marketing's first release M0–M7), promotions, Customer360 and engagement, attribution, reports and Insights, the campaign calendar with its projected collection, the shell providers and Assist, and a remote PASS checkout's visitor key, each phase reviewed by a fresh agent and merged on its focused specs. Next: P22 (SMS, in review) and follow-up 5, then P23.
 Nov 15, 2026 — gate 6 built: P16–P18 (stage M6), events (registration setup with the PASS Event page, registrations, tickets and
 payment with PASS Register, check-in with the door tablet and the registration triggers), each phase reviewed by a fresh agent and merged
@@ -448,7 +449,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P20 Attribution, reports and Insights | Mantle, BOSS | Reports, CampaignPerformance, DeliveryAnalysis, AudienceGrowth, Attribution | built and reviewed Nov 15, merged |
 | P21 Calendar, shell providers and Assist | Mantle, BOSS | Calendar, QuickCreate | built and reviewed Nov 15, merged |
 | P22 SMS | Mantle, BOSS, PASS | the SMS channel of Sends, Compose, AutomationDetail, SendingProfiles; PASS EmailPreferences' SMS scope | built and reviewed Nov 15, merged |
-| P23 Finish | all | the sweeps and the review walks (acceptance) | — |
+| P23 Finish | all | the sweeps and the review walks (acceptance) | built and reviewed Nov 15, merged |
 
 ### P0 — Checks
 
@@ -6531,7 +6532,7 @@ demo send's date.
   regression spec. `moqui lint --screens`: SurveyResponses' findings unchanged (the same pre-existing container lines, shifted by the
   comment). `node --check` and Prettier on the new and changed JavaScript. Not run: ./moq test-apps, test-framework, the acceptance
   suite (the four new acceptance specs included).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F442 to F447 in order:
   - the phase text's "eleven operations" is sixteen (above); §4's follow-up 5 row names completeRegistration where the code uses
     startRegistrationPayment;
   - Marketing has no section in mr-mantle `docs/Upgrading.md` (Sales and Maintenance have one): a database made before Marketing
@@ -6608,7 +6609,7 @@ users and the controls), deleted after; no acceptance test was run.
     segments and events), and the today-source lists by role the sends due, approvals, failed deliveries and registrations awaiting the
     organizer of the user's organizations, not "the user's own"; mr-mantle `MessageServices.xml`'s bounce intake comment names
     `MessageReports.emecas.xml`; MarketingTui's count comment names PageDetail's and Customer360's tabs (Consent has none in the menu).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F448 to F452 in order:
   - the phase text says eleven PASS operations; there are sixteen (the Built note is right); §4's follow-up 5 row names
     completeRegistration where the code forwards the visitor key in startRegistrationPayment (a note here, §4 not edited);
   - the plan's and the walk's "shown to the audience manager" for a send's recipients: Marketing's audience managers are refused Sends
@@ -7603,7 +7604,7 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | A remote PASS frontend forwards the consented visitor key with the checkout, so an order placed through it is attributed like a local one; a follow-up the lead runs in mr-pass and mr-mantle after P20's review (what record#OrderAttribution needs: P20's Review note, For the lead) | The user's call (P20) |
 | Nov 15, 2026 | Assist gets an aggregate-only audience tool: counts per bucket and reason only (classify#Recipients' buckets), never names, addresses or party ids; Assistant only, not MCP; the reader's audience permission and organization scope. Built in P20's review (SegmentServices count#Audience, marketing_audience_counts) | The user's call (P20) |
 | Nov 15, 2026 | Customer360 and ContactDetail under Marketing open only a party Marketing has a record of in the user's organizations (a list member, subscription request, segment member, recipient, registrant or form submitter), since the contact's notes and files open on the same check; Sales and Commons still open any party they admit | The user's call (P19's review) |
-| Nov 15, 2026 | Register's ticket checkout (completeRegistration) forwards a remote PASS frontend's visitor key as Shop's checkout does (follow-up 4): the digest kept only where an event would keep the key, read again before place#Order; follow-up 5 | The user's call (follow-up 4's review) |
+| Nov 15, 2026 | Register's ticket checkout forwards a remote PASS frontend's visitor key as Shop's checkout does (follow-up 4; as built with startRegistrationPayment, where the ticket order is made, not completeRegistration): the digest kept only where an event would keep the key, read again before place#Order; follow-up 5 | The user's call (follow-up 4's review) |
 | Nov 15, 2026 | The promotional SMS day limit stays one VoicePolicy value for every sending number (smsMaxPromotionalPerNumber); a per-number override, with a deployment-wide promotional cap beside it, is later (§7) | The user's call (P22's review) |
 | Nov 15, 2026 | PASS Email preferences may leave a text message topic but not join one; a join confirmed by the number itself ("Reply YES") needs an inbound keyword hook and is later (§7); joining is through an import or staff with evidence | The user's call (P22's review) |
 | Nov 15, 2026 | The demo's campaign sends get dates relative to the load, as follow-up 3 did for events, so the calendar walk's projected collection holds them on any run day; follow-up 6 | The user's call (P21's review) |
@@ -8067,6 +8068,17 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F439 | Follow-up 6 (Review Nov 15): R1 above | Follow-up 6: as its Review note says |
 | F440 | Follow-up 6 (Review Nov 15): the December send's name ("Garden newsletter, December") and its approval reason ("For the first of December"), and the Holiday gift guide's window (16 to 46 days after the load), read as story on a load other than mid-November: low. Not changed: renaming touches MarketingDelivery, MarketingShell's agenda, the acceptance MarketingCalendarWalk (name and palette search) and the November sibling's name for symmetry, for little gain; for the lead or the user | Follow-up 6: as its Review note says |
 | F441 | Follow-up 6 (Review Nov 15): a reload over a dev database where the December send was released or sent moves its schedule again (the row's reload already resets its status to CsApproved): demo-only, as the other loaders | Follow-up 6: as its Review note says |
+| F442 | P23 (Built Nov 15): the phase text's "eleven operations" is sixteen (above); §4's follow-up 5 row names completeRegistration where the code uses startRegistrationPayment | P23: as its Built note says |
+| F443 | P23 (Built Nov 15): Marketing has no section in mr-mantle `docs/Upgrading.md` (Sales and Maintenance have one): a database made before Marketing loads its seed, setup and report datasets as any new component's, but nothing says so | P23: as its Built note says |
+| F444 | P23 (Built Nov 15): the ticket has no PDF or print of its own (§18 names html-print/PDF): the PASS page is printable from the browser | P23: as its Built note says |
+| F445 | P23 (Built Nov 15): Attack-Surface's lines the read found exact but loose, left as they are: "at most ten topics" answers NotFound past ten; "an answer over 64 KB" is 65,536 characters of the values' JSON; resolveTrackingLink carries site, code and token | P23: as its Built note says |
+| F446 | P23 (Built Nov 15): mr-mantle `service/mantle/party/MessageServices.xml` names the report ECA's file as `MantleConsent.emecas.xml`; it is `MessageReports.emecas.xml` (a comment) | P23: as its Built note says |
+| F447 | P23 (Built Nov 15): the access walk's Services side has no event or registration of its own (Retail's registration is checked against Services' users only); the private (non-directory) contact of scenario 1 is MarketingImportWalk's (the import cannot match it), not repeated here | P23: as its Built note says |
+| F448 | P23 (Review Nov 15): the phase text says eleven PASS operations; there are sixteen (the Built note is right); §4's follow-up 5 row names completeRegistration where the code forwards the visitor key in startRegistrationPayment (a note here, §4 not edited) | P23: as its Review note says |
+| F449 | P23 (Review Nov 15): the plan's and the walk's "shown to the audience manager" for a send's recipients: Marketing's audience managers are refused Sends entirely, so only the administrator (or a user in both an audience group and a sends group) reads a recipient's address; by design as built, but no demo user but the administrator shows it | P23: as its Review note says |
+| F450 | P23 (Review Nov 15): a list member with no preferred address exports an empty Address (the export reads only `preferredContactMechId`); the intake paths set one, but a member loaded or adopted without it is blank in the export with nothing saying why | P23: as its Review note says |
+| F451 | P23 (Review Nov 15): Marketing has no section in mr-mantle `docs/Upgrading.md` (the worker's finding; not written here: it needs the list of Marketing's seed, setup and report files) | P23: as its Review note says |
+| F452 | P23 (Review Nov 15): the ticket has no PDF of its own (design §18 html-print/PDF), the worker's finding; the PASS page prints from the browser | P23: as its Review note says |
 
 ## 7. Later
 
