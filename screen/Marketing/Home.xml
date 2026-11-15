@@ -23,7 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
     and the approvals awaiting the approver; the period and mine or team filters wait for more sources. P9: the sends due (released and
     due within a day, or sending) and the failed or uncertain deliveries cards opening Sends, the scheduled sends in Upcoming opening each
     SendDetail, and a dispatcher's attention rows for a send with a failed or uncertain delivery opening its CampaignDelivery. P21: the
-    calendar shortcut (design §1.2), opening the campaign calendar. -->
+    calendar shortcut (design §1.2), opening the campaign calendar; its review: Upcoming's events and publication dates (the calendar's
+    sources), each opening EventDetail or ContentDetail. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
@@ -57,7 +58,8 @@ along with this software (see the LICENSE.md file). If not, see
                 marketingCampaign: sharedLinks['Campaigns/CampaignDetail'], marketingCampaignDefaults: sharedLinks['Settings/CampaignDefaults'],
                 marketingLists: sharedLinks['Audiences/Lists'], marketingSends: sharedLinks['Sends/Sends'],
                 marketingSend: sharedLinks['Sends/SendDetail'], marketingDelivery: sharedLinks['Sends/CampaignDelivery'],
-                marketingEvents: sharedLinks['Events/Events'], marketingReports: marketing.capabilities.reports ? sharedLinks['Reports/Catalog'] : null}"/>
+                marketingEvents: sharedLinks['Events/Events'], marketingEvent: sharedLinks['Events/EventDetail'],
+                marketingContent: sharedLinks['Content/ContentDetail'], marketingReports: marketing.capabilities.reports ? sharedLinks['Reports/Catalog'] : null}"/>
         <set field="newDefaults" from="{organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
         <set field="stateText" from="{available: 'Available', notAvailable: 'Not available', failed: 'Could not be read'}"/>
         <set field="cardRows" from="Array.from(homeFound?.cards || []).map(card =&gt; Object.assign({}, card, {

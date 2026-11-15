@@ -86,6 +86,9 @@ feature("Calendar renders its component and shows the campaign's window, its sch
         const eventAt = stamp("mantle.work.effort.WorkEffort", {workEffortId: ids.webinarEventId}, "estimatedStartDate")
         const events = range => json(transition(users.author, "Calendar/calendarEvents", range)).eventList || []
         const all = [].concat(events(around(campaignFrom)), events(around(sendAt)), events(around(eventAt)))
+        // another organization's author (Services) over the same days: none of Retail's items (P21 review)
+        const otherEvents = range => json(transition(users.otherAuthor, "Calendar/calendarEvents", range)).eventList || []
+        const other = [].concat(otherEvents(around(sendAt)), otherEvents(around(eventAt)))
         const moved = transition(users.author, "Calendar/moveEvent", {
             workEffortId: ids.scheduledSendId,
             start: day(sendAt + 2 * dayMs),
@@ -98,18 +101,25 @@ feature("Calendar renders its component and shows the campaign's window, its sch
             send: all.find(item => item.key === "send|" + ids.scheduledSendId),
             event: all.find(item => item.kind === "event" && item.workEffortId === ids.webinarEventId),
             otherCampaign: all.some(item => item.key === "campaign|" + ids.servicesCampaignId),
+            otherSees: other.filter(
+                item =>
+                    item.key === "send|" + ids.scheduledSendId ||
+                    item.key === "campaign|" + ids.runningCampaignId ||
+                    item.workEffortId === ids.webinarEventId
+            ).length,
             moved,
             agenda
         }
     },
-    then({qvue, campaign, send, event, otherCampaign, moved, agenda}) {
+    then({qvue, campaign, send, event, otherCampaign, otherSees, moved, agenda}) {
         qvue.status == 200 && qvue.output.includes("module.exports")
         campaign.allDay == true && campaign.canEdit == false
         campaign.url == "/qapps/Marketing/Campaigns/CampaignDetail?marketingCampaignId=" + ids.runningCampaignId
-        send.canEdit == false && !send.movable
+        send.canEdit == false
         send.url == "/qapps/Marketing/Sends/SendDetail?campaignSendId=" + ids.scheduledSendId
         event.url == "/qapps/Marketing/Events/EventDetail?workEffortId=" + ids.webinarEventId
         !otherCampaign
+        otherSees == 0
         // the drag of a send is refused before any event service runs
         moved.errors.join(" ").includes("RECORD_UNAVAILABLE")
         agenda.status == 200 && agenda.errors.length == 0
@@ -171,6 +181,10 @@ feature(
     {
         when() {
             const palette = asUser(users.author, () => invoke(C + "search#Records", {text: "Garden newsletter", limit: 10}).rows)
+            const otherPalette = asUser(
+                users.otherAuthor,
+                () => invoke(C + "search#Records", {text: "Garden newsletter", limit: 10}).rows
+            )
             const info = user =>
                 asUser(user, () =>
                     invoke(C + "lookup#Records", {
@@ -194,6 +208,7 @@ feature(
             const call = user => asUser(user, () => invoke(C + "get#CallContext", {number}))
             return {
                 palette: Array.from(palette || []),
+                otherPalette: Array.from(otherPalette || []),
                 author: info(users.author),
                 otherAuthor: info(users.otherAuthor),
                 links,
@@ -202,8 +217,9 @@ feature(
                 reader: call(users.reader)
             }
         },
-        then({palette, author, otherAuthor, links, registrationCard, events, reader}) {
+        then({palette, otherPalette, author, otherAuthor, links, registrationCard, events, reader}) {
             palette.some(row => row.recordEntity === SEND && row.recordId === ids.scheduledSendId)
+            !otherPalette.some(row => row.recordId === ids.scheduledSendId)
             !JSON.stringify(palette).includes("@") && !/token/i.test(JSON.stringify(palette))
             Array.from(author.recordList)
                 .map(row => row.recordId)

@@ -6111,6 +6111,70 @@ follow-up 3; mr-moqui and mr-pass unchanged, no Rust built. Built beside follow-
     a registration by its id, never its attendee.";
   - nothing needs the user's call; gate 7 is yours.
 
+**Review Nov 15 (P21).** mr-mantle and mr-boss on `mkt/p21`, read line by line against the phase text, §2, §4 and design §3 Calendar,
+§1.3 and §14.3; no Rust, no framework change.
+- Checked and sound:
+  - organization scope on every item: each calendar source (campaign windows, sends, automation milestones, publication dates, events)
+    reads only the organizations of the caller's Marketing scope, a named organization outside it refused (ORGANIZATION_DENIED); the
+    events are the scope's registration events and its campaigns' CakEvent links, and a CakEvent link is made only to a registration
+    event of the campaign's own organization (MarketingCampaigns.js `associationKinds.CakEvent`), so no other organization's event
+    reaches a calendar; automations only for an automation reader, as AutomationServices ask; the reads mirror the record services
+    (anyRead for campaigns, sends, content and events);
+  - no attendee, address or token in any shell row: calendar items and the projection's event maps carry names, states and dates (the
+    projection leaves out an event's location); Today counts deliveries and registrations, never a recipient; the registration card,
+    palette row and call-context row name the registration by id and offer; record-lookup answers only a reader of the record's
+    organization (an events manager for a registration) and leaves the rest to other providers;
+  - only an event moves: Calendar's moveEvent and cancelEvent call `check#CalendarEvent` (an event the scope holds, an instance
+    through its series) before Commons' `get#EventAccessInfo` edit rule and `update#EventOccurrence`; a send, an automation or another
+    organization's event is RECORD_UNAVAILABLE and every non-event item is canEdit false; moving a registration event keeps its
+    offers right (a single event's occurrence is its own start; the notices job tells registrants of a moved occurrence);
+  - the projection: `admitted` only for MARKETING_VIEW (a report-only reader gets none), read only (a device PUT 403), its window 30
+    days back to 180 ahead bounded at 400 days; every P21 service `allow-remote="false"`;
+  - each provider fails by name alone: calendar and Today sources each in their own pushErrors block, a failure logged and named
+    (failedSources; Today's a "could not be read just now" item) while the rest answer; the palette's and lookup's finds each in a
+    try; Today answers another user's Today and a non-reader nothing;
+  - LogNote, SendMessage and NewSend re-check the record through `check#Record` in the transition (the form's hidden fields are the
+    client's), and Mantle's services check again; nothing is filed or sent before the user submits;
+  - the screens: Calendar has one qvue render and CalendarTui one html render in the regression suite; no route fixture; specs well
+    under 15 s.
+- Fixed:
+  - R1 (medium; the worker's provisional finding): Home's Upcoming still answered its events and publication-date sources "Not
+    available" seven phases after both were built, while P21's calendar reads exactly those sources. Mantle `MarketingCalendar.js`
+    exports `upcomingRows` (one calendar source from now through the next days as Upcoming rows) and `MarketingWorkspace.js`'s
+    `events` and `publications` sources run it over Upcoming's 60 days (a failure named as any source's); Home's places gain
+    `marketingEvent` (EventDetail) and `marketingContent` (ContentDetail). MarketingCalendar gains a feature (Upcoming's four sources
+    available, the organization's event listed with its route, another organization's absent; it fails on the unfixed code, where
+    the two sources are notAvailable) and MarketingAccess now reads that the author's Home shows no "Not available".
+  - R2 (low; tests): MarketingShell checked another organization only through record-lookup's info, and its `!send.movable` read a
+    field no item has. It now also checks that Services' author's calendarEvents over the send's and the webinar's days hold none of
+    Retail's campaign, send or webinar, and that their palette does not find Retail's December send; the empty check is gone.
+- Provisional findings (for the lead to number):
+  - the demo's December send keeps a fixed 2026-12-01 date (the worker's finding, confirmed): MarketingShell reads its range from the
+    row and passes on any day, but the acceptance MarketingCalendarWalk's CalDAV feature finds the send only while it is within the
+    projection's default window (30 days back, 180 ahead), so from 2026-12-31 on its listing and object checks fail (the campaign's
+    window from about 2027-01-30), while its month views and drags, which read the row's date, keep working; the answer is the demo's send dates relative to the load, as follow-up 3 made the events',
+    which touches every spec that reads the December send (MarketingSends, MarketingApprovals and others): not this phase's, left;
+  - EventRegistration is not a notes-and-files record (design §14.3 names it a record-panel host; P17 did not add it), so "Log as
+    note" serves a campaign or a send: confirmed; the record host is P17's owner-contract work, not P21's, left for a follow-up;
+  - a third copy of the phone matching (`partiesOfNumber`, as SalesComms.js and Maintenance's Stack.js): confirmed, a Mantle helper
+    for the three belongs to a cross-app follow-up, not this phase;
+  - a moved event's notification links Commons' EventDetail, as Projects' calendar does (the worker's): acceptable, the event is the
+    calendar's;
+  - Today's Marketing feature in MarketingShell checks the group is present but not that the dispatcher gets an item (the demo has no
+    send due today); Mantle's MarketingCalendar covers the sends-due source.
+- Tests run (release binary, `--nobuild`, this worktree's runtime): mr-mantle MarketingCalendar (5 of 5, about 0.7 s), MarketingScope
+  (6 of 6); mr-boss MarketingShell (4 of 4, about 1.5 s), MarketingAccess (8 of 8). `moqui lint --screens` (release): Home.xml's
+  sites as before (none flagged new). Prettier clean on the changed JavaScript. Skills untouched by the review (no `--skills` run).
+  Not run: test-apps, the acceptance suite.
+- For the lead:
+  - budget share: mr-mantle MarketingCalendar about 0.7 s (one feature added, 0.04 s); mr-boss MarketingShell about 1.5 s;
+  - merge hot spots beside the Built note's: mr-mantle `MarketingWorkspace.js` (Upcoming's events and publications sources) and
+    `MarketingWorkspaceServices.xml` (get#Upcoming's description); mr-boss `screen/Marketing/Home.xml` (the header comment and the
+    places map), `test/Marketing/MarketingAccess.spec.js` (the Home assertion);
+  - the Attack-Surface paragraph the Built note gives stands as written; Home's Upcoming now adds the calendar's events and
+    publication dates (names and dates only) to a Marketing reader's Home;
+  - the user's call: whether the demo's sends get load-relative dates (the walk's collection feature depends on it).
+
 ### P22 — SMS
 
 Design §5 (the SMS channel of Sends and Compose), §6 (the Send SMS step), §12 SendingProfiles (SMS readiness), §13

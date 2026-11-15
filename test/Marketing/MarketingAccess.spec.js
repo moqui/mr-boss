@@ -585,7 +585,8 @@ feature(
             authorHome.errors.length == 0
             authorHome.output.includes("Marketing at a glance")
             authorHome.output.includes("Running campaigns")
-            authorHome.output.includes("Not available")
+            // every Home source answers since the P21 review (Upcoming's events and publication dates are the calendar's)
+            !authorHome.output.includes("Not available")
             authorHome.output.includes("Ziziwork Retail")
             !authorHome.output.includes("Nothing of it is open to you.")
             // an author holds no configure: the adoption source is the administrator's
