@@ -1,3 +1,6 @@
+Nov 15, 2026 — gate 6 built: P16–P18 (stage M6), events (registration setup with the PASS Event page, registrations, tickets and
+payment with PASS Register, check-in with the door tablet and the registration triggers), each phase reviewed by a fresh agent and merged
+on its focused specs; follow-up 1 (capture on approval, cancellation terms, stable entry codes) in review. Next: P19 beside P20.
 Nov 15, 2026 — gate 5 built: P12–P15 (stage M5), public forms and campaign content (surveys and form publication with PASS
 SubmitForm, leads and the Sales handoff, content, blog posts and landing pages, tracking links and capture), each phase reviewed by a
 fresh agent and merged on its focused specs, with an origin sync and the wiki page-name follow-ups between. Next: P16 (events).
@@ -439,7 +442,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P15 Tracking links and capture | Mantle, BOSS, PASS | TrackingLinks, TrackingLinkDetail; CampaignDetail's Tracking links tab | built and reviewed Nov 15, merged |
 | P16 Events and registration setup | Mantle, BOSS, PASS | Events, EventDetail, RegistrationSetup; PASS Event | built and reviewed Nov 15, merged |
 | P17 Registrations, tickets and payment | Mantle, BOSS, PASS | Registrations, RegistrationDetail; PASS Register, Registration | built and reviewed Nov 15, merged |
-| P18 Check-in | Mantle, BOSS | CheckIn | — |
+| P18 Check-in | Mantle, BOSS | CheckIn | built and reviewed Nov 15, merged |
 | P19 Promotions, Customer360 and engagement | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail, Customer360, ContactDetail | — |
 | P20 Attribution, reports and Insights | Mantle, BOSS | Reports, CampaignPerformance, DeliveryAnalysis, AudienceGrowth, Attribution | — |
 | P21 Calendar, shell providers and Assist | Mantle, BOSS | Calendar, QuickCreate | — |
@@ -5202,7 +5205,7 @@ files (EventRegistrations.js, EventRegistrationPlaces.js, EventRegistrationPayme
 - Inventories: usl-inventory's "Added in Marketing P18" table; ss-inventory has no baseline check-in form to map.
 - Design edits: design-marketing §6 (AutomationDetail as built: the registration triggers), §9 CheckIn (as built), §10 LeadRules (an
   event offer's rule), §14.1 EventAttendance; design-sales §3 (the intake's event source kinds, an owner contract).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F338 to F344 in order:
   - the code over the plan above: EventAttendance as its own record with its method; the check-in window; the override limited to held
     and pending places; the tablet's first name and initial; staff-only lookup; the device bound by the route group's fixed
     `registrationPolicyId`; the rate limit by attempt buckets; Attendance as the history with a fact; the offer triggers' cursors and the
@@ -5311,7 +5314,7 @@ commit); mr-boss changed only by this note.
     A shared device's request is now always the tablet's, whatever its display account holds. Spec EventCheckIn's tablet feature
     gives the display group MARKETING_VIEW and MARKETING_EVENT_MANAGE for four calls (search, by id, an override, a scan showing
     "Finn D."): refused and initial-only; the check fails on the unfixed code.
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F345 to F348 in order:
   - R1 above;
   - the worker's list stands (EventAttendance its own record, the window, overrides for held and pending only, first name and
     initial, staff-only search, the device by the fixed parameter, attempt buckets, the offer triggers and Sales source kinds; an
@@ -5925,6 +5928,17 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F335 | P17 (Review Nov 15): a placement that fails five times leaves its places pending (holding their seats) with the payment authorized, seen only as the reservation's failureMessage and the log; no staff list or alert names it | P17: as its Review note says |
 | F336 | P17 (Review Nov 15): the ExternalAccess kind lets an events manager issue a reservation capability through the generic issue service (its permission list), though its comment says only the registration services issue it | P17: as its Review note says |
 | F337 | P17 (Review Nov 15): a closed offer's waiting places are never ended (the job ends a published offer's at the start only) | P17: as its Review note says |
+| F338 | P18 (Built Nov 15): the code over the plan above: EventAttendance as its own record with its method; the check-in window; the override limited to held and pending places; the tablet's first name and initial; staff-only lookup; the device bound by the route group's fixed `registrationPolicyId`; the rate limit by attempt buckets; Attendance as the history with a fact; the offer triggers' cursors and the lead rules' event source and its Sales source kinds | P18: as its Built note says |
+| F339 | P18 (Built Nov 15): an override of a held free place leaves the place held: its hold may still expire after the check-in (the attendance stays); a cancellation after a check-in leaves the attendance of a cancelled place. Neither changes the other, by design of "never invents" | P18: as its Built note says |
+| F340 | P18 (Built Nov 15): P12's form-submission trigger (AtrFormSubmitted) has no choice in NewAutomation or AutomationDetail (P12 built the rule, not the screen); not added here | P18: as its Built note says |
+| F341 | P18 (Built Nov 15): an event's lead rule hands Sales no registration answers (the questions), only the attendee's name and address and the event in the notes; mapping the questions is later. Event captures come from the capture job alone (every five minutes), not after the commit | P18: as its Built note says |
+| F342 | P18 (Built Nov 15): the triggers name one offer (one occurrence): a series wants one automation or rule per occurrence | P18: as its Built note says |
+| F343 | P18 (Built Nov 15): the demo has no occurrence under way and no door tablet (Admin registers one), so the demo webinar's door says it is not open; the acceptance walk makes its own offer | P18: as its Built note says |
+| F344 | P18 (Built Nov 15): the spec and the acceptance fixture make codes with EventRegistrationPlaces.js `issueCode` (follow-up 1 changes how codes are made: see the hot spots) | P18: as its Built note says |
+| F345 | P18 (Review Nov 15): R1 above | P18: as its Review note says |
+| F346 | P18 (Review Nov 15): the worker's list stands (EventAttendance its own record, the window, overrides for held and pending only, first name and initial, staff-only search, the device by the fixed parameter, attempt buckets, the offer triggers and Sales source kinds; an overridden held place may still expire and free its seat while the attendee is in, so a sold-out door can admit one more than its seats; P12's form trigger has no screen choice; no answers to Sales; one occurrence per trigger; no demo door) | P18: as its Review note says |
+| F347 | P18 (Review Nov 15): the offer triggers' cursor, as P12's, stalls if more than 200 places share one `confirmedDate` (or attendances one `checkInDate`) to the millisecond: each run re-reads the same 200, all filed. Unreachable today (a reservation has ten places at most, confirmations and check-ins are one at a time); a tie-break on the registration id would close it for both triggers | P18: as its Review note says |
+| F348 | P18 (Review Nov 15): no spec runs two check-ins of one place concurrently; the row lock and EventAttendance's key make it safe by construction | P18: as its Review note says |
 
 ## 7. Later
 
