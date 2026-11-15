@@ -3,7 +3,7 @@
 // inputs of a Retail group in external processing (preview, reconcile, export: the file and its manifest stored and downloaded),
 // imports last year's payroll history with one unknown worker named (the rest recorded as historical pay records, no invoice), and
 // Admin's Exports and Imports list both with People's place. The rules themselves are Mantle's PayrollExchange; the access case is
-// PeopleAccessLater's. Run: ./moq accept mr-boss --spec PeoplePayrollExchangeUsable
+// PeoplePayrollAccess's. Run: ./moq accept mr-boss --spec PeoplePayrollExchangeUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
 const webroot = "component://webroot/screen/webroot.xml"

@@ -3,7 +3,7 @@
 // SupplierReturns lists the return by view and by order or supplier (OrderDetail's and Supplier360's returns) with its one
 // html render; ReturnDetail's Purchasing context shows the eligible receipts and the items by receipt, and a buyer
 // authorizes the return with the RMA (its one html render). The Mantle rules (authorize#SupplierReturn,
-// create#ReplacementOrder) are mr-mantle's PurchaseReturns spec; the access rules are PurchasingAccess's; the usable-when walk
+// create#ReplacementOrder) are mr-mantle's PurchaseReturns spec; the access rules are PurchasingRecordAccess's; the usable-when walk
 // is the acceptance PurchasingReturnsWalk. Run: ./moq test mr-boss --spec PurchasingReturns
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, invoke, page, returnFixture} = lib

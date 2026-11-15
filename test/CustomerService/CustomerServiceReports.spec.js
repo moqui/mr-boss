@@ -3,7 +3,7 @@
 // and elapsed time, and a small case by hand (a weekend and a pause on a spec calendar: median and p90); the export is the same
 // rows; return amounts only for a price or accounting reader; the catalogue offers CSAT results to service management only; the
 // shipped service dataset and its breach alert template load; and one qvt render of each report screen and Customer360's
-// Service tab. The access rules are CustomerServiceAccess's; the scenarios (a merge counted once, a manager of one team, open
+// Service tab. The access rules are CustomerServiceRecordAccess's; the scenarios (a merge counted once, a manager of one team, open
 // returns) CustomerServiceReportsWalk (acceptance).
 // Run: ./moq test mr-boss --spec CustomerService/CustomerServiceReports
 const lib = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")

@@ -3,7 +3,7 @@
 // the Knowledge mount's spaces; Send to customer's Compose address and its refusal of a draft and an internal article;
 // ArticleFeedback's one render (qvt) with the demo feedback and its review; CaseToArticle's one render (qvt): the outward
 // reply offered, the internal note left out, Joe's data taken out. The rules are Mantle's SupportKnowledge spec; the access
-// rules CustomerServiceAccess's. Run: ./moq test mr-boss --spec CustomerService/CustomerServiceKnowledge
+// rules CustomerServiceRecordAccess's. Run: ./moq test mr-boss --spec CustomerService/CustomerServiceKnowledge
 const lib = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke} = lib
 const K = "ironstone.customerservice.KnowledgeServices."

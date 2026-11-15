@@ -2,7 +2,7 @@
 // one render (html: Retail's demo steps by band and the preview of an amount over the first band, two steps with who may
 // take each), and the Today source of the approvals waiting for a purchase approver and none for a buyer. The rules (the
 // policies, steps, decisions, budget and supplier onboarding) are Mantle's (mr-mantle test/order/PurchaseApprovals); the
-// access cases are PurchasingAccess's; the usable-when walk is the acceptance PurchasingApprovalsWalk.
+// access cases are PurchasingRecordAccess's; the usable-when walk is the acceptance PurchasingApprovalsWalk.
 // Run: ./moq test mr-boss --spec PurchasingApprovals
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, invoke} = lib

@@ -3,7 +3,7 @@
 // committed and billed apart and withholds the supplier prices from a reader; the procurement tracker shows a buyer the bill's
 // payment withheld and a payables reader its state; an evaluation's detail (one qvt render of ScorecardDetail) and the
 // scorecards' export with its filters, snapshot time and what it left out, a supplier name a spreadsheet would read as a
-// formula guarded. The scorecard rules are Mantle's (mr-mantle test/party/SupplierScorecards); access is PurchasingAccess's
+// formula guarded. The scorecard rules are Mantle's (mr-mantle test/party/SupplierScorecards); access is PurchasingRecordAccess's
 // P15 feature; the usable-when walk is the acceptance PurchasingPerformanceWalk.
 // Run: ./moq test mr-boss --spec PurchasingPerformance
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")

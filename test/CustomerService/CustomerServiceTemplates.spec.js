@@ -2,7 +2,7 @@
 // Support queue (BossCustomerServiceDemoData.xml) in TemplateList's read and NewCase's template step; CaseTemplates' one render
 // (qvt) of TemplateEdit with its fields and their audience, the condition rows, the customer's preview without the internal
 // field, and the check of sample values that asks for the serial of equipment. The rules are Mantle's SupportTemplates spec;
-// the access rule CustomerServiceAccess's; NewCase's fields are on CustomerServiceCases' one render of it.
+// the access rule CustomerServiceRecordAccess's; NewCase's fields are on CustomerServiceCases' one render of it.
 // Run: ./moq test mr-boss --spec CustomerService/CustomerServiceTemplates
 const lib = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")
 const {ids, users, asUser, invoke} = lib

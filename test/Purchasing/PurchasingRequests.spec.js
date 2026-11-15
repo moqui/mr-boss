@@ -4,7 +4,7 @@
 // RequestSourcing's one html render for the buyer with the demo request's supplier group; the other apps' Items tab link to
 // RequestSourcing for a buyer only (Requests.js sourcingUrl); and Home's unsourced count with the Today source of requests due
 // to source. The rules of requests and sourcing are Mantle's (mr-mantle test/order/PurchaseRequests); the access cases are
-// PurchasingAccess's; the usable-when walk is acceptance PurchasingRequestsWalk.
+// PurchasingRecordAccess's; the usable-when walk is acceptance PurchasingRequestsWalk.
 // Run: ./moq test mr-boss --spec PurchasingRequests
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, invoke, page} = lib

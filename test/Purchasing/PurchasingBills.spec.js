@@ -3,7 +3,7 @@
 // payments withheld from them (its one html render); MatchExceptions' held and received-not-billed views, the
 // re-evaluation with a result per bill and the legacy backfill's preview for a match operator (its one html render); OrderDetail's bills with the actions by capability, Supplier360's bills and Home's
 // held-bill count. The Mantle rules (the match, the hold, the release request, the prepayment and the match-exception
-// notice) are mr-mantle's AccountingMatching and PurchaseBills specs; the access rules are PurchasingAccess's; the walk is
+// notice) are mr-mantle's AccountingMatching and PurchaseBills specs; the access rules are PurchasingRecordAccess's; the walk is
 // the acceptance PurchasingBillsWalk. Run: ./moq test mr-boss --spec PurchasingBills
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, invoke, page, billFixture} = lib

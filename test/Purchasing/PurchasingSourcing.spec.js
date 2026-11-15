@@ -5,7 +5,7 @@
 // P12: QuoteComparison's and Award's one html render each, the quote's awards before an award, and a declined quote (marked a
 // quote) left out of Purchase orders' Closed view (F-P11-8).
 // The rules of RFQs, quotes and the price publish are Mantle's (mr-mantle test/order/Sourcing); the access cases are
-// PurchasingAccess's; the usable-when walk is acceptance PurchasingSourcingWalk. Run: ./moq test mr-boss --spec PurchasingSourcing
+// PurchasingRecordAccess's; the usable-when walk is acceptance PurchasingSourcingWalk. Run: ./moq test mr-boss --spec PurchasingSourcing
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, invoke, page} = lib
 const S = "mantle.order.SourcingServices.",

@@ -4,7 +4,7 @@
 // PayStructureDetail with a preview run (each component's amount, the totals, the demonstration localization's items and the
 // calculation order), and the choices P22 adds (an employer's pay components, pay groups and accounts, and the localizations), each
 // with a selected value that is not on the page. Mantle's rules (formulas, dependencies, overlaps, totals, groups, approval) are
-// Mantle's PayConfiguration; the access case is PeopleAccessLater's. The usable-when walk is the acceptance
+// Mantle's PayConfiguration; the access case is PeoplePayrollAccess's. The usable-when walk is the acceptance
 // PeoplePayConfigurationUsable.
 // Run: ./moq test mr-boss --spec PeoplePayConfiguration
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")

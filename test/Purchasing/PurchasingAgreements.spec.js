@@ -2,7 +2,7 @@
 // views with each agreement's limit, released and remaining value, withheld from the reader; AgreementDetail's one html render
 // (its balance, items with the price, terms, the release action); and a release from AgreementDetail's transition, which makes
 // a draft purchase order line at the agreement's price, shown in OrderDetail's Agreements. The rules (caps, tolerance,
-// approval, revisions, the as-of print) are Mantle's (mr-mantle test/party/PurchaseAgreements); access is PurchasingAccess's;
+// approval, revisions, the as-of print) are Mantle's (mr-mantle test/party/PurchaseAgreements); access is PurchasingRecordAccess's;
 // the usable-when walk is the acceptance PurchasingAgreementsWalk.
 // Run: ./moq test mr-boss --spec PurchasingAgreements
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")

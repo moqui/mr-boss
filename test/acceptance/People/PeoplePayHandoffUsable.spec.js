@@ -6,7 +6,7 @@
 // finalizes an approved run once (a second Finalize makes nothing again), a payroll finance user of Accounting (finance with
 // PAYROLL_VIEW) approves and pays Ines's net pay invoice, PayRunDetail's Settlement shows it posted and paid, and a general ledger
 // reader (finance.gl, no PAYROLL_VIEW) cannot open the worker's payroll invoice. The rules themselves are Mantle's PayObligations
-// and mr-boss's AccountingPayrollOrigin and PeopleAccessLater. Run: ./moq accept mr-boss --spec PeoplePayHandoffUsable
+// and mr-boss's AccountingPayrollOrigin and PeoplePayrollAccess. Run: ./moq accept mr-boss --spec PeoplePayHandoffUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
 const R = "mantle.humanres.PayrollRunServices."

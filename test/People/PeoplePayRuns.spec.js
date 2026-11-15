@@ -3,7 +3,7 @@
 // reason, Calculate offered), the payroll approver's one html render of PayRuns (the run, its errors, no New pay run for the
 // approver), and People's Today: the payroll exceptions are the payroll operator's alone. Mantle's rules (each employee in its own
 // unit, the split, the approval, consumed inputs) are Mantle's PayRuns; the access case (creating a run payroll's, HR refused with
-// the same parameters, Services' group missing to Retail's payroll, the screens) is PeopleAccessLater's. The usable-when walk is the
+// the same parameters, Services' group missing to Retail's payroll, the screens) is PeoplePayrollAccess's. The usable-when walk is the
 // acceptance PeoplePayRunsUsable. Run: ./moq test mr-boss --spec PeoplePayRuns
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
