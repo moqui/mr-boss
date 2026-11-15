@@ -432,7 +432,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P11 Automation | Mantle, BOSS | Automations, AutomationDetail, EnrollmentDetail; Commerce's RecoveryPolicy | built and reviewed Nov 14, merged |
 | P12 Surveys and form publication | Mantle, BOSS, PASS | Surveys, SurveyDetail, SurveyDistribution, Responses, ResponseDetail; PASS SubmitForm | built and reviewed Nov 14, merged |
 | P13 Leads and the Sales handoff | Mantle, BOSS, PASS | Leads, LeadRules, LeadSources; PASS SubmitForm's lead purpose | built and reviewed Nov 14, merged |
-| P14 Content, blog posts and landing pages | Mantle, BOSS, PASS | Content, ContentDetail, BlogPosts, BlogPostDetail, LandingPages, PageDetail, Knowledge; PASS pages | — |
+| P14 Content, blog posts and landing pages | Mantle, BOSS, PASS | Content, ContentDetail, BlogPosts, BlogPostDetail, LandingPages, PageDetail, Knowledge; PASS pages | built and reviewed Nov 14, merged |
 | P15 Tracking links and capture | Mantle, BOSS, PASS | TrackingLinks, TrackingLinkDetail; CampaignDetail's Tracking links tab | — |
 | P16 Events and registration setup | Mantle, BOSS, PASS | Events, EventDetail, RegistrationSetup; PASS Event | — |
 | P17 Registrations, tickets and payment | Mantle, BOSS, PASS | Registrations, RegistrationDetail; PASS Register, Registration | — |
@@ -3978,7 +3978,7 @@ mr-moqui unchanged, no Rust built. Built beside P13 (leads, `mkt/p13`) and Sales
 - Design edits: design-marketing §2 (the two sibling paths), §8 LandingPages and BlogPostDetail (as built), §13.1
   (getMarketingPage), §14.1 CampaignContent; design-commerce §5's per-app table and the owner contract (the registry, the
   storeless mount).
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F283 to F289 in order:
   - the code over the plan above: the camelCase operation, store#BlogPost, BlogPostView, the sibling paths, Content for every
     reader, the page registry, the embed syntax and the form card, the newsletter category on the send, CakPage unavailable, the
     demo loader;
@@ -4075,7 +4075,7 @@ conflict; mr-mantle and mr-pass had nothing new. Fixes mr-mantle 6b58f7cf, mr-pa
     all three now need both. A new MarketingContent feature (failed before).
   - The PASS spec's page text gains a `javascript:` link, a `data:` URL, an SVG with onload and a style attribute, none of which reaches
     the page's article (it passed before: the hardening is sound; the check is new).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F290 to F293 in order:
   - publication without approval (design §8): the design does not require a review or approval before a landing page or a blog post is
     public. LandingPages' crosscut row gives "create, edit, preview, request review, publish with the content grant", and ContentDetail
     says "Request review uses the existing wiki review flow; only the owner-approved version may be publicly bound". As built,
@@ -4479,6 +4479,7 @@ design-marketing.md or the owner's design.
 | Nov 14, 2026 | The 5,000-person cap stays for an interactive segment evaluation and audience preview; P8 evaluates a send's audience in pages, over the universe narrowed to the send's lists and segments, so a large list can be sent to | The user's call (P5's review) |
 | Nov 14, 2026 | Marketing's client budget estimate rises from about 8 s to about 9 s: its one golden-path walk (MarketingSendWalk: create, prepare, approve and release a send) runs about 8.2 s, up to 8.6 s | The user's call (P9's review) |
 | Nov 14, 2026 | A public form's answer to a question its rules hide is answered with a generic "leave unanswered the questions that do not apply" (naming none), so a visitor without JavaScript can fix it, rather than the neutral receipt that would drop the answer silently | The user's call (P12's review) |
+| Nov 14, 2026 | A landing page gets an optional Request review on PageDetail: a reviewer is notified and may approve; publishing directly with MARKETING_CONTENT_EDIT stays possible; blog posts are unchanged. Built in P15 | The user's call (P14's review) |
 | Nov 13, 2026 | The one-person-team flag also admits an author's own campaign approval, recorded as a self-approval, as built in P2: a campaign sends nothing itself, and each of its sends is approved on its own under the 500-recipient limit | The user's call (P2) |
 | Nov 13, 2026 | `MARKETING_OWNER_CHANGE` (the lifecycle participant `marketing.campaigns`) is granted to `BOSS_ADMIN_IDENTITY` and `BOSS_ADMIN_ADMIN`, as built in P2, as Sales' `SALES_OWNER_CHANGE`; no Marketing group holds it | The user's call (P2) |
 | Nov 14, 2026 | The consent mutators keep P3's rule, an owner contract of Comms and Commons: `subscribe#ContactListParty`, `store#PartyConsent` and the signed-in `unsubscribe#ContactListParty` change another party's consent only for the party's own user, a contact administrator or Marketing's consent editor of the list's or purpose's organization; the callers' specs pass unchanged | The user's call (P3). The services that decide who may by a link's token or code (the unsubscribe and preferences links, a checkout opt-in's confirmation) record through the internal `record#PartyConsent`, so a visitor signed in as someone else still unsubscribes (P3 review R1) |
@@ -4786,6 +4787,17 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F280 | P13 (Review Nov 14): the handoff's request digest includes values that can change between attempts (the localized "Inquiry" in the lead's name, the publication's title, an account's address, and with R1 Sales' default team): only if Sales committed an intake and the capture's own update was then lost would a retry answer OPERATION_KEY_CONFLICT and stay failed (the lead exists, by the source identity); rare, left as built | P13: as its Review note says |
 | F281 | P13 (Review Nov 14): the after-commit capture and the job colliding log an error for the loser (harmless, nothing kept); counted once as failed in that run's totals | P13: as its Review note says |
 | F282 | P13 (Review Nov 14): the Built note's findings stand as written, except the "Sales routing grant" one, now R1 | P13: as its Review note says |
+| F283 | P14 (Built Nov 14): the code over the plan above: the camelCase operation, store#BlogPost, BlogPostView, the sibling paths, Content for every reader, the page registry, the embed syntax and the form card, the newsletter category on the send, CakPage unavailable, the demo loader | P14: as its Built note says |
+| F284 | P14 (Built Nov 14): a landing page is published by its author (MARKETING_CONTENT_EDIT edits and publishes), with no review or approval step | P14: as its Built note says |
+| F285 | P14 (Built Nov 14): a send's posts are appended to its prepared body only: the draft preview and test message show the author's own text, and an experiment's variants (P10) do not get them | P14: as its Built note says |
+| F286 | P14 (Built Nov 14): the PASS landing page is no-store (its subscribe box carries the session token), so a shared cache never keeps it; there is no sitemap or robots for the marketing mount | P14: as its Built note says |
+| F287 | P14 (Built Nov 14): a Shop menu may link a landing page (an SdtPage destination of any enabled mount of the site), as built | P14: as its Built note says |
+| F288 | P14 (Built Nov 14): a blog post's public link assumes the space's `publicBlogUrl` takes the post's id; the blog itself is PASS Publishing's, later | P14: as its Built note says |
+| F289 | P14 (Built Nov 14): P15's hook: the landing page's campaign is its CampaignContent (CckSitePage), and Page.xml names where P15 records a tracking code's visit; nothing tracking is built here | P14: as its Built note says |
+| F290 | P14 (Review Nov 14): publication without approval (design §8): the design does not require a review or approval before a landing page or a blog post is public. LandingPages' crosscut row gives "create, edit, preview, request review, publish with the content grant", and ContentDetail says "Request review uses the existing wiki review flow; only the owner-approved version may be publicly bound". As built, MARKETING_CONTENT_EDIT publishes a landing page's chosen version (the owner's binding, dated and audited, with an operation key), which meets "owner-approved" read as the owner's publication; but the Request review action of the crosscut row is not built for landing pages (the shared PageContent tab offers none, and the page space's restrictUpdate keeps the wiki review flow's reviewer from the page). A blog post's public version is the page's published version, which any writer of the page sets in Knowledge, with or without a review. The user's call: leave publication as the content grant's act (and drop "request review" from the crosscut row), add an optional Request review to PageDetail, or require an approved review before publish#SitePage binds a landing page's version | P14: as its Review note says |
+| F291 | P14 (Review Nov 14): blog categories are global (WikiPageCategory), so one organization's newsletter takes another organization's public posts in a category of the same name, and create#ContentSend takes any category id; as the framework's model is, with no organization on a wiki space | P14: as its Review note says |
+| F292 | P14 (Review Nov 14): BlogPost's small image (design §8 NewBlogPost and BlogPost: image upload with thumbnail) is not built | P14: as its Review note says |
+| F293 | P14 (Review Nov 14): the Built note's others stand as written (the preview and test message without the posts, experiments' variants without them, no sitemap or robots for the marketing mount, a Shop menu linking a landing page, the blog link from `publicBlogUrl`, P15's hook) | P14: as its Review note says |
 
 ## 7. Later
 

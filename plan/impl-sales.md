@@ -5899,7 +5899,7 @@ before `./moq test-apps` (4 workers), no product code changed.
   - mr-mantle SmithyMirrors' setup: duplicate key `SMI_SITE` in PublicSite, which SmithyIssues also creates; it fails whenever
     SmithyIssues ran first on the same database; 5 of 5 alone.
 - Not run: ./moq test-apps, test-framework, the acceptance suite. Prettier clean on the new and split specs.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F346 to F348 in order:
   - SmithyMirrors and SmithyIssues (mr-mantle) both create PublicSite `SMI_SITE`, so the second to run on one database fails its
     setup; a spec-own site id in one of them fixes it (not changed here: out of this follow-up's scope);
   - TextFiling (mr-boss) and SalesRecurrence's base feature (mr-mantle) failed in a serial run of their whole component and pass
@@ -5941,7 +5941,7 @@ without conflicts.
     filed (`filedDate` null). Not a post-commit race: receive#Sms files synchronously. TextFiling now makes its own personal contact
     of John's with its own number (+1 555 010-4161), as Contacts' spec-local contact does. Contacts then TextFiling failed before
     and passes after.
-- Provisional findings (for the lead to number):
+- Finding, numbered by the lead F349:
   - Two specs used the same spec-local ids (R1), and two read shared demo or list data that other specs change or grow (R2, R3).
     These pass alone and fail only in a full serial run. A spec-local id prefix, and a lookup by id rather than a first page,
     keep them apart.
@@ -6399,6 +6399,10 @@ Paths without a component are mr-boss's; Mantle's start `mr-mantle/`, PASS's `mr
 | F343 | Follow-up 3 (Built Nov 14): SalesOrderApproval's batch flake (F210) was the confirmation's revision raised after placement on a service worker; fixed in the spec. Other specs that place a storeless direct order of a seller counting every change and then act on its revision at once have the same race; none was seen failing | Follow-up 3: as its Built note says |
 | F344 | Follow-up 3 (Built Nov 14): MaintenancePlans' P14 feature fails on master's mr-boss with this worktree's runtime ("33.3% on time" not in the Preventive compliance report), alone as well; not looked into here (out of scope) | Follow-up 3: as its Built note says |
 | F345 | Follow-up 3 (Review Nov 14): MaintenancePlans' P14 feature depended on the clock (R1). Other Maintenance specs and walks that assert outcomes around the demo's fixed November dates may turn the same way as the calendar moves. None other was seen failing today | Follow-up 3: as its Review note says |
+| F346 | Follow-up 4 (Built Nov 14): SmithyMirrors and SmithyIssues (mr-mantle) both create PublicSite `SMI_SITE`, so the second to run on one database fails its setup; a spec-own site id in one of them fixes it (not changed here: out of this follow-up's scope) | Follow-up 4: as its Built note says |
+| F347 | Follow-up 4 (Built Nov 14): TextFiling (mr-boss) and SalesRecurrence's base feature (mr-mantle) failed in a serial run of their whole component and pass alone: order or timing dependent, not looked into | Follow-up 4: as its Built note says |
+| F348 | Follow-up 4 (Built Nov 14): PayConfiguration (mr-mantle, 10.2 s in a loaded serial run, 7.8 s alone) and AccountingAccess (mr-boss, 9.5 s) are the next nearest the limit; not split (under 12 s) | Follow-up 4: as its Built note says |
+| F349 | Follow-up 4 (Review Nov 14): Two specs used the same spec-local ids (R1), and two read shared demo or list data that other specs change or grow (R2, R3). These pass alone and fail only in a full serial run. A spec-local id prefix, and a lookup by id rather than a first page, keep them apart | Follow-up 4: as its Review note says |
 
 ## 7. Later
 
