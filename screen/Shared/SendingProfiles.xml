@@ -19,7 +19,9 @@ along with this software (see the LICENSE.md file). If not, see
     purpose, throttle, quiet hours, tracking, bounce domain and site; and its readiness, each check with the place that fixes it (Comms'
     mail accounts for the bounce account, Admin's relays for the transport). Everything is mantle.party.MessageServices
     (MESSAGE_SENDING_CONFIGURE writes; it and Marketing's configurer, authors and dispatchers read); Admin alone changes relays,
-    domains and credentials. -->
+    domains and credentials. P22: a text message profile is bound to one of the organization's messaging numbers (a number of the
+    organization's contact information that System, Voice, Numbers gives a messaging bridge), with its purpose, throttle, quiet hours
+    and the cost of a segment for the estimate before approval; ready only with the number's bridge. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Sending profiles" default-menu-index="5">
     <parameter name="sendingProfileId"/>
@@ -33,6 +35,20 @@ along with this software (see the LICENSE.md file). If not, see
                         fromAddress:fromAddress, fromName:(fromName ?? ''), replyToAddress:(replyToAddress ?? ''), purposeEnumId:(purposeEnumId ?? ''),
                         throttlePerHour:(throttlePerHour ?? ''), quietFrom:(quietFrom ?? ''), quietThru:(quietThru ?? ''), timeZone:(timeZone ?? ''),
                         trackingPolicyEnumId:(trackingPolicyEnumId || null), bounceDomain:bounceDomain, siteId:(siteId ?? '')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Sending profile saved</message></if>
+        </actions>
+        <default-response url="." parameter-map="{sendingProfileId:(stored?.sendingProfileId || sendingProfileId)}"/>
+        <error-response url="."/>
+    </transition>
+    <!-- P22: a text message profile -->
+    <transition name="storeSmsProfile">
+        <actions>
+            <service-call name="mantle.party.MessageServices.store#SendingProfile" out-map="stored"
+                    in-map="{sendingProfileId:(sendingProfileId || null), expectedRevision:(expectedRevision || null),
+                        organizationPartyId:(organizationPartyId || null), profileName:profileName, channelEnumId:'MdcSms',
+                        fromPhoneNumber:fromPhoneNumber, purposeEnumId:(purposeEnumId ?? ''), throttlePerHour:(throttlePerHour ?? ''),
+                        quietFrom:(quietFrom ?? ''), quietThru:(quietThru ?? ''), timeZone:(timeZone ?? ''),
+                        segmentCost:(segmentCost ?? ''), segmentCostUomId:(segmentCostUomId ?? '')}"/>
             <if condition="!ec.message.hasError()"><message type="success">Sending profile saved</message></if>
         </actions>
         <default-response url="." parameter-map="{sendingProfileId:(stored?.sendingProfileId || sendingProfileId)}"/>
@@ -69,7 +85,14 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the places a readiness check names (its fixRoute): this screen, Admin's relays, Comms' mail accounts -->
         <set field="fixPlaces" from="{marketingSendingProfiles: {url: '.', text: 'This profile'},
                 adminMailRelay: {url: '/qapps/Admin/Protocols/MailRelays', text: 'Admin: mail relays'},
-                mailAccount: {url: '/qapps/Comms/Settings/MailAccounts', text: 'Comms: mail accounts'}}"/>
+                mailAccount: {url: '/qapps/Comms/Settings/MailAccounts', text: 'Comms: mail accounts'},
+                voiceNumbers: {url: '/qapps/system/Voice/Numbers', text: 'System: Voice, Numbers'}}"/>
+        <!-- P22: the organizations' messaging numbers a text message profile may be bound to -->
+        <set field="numberOptions" from="Array.from(chosen?.numberOptions || found?.numberOptions || [])"/>
+        <set field="isSms" from="profile?.channelEnumId == 'MdcSms'"/>
+        <set field="smsValues" from="profile &amp;&amp; isSms ? Object.assign({}, profile, {expectedRevision: profile.revision})
+                : {organizationPartyId: organizationOptions.length == 1 ? organizationOptions[0].value : null,
+                    fromPhoneNumber: numberOptions.length == 1 ? numberOptions[0].value : null, purposeEnumId: 'MtpPromotional', segmentCostUomId: 'USD'}"/>
         <set field="checkList" from="Array.from(chosen?.checkList || []).map(row =&gt; Object.assign({}, row, {
                 fixUrl: row.fixRoute &amp;&amp; row.fixRoute != 'marketingSendingProfiles' ? fixPlaces[row.fixRoute]?.url : null,
                 fixText: row.fixRoute ? fixPlaces[row.fixRoute]?.text || '' : '',
@@ -98,7 +121,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
-                            <field name="fromAddress"><default-field title="Sender"><display/></default-field></field>
+                            <field name="senderText"><default-field title="Sender"><display/></default-field></field>
+                            <field name="channelText"><default-field title="Channel"><display/></default-field></field>
                             <field name="purposeText"><default-field title="Purpose"><display/></default-field></field>
                             <field name="limitsText"><default-field title="Limits"><display/></default-field></field>
                             <field name="readinessText">
@@ -111,7 +135,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <columns type="mobile">
-                                <column><field-ref name="profileName"/><field-ref name="fromAddress"/></column>
+                                <column><field-ref name="profileName"/><field-ref name="senderText"/></column>
                                 <column><field-ref name="readinessText"/></column>
                             </columns>
                         </form-list>
@@ -153,7 +177,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="Last checked ${profile?.lastCheckText}" type="p" style="m-muted q-pa-sm" condition="profile?.lastCheckText"/>
                     </box-body-nopad>
                 </container-box>
-                <container-box condition="found.canCreate">
+                <container-box condition="found.canCreate &amp;&amp; !isSms">
                     <box-header title="${profile ? 'Profile ' + profile.profileName : 'New profile'}"/>
                     <box-body>
                         <form-single name="SendingProfile" transition="storeProfile" map="profileValues">
@@ -208,6 +232,52 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field-row><field-ref name="throttlePerHour"/><field-ref name="trackingPolicyEnumId"/></field-row>
                                 <field-row><field-ref name="quietFrom"/><field-ref name="quietThru"/><field-ref name="timeZone"/></field-row>
                                 <field-row><field-ref name="siteId"/><field-ref name="submitButton"/></field-row>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <!-- P22: a text message profile, its own or a new one -->
+                <container-box condition="found.canCreate &amp;&amp; (isSms || !profile)">
+                    <box-header title="${isSms ? 'Profile ' + profile.profileName : 'New text message profile'}"/>
+                    <box-body>
+                        <label text="No organization of yours has a messaging number yet: add the number to the organization's contact information, and give it a messaging bridge in System, Voice, Numbers."
+                                type="p" style="m-muted" condition="!numberOptions.length &amp;&amp; !isSms"/>
+                        <form-single name="SmsSendingProfile" transition="storeSmsProfile" map="smsValues" condition="numberOptions.length || isSms">
+                            <field name="sendingProfileId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="profileName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                            <field name="organizationPartyId">
+                                <conditional-field title="Organization" condition="isSms"><display text="${profile?.organizationName}"/></conditional-field>
+                                <default-field title="Organization">
+                                    <drop-down><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromPhoneNumber">
+                                <default-field title="Messaging number" tooltip="One of the organization's numbers with a messaging bridge">
+                                    <drop-down><list-options list="numberOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="purposeEnumId">
+                                <default-field title="Purpose">
+                                    <drop-down allow-empty="true">
+                                        <option key="MtpPromotional" text="Promotional"/>
+                                        <option key="MtpTransactional" text="Transactional"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="throttlePerHour"><default-field title="At most an hour" tooltip="Empty: no throttle"><text-line size="8"/></default-field></field>
+                            <field name="quietFrom"><default-field title="Quiet from" tooltip="HH:mm"><text-line size="6"/></default-field></field>
+                            <field name="quietThru"><default-field title="Quiet until" tooltip="HH:mm"><text-line size="6"/></default-field></field>
+                            <field name="timeZone"><default-field title="Time zone" tooltip="As America/Chicago"><text-line size="20"/></default-field></field>
+                            <field name="segmentCost"><default-field title="Cost a segment" tooltip="The provider's price of one segment, for the estimate shown before approval"><text-line size="10"/></default-field></field>
+                            <field name="segmentCostUomId"><default-field title="Currency"><text-line size="4"/></default-field></field>
+                            <field name="submitButton"><default-field title=""><submit text="Save profile"/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="profileName"/><field-ref name="organizationPartyId"/></field-row>
+                                <field-row><field-ref name="fromPhoneNumber"/><field-ref name="purposeEnumId"/></field-row>
+                                <field-row><field-ref name="throttlePerHour"/><field-ref name="timeZone"/></field-row>
+                                <field-row><field-ref name="quietFrom"/><field-ref name="quietThru"/></field-row>
+                                <field-row><field-ref name="segmentCost"/><field-ref name="segmentCostUomId"/><field-ref name="submitButton"/></field-row>
                             </field-layout>
                         </form-single>
                     </box-body>

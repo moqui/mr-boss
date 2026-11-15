@@ -1988,6 +1988,24 @@ profile not ready is a retryable outcome. Receipt support is the bounce intake (
 relay's `ES_BOUNCED`, becomes a receipt fact and one suppression; Marketing's readiness (`marketing.sending`) warns of an organization
 with no ready profile.
 
+As built (impl-marketing P22): an SMS profile (channel text message) is bound to one of the organization's messaging numbers, a
+current telecom number of the organization that is one of our numbers (System, Voice, Numbers) with a messaging bridge; it has no relay,
+sender or bounce domain, and keeps its purpose, throttle, quiet hours and a configured cost a segment. Its readiness: in effect; the
+number one of the organization's, its bridge there and not disabled (not connected is a warning); STOP handling. The ledger hands a
+text to the framework's `send#SmsMessage` as the system, promotional, from the profile's number, after `PcpSms` consent on the topic
+and the SMS suppression; the answer is the outcome (the number's day of promotional texts waits for the next day untried; a STOP or the
+hook's no suppresses; a lost answer is uncertain and never resent). Mantle's `sms-consent` answer is registered in its `MoquiConf.xml`
+(the framework asks a component's conf provider for every sender, the system included) and says yes only for a number whose party has
+`PcpSms` granted with an organization that owns the sending number (its row, the global one, or one of its topics' latest rows) and no
+SMS suppression there. A STOP the framework keeps becomes one `PcpSms` withdrawal with that organization (source text message reply) and
+one SMS suppression (reason replied STOP); START ends neither. A send's channel is its topic's: a list of phone numbers makes a text
+message send, offered in NewSend once an SMS profile is ready; its content is one text (at most 1600 characters, "Reply STOP to opt
+out" added when it has no STOP), its estimate (characters, GSM-7 or UCS-2, segments, cost a message and for the prepared recipients)
+shown in Compose, SendDetail and the approver's dialog; no subject, attachment, tracking or unsubscribe link. An automation of a list of
+phone numbers has Send SMS steps (a template's text alternative). PASS Email preferences shows an organization's text message topics:
+one the person is on may be left there, never turned on (it needs a phone number's own evidence). Not built: a receipt after the
+hand-off (the framework keeps no row of a direct text, F73), a per-number override of the day's limit.
+
 ## 13. PASS Marketing participation
 
 ### 13.1 Mount and public boundary
