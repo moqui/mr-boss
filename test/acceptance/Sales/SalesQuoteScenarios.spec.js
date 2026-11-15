@@ -68,7 +68,6 @@ spec({
     stepwise: true,
     setupSpec() {
         capture.enable()
-        shared.restoreMail = lib.captureSystemMail()
         login("john.doe")
         // a second contact of Wingtip with no email yet
         system(() => {
@@ -83,7 +82,6 @@ spec({
         })
     },
     cleanupSpec() {
-        if (shared.restoreMail) shared.restoreMail()
         capture.reset()
         ec.message.clearErrors()
         login("john.doe")

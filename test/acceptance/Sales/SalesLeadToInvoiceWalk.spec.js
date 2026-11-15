@@ -112,13 +112,11 @@ spec({
     stepwise: true,
     setupSpec() {
         capture.enable()
-        state.restoreMail = lib.captureSystemMail()
         login("john.doe")
         makeUser(seller)
         makeUser(biller)
     },
     cleanupSpec() {
-        if (state.restoreMail) state.restoreMail()
         capture.reset()
         ec.message.clearErrors()
         login("john.doe")

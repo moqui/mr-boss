@@ -419,26 +419,6 @@ function sweepExtras(made = {}) {
     ]
 }
 
-// The framework's SYSTEM mail server (Mantle's quote and order templates send through it) given a host for a spec that reads the
-// mail capture: a server with no SMTP host skips the send before the capture, so its mail is never kept. A host nothing listens on
-// (the demo servers'), the capture enabled; returns the restore of the server as it was.
-function captureSystemMail() {
-    const fields = ["smtpHost", "smtpPort", "smtpStartTls", "smtpSsl"]
-    const was = system(() => ec.entity.find("moqui.basic.email.EmailServer").condition("emailServerId", "SYSTEM").one())
-    const before = Object.fromEntries(fields.map(field => [field, was ? was[field] : null]))
-    const store = values =>
-        system(() =>
-            ec.service
-                .sync()
-                .name("update#moqui.basic.email.EmailServer")
-                .parameters(Object.assign({emailServerId: "SYSTEM"}, values))
-                .call()
-        )
-    if (!before.smtpHost) store({smtpHost: "127.0.0.1", smtpPort: 9, smtpStartTls: "N", smtpSsl: "N"})
-    return () => {
-        if (!before.smtpHost) store(before)
-    }
-}
 // Stock of a product for a seller with no facility of its own (Ziziwork Sales in the demo): a spec warehouse it owns and an available
 // receipt there, so a storeless order's placement reserves it (place#Order's reservation reads the seller's assets; with none it makes
 // an ad hoc asset, which needs the order part's facility, and a Sales order part names none).
@@ -482,6 +462,5 @@ function sellerStock(organizationPartyId, productId, quantity) {
     sweepRecords,
     sweepParameters,
     sweepExtras,
-    captureSystemMail,
     sellerStock
 })
