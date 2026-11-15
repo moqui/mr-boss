@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Sales demo's dates relative to the load (data/BossZSalesDemoData.xml calls load#QuoteDatesDemo; impl-marketing follow-up 3). -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="load" noun="QuoteDatesDemo" authenticate="anonymous-all" allow-remote="false">
+        <description>Moves the end of the demo quotes' validity to the load: BOSS_SAL_QTE_WINGTIP's to 77 days and BOSS_SAL_QTE_FABRIKAM's
+            to 105 days after the load day at 00:00 (a load on Nov 15, 2026 gives Jan 31 and Feb 28, 2027), so both are open whenever
+            the demo is loaded; loading again moves them, and a missing quote is logged and skipped. Only data loading or a system
+            administrator may run it.</description>
+        <out-parameters><parameter name="wingtipThruDate" type="Timestamp"/></out-parameters>
+        <actions><script><![CDATA[
+            if (ec.user.userId && !ec.user.isInGroup('ADMIN')) throw new Error('Demo loading requires system administration')
+            // the server's local day, as the demo data's fixed dates are read
+            const now = new Date(ec.user.timestampMillis(ec.user.nowTimestamp))
+            const after = (days) => String(new Date(now.getFullYear(), now.getMonth(), now.getDate() + days).getTime())
+            const move = (orderId, validThruDate) => {
+                const keys = {orderId, orderPartSeqId: '01'}
+                if (ec.entity.find('mantle.order.OrderPart').condition(keys).disableAuthz().one() == null) {
+                    ec.logger.warn('The quote dates demo found no quote ' + orderId + '; not moved')
+                    return
+                }
+                ec.service.sync().name('update#mantle.order.OrderPart').parameters(Object.assign({validThruDate}, keys)).disableAuthz().call()
+            }
+            // as the loaded row: no order part change rule, which would count a new revision of the quote (its specs act on revision 1)
+            const wasDisabled = ec.artifactExecution.disableEntityEca()
+            try {
+                wingtipThruDate = after(77)
+                move('BOSS_SAL_QTE_WINGTIP', wingtipThruDate)
+                move('BOSS_SAL_QTE_FABRIKAM', after(105))
+            } finally {
+                if (!wasDisabled) ec.artifactExecution.enableEntityEca()
+            }
+        ]]></script></actions>
+    </service>
+</services>

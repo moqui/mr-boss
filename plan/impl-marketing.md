@@ -6120,6 +6120,121 @@ failed on master since follow-up 1 gave Retail a Utah nexus (R3).
     mr-moqui `framework_gaps_tests.rs`;
   - the user's call open (the Built note's): whether the 2027 event and quote dates get the load-relative treatment now.
 
+### Follow-up 3 — The 2027 demo dates specs depend on, relative to the load
+
+The user's call of Nov 15 (§4): the remaining demo dates that regression and acceptance specs depend on become relative to the load,
+as follow-up 2 did for the Products price switch: Marketing's webinar (2027-01-28) and workshop (2027-03-13, closing 03-12), Wingtip's
+quote valid to 2027-01-31, and PeopleLeave's requests of 2027-04-06/07 (F366, F369). Branch `mkt/fix3` in mr-boss (mr-mantle and
+mr-pass unchanged).
+
+**Built Nov 15 (follow-up 3).** mr-boss on branch `mkt/fix3` from master after follow-up 2's merge.
+- Checked first (the code over the plan): follow-up 2's loader (load#ScheduledPriceDemo: 2099 placeholders in the data file, moved by
+  a demo service called after the rows, in the server's zone; the test snapshot keyed by the load day); every spec and acceptance spec
+  that names the events, offers, ticket types or demo quotes, or the 2027 dates (grep of mr-boss, mr-mantle and mr-pass); the offer's
+  dated fields (occurrenceStart and End, closesDate; the check-in window is reckoned from the occurrence, EventCheckIn.js, with no
+  field of its own; no demo registration exists); the webinar's call link (P16's load#EventDemo, 90 days from the load); the order
+  part change rule (OrderPartHandleChange). The code over the plan:
+  - no mr-mantle or mr-pass spec depends on the BOSS demo's events: PASS's MarketingFixtures and Mantle's event specs make their own
+    offers dated from now, so the PASS expectations needed no change, and no BOSS regression spec asserts an event's date (they
+    register, render and scan); the dependency was the date passing;
+  - updating a demo quote's validity through update#OrderPart runs OrderPartHandleChange, which counts a new revision; the quote specs
+    act on revision 1 (SalesAccess, SalesApprovals), so the quote loader writes with entity ECA rules off, as the loaded row;
+  - Fabrikam's quote (valid to 2027-02-28, rendered by SalesQuotes and refused in SalesAccess) is moved with Wingtip's, the same case
+    a month later.
+- Demo (mr-boss):
+  - BossZZMarketingDemoData.xml: the events' and offers' dates are 2099 placeholders that the new
+    `ironstone.marketing.DemoServices.load#EventDatesDemo` (service/ironstone/marketing/DemoServices.xml, called before load#EventDemo)
+    moves together: the webinar to 18:00–19:00 on the first Thursday 70 days or more after the load day (inside its call link's 90
+    days), the workshop to 09:00–12:00 on the first Saturday 118 days or more after it, closing the day before at 17:00; each event's
+    estimated start and end are its offer's occurrence. A load on Nov 15, 2026 gives exactly the old dates (Thursday Jan 28 and
+    Saturday Mar 13, closing Friday Mar 12); loading again moves them. The story stands: an upcoming webinar, a workshop a few months
+    out;
+  - BossZSalesDemoData.xml: the two quotes' validThruDate are placeholders that the new `ironstone.sales.DemoServices.load#QuoteDatesDemo`
+    (service/ironstone/sales/DemoServices.xml, new, called after the Fabrikam quote) moves to 77 days (Wingtip) and 105 days
+    (Fabrikam) after the load day at 00:00 (Jan 31 and Feb 28, 2027 for a load on Nov 15); revision 1 kept;
+  - both loaders as load#ScheduledPriceDemo: anonymous-all, allow-remote false, a signed-in caller must be ADMIN, a missing row logged
+    and skipped.
+- Specs (mr-boss):
+  - PeopleLeave: its requests (spec data, not demo) fall on the first Tuesday 140 days or more ahead of the run (Tomas's morning) and
+    the Wednesday after (Ines's day), the calendar's range, the twin's date and its Earlier and Later around them (Apr 6 and 7, 2027 on
+    Nov 15, as before). Leave is not refused for a past day, but the year's turn would have aged the spec; Retail's holidays are on a
+    calendar nobody in the demo follows, so a Tuesday and a Wednesday are always charged;
+  - MarketingEvents checks the loader ran (a broken one would leave 2099 and pass, follow-up 2's R1): each event's start and end are
+    its offer's, the webinar a Thursday 18:00 ten to eleven weeks ahead, the workshop a Saturday 09:00 116 to 126 days ahead, closing
+    16 hours before; SalesQuotes checks Wingtip's validity ends 75 to 78 days ahead and Fabrikam's 103 to 106.
+- Acceptance specs that read these records (grep): MarketingRegistrationScenario registers for the demo webinar and reads its call
+  link, MarketingEventSetupWalk reads the events' owner; none hard-codes their dates or the quotes', so no expectation changed. Not
+  run, as the call said.
+- Not moved (no spec depends on them; for the lead): the spring campaign's thruDate (2027-01-31), its launch evening (Jan 10–12) and
+  Services' campaign (to Feb 28), the Sales opportunities' estimated close dates (Jan 31, Feb 28, Mar 15), Retail's holidays (Jan 4,
+  Jun 14). A load after January shows the workshop after its campaign's end, a story seam only.
+- Tests run (release, `--nobuild`, this worktree's runtime): MarketingEvents, SalesQuotes, PeopleLeave (9 of 9; the two new features
+  0.00 s each); every Marketing and Sales regression spec of mr-boss on 4 workers (34 specs, 95 of 95, 40.3 s of feature time); every
+  Insights and People spec (41 specs, 176 of 176); mr-pass MarketingEvents, MarketingRegistration, MarketingAccess (9 of 9); mr-mantle
+  EventRegistrations, EventCheckIn, EventRegistrationSetup (22 of 22). Prettier (mr-moqui's config) on the changed specs. Not run:
+  test-apps, test-framework, acceptance.
+- Findings (provisional, numbered by the lead):
+  - the code over the plan above: no Mantle or PASS spec depended on the BOSS events, and moving a quote's validity through the
+    entity service raises its revision, so the loader runs without entity ECA rules; Fabrikam's quote is moved too;
+  - the dates left fixed (the campaigns', the opportunities', Retail's holidays): no spec depends on them; the spring campaign ends
+    Jan 31, 2027 whatever the load, so a later load shows its events after it.
+- For the lead:
+  - budget share: none measurable (two entity reads and two quote reads in two new features; the loaders run once per load);
+  - merge hot spots: mr-boss `data/BossZZMarketingDemoData.xml` (P16 block), `data/BossZSalesDemoData.xml` (P7 block),
+    `service/ironstone/marketing/DemoServices.xml`, `service/ironstone/sales/DemoServices.xml` (new), `test/Marketing/MarketingEvents.spec.js`,
+    `test/Sales/SalesQuotes.spec.js`, `test/People/PeopleLeave.spec.js`, this file. P19 and P20 touch none of these but this file;
+  - the user's call, if wanted: whether the campaigns' and opportunities' dates follow the load too (no spec needs it).
+
+**Review Nov 15 (follow-up 3).** A fresh review of `mkt/fix3` (mr-boss 92cc9f91; master had nothing newer) against the follow-up's
+text, §2, §4 (the Nov 15 call) and follow-up 2's loader pattern.
+- Checked and sound:
+  - both loaders are internal (`allow-remote="false"`, anonymous-all for data loading) and refuse a signed-in non-ADMIN, as
+    load#ScheduledPriceDemo; fixed IDs only, nothing supplied is trusted; a missing row is logged and skipped;
+  - quote dates with entity ECA rules off: on OrderPart the only rule is OrderPartHandleChange (handle#OrderPartChange: retax on an
+    address or customer change, else increment#OrderRevision), so turning rules off skips only the revision count, as intended. The
+    data feed (`note_touch`, so the order and quote search documents and Insights' feeds) and the audit log are separate from the
+    rule switch (moqui-entity `load_feed/eca.rs` gates the rules only), so the indexes see the new date; the previous switch state is
+    restored in `finally`;
+  - the event loader writes the events with rules on: WorkEffort's rules (project update, request sync, shell counts) are harmless
+    for an event; EventRegistrationPolicy has none, and its policyRevision is a service's, not a rule's;
+  - day arithmetic: the windows of both new features allow a load just before midnight and a DST change between load and event
+    (the quote window 75–78 days against 77 days less up to a day; the webinar 68–79, the workshop 116–126); the workshop closes
+    Friday 17:00 to Saturday 09:00, which no US or EU DST change falls in, so the spec's 16 hours holds;
+  - the webinar's call link: a fresh load puts the webinar 70–77 days out, inside the link's 90 days (2160 hours);
+  - PeopleLeave: no holiday reaches the chosen days. Employer holidays are WepHoliday rows owned by the organization and the demo
+    has none (BOSS_PPL_HOL_* are on BOSS_PPL_HOL_RETAIL, the calendar of a schedule nobody follows; Mantle's US holidays are on
+    HolidayUsaFed/Bank, assigned to no one); a Tuesday and a Wednesday are always working days of the standard week, never a
+    weekend; the twin's Earlier and Later are the given date ±14 days, as before;
+  - the two new features check the loaders ran (a broken loader leaves 2099 and fails them).
+- Fixed:
+  - R1 (medium): the event loader counted days and hours in the server's local zone (the script engine's `Date`), while PASS shows
+    the occurrence in the offer's zone (America/Denver): on this machine (America/Chicago) the demo webinar read Thu 17:00 and the
+    workshop's closing Fri 16:00 on PASS (checked before the fix), and on a UTC server it would read 11:00. The loader now takes the
+    load day in each offer's zone (`ec.l10n.format`), counts calendar days in UTC and reads the wall-clock hour back in the zone
+    (`ec.l10n.parseTimestamp`), DST kept. MarketingEvents checks the occurrence as `Thu 18:00` and `Sat 09:00` formatted in the
+    offer's zone (it fails on the unfixed loader). The old fixed rows had the same seam;
+  - R2 (low): the quotes' rows carried a 2099 placeholder validThruDate, so a reload of BossZSalesDemoData over a loaded database
+    changed the stored date and OrderPartHandleChange counted revision 2 (the header row resets 1 just before; checked with a store
+    of the row: unchanged or omitted fields count nothing, the placeholder counts one), breaking the specs that act on revision 1.
+    The rows now name no validThruDate and load#QuoteDatesDemo writes it.
+- Provisional findings (for the lead to number):
+  - R1 and R2 above;
+  - the webinar's call link is made once (P16's webinarCall skips an event with an infoUrl), so a reload more than about two weeks
+    after the first load moves the webinar past the link's 90 days; a fresh load is always inside. Not fixed: telling an expired link
+    needs the CallLink row behind the path (its token is hashed); for the lead whether the demo loader should renew it;
+  - a quote loader failure: the two moves share the service's transaction, so a failing update rolls back both (fixed IDs, rare);
+    noted, not changed.
+- Tests run (release, `--nobuild`, this worktree's runtime): mr-boss MarketingEvents, SalesQuotes, SalesAccess, SalesApprovals,
+  PeopleLeave, MarketingAccess, MarketingRegistrations (7 specs, 38 of 38, 37.3 s); mr-mantle EventRegistrations (16 of 16, 29.3 s);
+  again after the fix commit MarketingEvents, SalesQuotes, PeopleLeave (9 of 9; the two new features 0.00 s each). Prettier (mr-moqui's
+  config) on the changed specs. Not run: test-apps, test-framework, acceptance.
+- For the lead:
+  - budget share: unchanged (one more `ec.l10n.format` per event in the new feature);
+  - merge hot spots: as the Built note's, plus the review commit in the same files (`data/BossZSalesDemoData.xml`,
+    `service/ironstone/marketing/DemoServices.xml`, `test/Marketing/MarketingEvents.spec.js`, `test/Sales/SalesQuotes.spec.js`);
+  - the user's calls: whether the demo should renew the webinar's call link on a reload; the Built note's (campaign and opportunity
+    dates) stands.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -6190,6 +6305,7 @@ design-marketing.md or the owner's design.
 | Nov 15, 2026 | A framework `hmac` host member replaces the nested digest of the entry code (EventRegistrationPlaces.js codeOf, one function); the lead builds it in mr-moqui after follow-up 1's review | The user's call (follow-up 1's review) |
 | Nov 15, 2026 | Mantle's OrderToCashBasicFlow and ReturnToResponseBasicFlow keep suspending Retail's Utah nexus during their run (test/order/DemoTaxNexus.js) rather than move the chain to a Mantle-owned seller | The user's call (follow-up 1's review) |
 | Nov 15, 2026 | Demo data dates that specs depend on are made relative to load time (or far future) and the specs read as of a fixed date, starting with BOSS_PRICE_SALES/BOSS_PRICE_NEXT; built in follow-up 2 with the framework hmac member | The user's call |
+| Nov 15, 2026 | The 2027 demo dates specs depend on become load-relative: the Marketing webinar and workshop (their events, offers' occurrences and the workshop's closing, together), the Sales demo quotes' validity, and PeopleLeave's request days; built in follow-up 3 | The user's call (Nov 15), after follow-up 2's F366 and F369 |
 
 ## 5. Open questions
 

@@ -721,10 +721,10 @@ along with this software (see the LICENSE.md file). If not, see
         BossCommerceDemoData). -->
     <mantle.work.effort.WorkEffort workEffortId="BOSS_MKT_EV_WEBINAR" workEffortTypeEnumId="WetEvent" workEffortName="Spring planting webinar"
             description="Online session for newsletter readers; Q&amp;A at the end." statusId="WeInPlanning" ownerPartyId="BOSS_MKT_EVENTS"
-            estimatedStartDate="2027-01-28 18:00:00" estimatedCompletionDate="2027-01-28 19:00:00" visibilityEnumId="WevAllUsers"/>
+            estimatedStartDate="2099-01-28 18:00:00" estimatedCompletionDate="2099-01-28 19:00:00" visibilityEnumId="WevAllUsers"/>
     <mantle.work.effort.WorkEffort workEffortId="BOSS_MKT_EV_WORKSHOP" workEffortTypeEnumId="WetEvent" workEffortName="Rose pruning workshop"
             description="Hands-on morning in the garden centre; tools provided." statusId="WeInPlanning" ownerPartyId="BOSS_MKT_EVENTS"
-            location="Ziziwork garden centre, Orem" estimatedStartDate="2027-03-13 09:00:00" estimatedCompletionDate="2027-03-13 12:00:00"
+            location="Ziziwork garden centre, Orem" estimatedStartDate="2099-03-13 09:00:00" estimatedCompletionDate="2099-03-13 12:00:00"
             visibilityEnumId="WevAllUsers"/>
     <mantle.work.registration.RegistrationEvent workEffortId="BOSS_MKT_EV_WEBINAR" organizationPartyId="ORG_ZIZI_RETAIL"
             createdByUserId="BOSS_MKT_EVENTS" createdDate="2026-11-01 10:00:00"/>
@@ -745,7 +745,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MKT_EV_WORKSHOP" productId="BOSS_MKT_TICKET_STD" fromDate="2026-11-01 10:00:00" typeEnumId="WeptSales"/>
     <mantle.work.effort.WorkEffortProduct workEffortId="BOSS_MKT_EV_WORKSHOP" productId="BOSS_MKT_TICKET_MEMBER" fromDate="2026-11-01 10:00:00" typeEnumId="WeptSales"/>
     <mantle.work.registration.EventRegistrationPolicy registrationPolicyId="BOSS_MKT_OFFER_WEBINAR" workEffortId="BOSS_MKT_EV_WEBINAR"
-            occurrenceStart="2027-01-28 18:00:00" occurrenceEnd="2027-01-28 19:00:00" organizationPartyId="ORG_ZIZI_RETAIL" statusId="ErpPublished"
+            occurrenceStart="2099-01-28 18:00:00" occurrenceEnd="2099-01-28 19:00:00" organizationPartyId="ORG_ZIZI_RETAIL" statusId="ErpPublished"
             publicTitle="Spring planting webinar" publicDescription="An hour on what to plant this spring, with time for your questions."
             timeZone="America/Denver" siteId="ZIZI_SHOP" totalSeats="100" holdMinutes="15" waitlistEnabled="Y" waitlistLimit="50"
             termsText="Free. The link to join is sent with your confirmation." cancellationTerms="Cancel any time from your registration."
@@ -754,10 +754,10 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.work.registration.EventTicketType ticketTypeId="BOSS_MKT_TT_WEBINAR" registrationPolicyId="BOSS_MKT_OFFER_WEBINAR" ticketName="Free place"
             priceSourceEnumId="EtpFree" perOrderLimit="1" sequenceNum="1" fromDate="2026-11-01 10:00:00" createdByUserId="BOSS_MKT_EVENTS"/>
     <mantle.work.registration.EventRegistrationPolicy registrationPolicyId="BOSS_MKT_OFFER_WORKSHOP" workEffortId="BOSS_MKT_EV_WORKSHOP"
-            occurrenceStart="2027-03-13 09:00:00" occurrenceEnd="2027-03-13 12:00:00" organizationPartyId="ORG_ZIZI_RETAIL" statusId="ErpPublished"
+            occurrenceStart="2099-03-13 09:00:00" occurrenceEnd="2099-03-13 12:00:00" organizationPartyId="ORG_ZIZI_RETAIL" statusId="ErpPublished"
             publicTitle="Rose pruning workshop" publicDescription="A hands-on morning: how and when to prune climbing, shrub and hybrid tea roses. Tools and gloves provided."
             timeZone="America/Denver" siteId="ZIZI_SHOP" totalSeats="12" holdMinutes="15" waitlistEnabled="Y" waitlistLimit="6"
-            closesDate="2027-03-12 17:00:00" termsText="Places are held for 15 minutes while you pay." cancellationTerms="Cancel up to two days before for a full refund."
+            closesDate="2099-03-12 17:00:00" termsText="Places are held for 15 minutes while you pay." cancellationTerms="Cancel up to two days before for a full refund."
             cancelDeadlineHours="48" refundPercent="100" lateCancelAllowed="N"
             questionScopeEnumId="ErqAttendee" policyRevision="4" termsRevision="0" publishedDate="2026-11-02 09:00:00" publishedByUserId="BOSS_MKT_EVENTS"
             createdByUserId="BOSS_MKT_EVENTS" createdDate="2026-11-01 10:00:00"/>
@@ -765,6 +765,11 @@ along with this software (see the LICENSE.md file). If not, see
             priceSourceEnumId="EtpProduct" productId="BOSS_MKT_TICKET_STD" perOrderLimit="4" sequenceNum="1" fromDate="2026-11-01 10:00:00" createdByUserId="BOSS_MKT_EVENTS"/>
     <mantle.work.registration.EventTicketType ticketTypeId="BOSS_MKT_TT_MEMBER" registrationPolicyId="BOSS_MKT_OFFER_WORKSHOP" ticketName="Members"
             priceSourceEnumId="EtpProduct" productId="BOSS_MKT_TICKET_MEMBER" capacity="4" perOrderLimit="2" sequenceNum="2" fromDate="2026-11-01 10:00:00" createdByUserId="BOSS_MKT_EVENTS"/>
+    <!-- Marketing follow-up 3 (§4 Nov 15, the user's call): the events' dates are relative to the load, so the webinar is always upcoming
+        and the workshop a few months out; the 2099 dates above are only placeholders that ironstone.marketing.DemoServices.load#EventDatesDemo
+        moves, the events, their offers' occurrences and the workshop's closing together (a load on Nov 15, 2026 gives the webinar on
+        Thursday Jan 28, 2027 and the workshop on Saturday Mar 13, closing Friday Mar 12 at 17:00; loading again moves them). -->
+    <ironstone.marketing.DemoServices.load-EventDatesDemo/>
     <ironstone.marketing.DemoServices.load-EventDemo/>
     <!-- ===== end of Marketing P16 ===== -->
 

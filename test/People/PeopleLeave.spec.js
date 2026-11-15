@@ -10,6 +10,20 @@ const {ids, users, asUser, system, invoke, page} = lib
 const L = "mantle.humanres.LeaveServices."
 const REASON = "Private family matter"
 const state = {}
+// the days of the requests, relative to the run (Marketing follow-up 3, the user's call of Nov 15): Tomas's morning on the first
+// Tuesday twenty weeks or more ahead, Ines's day the Wednesday after (a run on Nov 15, 2026 gives Apr 6 and 7, 2027); the calendar's
+// and the twin's dates around them, in the server's zone
+const DAY = (() => {
+    const pad = n => String(n).padStart(2, "0")
+    const now = new Date()
+    const first = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 140)
+    const tuesday = first.getDate() + ((2 - first.getDay() + 7) % 7)
+    const at = plus => {
+        const day = new Date(first.getFullYear(), first.getMonth(), tuesday + plus)
+        return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`
+    }
+    return {tomas: at(0), ines: at(1), from: at(-5), thru: at(24), earlier: at(-19), later: at(9)}
+})()
 
 spec({
     stepwise: true,
@@ -37,7 +51,7 @@ spec({
                 const ines = invoke(L + "submit#Request", {
                     partyRelationshipId: ids.reportEmploymentId,
                     leaveTypeEnumId: "PltAnnual",
-                    fromDate: "2027-04-07",
+                    fromDate: DAY.ines,
                     reason: "Ines's own"
                 })
                 state.inesRequest = ines.leaveRequestId
@@ -52,7 +66,7 @@ spec({
             system(() =>
                 invoke(L + "submit#Request", {
                     leaveTypeEnumId: "PltAnnual",
-                    fromDate: "2027-04-06",
+                    fromDate: DAY.tomas,
                     dayPartEnumId: "LdpMorning",
                     reason: REASON
                 })
@@ -88,7 +102,7 @@ feature(
         then({detail, agent, approved}) {
             state.setup == "2/2"
             detail.status == 200 && detail.errors.length == 0
-            detail.output.includes("Tomas Lindqvist: 2027-04-06") && detail.output.includes("Left after it")
+            detail.output.includes("Tomas Lindqvist: " + DAY.tomas) && detail.output.includes("Left after it")
             detail.output.includes("Approve") && detail.output.includes("Refuse")
             // the approver reads the reason, in a section and field opted out of AI (no text actions, nothing in Assist's page state)
             detail.output.includes(REASON) && detail.output.includes('data-ai-opt-out="section"')
@@ -106,12 +120,12 @@ feature(
                 const out = ec.screen
                     .makeTest()
                     .rootScreen("component://mr-boss/screen/People.xml")
-                    .render("Time/TeamCalendar/calendarEvents", {start: "2027-04-01", end: "2027-04-30"}, null)
+                    .render("Time/TeamCalendar/calendarEvents", {start: DAY.from, end: DAY.thru}, null)
                 ec.message.clearErrors()
                 return JSON.parse(String(out.output || "{}"))
             })
             // the terminal twin of the calendar from the request's fortnight, with the way to the fortnights before and after
-            const twin = asUser(users.manager, () => page("Time/TeamCalendarTui", {date: "2027-04-01"}, "tui"))
+            const twin = asUser(users.manager, () => page("Time/TeamCalendarTui", {date: DAY.from}, "tui"))
             const list = asUser(users.employee, () => page("Time/LeaveRequests", {show: "mine"}, "html"))
             const other = asUser(users.employee, () =>
                 page("Time/LeaveRequestDetail", {leaveRequestId: state.inesRequest}, "html")
@@ -126,8 +140,10 @@ feature(
             // Ines's day waits for approval: not on the calendar
             !events.some(event => event.leaveRequestId === state.inesRequest)
             twin.status == 200 && twin.errors.length == 0 && twin.output.includes("Tomas Lindqvist · Out (morning)")
-            twin.output.includes("date=2027-03-18") && twin.output.includes("date=2027-04-15") && !twin.output.includes(REASON)
-            list.status == 200 && list.errors.length == 0 && list.output.includes("2027-04-06") && !list.output.includes(REASON)
+            twin.output.includes("date=" + DAY.earlier) &&
+                twin.output.includes("date=" + DAY.later) &&
+                !twin.output.includes(REASON)
+            list.status == 200 && list.errors.length == 0 && list.output.includes(DAY.tomas) && !list.output.includes(REASON)
             other.status == 200 && other.output.includes("not available to you") && !other.output.includes("Ines's own")
         }
     }
