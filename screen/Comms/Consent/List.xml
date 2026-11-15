@@ -38,6 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="changed_thru"/>
     <parameter name="orderByField"/>
     <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
 
     <!-- the parties of the Record consent picker -->
     <transition-include name="contactSearch" location="component://mr-boss/template/ContactRecord.xml"/>
@@ -106,7 +107,7 @@ along with this software (see the LICENSE.md file). If not, see
             const out = ec.service.sync().name('ironstone.comms.ConsentServices.find#Consents').parameters({text: text || null, contactListId: contactListId || null,
                 statusId: statusId || null, purposeEnumId: purposeEnumId || null, allowSolicitation: allowSolicitation || null,
                 changedFromDate: changedFromDate, changedThruDate: changedThruDate, orderByField: orderByField || null,
-                pageIndex: Number(pageIndex || 0) || 0, pageSize: 20}).call() || {}
+                pageIndex: Number(pageIndex || 0) || 0, pageSize: Math.min(Math.max(Number(pageSize || 20) || 20, 1), 100)}).call() || {}
             consentList = Array.from(out.consentList || [])
             consentListCount = out.consentListCount || 0
             consentListPageIndex = out.consentListPageIndex || 0

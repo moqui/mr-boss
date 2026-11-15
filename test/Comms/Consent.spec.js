@@ -57,7 +57,9 @@ spec({
 
 feature("the registry: one row per contact with consent data, the chips of its lists and purposes, the last change; the demo's states", {
     when() {
-        return { shown: list({}) }
+        // a page that holds every contact: specs before this one in the worker add contacts with consent data, which a
+        // page of 20 in the newest-first order would put the demo's off
+        return { shown: list({ pageSize: 100 }) }
     },
     then({ shown }) {
         shown.status == 200
