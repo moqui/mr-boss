@@ -199,6 +199,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-single>
                             </container-dialog>
                             <link url="${detailPath}" text="Open in the calendar" icon="sym_o_calendar_month" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                            <link url="${sharedLinks['Events/Registrations']}" text="Registrations" icon="sym_o_groups" link-type="anchor"
+                                    parameter-map="{workEffortId:workEffortId}" condition="hasOffer &amp;&amp; sharedLinks['Events/Registrations']"/>
                             <container-dialog id="CloseOfferDialog" button-text="Close registration" icon="sym_o_block" width="480"
                                     title="Close the registration for ${offer.occurrenceText}" condition="offer &amp;&amp; offer.canClose">
                                 <form-single name="CloseOffer" transition="closeOffer" map="stateValues">

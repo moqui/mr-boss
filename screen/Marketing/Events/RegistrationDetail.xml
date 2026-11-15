@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Marketing › Events › RegistrationDetail (design-marketing §9 RegistrationDetail: Registration, Answers, Attendance,
+    RegistrationChange; style-guide §3.3 Detail; impl-marketing P17): one attendee's registration for an events manager of its
+    organization (mantle.work.EventRegistrationServices.get#Registration; else "Not available", linking back). The record header: the
+    attendee, the event and occurrence, the ticket and the state chip; the primary action by state (Confirm for a held free place or a
+    place paid after its hold ended, given a seat where one is free), the rest under More (Correct or substitute, Send again, Cancel).
+    The boxes: the registration (buyer, source, the terms it accepted in that revision's words, its order and payment, the refund,
+    the entry code's revision, never the code), its answers (the shared response page) and its history (every action with who,
+    when, the states, the code revision and the reason: check-ins from P18 join it). Each write is Mantle's at the revision read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Registration" default-menu-include="false">
+    <parameter name="registrationId" required="true"/>
+    <transition-include name="confirmRegistration" location="component://mr-boss/template/MarketingRegistrations.xml"/>
+    <transition-include name="cancelRegistration" location="component://mr-boss/template/MarketingRegistrations.xml"/>
+    <transition-include name="correctRegistration" location="component://mr-boss/template/MarketingRegistrations.xml"/>
+    <transition-include name="applyRegistrations" location="component://mr-boss/template/MarketingRegistrations.xml"/>
+    <transition name="registrationList"><default-response url="../Registrations"/></transition>
+    <actions>
+        <if condition="marketing.capabilities.registrationRead">
+            <service-call name="mantle.work.EventRegistrationServices.get#Registration" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{registrationId:registrationId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!found?.registration"/>
+        <script><![CDATA[
+            if (!recordFound) return
+            reg = found.registration
+            actionList = Array.from(found.actions || [])
+            captionText = [reg.offerTitle, reg.occurrenceText, reg.ticketName, reg.buyerName ? 'bought by ' + reg.buyerName : null].filter(Boolean).join(' · ')
+            changeValues = {registrationId, expectedRevision: reg.revision}
+            correctValues = {registrationId, expectedRevision: reg.revision, attendeeName: reg.attendeeName}
+            batchValues = {registrationIds: registrationId, batch: 'notify'}
+            listPath = sharedLinks['Events/Registrations']
+            responsePath = sharedLinks['Surveys/ResponseDetail']
+            facts = [
+                {label: 'Buyer', value: reg.buyerName},
+                {label: 'Source', value: reg.sourceText},
+                {label: 'Registered', value: reg.createdText},
+                {label: 'Confirmed', value: reg.confirmedText},
+                {label: 'Held until', value: reg.holdEndsText},
+                {label: 'Payment', value: reg.paymentText},
+                {label: 'Order', value: reg.orderId},
+                {label: 'Refund', value: reg.refundText},
+                {label: 'Entry code', value: reg.credentialText},
+                {label: 'Cancelled', value: reg.cancelledText ? reg.cancelledText + (reg.cancelReason ? ': ' + reg.cancelReason : '') : ''},
+                {label: 'Terms accepted', value: reg.termsRevision != null ? 'Revision ' + reg.termsRevision : ''}
+            ].filter(fact => fact.value)
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="RegistrationNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Registration ${registrationId} is not available: it is not a registration of your organizations, or registrations are for events managers."/>
+                <link url="registrationList" text="Back to registrations" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="RegistrationFound" condition="recordFound"><widgets>
+            <context record-entity="mantle.work.registration.EventRegistration" record-id="${registrationId}" title="${reg.attendeeName}"/>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <container style="row items-center no-wrap">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${WebUtilities.encodeHtml(registrationId)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "RegistrationKey", style: "strong", text: registrationId})}]]></text>
+                            </render-mode>
+                            <label text="${reg.attendeeName}" type="h5"/>
+                        </container>
+                        <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${reg.stateColor}">${WebUtilities.encodeHtml(reg.stateText)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "RegistrationState", text: reg.stateText})}]]></text>
+                            <text type="html">${reg.stateText}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <link url="${listPath}" text="All registrations of the event" link-type="anchor" parameter-map="{workEffortId:reg.workEffortId}" condition="listPath"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-xs m-record-actions">
+                        <container-dialog id="ConfirmDialog" button-text="${reg.statusId == 'EvrReview' ? 'Give a seat' : 'Confirm'}" icon="sym_o_check_circle"
+                                type="primary" width="520" title="Confirm the registration of ${reg.attendeeName}" condition="found.canConfirm">
+                            <label type="p" text="${reg.statusId == 'EvrReview' ? 'Its payment arrived after the hold ended. Where seats are free for every place it paid for, they are taken and its order is placed; its approval confirms them.' : 'A free place held for this attendee is confirmed and its ticket sent.'}"/>
+                            <form-single name="ConfirmRegistration" transition="confirmRegistration" map="changeValues">
+                                <field name="registrationId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="reason"><default-field title="Note"><text-line size="40" maxlength="200"/></default-field></field>
+                                <field name="submitButton"><default-field title=""><submit text="Confirm" confirmation="Confirm the registration of ${reg.attendeeName}?"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="CorrectDialog" button-text="Correct or substitute" icon="sym_o_person_edit" width="560"
+                                    title="Correct or substitute the attendee" condition="found.canCorrect">
+                                <label type="p" text="A new person replaces the attendee; the earlier entry code stops working and a confirmed place's new code goes to the new attendee. Check-ins stay as they were."/>
+                                <form-single name="CorrectRegistration" transition="correctRegistration" map="correctValues">
+                                    <field name="registrationId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="attendeeName"><default-field title="Attendee"><text-line size="30" maxlength="100"/></default-field></field>
+                                    <field name="attendeeEmail"><default-field title="Attendee's email"><text-line size="30" maxlength="254" input-type="email"/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="40" maxlength="200"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Save" confirmation="Change the attendee of this registration?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="NotifyDialog" button-text="Send again" icon="sym_o_forward_to_inbox" width="480"
+                                    title="Send the ticket or status again" condition="found.canNotify">
+                                <form-single name="NotifyRegistration" transition="applyRegistrations" map="batchValues">
+                                    <field name="registrationIds"><default-field><hidden/></default-field></field>
+                                    <field name="batch"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Send again" confirmation="Send it again? A ticket carries a new entry code."/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="CancelDialog" button-text="Cancel registration" icon="sym_o_cancel" width="520"
+                                    title="Cancel the registration of ${reg.attendeeName}" condition="found.canCancel">
+                                <label type="p" text="Its place is released once and its entry code stops working; a paid place's refund is handed to Accounting and shows pending until the provider's answer."/>
+                                <form-single name="CancelRegistration" transition="cancelRegistration" map="changeValues">
+                                    <field name="registrationId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="40" maxlength="200"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Cancel registration" type="danger" confirmation="Cancel the registration of ${reg.attendeeName}?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </button-menu>
+                    </container>
+                </container>
+            </container>
+            <container style="row q-col-gutter-md">
+                <container style="col-12 col-md-6">
+                    <container-box><box-header title="Registration"/><box-body>
+                        <section-iterate name="RegistrationFacts" list="facts" entry="fact"><widgets>
+                            <container style="row q-py-xs">
+                                <label text="${fact.label}" type="span" style="col-5 text-caption m-muted"/>
+                                <label text="${fact.value}" type="span" style="col-7"/>
+                            </container>
+                        </widgets></section-iterate>
+                    </box-body></container-box>
+                    <container-box condition="reg.termsText || reg.cancellationTerms || reg.consentText"><box-header title="The terms accepted"/><box-body>
+                        <label text="${reg.termsText}" type="p" condition="reg.termsText"/>
+                        <label text="Cancellation: ${reg.cancellationTerms}" type="p" condition="reg.cancellationTerms"/>
+                        <label text="${reg.consentText}" type="p" condition="reg.consentText"/>
+                    </box-body></container-box>
+                    <container-box condition="reg.formResponseId"><box-header title="Answers"/><box-body>
+                        <label type="p" text="The attendee's answers to the registration questions, as the form stood when answered."/>
+                        <link url="${responsePath}" text="Open the answers" link-type="anchor" parameter-map="{formResponseId:reg.formResponseId}" condition="responsePath"/>
+                    </box-body></container-box>
+                </container>
+                <container style="col-12 col-md-6">
+                    <container-box><box-header title="Attendance and history"/><box-body-nopad>
+                        <form-list name="RegistrationHistory" list="actionList" skip-form="true">
+                            <field name="whenText"><default-field title="When"><display/></default-field></field>
+                            <field name="actionText"><default-field title="What"><display/></default-field></field>
+                            <field name="toText"><default-field title="State"><display/></default-field></field>
+                            <field name="actorText"><default-field title="Who"><display/></default-field></field>
+                            <field name="credentialRevision"><default-field title="Code"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="actionText"/><field-ref name="whenText"/></column>
+                                <column><field-ref name="toText"/><field-ref name="actorText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad></container-box>
+                </container>
+            </container>
+        </widgets></section>
+    </widgets>
+</screen>

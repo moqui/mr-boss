@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The registration transitions of the IronStone Marketing screens (impl-marketing P17; design-marketing §9 Registrations,
+    RegistrationDetail): each calls mantle.work.EventRegistrationServices, which checks MARKETING_EVENT_MANAGE and the offer's organization,
+    so a screen that includes one adds no authority. A screen includes each transition it uses by name.
+    - enterRegistration: StaffRegistration (reserve#Registration, then complete#Registration with the attendee named and the terms
+      accepted on the buyer's behalf; a free place confirms, a paid one stays held for its payment);
+    - applyRegistrations: RegistrationBatch (change#Registrations), cancel or notify the selected registrations;
+    - confirmRegistration, cancelRegistration, correctRegistration: RegistrationDetail's RegistrationChange. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="enterRegistration">
+        <actions>
+            <set field="requestKey" from="requestKey || ec.user.randomString(24).replace(/[^A-Za-z0-9]/g, 'x')"/>
+            <!-- the ticket chosen names its offer: "offer:ticket" -->
+            <set field="registrationPolicyId" from="ticketKey ? String(ticketKey).split(':')[0] : registrationPolicyId"/>
+            <set field="ticketTypeId" from="ticketKey ? String(ticketKey).split(':')[1] : ticketTypeId"/>
+            <service-call name="mantle.work.EventRegistrationServices.reserve#Registration" out-map="reserved"
+                    in-map="{registrationPolicyId:registrationPolicyId, ticketTypeId:ticketTypeId, quantity:1, buyerName:buyerName,
+                        buyerEmail:buyerEmail, marketingCampaignId:(marketingCampaignId || null), requestKey:requestKey}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; reserved?.state == 'held'">
+                <service-call name="mantle.work.EventRegistrationServices.complete#Registration" out-map="completed"
+                        in-map="{reservationId:reserved.reservationId, attendees:[{name:(attendeeName || buyerName), email:(attendeeEmail || null)}],
+                            acceptTerms:(acceptTerms == 'Y'), termsRevision:null, requestKey:requestKey}"/>
+            </if>
+            <if condition="!ec.message.hasError()"><message type="success">${reserved?.state == 'waitlisted' ? 'Added to the waitlist' :
+                    (completed?.state == 'confirmed' ? 'Registration confirmed' : 'Places held: the buyer pays to confirm them')}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="registrationPolicyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="applyRegistrations">
+        <actions>
+            <set field="selectedIds" from="registrationIds == null ? [] : (typeof registrationIds == 'string' ? registrationIds.split(',') : Array.from(registrationIds))"/>
+            <service-call name="mantle.work.EventRegistrationServices.change#Registrations" out-map="changed"
+                    in-map="{action:batch, registrationIds:selectedIds, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="${changed.failed ? 'warning' : 'success'}">${changed.changed} changed${changed.failed ? ', ' + changed.failed + ' failed: ' + Array.from(changed.results).filter(r =&gt; r.outcome == 'failed').map(r =&gt; r.registrationId + ' ' + r.message).join('; ') : ''}</message></if>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/><parameter name="registrationPolicyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="confirmRegistration">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.confirm#Registration"
+                    in-map="{registrationId:registrationId, expectedRevision:expectedRevision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Registration confirmed or its seat given</message></if>
+        </actions>
+        <default-response url="."><parameter name="registrationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="cancelRegistration">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.cancel#Registration" out-map="cancelled"
+                    in-map="{registrationId:registrationId, expectedRevision:expectedRevision, reason:reason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${cancelled.refundStatusEnumId == 'ErfRequested' ? 'Registration cancelled; its refund is handed to Accounting' : 'Registration cancelled'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="registrationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="correctRegistration">
+        <actions>
+            <service-call name="mantle.work.EventRegistrationServices.correct#Registration" out-map="corrected"
+                    in-map="{registrationId:registrationId, expectedRevision:expectedRevision, attendeeName:attendeeName,
+                        attendeeEmail:(attendeeEmail || null), reason:reason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${corrected.substituted ? 'Attendee substituted; the earlier entry code no longer works' : 'Attendee corrected'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="registrationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+</screen>

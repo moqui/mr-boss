@@ -1056,6 +1056,23 @@ impl-marketing P16), called by built screens and PASS pages:
 | work/EventRegistrationServices | add#EventVideoCall | Marketing/Events/EventDetail ("Add video call", L7) | Marketing/Events/RegistrationSetup (More › Add video call) (Marketing P16) |
 | marketing/MarketingPortalServices | get#Event | PASS:Marketing/Event (PublicEvent) | PASS:Marketing/Event (getMarketingEvent); PASS:Marketing/Page (an [[event ID]] card) (Marketing P16) |
 | marketing/CampaignServices | store#CampaignAssociation (CakEvent) | Marketing/Campaigns/CampaignDetail (Links) | the event kind by RegistrationEvent's organization (Marketing P16) |
+
+Added in Marketing P17 (Nov 15, 2026; registrations, tickets and payment in `mantle.work.EventRegistrationServices` over
+EventRegistrationPlaces.js, EventRegistrationPayments.js and EventRegistrationNotices.js, PASS Register and Registration's operations of
+`mantle.marketing.MarketingPortalServices`, impl-marketing P17), called by built screens, PASS pages, jobs and a SECA:
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| work/EventRegistrationServices | find#Registrations | Marketing/Events/Registrations (RegistrationFind, Attendees) | Marketing/Events/Registrations (Marketing P17) |
+| work/EventRegistrationServices | reserve#Registration, complete#Registration | Marketing/Events/Registrations (StaffRegistration) | template/MarketingRegistrations.xml enterRegistration (Marketing/Events/Registrations) (Marketing P17) |
+| work/EventRegistrationServices | change#Registrations | Marketing/Events/Registrations (RegistrationBatch) | Marketing/Events/Registrations (row selection: Cancel, Send again), RegistrationDetail (Send again) (Marketing P17) |
+| work/EventRegistrationServices | get#Registration, confirm#Registration, cancel#Registration, correct#Registration | Marketing/Events/RegistrationDetail (Registration, Attendance, RegistrationChange) | Marketing/Events/RegistrationDetail (Marketing P17) |
+| work/EventRegistrationServices | start#RegistrationPayment | PASS:Marketing/Register (RegistrationPayment) | PASS:Marketing/Register through startRegistrationPayment (EventRegistrationPayments.js); the staff wrapper for a staff entry (Marketing P17) |
+| work/EventRegistrationServices | check#RegistrationAccess, create#EventRegistrationContent | Shared/Chatter, Shared/RecordFiles (EventRegistration host) | CommunicationServices' visibility, ironstone.shared.RecordFilesServices (Marketing P17) |
+| work/EventRegistrationServices | run#RegistrationHolds, run#RegistrationNotices | §15.3 Registration expiry/waitlist, Event communications | jobs run_EventRegistrations, run_EventRegistrationNotices (Marketing P17) |
+| work/EventRegistrationServices | handle#RegistrationOrderStatus, offer#WaitlistPlaces, refund#RegistrationPayment, refresh#RegistrationPayment, queue#RegistrationNotice, build#RegistrationDelivery | §9 order rules, §15.3, §18 | the EventRegistrationOrderStatus SECA, after-commit services and the ledger source MdsrcEventRegistration (Marketing P17) |
+| marketing/MarketingPortalServices | reserve#Registration, complete#Registration, start#RegistrationPayment, get#Registration, cancel#Registration | PASS:Marketing/Register (RegistrationChoice, RegistrationAnswers, RegistrationPayment, RegistrationReceipt), PASS:Marketing/Registration (MyRegistration, CancelRegistration) | PASS:Marketing/Register, PASS:Marketing/Registration (Marketing P17) |
+| order/OrderInfoServices | check#OrderPreApprove | Sales §5 (pre-approval warnings) | a storeless ticket order (OrpEventRegistration) skips the new-customer and shipping-address checks (Marketing P17) |
 ## Order (89 services)
 
 | Service XML | Service | Designed in | Implemented in |

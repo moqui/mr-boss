@@ -55,7 +55,8 @@ along with this software (see the LICENSE.md file). If not, see
                 marketingCampaigns: sharedLinks['Campaigns/Campaigns'], marketingApprovals: sharedLinks['Campaigns/Approvals'],
                 marketingCampaign: sharedLinks['Campaigns/CampaignDetail'], marketingCampaignDefaults: sharedLinks['Settings/CampaignDefaults'],
                 marketingLists: sharedLinks['Audiences/Lists'], marketingSends: sharedLinks['Sends/Sends'],
-                marketingSend: sharedLinks['Sends/SendDetail'], marketingDelivery: sharedLinks['Sends/CampaignDelivery']}"/>
+                marketingSend: sharedLinks['Sends/SendDetail'], marketingDelivery: sharedLinks['Sends/CampaignDelivery'],
+                marketingEvents: sharedLinks['Events/Events']}"/>
         <set field="newDefaults" from="{organizationPartyId: organizationPartyId || marketing.activeOrganizationPartyId || (marketing.organizationPartyIds.length == 1 ? marketing.organizationPartyIds[0] : null)}"/>
         <set field="stateText" from="{available: 'Available', notAvailable: 'Not available', failed: 'Could not be read'}"/>
         <set field="cardRows" from="Array.from(homeFound?.cards || []).map(card =&gt; Object.assign({}, card, {

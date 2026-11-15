@@ -104,7 +104,10 @@ const ids = {
     // ticket types priced by their products)
     webinarEventId: "BOSS_MKT_EV_WEBINAR",
     workshopEventId: "BOSS_MKT_EV_WORKSHOP",
-    workshopOfferId: "BOSS_MKT_OFFER_WORKSHOP"
+    workshopOfferId: "BOSS_MKT_OFFER_WORKSHOP",
+    // P17: the webinar's offer and its free ticket, for a staff registration
+    webinarOfferId: "BOSS_MKT_OFFER_WEBINAR",
+    webinarTicketId: "BOSS_MKT_TT_WEBINAR"
 }
 // The demo users of each group (each but the administrator also in BOSS_MARKETING), agents of Ziziwork Retail but
 // marketing.author2 (Ziziwork Services only), none in ADMIN; a Projects client contact, a PASS public account and another app's
