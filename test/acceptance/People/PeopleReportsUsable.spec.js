@@ -5,7 +5,7 @@
 // expiring template, copied in Insights › Business alerts and activated, tells its owner once when a Retail employee's verified
 // qualification expires within thirty days, and not again at the next check. Rafael's first aid certificate's expiry is moved here
 // and put back at the end, and the copied rule and the schedule are deleted, so the demo data is left as it was. The rules are
-// Mantle's PeopleReports and BOSS's PeopleInsights and PeopleAccessLater. Written with P29, not run as part of it.
+// Mantle's PeopleReports and BOSS's PeopleInsights and PeoplePayrollAccess. Written with P29, not run as part of it.
 // Run: ./moq accept mr-boss --spec PeopleReportsUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

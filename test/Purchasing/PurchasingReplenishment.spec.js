@@ -3,7 +3,7 @@
 // action), the buyer's conversion through its transition into a draft purchase order, Home's shortfall count with the plan's
 // date, ReorderRules' rule list (its one html render, with the stock planner's New rule and a snooze) and the Purchasing
 // context of InventoryAvailability's Policy (its html render, with the snooze). The rules themselves are Mantle's
-// (mr-mantle test/product/Replenishment); the facility's access rule is PurchasingAccess's; the usable-when walk is the
+// (mr-mantle test/product/Replenishment); the facility's access rule is PurchasingRecordAccess's; the usable-when walk is the
 // acceptance PurchasingReplenishmentWalk.
 // Run: ./moq test mr-boss --spec PurchasingReplenishment
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")

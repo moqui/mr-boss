@@ -7,8 +7,8 @@
 // Admin's readiness and settings registries. One feature per rule, each case of it a line of its problems, with artifact
 // authorization enabled. Mantle's scope rules (employment dates, reporting lines, self) are Mantle's PeopleScope. The access
 // and isolation walk is the acceptance PeopleFoundationWalk. This spec holds P1 to P10's features (foundation, employees,
-// organization, positions, approvals, hire, lifecycle, self-service, schedules, time); P11 on are PeopleAccessLater's, which
-// shares PeopleSpecLib. The context, menu and capability features here hold every phase's links, menu groups and capabilities.
+// organization, positions, approvals, hire, lifecycle, self-service, schedules, time); P11 to P21 and P30 are PeopleAccessLater's and
+// payroll's (P22 to P29, P31) PeoplePayrollAccess's, which share PeopleSpecLib. The context, menu and capability features here hold every phase's links, menu groups and capabilities.
 // A later phase adds a case only for an access rule it adds. P2: the
 // employment content host (its notes and files an HR officer's of its employer, through the shared panels' record check) and
 // the People panels serving no other record. P3: a change of a unit's members and of a reporting line, an HR editor's of its

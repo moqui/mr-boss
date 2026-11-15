@@ -5,7 +5,7 @@
 // runs, reads its population, calculates it (three calculated, Leon in error with SALARY_MISSING), has Leon's salary set and
 // calculates again (only Leon is calculated, the others' results stay as they were), and asks for approval; the payroll operator
 // may not approve; the payroll approver (people.payapprover) reads the exact totals on the Approval step and approves them. Nothing
-// is paid or posted. The rules themselves are Mantle's PayRuns and mr-boss's PeoplePayRuns and PeopleAccessLater.
+// is paid or posted. The rules themselves are Mantle's PayRuns and mr-boss's PeoplePayRuns and PeoplePayrollAccess.
 // Run: ./moq accept mr-boss --spec PeoplePayRunsUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

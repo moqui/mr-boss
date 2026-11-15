@@ -3,7 +3,7 @@
 // payslip marked, Correct pay offered and no Issue statement), the payroll approver's one html render of Payslips (the run's slips,
 // the preview and the issued one), and the employee's one html render of their own issued slip under Commons (MyPayslip: its lines
 // and the download of its stored statement, not the line kept off it). Mantle's rules (slips on approval, preview never issued,
-// corrections linked, the person's own issued slips alone) are Mantle's Payslips; the access case is PeopleAccessLater's. The
+// corrections linked, the person's own issued slips alone) are Mantle's Payslips; the access case is PeoplePayrollAccess's. The
 // usable-when walk is the acceptance PeoplePayslipsUsable. Run: ./moq test mr-boss --spec PeoplePayslips
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

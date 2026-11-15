@@ -2,7 +2,7 @@
 // thermostat for the agent (its coverage from the ship date plus the 12-month term with the source, and Decide as the primary
 // action), WarrantyClaims' one qvt render listing it, Customer360's Delivered items' one html render (a tab alone) showing the serial with its
 // warranty end and the claim, and NewCase's template step taking the warranty claim type's template before the queue's. The
-// rules are Mantle's SupportWarranty spec; the access rule is CustomerServiceAccess's; the usable-when is the acceptance
+// rules are Mantle's SupportWarranty spec; the access rule is CustomerServiceRecordAccess's; the usable-when is the acceptance
 // CustomerServiceWarrantyWalk. RequestDetail's unlink of the claim's order moves its revision (F185, through WarrantyServices).
 // The claim is the spec's own, closed at the end.
 // Run: ./moq test mr-boss --spec CustomerServiceWarranty

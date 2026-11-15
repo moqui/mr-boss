@@ -6,7 +6,7 @@
 // PayStructures and PayStructureDetail, previews gross to net (the demonstration localization's items among them) and asks to
 // publish it, approved the same way; and sets up a monthly group through PayGroups, prepares its periods and reads its readiness:
 // preview only. The HR officer (people.hr, no payroll permission) opens none of the screens. The rules themselves are Mantle's
-// PayConfiguration and mr-boss's PeoplePayConfiguration and PeopleAccessLater.
+// PayConfiguration and mr-boss's PeoplePayConfiguration and PeoplePayrollAccess.
 // Run: ./moq accept mr-boss --spec PeoplePayConfigurationUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page, screenRefusal} = lib

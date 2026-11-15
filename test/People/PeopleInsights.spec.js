@@ -8,7 +8,7 @@
 // updates or removes its holder's qualification documents (the P29 review); the Insights data steward stewards the People datasets and reads none of their rows; an Assist or MCP
 // question or saved panel on a People dataset is refused and none is listed as a source; Reports' one render (headcount as HR, with its denominator and export) and its CSV, and Preferences' one
 // render (the People administrator's clocking default and case intake handlers by name). The report rules are Mantle's
-// PeopleReports; the access cases are PeopleAccessLater's; the "usable when" is the acceptance PeopleReportsUsable.
+// PeopleReports; the access cases are PeoplePayrollAccess's; the "usable when" is the acceptance PeopleReportsUsable.
 // Run: ./moq test mr-boss --spec PeopleInsights
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page} = lib

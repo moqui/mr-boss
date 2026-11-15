@@ -1,7 +1,7 @@
 // Customer Service order changes (impl-customer-service P10): OrderChangeDetail's one qvt render of an approved proposal for
 // the order desk (its state, the impact with the line's reserved quantity, the decision and Apply as the one primary action)
 // and OrderChanges' one qvt render listing it. The rules are Mantle's OrderChanges spec; the access rule is
-// CustomerServiceAccess's; the usable-when is the acceptance CustomerServiceOrderChangesWalk. The proposal is the spec's own,
+// CustomerServiceRecordAccess's; the usable-when is the acceptance CustomerServiceOrderChangesWalk. The proposal is the spec's own,
 // removed at the end.
 // Run: ./moq test mr-boss --spec CustomerServiceOrderChanges
 const lib = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")

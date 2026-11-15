@@ -9,7 +9,7 @@
 // - an application to a Retail opening: the recruiter's (people.recruiter).
 // Then each user of a People group with no other launcher (people.reader, .employee, .manager, .hr, .recruiter, .payroll,
 // .payapprover, .develop, .case, .admin) and Accounting's payroll finance (finance.payroll, PAYROLL_VIEW, which reads nothing of
-// People: PeopleAccessLater's P31 feature) gets none of a secret that is not theirs, with valid ids and parameters: not by URL (Employee360 under People and
+// People: PeoplePayrollAccess's P31 feature) gets none of a secret that is not theirs, with valid ids and parameters: not by URL (Employee360 under People and
 // Commons, RequestDetail under People and Commons, LeaveRequestDetail, ApplicantDetail, PayAssignments, Payslips, the lists), the
 // screens' services (get#Employee360Context, get#Employee360, get#Compensation, get#PeopleCase, get#Request, get#Application, the
 // payroll register), direct calls of the Mantle services and the REST entity paths, transitions (Employee360's storePersonalInfo on
@@ -19,7 +19,7 @@
 // the walk ran (titles and messages of anyone's). The readers get theirs (each negative case has its positive one). Last, the kiosk
 // display account, as Retail's registered tablet, reaches none of it. The scenarios each phase wrote stay theirs (PeopleDirectoryUsable,
 // PeopleCasesUsable, PeoplePayAssignmentsUsable, PeoplePayslipsUsable, PeopleLeaveUsable, PeopleRecruitingUsable, PeopleKioskUsable);
-// this walk puts every group through the same paths. The rules themselves are the regression specs' (PeopleAccess, PeopleAccessLater,
+// this walk puts every group through the same paths. The rules themselves are the regression specs' (PeopleAccess, PeopleAccessLater, PeoplePayrollAccess,
 // Mantle's PeopleScope and the phases' specs). The invoice, payment and GL drill-down of payroll is AccountingPayrollOrigin's and
 // PeoplePayHandoffUsable's. "Navigation and devices" is PeopleNavigationWalk, the phone width PeoplePhoneWalk.
 // Run: ./moq accept mr-boss --spec PeopleReviewWalk

@@ -3,7 +3,7 @@
 // options with their scores, the rules and the preview; ServiceDefaults' one render (qvt) with the feedback delivery;
 // SatisfactionResults' read and one render (qvt): one form and its current period, the demo answer with its comment and the
 // counts; ResponseDetail's read with the form as of the answer; Home's CSAT measure. The rules are Mantle's CaseFeedback spec;
-// the access rules CustomerServiceAccess's; the walks CustomerServiceFeedbackWalk (acceptance).
+// the access rules CustomerServiceRecordAccess's; the walks CustomerServiceFeedbackWalk (acceptance).
 // Run: ./moq test mr-boss --spec CustomerService/CustomerServiceFeedback
 const lib = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")
 const {ids, users, asUser, system, invoke} = lib

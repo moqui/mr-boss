@@ -5,7 +5,7 @@
 // the monthly pay group from a date on PayAssignments (previewed first), saves his tax profile with the demonstration localization's
 // fields and sees his readiness clear; the HR officer (people.hr) opens the same Employee360 with no Compensation region. Then a
 // raise for Tomas waits for the employer's payroll approver (people.payapprover), who reads and approves it, while his manager
-// (people.manager, Hannah) reads nothing of it, and the salary in effect ends on its date. The rules themselves are Mantle's PayAssignments and mr-boss's PeoplePayAssignments and PeopleAccessLater.
+// (people.manager, Hannah) reads nothing of it, and the salary in effect ends on its date. The rules themselves are Mantle's PayAssignments and mr-boss's PeoplePayAssignments and PeoplePayrollAccess.
 // Run: ./moq accept mr-boss --spec PeoplePayAssignmentsUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib

@@ -6,7 +6,7 @@
 // and an employment's advances), each with a selected value that is not on the page. Mantle's rules (each input once, the time
 // basis, the worker invoice, the source guards, the adjustment's approval) are Mantle's PayInputs; the access case (preparing and
 // adjusting payroll's, HR refused with the same parameters, Services' group missing to Retail's payroll, the screens) is
-// PeopleAccessLater's. The usable-when walk is the acceptance PeoplePayInputsUsable. Run: ./moq test mr-boss --spec PeoplePayInputs
+// PeoplePayrollAccess's. The usable-when walk is the acceptance PeoplePayInputsUsable. Run: ./moq test mr-boss --spec PeoplePayInputs
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
 const S = "mantle.humanres.PayrollInputServices."

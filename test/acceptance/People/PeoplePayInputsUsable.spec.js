@@ -5,7 +5,7 @@
 // leave become inputs, Ines is named and left out), and makes a bonus for Tomas on Pay adjustments, which the payroll approver
 // (people.payapprover) approves from To decide; preparing again makes nothing twice. Then a worker invoice that names Tomas's paid
 // time entry is refused, and his week, once a pay input of it is finalized, is not reopened. The rules themselves are Mantle's
-// PayInputs and mr-boss's PeoplePayInputs and PeopleAccessLater. Run: ./moq accept mr-boss --spec PeoplePayInputsUsable
+// PayInputs and mr-boss's PeoplePayInputs and PeoplePayrollAccess. Run: ./moq accept mr-boss --spec PeoplePayInputsUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
 const S = "mantle.humanres.PayrollInputServices."

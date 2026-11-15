@@ -8,7 +8,7 @@
 // the acceptance fixture only (§5 Q3: preview mode issues nothing; P27's finalization would make the slips final), both slips are
 // made final and the operator issues them: the employee is told with no amount, sees both on SelfService and reads the correction
 // with the net effect. Nothing is paid or posted. The rules themselves are Mantle's Payslips and mr-boss's PeoplePayslips and
-// PeopleAccessLater. Run: ./moq accept mr-boss --spec PeoplePayslipsUsable
+// PeoplePayrollAccess. Run: ./moq accept mr-boss --spec PeoplePayslipsUsable
 const lib = ec.resource.script("component://mr-boss/test/People/PeopleSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
 const S = "mantle.humanres.PayrollRunServices."

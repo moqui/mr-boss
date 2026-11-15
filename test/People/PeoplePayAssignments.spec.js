@@ -5,7 +5,7 @@
 // whatever the user may read), and the choices P23 adds (an employer's employments, structures and a structure's elective lines,
 // and the benefit types), each with a selected value that is not on the page. Mantle's rules (one primary per employment and date,
 // salary dates, the pay change, the profile's fields, readiness) are Mantle's PayAssignments; the access case (Compensation absent
-// for HR with the same parameters) is PeopleAccessLater's. Pay opted out of AI (the user's call of Nov 12, 2026): an agent's render of
+// for HR with the same parameters) is PeoplePayrollAccess's. Pay opted out of AI (the user's call of Nov 12, 2026): an agent's render of
 // Employee360 shows Compensation's placeholder, and the pay fields' definitions answer aiOptOut, which the data tool reads by.
 // The usable-when walk is the acceptance PeoplePayAssignmentsUsable.
 // Run: ./moq test mr-boss --spec PeoplePayAssignments
