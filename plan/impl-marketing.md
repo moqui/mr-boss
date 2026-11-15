@@ -7701,7 +7701,7 @@ it" (follow-up 5), its attribution read as `[]` (line 1391), though it passed al
   ShopCheckout and MarketingRetention in one run: 107 of 107, 26.9 s of feature time; EventRegistrations alone: 17 of 17, the feature
   0.86 s. The race does not reproduce on an idle machine (the feature passed alone before the fix too). Not run: test-apps,
   test-framework, acceptance.
-- Findings (provisional, numbered by the lead):
+- Finding, numbered by the lead F461:
   - a spec that reads what a tx-commit SECA writes must wait for it (the service worker runs it after the commit); this one read at
     once (fixed here, low). The other attribution specs call handle#OrderPlaced directly and are not affected.
 - For the lead:
@@ -8279,6 +8279,7 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F458 | Follow-up 7 (Review Nov 15): MarketingAccess's holders check was order-dependent on every Marketing spec's spec-local groups, not EventCheckIn's alone (R1, medium, fixed here) | Follow-up 7: as its Review note says |
 | F459 | Follow-up 7 (Review Nov 15): Consent's registry chips were satisfied by the filter's options (R2, low, fixed here) | Follow-up 7: as its Review note says |
 | F460 | Follow-up 7 (Review Nov 15): SendDetail's Delivery fix had no server check (R3, low, fixed here) | Follow-up 7: as its Review note says |
+| F461 | Follow-up 8 (Built Nov 15): a spec that reads what a tx-commit SECA writes must wait for it (the service worker runs it after the commit); this one read at once (fixed here, low). The other attribution specs call handle#OrderPlaced directly and are not affected | Follow-up 8: as its Built note says |
 
 ## 7. Later
 
