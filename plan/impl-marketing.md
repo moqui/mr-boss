@@ -5812,7 +5812,7 @@ starting with BOSS_PRICE_SALES/BOSS_PRICE_NEXT. Branch `mkt/fix2` in mr-moqui, m
     regression specs of Maintenance, People, Marketing, Sales, Purchasing, Projects, Products, Warehouse, Manufacturing and
     CustomerService on 4 workers (933 of 935): SalesQuotes and SalesQuoteSend fail alike on master's runtime (below), not a date.
   - Prettier (mr-moqui's config) on the changed JavaScript; rustfmt on archive.rs. Not run: test-apps, test-framework, acceptance.
-- Findings (provisional, numbered by the lead):
+- Findings, numbered by the lead F363 to F366 in order:
   - the code over the plan above (hex by default with an optional base64url, an empty key refused; no version marker for codes);
   - existing entry codes of follow-up 1's construction rotate at their registration's next showing (the demo data stores none);
   - SalesQuotes ("No tax: the seller has no tax gateway" not shown for Wingtip's quote) and SalesQuoteSend (propose#Quote refused,
@@ -5870,7 +5870,7 @@ failed on master since follow-up 1 gave Retail a Utah nexus (R3).
     OrderDetail says "Tax by the seller's gateway … the quote has no address: choose the customer's in Edit quote" and a proposal
     takes Wingtip's address and retaxes first (F151). Its data comment says so. SalesQuotes asserts that note and no "No tax";
     SalesQuoteSend asserts the new quote is at Wingtip's address with a sales tax line (it failed on master before reaching that).
-- Provisional findings (for the lead to number):
+- Findings, numbered by the lead F367 to F369 in order:
   - existing entry codes of follow-up 1's construction rotate at their registration's next showing (as the Built note says);
   - the demo quote BOSS_SAL_QTE_WINGTIP is untaxed as loaded (no tax line until a rep chooses the address or proposes it), since
     Retail's gateway and nexus load after the Sales demo; giving it tax at load would mean taxing it after BossZZMarketingDemoData
@@ -6346,6 +6346,13 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F360 | Follow-up 1 (Review Nov 15): the whole authorization captured and a place cancelled before the approval refunded from it (above) | Follow-up 1: as its Review note says |
 | F361 | Follow-up 1 (Review Nov 15): OrderToCashBasicFlow and ReturnToResponseBasicFlow still suspend Retail's nexus (R4) | Follow-up 1: as its Review note says |
 | F362 | Follow-up 1 (Review Nov 15): ProductsPriceLists and ProductsPricing (mr-boss) fail on master too (the main checkout, release): BossProductsDemoData's BOSS_PRICE_SALES (15.00) ends and BOSS_PRICE_NEXT (16.00, "Scheduled next price") starts 2026-11-15 00:00, today, so the price list's explanation reads 14.40 (16.00 less 10 %) for the expected 13.50 and the REST read lists BOSS_PRICE_NEXT, not BOSS_PRICE_SALES: a date in the demo data, not tax and not this follow-up | Follow-up 1: as its Review note says |
+| F363 | Follow-up 2 (Built Nov 15): the code over the plan above (hex by default with an optional base64url, an empty key refused; no version marker for codes) | Follow-up 2: as its Built note says |
+| F364 | Follow-up 2 (Built Nov 15): existing entry codes of follow-up 1's construction rotate at their registration's next showing (the demo data stores none) | Follow-up 2: as its Built note says |
+| F365 | Follow-up 2 (Built Nov 15): SalesQuotes ("No tax: the seller has no tax gateway" not shown for Wingtip's quote) and SalesQuoteSend (propose#Quote refused, ADDRESS_REQUIRED: the customer has no address to tax the quote at) fail on master too: Retail now has a Utah nexus and inherits Corp's LOCAL gateway (follow-up 1's demo change), so Retail's quotes are taxed and need an address; a follow-up for Sales' specs or demo (Wingtip given an address, or the specs' expectations), not done here | Follow-up 2: as its Built note says |
+| F366 | Follow-up 2 (Built Nov 15): dates beyond December that specs depend on, next to turn: Marketing's webinar (2027-01-28) and workshop (2027-03-13, closing 03-12) offers that MarketingAccess and the Marketing specs register for; Wingtip's quote valid to 2027-01-31; PeopleLeave's requests of 2027-04-06/07. Not changed (outside the call's Nov–Dec window) | Follow-up 2: as its Built note says |
+| F367 | Follow-up 2 (Review Nov 15): existing entry codes of follow-up 1's construction rotate at their registration's next showing (as the Built note says) | Follow-up 2: as its Review note says |
+| F368 | Follow-up 2 (Review Nov 15): the demo quote BOSS_SAL_QTE_WINGTIP is untaxed as loaded (no tax line until a rep chooses the address or proposes it), since Retail's gateway and nexus load after the Sales demo; giving it tax at load would mean taxing it after BossZZMarketingDemoData or moving Retail's nexus into the Sales demo | Follow-up 2: as its Review note says |
+| F369 | Follow-up 2 (Review Nov 15): dates beyond December that specs depend on, next to turn (the worker's list, not changed): Marketing's webinar offer (2027-01-28) and workshop (2027-03-13, closing 03-12), which MarketingAccess and the Marketing specs register for; Wingtip's quote valid to 2027-01-31; PeopleLeave's requests of 2027-04-06/07 | Follow-up 2: as its Review note says |
 
 ## 7. Later
 
