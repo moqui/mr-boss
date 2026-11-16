@@ -122,7 +122,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         parameter-map="{loginKey:loginKey}"/></default-field></field>
                         </form-list>
                         <section name="NoTokens" condition="!tokenList.length"><widgets>
-                            <label type="p" text="No access tokens. A token is the password for git over HTTPS and for the REST API." style="m-muted q-pa-sm q-mb-none"/>
+                            <label type="p" text="No access tokens. A token is the password for git over HTTPS and for git's REST API (posting checks), and signs in nowhere else." style="m-muted q-pa-sm q-mb-none"/>
                         </widgets></section>
                     </box-body-nopad>
                 </container-box>
@@ -136,7 +136,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="git clone ${sampleSshUrl || 'ssh://' + username + '@this-server/repository.git'}" type="div" style="text-mono q-mb-sm"/>
                         <label text="Each repository shows its own addresses under Clone." type="p" style="text-caption m-muted"/>
                     </widgets><fail-widgets>
-                        <label type="p" text="Code hosting is not in this build, so there is nothing to clone here; the keys and tokens still serve SFTP and the REST API."/>
+                        <label type="p" text="Code hosting is not in this build, so there is nothing to clone here; the SSH keys still serve SFTP (a token signs in to git only)."/>
                     </fail-widgets></section>
                     <label text="So your commits show as yours, commit with your account's email:" type="p" style="q-mb-xs q-mt-sm"/>
                     <label text="${configText}" type="pre"/>

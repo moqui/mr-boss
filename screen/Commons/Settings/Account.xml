@@ -18,8 +18,9 @@ along with this software (see the LICENSE.md file). If not, see
     the code when a second factor is required), my second factors (UserServices: get#UserAuthcFactorInfo, the create
     services by type, invalidate#UserAuthcFactorEntry, the verify screens of the tools app) and where I am signed in
     (org.moqui.admin.IdentityServices.find#Sessions, self-scoped: the one session definition Admin's Sessions reads, with Sign
-    out for another session through revoke#Sessions; design-drawers-commons Account, impl-admin P4 owner contract), and git and API access (design-projects.md §7 GitAccess: a link to Projects' Git access for a user
-    who has Projects, else the access tokens here, org.moqui.impl.UserServices create#UserAccessToken and revoke#UserAccessToken).
+    out for another session through revoke#Sessions; design-drawers-commons Account, impl-admin P4 owner contract), and git access (design-projects.md §7 GitAccess: a link to Projects' Git access for a user
+    who has Projects, else the access tokens here, org.moqui.impl.UserServices create#UserAccessToken and revoke#UserAccessToken;
+    a token signs in to git only, scope git, SEC-PFS-61).
     Every form is the current user's own: the user and party come from ec.user, never the request. The
     photo is the face image of the user's party (PartyContent PcntFaceImage, mantle.party.PartyServices.create#PartyContent
     through ironstone.commons.CommonsServices.upload#MyPhoto; Remove takes it away), shown here and by m-avatar wherever BOSS passes a
@@ -197,7 +198,7 @@ along with this software (see the LICENSE.md file). If not, see
                 endedText: row.active ? '' : row.state === 'ended' ? when(row.endedDate) : ec.l10n.localize('Expired'), active: !!row.active, current: !!row.current}))
             singleUseCodeText = singleUseCodes && singleUseCodes.length ? Array.from(singleUseCodes).join('   ') : null
             thruDefault = String(Number(String(ec.user.nowTimestamp)) + 365 * 86400000)
-            // git and API access: a user who has Projects keeps SSH keys and tokens in its Git access page, any other has the tokens here
+            // git access: a user who has Projects keeps SSH keys and tokens in its Git access page, any other has the tokens here
             hasProjects = !!ec.service.sync().name('ironstone.commons.PaletteServices.get#RecordLink').parameters({recordEntityName: 'moqui.resource.GitRepository', id: '_NA_'}).call()?.url
             newAccessToken = !hasProjects && ec.web?.sessionAttributes?.remove ? (ec.web.sessionAttributes.remove('newAccessToken') || null) : null
             tokenList = hasProjects ? [] : Array.from(ec.entity.find('moqui.security.UserLoginKey').condition('userId', ec.user.userId).condition('description', 'is-not-null', null)
@@ -360,11 +361,11 @@ along with this software (see the LICENSE.md file). If not, see
                     </widgets></section>
                 </box-body-nopad></container-box>
 
-                <container-box><box-header title="Git and API access"/>
+                <container-box><box-header title="Git access"/>
                     <box-toolbar>
                         <container-dialog id="AccountAccessTokenDialog" button-text="New access token" icon="sym_o_key" width="480" title="A new access token" condition="!hasProjects">
                             <form-single name="AccountAccessToken" transition="createAccessToken" focus-field="description">
-                                <field name="description"><default-field title="For (a script, an app)"><text-line size="40"/></default-field></field>
+                                <field name="description"><default-field title="For (a computer, a CI job)"><text-line size="40"/></default-field></field>
                                 <field name="expireDays" from="90"><default-field title="Expires in days"><text-line size="6" input-type="number"/></default-field></field>
                                 <field name="submitButton"><default-field title="Make token"><submit/></default-field></field>
                             </form-single>
@@ -392,7 +393,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         parameter-map="{loginKey:loginKey}"/></default-field></field>
                         </form-list>
                         <section name="AccountNoTokens" condition="!tokenList.length"><widgets>
-                            <label type="p" text="No access tokens. A token signs a script or an app in to the REST API." style="m-muted q-pa-sm q-mb-none"/>
+                            <label type="p" text="No access tokens. A token is the password for git over HTTPS, and signs in nowhere else. A script or an app signs in with the device key of the desktop or terminal client's sign-in; a calendar, contacts or files app with an app password (Settings, Sync)." style="m-muted q-pa-sm q-mb-none"/>
                         </widgets></section>
                     </fail-widgets></section>
                     </box-body-nopad>

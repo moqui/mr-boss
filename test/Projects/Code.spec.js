@@ -286,7 +286,7 @@ feature("Git access: an SSH key added and removed, an access token made and revo
         tokens.length == 1
         revoked.errors == ""
         left == 0
-        account.output.includes("Git and API access")
+        account.output.includes("Git access")
         account.output.includes("/qapps/Projects/Code/GitAccess")
     },
 })
