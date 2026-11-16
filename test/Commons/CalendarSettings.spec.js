@@ -124,7 +124,7 @@ feature("Family shared with Joe Developer: he sees it and its birthday; unshared
 
 feature("a feed: subscribed, fetched now from an address that does not answer (failed, with the reason), then read from its text", {
     when() {
-        const subscribed = post("subscribe", { url: "http://127.0.0.1:9/school.ics", calendarName: "BOSS_TEST School", refreshMinutes: "1440", fetchNow: "N" })
+        const subscribed = post("subscribe", { url: "https://127.0.0.1:9/school.ics", calendarName: "BOSS_TEST School", refreshMinutes: "1440", fetchNow: "N" })
         const calendar = all("mantle.work.calendar.Calendar", { calendarName: "BOSS_TEST School" })[0] || {}
         made.feed = calendar.calendarId
         const fresh = sys(() => call("ironstone.commons.CalendarServices.get#CalendarSettings", {})).subscriptionList.find((item) => item.calendarId === calendar.calendarId) || {}
