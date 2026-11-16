@@ -231,8 +231,8 @@ feature("nothing outside the root grants widens the scope: an active organizatio
     },
     then({problems, active, grantCount}) {
         problems.join("\n") == ""
-        // Mantle lets the finance administrator make the other organization active
-        active == "ORG_ZIZI_SERVICES"
+        // a finance administrator makes active only an organization they work for (SEC-BOS-02)
+        active == null
         // the three areas' 11 and the receipt, transfer and count quick creates' two each (P18)
         grantCount == 17
     },

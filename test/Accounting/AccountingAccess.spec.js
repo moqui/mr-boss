@@ -483,7 +483,8 @@ feature(
                     admin
                 ],
                 ["rate", "finance.gl", ledger + "CurrencyServices.store#Rate", rate, admin],
-                ["rate", "finance.admin", ledger + "CurrencyServices.store#Rate", rate, ""],
+                // exchange rates are every organization's: a finance administrator of some organizations is refused (SEC-BOS-02)
+                ["rate", "finance.admin", ledger + "CurrencyServices.store#Rate", rate, "Exchange rates need finance administration of every organization"],
                 ["term", "finance.gl", setup + "store#SettlementTerm", term, admin],
                 ["term", "finance.admin", setup + "store#SettlementTerm", term, ""],
                 ["rate refresh", "finance.gl", ledger + "CurrencyServices.refresh#Rates", providerRates, admin],
@@ -1236,147 +1237,164 @@ feature("a section a role lacks does not open, and the screens with no logic spe
 
 feature("server choices keep a selected label outside the search page", {
     when() {
-        // the fixtures are made with artifact authz off, the choices are read with it on
-        return lib.asUser(
-            "finance.admin",
-            () => {
-                const service = "mantle.account.InvoiceServices."
-                // own the source and credit used by the picker; shared demo invoices keep their balances
-                const target = lib.call(service + "create#Receivable", {
-                    organizationPartyId: org,
-                    customerPartyId: ids.customerPartyId,
-                    description: "Choice source invoice"
-                })
-                lib.call(service + "store#InvoiceDraftItem", {
-                    organizationPartyId: org,
-                    invoiceId: target.invoiceId,
-                    itemTypeEnumId: "ItemTimeEntry",
-                    quantity: 1,
-                    amount: 25,
-                    description: "Choice source services"
-                })
-                const finalize = invoiceId =>
-                    lib.call(service + "change#InvoiceState", {
-                        organizationPartyId: org,
-                        invoiceId,
-                        action: "finalize",
-                        lastUpdatedStamp: ec.entity.find(INVOICE).condition("invoiceId", invoiceId).disableAuthz().one()
-                            .lastUpdatedStamp,
-                        operationKey: "choice-finalize-" + ec.user.randomString(20),
-                        changeReason: "Prepare a valid selected choice"
-                    })
-                finalize(target.invoiceId)
-                const credit = lib.call("ironstone.accounting.ReceivableServices.create#InvoiceCredit", {
-                    organizationPartyId: org,
-                    originalInvoiceId: target.invoiceId,
-                    amount: 5,
-                    description: "Choice customer credit",
-                    operationKey: "choice-credit-" + ec.user.randomString(20)
-                })
-                finalize(credit.invoiceId)
-                const bill = lib.call("mantle.ledger.AccountingServices.create#DraftDocument", {
-                    kind: "bills",
-                    organizationPartyId: org,
-                    otherPartyId: ids.customerPartyId,
-                    description: "Choice supplier bill"
-                })
-                const reviewedContentId = "CHOICE_ATTACH_" + ec.user.randomString(20)
-                const reviewedLocation =
-                    "dbresource://mantle/content/invoice/" + target.invoiceId + "/content_" + reviewedContentId + "/Reviewed.txt"
-                const reviewedFile = ec.resource.getLocationReference(reviewedLocation)
-                reviewedFile.putText("The supporting scope reviewed by this test")
-                invoke("create#mantle.account.invoice.InvoiceContent", {
-                    invoiceContentId: reviewedContentId,
-                    invoiceId: target.invoiceId,
-                    contentLocation: reviewedLocation,
-                    contentTypeEnumId: "IctInvoiceDocument",
-                    description: "Reviewed customer attachment"
-                })
-                const attachments = {
-                    organizationPartyId: org,
-                    invoiceId: target.invoiceId,
-                    attachmentContentIdList: [reviewedContentId]
-                }
-                const reviewedRow = lib.call(service + "get#InvoiceDeliveryAttachments", attachments).attachmentRows[0]
-                const reviewedToken = reviewedContentId + "~" + reviewedRow.attachmentVersion
-                ec.artifactExecution.enableAuthz()
-                const choices = p => lib.call("ironstone.accounting.AccessServices.get#Choices", p).options || []
-                const term = "no-matching-accounting-fixture-92831"
-                const cases = [
-                    ...[
-                        "parties",
-                        "invoices",
-                        "products",
-                        "projects",
-                        "terms",
-                        "currencies",
-                        "enum:ItemType",
-                        "enum:InvoiceType"
-                    ].map(choice => ({choice})),
-                    {choice: "bills", selected: bill.recordId},
-                    {choice: "receivableCredits", invoiceId: target.invoiceId, selected: credit.invoiceId},
-                    {choice: "invoiceTypes", selected: "InvoiceSales"},
-                    {choice: "invoiceStatuses", selected: "InvoiceFinalized"},
-                    {choice: "invoiceAttachments", invoiceId: ids.finalizedInvoiceId, selected: "BOSS_ACCT_AR_SUPPORT"},
-                    {choice: "reviewedInvoiceAttachments", invoiceId: target.invoiceId, selected: reviewedToken},
-                    {choice: "invoiceItemTypes", selected: "ItemTimeEntry"},
-                    {choice: "identificationTypes", selected: "PtidPassport"},
-                    {choice: "bankAccountTypes", selected: "BatChecking"},
-                    {choice: "taxAuthorities", selected: "UsaIrs"}
-                ]
-                const failures = []
-                for (const entry of cases) {
-                    // projects are chosen in the organization that has them
-                    const projectScope = entry.choice === "projects"
-                    if (projectScope) lib.selectOrganization(ids.foreignOrganizationPartyId)
-                    try {
-                        const parameters = {organizationPartyId: projectScope ? ids.foreignOrganizationPartyId : org, ...entry}
-                        const initial = choices(parameters)
-                        const selected = entry.selected ? initial.find(row => row.value === entry.selected) : initial[0]
-                        if (!selected) {
-                            failures.push(entry.choice + ": required fixture option is absent")
-                            continue
-                        }
-                        if (choices({...parameters, term, selected: null}).length)
-                            failures.push(entry.choice + ": search did not exclude the selected fixture")
-                        if (
-                            !choices({...parameters, term, selected: selected.value}).some(
-                                row => row.value === selected.value && row.label === selected.label
-                            )
-                        )
-                            failures.push(entry.choice + ": selected label was lost")
-                    } finally {
-                        if (projectScope) lib.selectOrganization(org)
-                    }
-                }
-                ec.artifactExecution.disableAuthz()
-                reviewedFile.putText("This source changed after its supporting bytes were reviewed")
-                ec.artifactExecution.enableAuthz()
-                const currentRow = lib.call(service + "get#InvoiceDeliveryAttachments", attachments).attachmentRows[0]
-                if (currentRow.attachmentVersion === reviewedRow.attachmentVersion)
-                    failures.push("reviewedInvoiceAttachments: source byte change did not change its version")
-                const retained = choices({
-                    organizationPartyId: org,
-                    invoiceId: target.invoiceId,
-                    choice: "reviewedInvoiceAttachments",
-                    term,
-                    selected: reviewedToken
-                })
-                if (!retained.some(row => row.value === reviewedToken && row.label.includes("Reviewed.txt")))
-                    failures.push("reviewedInvoiceAttachments: original reviewed token was lost after source change")
-                if (retained.some(row => row.value === reviewedContentId + "~" + currentRow.attachmentVersion))
-                    failures.push("reviewedInvoiceAttachments: selection silently adopted the changed source version")
-                if (JSON.stringify(retained).includes("dbresource://"))
-                    failures.push("reviewedInvoiceAttachments: choice exposed an archive location")
-                return {failures}
-            },
-            false
-        )
+        // the projects are chosen in another organization, which takes Accounting in every organization: the finance
+        // administrator holds ACCOUNTING_ALL_ORGANIZATIONS for this feature alone (SEC-BOS-02)
+        const since = ec.user.nowTimestamp
+        if (!ec.entity.find("moqui.security.UserGroup").condition("userGroupId", "ACCT_SPEC_ALL_ORGS").disableAuthz().one()) {
+            invoke("create#moqui.security.UserGroup", {userGroupId: "ACCT_SPEC_ALL_ORGS", description: "Accounting spec: every organization"})
+            invoke("create#moqui.security.UserGroupPermission", {userGroupId: "ACCT_SPEC_ALL_ORGS",
+                userPermissionId: "ACCOUNTING_ALL_ORGANIZATIONS", fromDate: since})
+        }
+        invoke("create#moqui.security.UserGroupMember", {userGroupId: "ACCT_SPEC_ALL_ORGS", userId: "BOSS_ACCT_ADMIN", fromDate: since})
+        try {
+            return choicesFeature()
+        } finally {
+            invoke("update#moqui.security.UserGroupMember", {userGroupId: "ACCT_SPEC_ALL_ORGS", userId: "BOSS_ACCT_ADMIN", fromDate: since,
+                thruDate: ec.user.nowTimestamp})
+        }
     },
     then({failures}) {
         failures == []
     }
 })
+function choicesFeature() {
+    // the fixtures are made with artifact authz off, the choices are read with it on
+    return lib.asUser(
+        "finance.admin",
+        () => {
+            const service = "mantle.account.InvoiceServices."
+            // own the source and credit used by the picker; shared demo invoices keep their balances
+            const target = lib.call(service + "create#Receivable", {
+                organizationPartyId: org,
+                customerPartyId: ids.customerPartyId,
+                description: "Choice source invoice"
+            })
+            lib.call(service + "store#InvoiceDraftItem", {
+                organizationPartyId: org,
+                invoiceId: target.invoiceId,
+                itemTypeEnumId: "ItemTimeEntry",
+                quantity: 1,
+                amount: 25,
+                description: "Choice source services"
+            })
+            const finalize = invoiceId =>
+                lib.call(service + "change#InvoiceState", {
+                    organizationPartyId: org,
+                    invoiceId,
+                    action: "finalize",
+                    lastUpdatedStamp: ec.entity.find(INVOICE).condition("invoiceId", invoiceId).disableAuthz().one()
+                        .lastUpdatedStamp,
+                    operationKey: "choice-finalize-" + ec.user.randomString(20),
+                    changeReason: "Prepare a valid selected choice"
+                })
+            finalize(target.invoiceId)
+            const credit = lib.call("ironstone.accounting.ReceivableServices.create#InvoiceCredit", {
+                organizationPartyId: org,
+                originalInvoiceId: target.invoiceId,
+                amount: 5,
+                description: "Choice customer credit",
+                operationKey: "choice-credit-" + ec.user.randomString(20)
+            })
+            finalize(credit.invoiceId)
+            const bill = lib.call("mantle.ledger.AccountingServices.create#DraftDocument", {
+                kind: "bills",
+                organizationPartyId: org,
+                otherPartyId: ids.customerPartyId,
+                description: "Choice supplier bill"
+            })
+            const reviewedContentId = "CHOICE_ATTACH_" + ec.user.randomString(20)
+            const reviewedLocation =
+                "dbresource://mantle/content/invoice/" + target.invoiceId + "/content_" + reviewedContentId + "/Reviewed.txt"
+            const reviewedFile = ec.resource.getLocationReference(reviewedLocation)
+            reviewedFile.putText("The supporting scope reviewed by this test")
+            invoke("create#mantle.account.invoice.InvoiceContent", {
+                invoiceContentId: reviewedContentId,
+                invoiceId: target.invoiceId,
+                contentLocation: reviewedLocation,
+                contentTypeEnumId: "IctInvoiceDocument",
+                description: "Reviewed customer attachment"
+            })
+            const attachments = {
+                organizationPartyId: org,
+                invoiceId: target.invoiceId,
+                attachmentContentIdList: [reviewedContentId]
+            }
+            const reviewedRow = lib.call(service + "get#InvoiceDeliveryAttachments", attachments).attachmentRows[0]
+            const reviewedToken = reviewedContentId + "~" + reviewedRow.attachmentVersion
+            ec.artifactExecution.enableAuthz()
+            const choices = p => lib.call("ironstone.accounting.AccessServices.get#Choices", p).options || []
+            const term = "no-matching-accounting-fixture-92831"
+            const cases = [
+                ...[
+                    "parties",
+                    "invoices",
+                    "products",
+                    "projects",
+                    "terms",
+                    "currencies",
+                    "enum:ItemType",
+                    "enum:InvoiceType"
+                ].map(choice => ({choice})),
+                {choice: "bills", selected: bill.recordId},
+                {choice: "receivableCredits", invoiceId: target.invoiceId, selected: credit.invoiceId},
+                {choice: "invoiceTypes", selected: "InvoiceSales"},
+                {choice: "invoiceStatuses", selected: "InvoiceFinalized"},
+                {choice: "invoiceAttachments", invoiceId: ids.finalizedInvoiceId, selected: "BOSS_ACCT_AR_SUPPORT"},
+                {choice: "reviewedInvoiceAttachments", invoiceId: target.invoiceId, selected: reviewedToken},
+                {choice: "invoiceItemTypes", selected: "ItemTimeEntry"},
+                {choice: "identificationTypes", selected: "PtidPassport"},
+                {choice: "bankAccountTypes", selected: "BatChecking"},
+                {choice: "taxAuthorities", selected: "UsaIrs"}
+            ]
+            const failures = []
+            for (const entry of cases) {
+                // projects are chosen in the organization that has them
+                const projectScope = entry.choice === "projects"
+                if (projectScope) lib.selectOrganization(ids.foreignOrganizationPartyId)
+                try {
+                    const parameters = {organizationPartyId: projectScope ? ids.foreignOrganizationPartyId : org, ...entry}
+                    const initial = choices(parameters)
+                    const selected = entry.selected ? initial.find(row => row.value === entry.selected) : initial[0]
+                    if (!selected) {
+                        failures.push(entry.choice + ": required fixture option is absent")
+                        continue
+                    }
+                    if (choices({...parameters, term, selected: null}).length)
+                        failures.push(entry.choice + ": search did not exclude the selected fixture")
+                    if (
+                        !choices({...parameters, term, selected: selected.value}).some(
+                            row => row.value === selected.value && row.label === selected.label
+                        )
+                    )
+                        failures.push(entry.choice + ": selected label was lost")
+                } finally {
+                    if (projectScope) lib.selectOrganization(org)
+                }
+            }
+            ec.artifactExecution.disableAuthz()
+            reviewedFile.putText("This source changed after its supporting bytes were reviewed")
+            ec.artifactExecution.enableAuthz()
+            const currentRow = lib.call(service + "get#InvoiceDeliveryAttachments", attachments).attachmentRows[0]
+            if (currentRow.attachmentVersion === reviewedRow.attachmentVersion)
+                failures.push("reviewedInvoiceAttachments: source byte change did not change its version")
+            const retained = choices({
+                organizationPartyId: org,
+                invoiceId: target.invoiceId,
+                choice: "reviewedInvoiceAttachments",
+                term,
+                selected: reviewedToken
+            })
+            if (!retained.some(row => row.value === reviewedToken && row.label.includes("Reviewed.txt")))
+                failures.push("reviewedInvoiceAttachments: original reviewed token was lost after source change")
+            if (retained.some(row => row.value === reviewedContentId + "~" + currentRow.attachmentVersion))
+                failures.push("reviewedInvoiceAttachments: selection silently adopted the changed source version")
+            if (JSON.stringify(retained).includes("dbresource://"))
+                failures.push("reviewedInvoiceAttachments: choice exposed an archive location")
+            return {failures}
+        },
+        false
+    )
+}
 
 // mr-pass impl-shop P5 (X4, F15): the payment operator (treasury) releases a Payment hold; AR does not hold the permission
 feature("treasury holds the Payment hold's release permission (PAYMENT_HOLD_RELEASE); AR does not", {

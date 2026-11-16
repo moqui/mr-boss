@@ -92,6 +92,9 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ACCT_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ACCT_ADMIN" firstName="Finance" lastName="Admin"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ACCT_ADMIN_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_ACCT_ADMIN" toPartyId="BOSS_ACCT_ORG" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
+    <!-- the finance administrator also works for the startup, whose accounting they set up: ACCOUNTING_ADMIN is the holder's own
+        organizations, every one only with ADMIN's ACCOUNTING_ALL_ORGANIZATIONS (SEC-BOS-02) -->
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_ACCT_ADMIN_NEWCO" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_ACCT_ADMIN" toPartyId="BOSS_ACCT_NEWCO" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ACCT_ADMIN" username="finance.admin" userFullName="Finance Admin" partyId="BOSS_ACCT_ADMIN" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING" userId="BOSS_ACCT_ADMIN" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_ADMIN" userId="BOSS_ACCT_ADMIN" fromDate="2026-01-01 00:00:00"/>

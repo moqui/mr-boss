@@ -96,16 +96,19 @@ feature("authorized payment Files work without an active selection and refuse a 
             helper.selectOrganization(null)
             return domainCall(files + "get#RecordFiles", record)
         })
+        // a finance administrator cannot select an organization they do not work for (SEC-BOS-02): the selection is dropped
+        // and the files answer as with none
         const otherSelection = helper.asUser("finance.admin", () => {
             helper.selectOrganization(helper.ids.foreignOrganizationPartyId)
-            return refused(files + "get#RecordFiles", record)
+            return domainCall(files + "get#RecordFiles", record)
         })
         return {withoutSelection, otherSelection}
     },
     then({withoutSelection, otherSelection}) {
         withoutSelection.visible == true
         withoutSelection.fileCount == 3
-        !!otherSelection
+        otherSelection.visible == true
+        otherSelection.fileCount == 3
     }
 })
 feature("a known issued-check content key requires treasury authority with artifact authorization on and off", {
