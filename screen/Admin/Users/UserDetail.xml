@@ -185,7 +185,11 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.admin.ContextServices.check#Record" out-map="record"
                     in-map="{appRoot:appRoot, recordType:'user', recordId:userId, capability:'identityManage', loginAs:true}"/>
+            <!-- and only after the administrator signed in, or confirmed who they are, in the last five minutes, as Tools'
+                Login As (require#RecentAuth; the link's form asks and sends again on X-Moqui-Reauth) -->
             <if condition="!ec.message.hasError()">
+                <service-call name="org.moqui.sso.RecentAuthServices.require#RecentAuth" out-map="recentAuthOut"/></if>
+            <if condition="!ec.message.hasError() &amp;&amp; recentAuthOut.recent">
                 <set field="target" from="ec.entity.find('moqui.security.UserAccount').condition('userId', userId).disableAuthz().one()"/>
                 <log level="warn" message="Login as ${target.username} by ${ec.user.username}"/>
                 <script>ec.user.internalLoginUser(target.username)</script>
