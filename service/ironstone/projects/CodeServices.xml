@@ -241,6 +241,11 @@ along with this software (see the LICENSE.md file). If not, see
             if (importUrl) {
                 const kind = ec.entity.find('moqui.resource.GitRepository').condition('repositoryId', repositoryId).one()?.repositoryKind
                 if (kind !== 'db') { ec.message.addError(ec.l10n.localize('Only a repository in the database imports from a URL')); return }
+                // a URL only: the import runs with authorization disabled, where a git:// source (another repository) or a
+                // directory of the server would be taken without a check of the caller (plans/Security-Review.md
+                // SEC-GIT-01); import#GitRepository holds a URL to https and public addresses itself
+                if (!/^https?:\/\//i.test(String(importUrl).trim())) {
+                    ec.message.addError(ec.l10n.localize('Import from an https URL')); return }
                 ec.service.sync().name('org.moqui.git.GitServices.import#GitRepository').parameters({repositoryId, source: String(importUrl).trim()}).disableAuthz().call()
                 if (ec.message.hasError()) return
             }
