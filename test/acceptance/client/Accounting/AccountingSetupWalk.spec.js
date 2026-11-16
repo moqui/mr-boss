@@ -17,6 +17,15 @@ feature("a finance administrator sets up a new organization's accounting and act
         })
         made.ok
         const organizationPartyId = made.json().partyId
+        // the finance administrator works for it, as for the demo startup (BOSS_ACCT_ADMIN_NEWCO): ACCOUNTING_ADMIN reaches only
+        // the holder's organizations, so an administrator adds them as its member, as Admin's organization screen does
+        const admin = session({user: "john.doe"})
+        const member = admin.post("/apps/Admin/Settings/OrganizationDetail/addMember", {
+            accept: "json",
+            form: {organizationPartyId, partyId: "BOSS_ACCT_ADMIN", relationshipTypeEnumId: "PrtAgent", reason: "Setup walk"}
+        })
+        member.ok
+        member.text.includes("Member added")
         const page = browser.newPage({
             user: "finance.admin",
             viewport: {width: 1280, height: 900},
