@@ -183,3 +183,59 @@ feature("a phone call is not transferred to another organization's user; the sam
         same.callTransferId != null
     },
 })
+
+// the chat-target hook (DC-UI-043): the Comms Chat screen's transitions as a browser calls them, with authorization on. The
+// people search leaves out another organization's user, a direct message to them is refused, and adding them to one's own
+// private room is refused the same way; a user of a shared party is found, messaged and added with the very same calls.
+feature("chat reaches only the users joe.developer may see: search, a direct message and adding to a private room", {
+    when() {
+        const comms = "component://mr-boss/screen/Comms.xml"
+        const chat = (name, parameters, method) => {
+            const str = ec.screen
+                .makeTest()
+                .rootScreen(comms)
+                .render(`Chat/${name}`, parameters || {}, method || null)
+            let json = null
+            try {
+                json = JSON.parse(str.output)
+            } catch (err) {
+                json = null
+            }
+            const errors = [str.errorMessages.join(" | "), json && !Array.isArray(json) && json.errors ? String(json.errors) : ""]
+                .filter(text => text)
+                .join(" | ")
+            ec.message.clearErrors()
+            return {errors, json: json || {}}
+        }
+        ec.user.internalLoginUser("joe.developer")
+        const found = term => {
+            const rows = chat("searchUsers", {term}).json
+            return Array.isArray(rows) ? rows.map(row => row.value) : []
+        }
+        const searchOther = found("Otto")
+        const searchSame = found("Sam")
+        const directOther = chat("createDirect", {userIds: OTHER}, "post")
+        const directSame = chat("createDirect", {userIds: SAME}, "post")
+        const room = chat("createRoom", {roomTypeEnumId: "private", roomName: "Chat target spec room"}, "post")
+        const roomId = room.json.chatRoomId
+        const addOther = chat("addMembers", {chatRoomId: roomId, userIds: OTHER}, "post")
+        const addSame = chat("addMembers", {chatRoomId: roomId, userIds: SAME}, "post")
+        const members = sys(() =>
+            Array.from(ec.entity.find("moqui.chat.ChatRoomMember").condition("chatRoomId", roomId).list())
+                .filter(row => !row.leftDate)
+                .map(row => row.userId)
+        )
+        return {searchOther, searchSame, directOther, directSame, roomId, addOther, addSame, members}
+    },
+    then(v) {
+        !v.searchOther.includes(OTHER)
+        v.searchSame.includes(SAME)
+        v.directOther.errors.includes("not found")
+        v.directSame.errors == ""
+        v.roomId != null
+        v.addOther.errors.includes("not found")
+        v.addSame.errors == ""
+        !v.members.includes(OTHER)
+        v.members.includes(SAME)
+    }
+})

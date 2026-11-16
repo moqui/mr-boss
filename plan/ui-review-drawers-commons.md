@@ -1087,6 +1087,7 @@ Each correction has a regression that failed before it. The live retest belongs 
 | ID | Correction | Regression | Live retest owed |
 | --- | --- | --- | --- |
 | DC-UI-040 | Notes saves one at a time: a save asked for while one is on its way (the flush before another note opens, Ctrl+S, a named version) waits for it, then saves what was typed by then on the version it made. A response changes only the saved state of the note it saved. | `test/client/NotesResponses` (held save, more typing, second note opened). | Markdown fallback with a delayed response, then the rich editor and a failed save. |
+| DC-UI-043 | Cause: `add#Member` is an XMPP client service that `ALL_USERS` may always run. Under that inheritable grant, `call#Providers` ran the Comms `chat-target` provider without the Comms grant's entity filters, so it saw every organization's people. The framework now decides a provider's app frame by the user's own grant of the app (`screen/shell.rs` `run_in_app`). The provider also sets up the user's organizations when no Comms screen has (an XMPP session). | `test/Comms/CallTarget` (search, direct message and add for another organization's user and a shared one, authorization on), and the framework's `a_provider_runs_with_its_apps_own_grant_not_one_its_caller_inherits`. | The live pair (add refused, then no pre-add history), and an XMPP invite of a colleague. |
 
 #### Verification and scope
 
