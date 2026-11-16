@@ -415,6 +415,26 @@ feature("a task or request made from a message, the message filed on it and on t
     },
 })
 
+// DC-UI-044: a message's actions are offered by the permission each one's service checks (the ext items' permission): ordinary
+// staff get a task, a request and an event, and no case, application, lead or RFQ they would be refused; john gets them all
+feature("a message's actions offer ordinary staff no case, application, lead or RFQ, which john is offered", {
+    when() {
+        const actions = () => {
+            const out = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render("extItems/apps/Comms/Chat", {}, null)
+            ec.message.clearErrors()
+            try { return Array.from(JSON.parse(String(out.output || "{}")).actions || []).map((action) => action.name) } catch (err) { return [] }
+        }
+        return { joe: as("joe.developer", actions), john: actions() }
+    },
+    then({ joe, john }) {
+        joe.includes("boss.createTask") && joe.includes("boss.createRequest") && joe.includes("boss.createEvent")
+        !joe.includes("boss.createCase") && !joe.includes("boss.createApplication")
+        !joe.includes("sales.createLead") && !joe.includes("sales.createRfq")
+        john.includes("boss.createCase") && john.includes("boss.createApplication")
+        john.includes("sales.createLead") && john.includes("sales.createRfq")
+    },
+})
+
 feature("the demo request's Chatter shows its room's messages, each a link to the room at the message", {
     when() {
         const str = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Commons.xml").render("Chatter/timeline",
