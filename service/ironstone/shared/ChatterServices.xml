@@ -190,15 +190,21 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="search" noun="Users">
         <description>The people of the @ mention list, the To of an internal message, the followers to add and the assignee
             drop-down: active user accounts with a party whose name or username has the term, as {id (the userId), value (the
-            same), label, partyId}.</description>
+            same), label, partyId}. Only the people the user may reach, as the framework's people search: a user the apps'
+            chat-target providers refuse (IronStone's: the users of parties the user may see, Comms.xml) is left out, as one that
+            does not exist (org.moqui.chat.ChatServices get#RefusedUsers; SEC-COM-01). A project's client contact may be found,
+            as Projects mentions them.</description>
         <in-parameters>
             <parameter name="term"/>
             <parameter name="limit" type="Integer" default="10"/>
         </in-parameters>
         <out-parameters><parameter name="userList" type="List"/></out-parameters>
         <actions>
-            <set field="termText" from="String(term || '').trim()"/>
-            <entity-find entity-name="moqui.security.UserAccount" list="accountList" limit="${limit || 10}">
+            <!-- the term as text: its % and _ are not wildcards -->
+            <set field="termText" from="String(term || '').trim().replace(/[\\%_]/g, '\\$&amp;')"/>
+            <set field="pageLimit" from="Math.min(Math.max(Number(limit) || 10, 1), 50)"/>
+            <!-- more than a page, so the people left out below seldom leave it short -->
+            <entity-find entity-name="moqui.security.UserAccount" list="accountList" limit="${Math.min(pageLimit * 3, 150)}">
                 <econditions combine="or">
                     <econdition field-name="username" operator="like" value="%${termText}%" ignore-case="true"/>
                     <econdition field-name="userFullName" operator="like" value="%${termText}%" ignore-case="true"/>
@@ -208,15 +214,26 @@ along with this software (see the LICENSE.md file). If not, see
                 <order-by field-name="^userFullName,^username"/>
             </entity-find>
             <script><![CDATA[
-                userList = Array.from(accountList).map((account) => ({id: account.userId, value: account.userId,
+                const refused = refusedOf(Array.from(accountList).map((account) => account.userId))
+                userList = Array.from(accountList).filter((account) => !refused.has(account.userId)).slice(0, pageLimit)
+                    .map((account) => ({id: account.userId, value: account.userId,
                     label: account.userFullName || account.username, partyId: account.partyId}))
+                // the users the apps' chat-target providers refuse to this user; all of them when the check cannot be made
+                function refusedOf(ids) {
+                    if (!ids.length) return new Set()
+                    const out = ec.service.sync().name('org.moqui.chat.ChatServices.get#RefusedUsers')
+                        .parameters({userIdList: ids, hook: 'chat-target'}).call()
+                    return new Set(out ? Array.from(out.refusedUserIdList || []) : ids)
+                }
             ]]></script>
         </actions>
     </service>
 
     <service verb="get" noun="UserIdsParties" allow-remote="false">
         <description>The user accounts of a list (or comma-separated text) of userIds that exist, with their parties; for the
-            mentions of a rich-text body (data-mention-id) and the users chosen in a drop-down.</description>
+            mentions of a rich-text body (data-mention-id) and the users chosen in a drop-down. A user the apps' chat-target
+            providers refuse to the caller is left out, as one that does not exist, so a forged id neither notifies nor adds
+            anyone search#Users would not find (org.moqui.chat.ChatServices get#RefusedUsers; SEC-COM-01).</description>
         <in-parameters>
             <parameter name="userIds" type="Object"/>
             <parameter name="html" allow-html="any"><description>Rich text whose data-mention-id spans add userIds</description></parameter>
@@ -232,7 +249,12 @@ along with this software (see the LICENSE.md file). If not, see
             partyIdList = []
             nameList = []
             if (ids.length === 0) return
-            for (const account of ec.entity.find('moqui.security.UserAccount').condition('userId', 'in', ids).disableAuthz().list()) {
+            const checked = ec.service.sync().name('org.moqui.chat.ChatServices.get#RefusedUsers')
+                .parameters({userIdList: ids, hook: 'chat-target'}).call()
+            const refused = new Set(checked ? Array.from(checked.refusedUserIdList || []) : ids)
+            const allowed = ids.filter((id) => !refused.has(id))
+            if (allowed.length === 0) return
+            for (const account of ec.entity.find('moqui.security.UserAccount').condition('userId', 'in', allowed).disableAuthz().list()) {
                 userIdList.push(account.userId)
                 if (account.partyId && !partyIdList.includes(account.partyId)) partyIdList.push(account.partyId)
                 nameList.push(account.userFullName || account.username)
