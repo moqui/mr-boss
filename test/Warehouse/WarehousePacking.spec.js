@@ -101,7 +101,9 @@ feature("BoxTypes and FacilityDetail's Box types tab list the demo cartons; the 
     then({reader, admin, tab, types}) {
         reader.errors == []
         reader.output.includes("Medium carton")
-        !reader.output.includes("New box type")
+        // New box type is shown disabled with the reason, no dialog
+        !reader.output.includes('id="NewBoxTypeDialog"')
+        reader.output.includes("New box type: Needs")
         admin.errors == []
         admin.output.includes("New box type")
         tab.errors == []

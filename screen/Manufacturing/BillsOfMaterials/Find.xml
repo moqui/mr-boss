@@ -104,7 +104,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="${methodMessage}" type="p" style="m-muted" condition="!!methodMessage"/>
             </container>
             <container style="col-auto row items-center q-gutter-xs">
-                <container-dialog id="NewBomDialog" condition="canEdit" type="primary" button-text="New BOM" icon="sym_o_add"
+                <container-dialog id="NewBomDialog" disable-condition="!canEdit"
+                        disable-message="Needs manufacturing method editing access, which an administrator can grant." type="primary" button-text="New BOM" icon="sym_o_add"
                         title="New BOM" width="720">
                     <form-single name="NewBom" transition="createBom" map="{organizationPartyId:organizationPartyId, methodCode:'MAIN'}">
                         <field name="organizationPartyId">

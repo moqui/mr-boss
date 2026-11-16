@@ -43,7 +43,8 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <context title="Shipments" selection-form="ShipmentList"/>
         <container style="row items-center q-gutter-sm q-mb-sm">
-            <container-dialog id="NewOutgoingDialog" condition="warehouse.capabilities.loadEdit" type="primary"
+            <container-dialog id="NewOutgoingDialog" disable-condition="!warehouse.capabilities.loadEdit"
+                    disable-message="Needs shipping and picking access, which an administrator can grant." type="primary"
                     button-text="New shipment" icon="sym_o_add" title="New outgoing shipment" width="520">
                 <label type="p" style="text-caption" text="A shipment of an approved order part, from the part's facility."/>
                 <form-single name="NewOutgoing" transition="createOutgoing"

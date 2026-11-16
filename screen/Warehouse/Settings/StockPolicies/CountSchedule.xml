@@ -66,7 +66,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Count schedule at ${found.scopeText}"/>
                     <box-toolbar>
-                        <container-dialog id="AddCountScheduleDialog" condition="canManage" type="primary"
+                        <container-dialog id="AddCountScheduleDialog" disable-condition="!canManage"
+                                disable-message="Needs warehouse settings access, which an administrator can grant." type="primary"
                                 button-text="Add schedule" icon="sym_o_add" title="Add a count schedule" width="760">
                             <form-single name="AddCountSchedule" transition="storeCountSchedule" map="newParams">
                                 <field name="facilityId">

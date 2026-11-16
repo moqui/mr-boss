@@ -319,7 +319,9 @@ feature("FacilityDetail's Policies tab renders on its own: a manager changes the
         manager.output.includes("Organization: Ziziwork Retail")
         reader.errors.length == 0
         reader.output.includes("Delivery steps")
-        !reader.output.includes("Change operations")
+        // Change operations is shown disabled with the reason, no dialog
+        !reader.output.includes('id="OperationPolicyDialog"')
+        reader.output.includes("Change operations: Needs")
         other.output.includes("are not available to you")
     }
 })

@@ -516,10 +516,12 @@ along with this software (see the LICENSE.md file). If not, see
         </section>
 
         <!-- AdHocReceipt: stock with no order, for receive, with a reason -->
-        <section name="AdHocReceipt" condition="!handheld &amp;&amp; warehouse.capabilities.receive">
+        <section name="AdHocReceipt" condition="!handheld">
             <widgets>
                 <container-dialog id="AdHocReceiptDialog" button-text="Receive without an order" icon="sym_o_add_box"
-                        title="Receive stock without an order" width="720">
+                        title="Receive stock without an order" width="720"
+                        disable-condition="!warehouse.capabilities.receive"
+                        disable-message="Needs receiving access, which an administrator can grant.">
                     <form-single name="AdHocReceipt" transition="receiveAdHoc"
                             map="{adHocFacilityId:receipt?.facilityId || warehouse.facilityId, operationKey:adHocKey}">
                         <field name="operationKey">

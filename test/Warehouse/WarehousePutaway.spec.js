@@ -247,7 +247,9 @@ feature("PutawayRules lists and tests the rules; a facility admin adds one and a
         rules.output.includes("BOSS_WH_P9_RULE")
         rules.output.includes("Sealant overflow to the bulk bay")
         rules.output.includes("Put away at 01010402")
-        !rules.output.includes("New rule")
+        // New rule is shown disabled with the reason, no dialog
+        !rules.output.includes('id="NewRuleDialog"')
+        rules.output.includes("New rule: Needs")
         mover.includes("PERMISSION_DENIED")
         admin == ""
         added.toLocationTypeEnumId == "FltBulk"

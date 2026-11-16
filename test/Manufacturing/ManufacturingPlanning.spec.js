@@ -135,7 +135,9 @@ feature("the scheduler reads the plan without its actions", {
         scheduler.status == 200
         scheduler.errors.length == 0
         scheduler.output.includes("Spec planned part")
-        !scheduler.output.includes("Recalculate")
+        // Recalculate is shown disabled with the reason, no dialog
+        !scheduler.output.includes('id="RecalculatePlanDialog"')
+        scheduler.output.includes("Recalculate: Needs")
         !scheduler.output.includes("Make draft work orders")
         runBySchedule.includes("PERMISSION_DENIED")
     }

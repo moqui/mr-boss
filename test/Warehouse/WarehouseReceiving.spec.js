@@ -106,7 +106,9 @@ feature("NewReceipt opens a part's one open receipt; a second request opens the 
         list.errors == []
         list.output.includes(shipmentIds[0])
         list.output.includes("Ziddleman")
-        !list.output.includes("New receipt")
+        // New receipt is shown disabled with the reason, no dialog
+        !list.output.includes('id="NewReceiptDialog"')
+        list.output.includes("New receipt: Needs")
         receiverList.output.includes("New receipt")
     }
 })

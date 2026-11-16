@@ -57,7 +57,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row items-center q-gutter-xs">
                 <container-dialog id="NewOutsideProcessing" button-text="New outside processing" type="primary" icon="sym_o_add"
-                        width="760" title="Ask for an operation to be done by a supplier" condition="canRequest">
+                        width="760" title="Ask for an operation to be done by a supplier" disable-condition="!canRequest"
+                        disable-message="Needs production planning access, which an administrator can grant.">
                     <form-single name="RequestService" transition="requestService" map="{}">
                         <field name="operationKey" from="operationKey"><default-field><hidden/></default-field></field>
                         <field name="operationWorkEffortId">

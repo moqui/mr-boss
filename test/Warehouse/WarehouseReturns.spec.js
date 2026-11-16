@@ -205,7 +205,9 @@ feature("Returns lists the returns of the user's facilities, and NewReturn is fo
         reader.list.errors == []
         reader.list.output.includes("BOSS_WH_RMA")
         reader.list.output.includes("BOSS_WH_SRET")
-        !reader.list.output.includes("New return")
+        // New return is shown disabled with the reason, no dialog
+        !reader.list.output.includes('id="NewReturnDialog"')
+        reader.list.output.includes("New return: Needs")
         reader.rows.some(row => row.returnId == "BOSS_WH_RMA" && row.directionText == "From customer")
         reader.rows.some(row => row.returnId == "BOSS_WH_SRET" && row.handledText == "Sent 0 of 3")
         reader.create.includes("PERMISSION_DENIED")

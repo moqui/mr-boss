@@ -43,8 +43,10 @@ along with this software (see the LICENSE.md file). If not, see
         <context title="Picklists" selection-form="PicklistList"/>
         <container style="row items-center q-gutter-sm q-mb-sm">
             <link url="${sharedLinks['Picking/CreatePicklists']}" text="Create picklists" link-type="anchor-button"
-                    btn-type="primary" icon="sym_o_playlist_add" condition="warehouse.capabilities.loadEdit"/>
-            <container-dialog id="NewPicklistDialog" condition="warehouse.capabilities.loadEdit" button-text="New picklist"
+                    btn-type="primary" icon="sym_o_playlist_add" disable-condition="!warehouse.capabilities.loadEdit"
+                    disable-message="Needs shipping and picking access, which an administrator can grant."/>
+            <container-dialog id="NewPicklistDialog" disable-condition="!warehouse.capabilities.loadEdit"
+                    disable-message="Needs shipping and picking access, which an administrator can grant." button-text="New picklist"
                     icon="sym_o_add" title="New manual picklist" width="560">
                 <form-single name="NewPicklist" transition="storeLoad"
                         map="{loadFacilityId:newLoadFacilityId, estimatedStartDate:ec.user.nowTimestamp}">

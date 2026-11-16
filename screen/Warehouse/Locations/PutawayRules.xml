@@ -120,7 +120,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Rules of ${found.facilityName}"/>
                     <box-toolbar>
-                        <container-dialog id="NewRuleDialog" condition="canEdit" type="primary" button-text="New rule"
+                        <container-dialog id="NewRuleDialog" disable-condition="!canEdit"
+                                disable-message="Needs facility editing access, which an administrator can grant." type="primary" button-text="New rule"
                                 icon="sym_o_add" title="New putaway rule" width="760">
                             <form-single name="NewRule" transition="storeRule" map="newRuleParams">
                                 <field name="facilityId">

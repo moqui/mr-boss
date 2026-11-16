@@ -127,7 +127,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Consumption"/>
                     <box-toolbar>
-                        <container-dialog id="ConsumptionPolicyDialog" condition="policy.canEdit" button-text="Change consumption"
+                        <container-dialog id="ConsumptionPolicyDialog" disable-condition="!policy.canEdit"
+                                disable-message="Needs production settings access, which an administrator can grant." button-text="Change consumption"
                                 icon="sym_o_edit" width="760" title="Change consumption at ${scopeText}">
                             <form-single name="ConsumptionPolicy" transition="storeProductionPolicy"
                                     map="Object.assign({}, policy.configuredPolicy, formScope, {policyGroup:'consumption'})">
@@ -305,7 +306,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Time and cost"/>
                     <box-toolbar>
-                        <container-dialog id="TimeAndCostPolicyDialog" condition="policy.canEdit" button-text="Change time and cost"
+                        <container-dialog id="TimeAndCostPolicyDialog" disable-condition="!policy.canEdit"
+                                disable-message="Needs production settings access, which an administrator can grant." button-text="Change time and cost"
                                 icon="sym_o_edit" width="760" title="Change time and cost at ${scopeText}">
                             <form-single name="TimeAndCostPolicy" transition="storeProductionPolicy"
                                     map="Object.assign({}, policy.configuredPolicy, formScope, {policyGroup:'timeAndCost'})">
@@ -481,7 +483,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Planning"/>
                     <box-toolbar>
-                        <container-dialog id="PlanningPolicyDialog" condition="policy.canEdit" button-text="Change planning"
+                        <container-dialog id="PlanningPolicyDialog" disable-condition="!policy.canEdit"
+                                disable-message="Needs production settings access, which an administrator can grant." button-text="Change planning"
                                 icon="sym_o_edit" width="760" title="Change planning at ${scopeText}">
                             <form-single name="PlanningPolicy" transition="storeProductionPolicy"
                                     map="Object.assign({}, policy.configuredPolicy, formScope, {policyGroup:'planning'})">

@@ -45,7 +45,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <widgets>
         <!-- for a facility administrator: canEdit in the including screen's context -->
-        <section name="NewFacility" condition="canEdit">
+        <section name="NewFacility">
             <actions>
                 <set field="newFacilityDefaults" from="{ownerPartyId: warehouse.defaultOrganizationPartyId || null,
                         facilityTypeEnumId: 'FcTpWarehouse'}"/>
@@ -56,7 +56,9 @@ along with this software (see the LICENSE.md file). If not, see
                         title="${newFacilityTitle || 'New facility'}"
                         icon="sym_o_add"
                         width="720"
-                        type="${newFacilityType || 'primary'}">
+                        type="${newFacilityType || 'primary'}"
+                        disable-condition="!(canEdit)"
+                        disable-message="Needs facility editing access, which an administrator can grant.">
                     <form-single name="NewFacility" transition="createFacility" map="newFacilityDefaults">
                         <field name="parentFacilityId" from="parentFacilityId">
                             <default-field title="Inside" tooltip="The site, building or warehouse it is part of">

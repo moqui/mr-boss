@@ -86,7 +86,8 @@ along with this software (see the LICENSE.md file). If not, see
             <box-header title="Carrier methods · ${methodRows.length}"/>
             <box-toolbar>
                 <container-dialog id="AddMethodDialog" button-text="Add method" icon="sym_o_add" title="Add a carrier method"
-                        width="560" condition="canEdit">
+                        width="560" disable-condition="!canEdit"
+                        disable-message="Needs carrier settings access, which an administrator can grant.">
                     <form-single name="AddMethod" transition="storeCarrierMethod">
                         <field name="carrierPartyId">
                             <default-field title="Carrier">
@@ -277,7 +278,8 @@ along with this software (see the LICENSE.md file). If not, see
             <box-header title="Which gateway serves a carrier · ${bindingRows.length}"/>
             <box-toolbar>
                 <container-dialog id="BindGatewayDialog" button-text="Bind a carrier" icon="sym_o_add"
-                        title="Let a gateway rate and label a carrier" width="520" condition="canEdit">
+                        title="Let a gateway rate and label a carrier" width="520" disable-condition="!canEdit"
+                        disable-message="Needs carrier settings access, which an administrator can grant.">
                     <form-single name="BindGateway" transition="storeGatewayCarrier">
                         <field name="shippingGatewayConfigId">
                             <default-field title="Gateway">

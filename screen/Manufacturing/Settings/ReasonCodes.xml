@@ -98,7 +98,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Reason codes"/>
                     <box-toolbar>
-                        <container-dialog id="AddReasonDialog" condition="canEdit" type="primary" button-text="Add reason"
+                        <container-dialog id="AddReasonDialog" disable-condition="!canEdit"
+                                disable-message="Needs production settings access, which an administrator can grant." type="primary" button-text="Add reason"
                                 icon="sym_o_add" title="Add a reason code" width="760">
                             <form-single name="AddReason" transition="storeReason" map="newReason">
                                 <field name="organizationPartyId">

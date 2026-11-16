@@ -141,7 +141,9 @@ feature("a buyer converts it through the Planning mount's convertSuggestions to 
     then({buyerPlan, plannerPlan, scheduler, first, links}) {
         buyerPlan.errors.length == 0
         buyerPlan.output.includes("Make draft purchase order lines")
-        !buyerPlan.output.includes("Recalculate")
+        // Recalculate is shown disabled with the reason, no dialog
+        !buyerPlan.output.includes('id="RecalculatePlanDialog"')
+        buyerPlan.output.includes("Recalculate: Needs")
         !plannerPlan.output.includes("Make draft purchase order lines")
         scheduler.includes("PRODUCTION_PLAN or PURCHASE_ORDER_EDIT is required")
         first == ""

@@ -50,7 +50,8 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <context title="Transfers" selection-form="TransferList"/>
         <container style="row items-center q-gutter-sm q-mb-sm">
-            <container-dialog id="NewTransferDialog" condition="warehouse.capabilities.move" type="primary"
+            <container-dialog id="NewTransferDialog" disable-condition="!warehouse.capabilities.move"
+                    disable-message="Needs inventory moves access, which an administrator can grant." type="primary"
                     button-text="New transfer" icon="sym_o_add" title="Transfer stock to another facility" width="720">
                 <section-include name="NewTransferForm" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
             </container-dialog>

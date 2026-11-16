@@ -369,7 +369,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <container-dialog id="RecalculatePlanDialog" button-text="Recalculate" icon="sym_o_calculate"
                                     width="640" type="primary" title="Recalculate the supply plan of ${plan.facilityNames}"
-                                    condition="mayRun">
+                                    disable-condition="!mayRun"
+                                    disable-message="Needs supply planning access, which an administrator can grant.">
                                 <form-single name="PlanParameters" transition="runPlan"
                                         map="{plantId:plantId, planFacilityId:planFacilityId}">
                                     <field name="plantId">
@@ -405,7 +406,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-single>
                             </container-dialog>
                             <container-dialog id="PlanScheduleDialog" button-text="Schedule" icon="sym_o_event_repeat"
-                                    width="760" title="Plan schedule of ${plan.organizationName}" condition="maySchedule">
+                                    width="760" title="Plan schedule of ${plan.organizationName}" disable-condition="!maySchedule"
+                                    disable-message="Needs supply planning access, which an administrator can grant.">
                                 <form-single name="PlanSchedule" transition="storeSchedule" map="scheduleDefaults">
                                     <field name="plantId" from="plantId">
                                         <default-field>

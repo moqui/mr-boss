@@ -44,7 +44,8 @@ along with this software (see the LICENSE.md file). If not, see
             <box-header title="Asset pools"/>
             <box-toolbar>
                 <container-dialog id="NewPool" button-text="New pool" type="primary" title="Set aside stock in a new pool"
-                        condition="found?.canManage">
+                        disable-condition="!found?.canManage"
+                        disable-message="Needs warehouse settings access, which an administrator can grant.">
                     <form-single name="NewPoolForm" transition="createPool" map="newPool">
                         <field name="ownerPartyId">
                             <default-field title="Organization">

@@ -37,7 +37,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Tracking at ${policy.scopeText}"/>
                     <box-toolbar>
                         <container-dialog id="TrackingPolicyDialog" button-text="Change tracking" type="primary"
-                                title="Change the tracking defaults at ${policy.scopeText}" condition="policy.canManage">
+                                title="Change the tracking defaults at ${policy.scopeText}" disable-condition="!policy.canManage"
+                                disable-message="Needs warehouse settings access, which an administrator can grant.">
                             <form-single name="TrackingPolicy" transition="storeTrackingPolicy" map="policy.trackingSettings">
                                 <field name="organizationPartyId">
                                     <default-field>

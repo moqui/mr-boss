@@ -79,7 +79,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="Scrap and loss" type="h5"/>
             </container>
             <container style="col-auto row items-center q-gutter-xs">
-                <container-dialog id="RecordLossDialog" condition="canOperate" button-text="Record loss" type="primary"
+                <container-dialog id="RecordLossDialog" disable-condition="!canOperate"
+                        disable-message="Needs production operation access, which an administrator can grant." button-text="Record loss" type="primary"
                         icon="sym_o_delete_sweep" width="640" title="Record a production loss">
                     <label text="An issued component scrapped in work in process writes a scrap cost event and moves no stock; an output asset of an open work order is issued back to it. Free stock is scrapped in Warehouse's Adjustments."
                             type="p" style="text-caption"/>

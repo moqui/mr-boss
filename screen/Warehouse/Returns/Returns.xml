@@ -44,7 +44,8 @@ along with this software (see the LICENSE.md file). If not, see
         <container style="row items-center q-gutter-sm q-mb-sm">
             <container-dialog id="NewReturnDialog" type="primary" button-text="New return" icon="sym_o_add"
                     title="Record a return" width="640"
-                    condition="warehouse.capabilities.receive || warehouse.capabilities.qualityDispose">
+                    disable-condition="!(warehouse.capabilities.receive || warehouse.capabilities.qualityDispose)"
+                    disable-message="Needs receiving or quality disposition access, which an administrator can grant.">
                 <section-include name="NewReturnForm" location="component://mr-boss/template/WarehouseReturnParts.xml"/>
             </container-dialog>
             <link url="." text="From customers" link-type="anchor-button" icon="sym_o_move_to_inbox"

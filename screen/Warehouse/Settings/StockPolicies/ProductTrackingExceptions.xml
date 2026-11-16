@@ -38,7 +38,8 @@ along with this software (see the LICENSE.md file). If not, see
             <box-header title="Product tracking exceptions"/>
             <box-toolbar>
                 <container-dialog id="NewException" button-text="Add exception" type="primary"
-                        title="Add a product tracking exception" condition="canPlan">
+                        title="Add a product tracking exception" disable-condition="!canPlan"
+                        disable-message="Needs warehouse settings access, which an administrator can grant.">
                     <form-single name="NewExceptionForm" transition="storeTrackingPolicy" map="newException">
                         <field name="organizationPartyId">
                             <default-field>
