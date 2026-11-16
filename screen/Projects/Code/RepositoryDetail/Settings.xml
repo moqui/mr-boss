@@ -430,7 +430,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <container-box><box-header title="Export and import"/><box-body>
                         <form-single name="ExportRepository" transition="exportRepository">
                             <field name="repositoryId"><default-field><hidden/></default-field></field>
-                            <field name="targetPath"><default-field title="Export to a bare repository at (empty: runtime/git/${repositoryId})"><text-line size="40"/></default-field></field>
+                            <field name="targetPath"><default-field title="Export to a bare repository at runtime/git-export/ (empty: runtime/git/${repositoryId})"
+                                    tooltip="A relative path under runtime/git-export, of letters, digits, '.', '_' and '-' segments; an absolute path or '..' is refused"><text-line size="40"/></default-field></field>
                             <field name="submitButton"><default-field title="Export"><submit/></default-field></field>
                         </form-single>
                         <section name="ImportLive" condition="!isArchived"><widgets>
