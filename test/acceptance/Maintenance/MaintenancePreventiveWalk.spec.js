@@ -44,7 +44,13 @@ const one = (entity, conditions) => ec.entity.find(entity).condition(conditions)
 const rows = (entity, conditions) => Array.from(ec.entity.find(entity).condition(conditions).disableAuthz().list())
 const plan = maintenanceScheduleId => one("mantle.work.maintenance.MaintenanceSchedule", {maintenanceScheduleId})
 const orders = maintenanceScheduleId => rows("mantle.work.maintenance.MaintenanceWorkOrder", {maintenanceScheduleId})
-const localDay = days => ec.l10n.format(new Date(Date.now() + days * dayMs), "yyyy-MM-dd", null, zone)
+// days after today on the zone's calendar: n × 24 hours crosses a daylight-saving change an hour off, which late in the
+// evening is the next day, and a weekly cadence anchored on it falls a day later
+const localDay = days => {
+    const date = new Date(ec.l10n.format(new Date(), "yyyy-MM-dd", null, zone) + "T12:00:00Z")
+    date.setUTCDate(date.getUTCDate() + days)
+    return date.toISOString().slice(0, 10)
+}
 const activate = maintenanceScheduleId =>
     post(users.planner, "Preventive/Plans/PlanDetail/planAction", {
         maintenanceScheduleId,
