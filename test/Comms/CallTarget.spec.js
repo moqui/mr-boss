@@ -11,6 +11,7 @@ const ORG = "BOSS_TEST_CT_ORG"
 const SAME = "BOSS_TEST_CT_SAME"
 const OTHER = "BOSS_TEST_CT_OTHER"
 const NOPARTY = "BOSS_TEST_CT_NOPARTY"
+const REQUEST = "BOSS_TEST_CT_REQUEST"
 const CALLS = "org.moqui.call.CallServices."
 const TRANSFERS = "org.moqui.call.CallTransferServices."
 
@@ -181,5 +182,50 @@ feature("a phone call is not transferred to another organization's user; the sam
         other.reasonCode == "notFound"
         same.errors == ""
         same.callTransferId != null
+    },
+})
+
+// IronStone's own people search and mention ids (service/ironstone/shared/ChatterServices.xml search#Users, get#UserIdsParties)
+// follow the same chat-target rule (SEC-COM-01, found during the fixes): joe.developer finds the user of a shared party and not
+// another organization's, and a mention of the latter in a note notifies no one, as a forged id of a user that does not exist
+feature("the Chatter people search and a note's mentions leave out a user joe.developer may not reach", {
+    when() {
+        const commons = "component://mr-boss/screen/Commons.xml"
+        const screen = (name, parameters, method) => {
+            const out = ec.screen.makeTest().rootScreen(commons).render("Chatter/" + name, parameters, method || null)
+            ec.message.clearErrors()
+            let json = null
+            try { json = JSON.parse(out.output) } catch (err) { json = null }
+            return { status: out.status, errors: out.errorMessages.join(" | "), json: json || {} }
+        }
+        const mentions = (userId) => sys(() => ec.entity.find("moqui.security.user.NotificationMessageByUser")
+            .condition("userId", userId).condition("topic", "ChatterMention").count())
+        // a request joe.developer reports, so he may write on it
+        sys(() => {
+            if (ec.entity.find("mantle.request.Request").condition("requestId", REQUEST).count() == 0) {
+                call("create#mantle.request.Request", { requestId: REQUEST, requestTypeEnumId: "RqtSupport", statusId: "ReqSubmitted",
+                    requestName: "Call target mentions", filedByPartyId: "ORG_ZIZI_JD", requestDate: ec.user.nowTimestamp })
+                call("create#mantle.request.RequestParty", { requestId: REQUEST, partyId: "ORG_ZIZI_JD", roleTypeId: "Reporter",
+                    fromDate: ec.user.nowTimestamp })
+            }
+        })
+        ec.user.internalLoginUser("joe.developer")
+        try {
+            const found = screen("searchUsers", { term: "Call target", limit: 50 })
+            const before = { same: mentions(SAME), other: mentions(OTHER) }
+            const body = '<p><span data-mention-id="' + SAME + '">@Sam</span> and <span data-mention-id="' + OTHER + '">@Otto</span></p>'
+            const logged = screen("logNote", { recordEntity: "mantle.request.Request", recordId: REQUEST, body, recordUrl: "/qapps/Commons/Requests/RequestDetail?requestId=" + REQUEST }, "post")
+            return { found, logged, same: mentions(SAME) - before.same, other: mentions(OTHER) - before.other }
+        } finally {
+            ec.user.internalLoginUser("john.doe")
+        }
+    },
+    then({ found, logged, same, other }) {
+        found.status == 200
+        Array.isArray(found.json)
+        found.json.some((user) => user.id == SAME) && !found.json.some((user) => user.id == OTHER)
+        logged.status == 200 && logged.errors == ""
+        same == 1
+        other == 0
     },
 })
