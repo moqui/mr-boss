@@ -41,6 +41,10 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="confirmSettlement">
         <actions>
+            <!-- a review whose draft changed since is refused, not posted as it was (ACC-UI-033) -->
+            <service-call name="ironstone.accounting.SettlementScreenServices.check#SettlementReviewCurrent"
+                    in-map="{organizationPartyId:organizationPartyId, previewId:previewId, draftId:draftId,
+                        direction:direction}"/>
             <service-call name="mantle.account.PaymentServices.apply#Settlement"
                     in-map="{previewId:previewId, inputFingerprint:inputFingerprint, operationKey:operationKey}"
                     out-map="settlementResult"/>
@@ -630,6 +634,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         map="review.confirmParameters">
                                     <field name="organizationPartyId"><default-field><hidden/></default-field></field>
                                     <field name="previewId"><default-field><hidden/></default-field></field>
+                                    <field name="draftId"><default-field><hidden/></default-field></field>
                                     <field name="inputFingerprint"><default-field><hidden/></default-field></field>
                                     <field name="operationKey"><default-field><hidden/></default-field></field>
                                     <field name="submit">
@@ -642,10 +647,14 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-single>
                             </widgets>
                         </section>
+                        <label text="The selection changed after this review was prepared. Go back to the selection and preview it again."
+                                type="p"
+                                style="text-warning"
+                                condition="review.staleSelection"/>
                         <label text="This review can no longer be confirmed. Go back to the selection to prepare a new one."
                                 type="p"
                                 style="m-muted"
-                                condition="!review.canConfirm &amp;&amp; !review.hasResults"/>
+                                condition="!review.canConfirm &amp;&amp; !review.hasResults &amp;&amp; !review.staleSelection"/>
                     </box-body>
                 </container-box>
                 <container-box>

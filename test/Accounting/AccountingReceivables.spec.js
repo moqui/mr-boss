@@ -241,6 +241,27 @@ feature("a batch's alert names each recipient's outcome of a send", {
     }
 })
 
+// ACC-UI-038: a print the batch did not make is refused with its reason (404 over HTTP), not an empty answer
+feature("a batch's print of an invoice it did not print is refused with its reason", {
+    when() {
+        return helper.asUser("finance.ar", () => {
+            const out = ec.screen
+                .makeTest()
+                .rootScreen("component://mr-boss/screen/Accounting.xml")
+                .render(
+                    "Receivables/InvoiceBatch/downloadPrintedInvoice",
+                    {organizationPartyId: ids.organizationPartyId, downloadInvoiceId: ids.invoiceId, operationKey: "batch-not-run"},
+                    null
+                )
+            return {errors: Array.from(out.errorMessages || []).join(" "), output: String(out.output || "")}
+        })
+    },
+    then({errors, output}) {
+        errors.includes("The invoice output is not available")
+        output == ""
+    }
+})
+
 feature("customer context checks the organization even with artifact authorization disabled", {
     when() {
         return helper.asUser(

@@ -337,11 +337,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <section-include name="ReportPrintCaption" location="component://mr-boss/template/AccountingReportParts.xml"/>
             </fail-widgets>
         </section>
+        <!-- the report's own account filter comes back as reportGlAccountId: under glAccountId the drill carried the row's
+            account (AccountDetail declares it), and Back narrowed the report to it (ACC-UI-029) -->
         <section name="BackToReport" condition="['TrialBalance','GeneralLedger'].includes(reportReturn)">
             <actions>
                 <set field="reportOptions"
-                        from="{organizationPartyId, glAccountId, timePeriodId, fromDate, thruDate, amountUomId,
-                            facilityId, costCenterId, compareFromDate, compareThruDate}"/>
+                        from="{organizationPartyId, glAccountId: reportGlAccountId || '', timePeriodId, fromDate, thruDate,
+                            amountUomId, facilityId, costCenterId, compareFromDate, compareThruDate}"/>
             </actions>
             <widgets>
                 <link url="//Accounting/Reports/${reportReturn}"

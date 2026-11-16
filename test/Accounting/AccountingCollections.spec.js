@@ -49,7 +49,9 @@ feature("the collections, credit and recurring screens render in #mode", {
         const rows = pages.map(([user, path, parameters, text]) =>
             lib().asUser(user, () => {
                 const page = lib().page(path, parameters, mode)
-                return {path, status: page.status, errors: page.errors, found: page.output.includes(text)}
+                // Make draft now names the period its confirmation shows (ACC-UI-032)
+                const period = path != "Receivables/RecurringInvoices" || page.output.includes("occurrenceDate")
+                return {path, status: page.status, errors: page.errors, found: page.output.includes(text), period}
             })
         )
         // AR sees the hold but cannot release it; the reader sees the aging but no contact dialog
@@ -60,6 +62,7 @@ feature("the collections, credit and recurring screens render in #mode", {
     },
     then({rows, arOrder, readCollections, mode}) {
         rows.filter(row => row.status != 200 || row.errors.length || !row.found).map(row => row.path) == []
+        rows.filter(row => !row.period).map(row => row.path) == []
         if (mode == "qvt") {
             arOrder.includes("On hold")
             !arOrder.includes("Release hold")
@@ -159,5 +162,26 @@ feature("an approver releases the demo order's credit hold with a reason; the or
         // the demo order was held before its approval and has no payment: back to Placed for its approver
         released.statusId == "OrderPlaced"
         !page.output.includes("Release hold")
+    }
+})
+
+// ACC-UI-031: a new recurring schedule's "Copy the lines of" offers the organization's invoices, with a search or without
+feature("a recurring schedule's template choice lists the organization's invoices, searched or not", {
+    when() {
+        return lib().asUser("finance.ar", () => {
+            const choose = term =>
+                Array.from(
+                    lib().call("ironstone.accounting.AccessServices.get#Choices", {
+                        choice: "templateInvoices",
+                        organizationPartyId: org,
+                        term
+                    }).options || []
+                ).map(row => row.value)
+            return {all: choose(""), searched: choose("RENT")}
+        })
+    },
+    then({all, searched}) {
+        all.includes("BOSS_ACCT_RENT_TEMPLATE")
+        searched.includes("BOSS_ACCT_RENT_TEMPLATE")
     }
 })

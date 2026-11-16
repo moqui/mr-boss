@@ -62,15 +62,11 @@ along with this software (see the LICENSE.md file). If not, see
                             <text-line size="10"/>
                         </default-field>
                     </field>
+                    <!-- invoices take the prefix on the standard sequence; an enforced sequence is not built, so it is not offered
+                        (ACC-UI-035) -->
                     <field name="invoiceSequenceEnumId">
                         <default-field title="Invoice numbering">
-                            <drop-down allow-empty="true">
-                                <dynamic-options transition="choices"
-                                        server-search="true"
-                                        min-length="0"
-                                        parameter-map="{choice:'enum:InvoiceSequence',
-                                            organizationPartyId:organizationPartyId, selected:invoiceSequenceEnumId}"/>
-                            </drop-down>
+                            <display text="Standard: the prefix, then the next invoice number" also-hidden="false"/>
                         </default-field>
                     </field>
                     <field name="orderIdPrefix">

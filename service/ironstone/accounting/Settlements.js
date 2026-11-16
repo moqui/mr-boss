@@ -467,6 +467,51 @@ function workbench(parameters) {
     })
 }
 
+// Whether the user's draft (draftId) still holds what a review was prepared from: the same allocations, adjustments,
+// amounts and reviewed revisions. A draft changed after its review (Back to selection, an amount saved) makes the review
+// stale: confirming it would post what the user has since replaced (ACC-UI-033). With no draft named, or one no longer
+// kept (expired, or applied), there is nothing to compare.
+function sameSelection(a, b) {
+    const amount = value => toDecimal(String(value ?? "0") || "0")
+    const sameAmount = (x, y) => amount(x).compare(amount(y)) === 0
+    const byAllocation = rows => [...rows].sort((x, y) => (x.sourceKey + "|" + x.targetKey).localeCompare(y.sourceKey + "|" + y.targetKey))
+    const byAdjustment = rows =>
+        [...rows].sort((x, y) =>
+            [x.invoiceId, x.itemTypeEnumId, x.glAccountId, x.reason].join("|").localeCompare([y.invoiceId, y.itemTypeEnumId, y.glAccountId, y.reason].join("|"))
+        )
+    if (a.allocations.length !== b.allocations.length || a.adjustments.length !== b.adjustments.length) return false
+    const allocationsA = byAllocation(a.allocations),
+        allocationsB = byAllocation(b.allocations)
+    if (allocationsA.some((row, at) => row.sourceKey !== allocationsB[at].sourceKey || row.targetKey !== allocationsB[at].targetKey || !sameAmount(row.amount, allocationsB[at].amount)))
+        return false
+    const adjustmentsA = byAdjustment(a.adjustments),
+        adjustmentsB = byAdjustment(b.adjustments)
+    if (
+        adjustmentsA.some((row, at) => {
+            const other = adjustmentsB[at]
+            return (
+                ["invoiceId", "itemTypeEnumId", "glAccountId", "reason"].some(field => String(row[field] || "") !== String(other[field] || "")) ||
+                !sameAmount(row.amount, other.amount)
+            )
+        })
+    )
+        return false
+    const versionsA = a.sourceVersions || {},
+        versionsB = b.sourceVersions || {}
+    const keys = new Set([...Object.keys(versionsA), ...Object.keys(versionsB)])
+    return [...keys].every(key => String(versionsA[key]) === String(versionsB[key]))
+}
+function draftStillReviewed(retained, draftId) {
+    if (!draftId || !retained?.previewId) return true
+    const stored = storedDraft(draftId)
+    if (!stored) return true
+    try {
+        return sameSelection(selection(parseDraft(stored)), selection(retainedDraft(retained)))
+    } catch (error) {
+        return false
+    }
+}
+
 // The settlement review the side's SettlementReview shows, every part present: a review that does not exist, expired or
 // is another user's has reviewFound false. The way back to the selection carries the review's party, currency and dates
 // and the user's draft (draftId). Refuses a user without the side's read authority and a review of the other side.
@@ -483,15 +528,34 @@ function settlementReview(parameters) {
         throw new Error("This review belongs to the other workbench")
     const reviewFound = !!retained?.previewId
     const selection = reviewFound ? retainedDraft(retained).scope : draftScope(current)
+    const review = reviewPresentation(reviewFound ? retained : {}, current.organizationPartyId, current.direction)
+    // a review whose draft changed since is not confirmed (ACC-UI-033); the draft goes with the confirmation, which checks
+    // it again (check#SettlementReviewCurrent)
+    review.staleSelection = reviewFound && !review.hasResults && !draftStillReviewed(retained, parameters.draftId)
+    if (review.staleSelection) review.canConfirm = false
+    review.confirmParameters = Object.assign({}, review.confirmParameters, {draftId: parameters.draftId || ""})
     return {
         previewId: parameters.previewId || "",
         draftId: parameters.draftId || "",
         reviewFound,
-        settlementReview: reviewPresentation(reviewFound ? retained : {}, current.organizationPartyId, current.direction),
+        settlementReview: review,
         workbenchLabels: labels(current.direction),
         selectionParameters: Object.assign({}, selection, {draftId: parameters.draftId || ""}),
         newSelectionParameters: Object.assign({}, selection, {draftId: ""})
     }
+}
+
+// Refuses to confirm a review whose draft changed after it was prepared (ACC-UI-033); a review already applied, or one
+// with no draft named, passes, so the saved result can still be read.
+function checkReviewCurrent(parameters) {
+    const current = scope(parameters)
+    if (!parameters.previewId || !parameters.draftId) return {current: true}
+    const retained = policy.call(native + "get#SettlementPreview", {
+        previewId: parameters.previewId,
+        organizationPartyId: current.organizationPartyId
+    })
+    if (retained?.results?.settlementId || draftStillReviewed(retained, parameters.draftId)) return {current: true}
+    throw new Error("STALE_REVIEW: The selection changed after this review was prepared. Go back to the selection and preview it again")
 }
 
 // The texts and paths of a side's workbench and review screens (template/AccountingWorkbench.xml).
@@ -500,7 +564,7 @@ function labels(direction) {
     return Object.assign({}, side, {direction, review: side.workbench.split("/")[0] + "/SettlementReview"})
 }
 // The workbench and review contexts, and the draft edit and preview request of the workbench's services.
-const operations = {workbench, settlementReview, editDraft, previewRequest}
+const operations = {workbench, settlementReview, editDraft, previewRequest, checkReviewCurrent}
 function execute(op, parameters) {
     if (!operations[op]) throw new Error("Unknown settlement screen operation " + op)
     return operations[op](parameters)

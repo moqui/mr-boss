@@ -27,6 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="inputFingerprint"/>
     <parameter name="operationKey"/>
     <parameter name="reportReturn"/>
+    <parameter name="reportGlAccountId"/>
     <parameter name="fromDate"/>
     <parameter name="thruDate"/>
     <parameter name="timePeriodId"/>
