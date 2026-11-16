@@ -133,6 +133,23 @@ feature("FacilityDetail's #tab tab renders for a reader, without edit actions, a
     }
 })
 
+feature("FacilityDetail's terminal level draws its tabs as links, the current one primary", {
+    when() {
+        const r = asUser("warehouse.read", () => page(detail + "/Locations", {facilityId: ids.facilityId}, "tui"))
+        const nodes = (function walk(node) { return [node].concat(...(node.c || []).map(walk)) })(JSON.parse(r.output))
+        return {errors: r.errors, tabRow: nodes.find(node => node.id === "FacilityTabRow"),
+            tabLinks: nodes.find(node => node.id === "FacilityTabLinks")}
+    },
+    then({errors, tabRow, tabLinks}) {
+        errors == []
+        ["Overview", "Children", "Locations", "Files"].every(tab => tabRow.c.some(link => link.id === "FacilityTab_" + tab))
+        tabRow.c.every(link => link.t === "link" && link.url.includes("/FacilityDetail/") && link.url.includes("facilityId=" + ids.facilityId))
+        tabRow.c.filter(link => link.btnType === "primary").map(link => link.id) == ["FacilityTab_Locations"]
+        // the html link buttons are left out of the terminal
+        tabLinks.c == []
+    }
+})
+
 feature("the Locations tab leaves out a closed location until asked, and shows each type's status", {
     when() {
         return asUser("warehouse.facility", () => ({

@@ -508,8 +508,10 @@ along with this software (see the LICENSE.md file). If not, see
                     <widgets>
                         <render-mode>
                             <text type="qvt"><![CDATA[<div id="FacilityTabs"><q-tabs dense no-caps align="left" narrow-indicator inline-label class="text-grey-7" active-color="primary" indicator-color="primary" :model-value="$root.currentPathList[$root.currentPathList.lastIndexOf('FacilityDetail') + 1]">${facilityTabItems.map(item => '<q-tab name="' + WebUtilities.encodeHtml(item.name) + '" label="' + WebUtilities.encodeHtml(item.title || item.name) + '" @click.prevent="$root.setUrl($root.getLinkPath(' + WebUtilities.encodeHtml(JSON.stringify(item.url)) + '))"></q-tab>').join('')}</q-tabs><q-separator class="q-mb-md"></q-separator></div>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "row", id: "FacilityTabRow", c: facilityTabItems.map(item => ({t: "link", id: "FacilityTab_" + item.name, text: String(item.title || item.name), url: String(item.url || ""), kind: "anchor-button", btnType: item.inPath ? "primary" : undefined}))})}]]></text>
                         </render-mode>
-                        <section name="FacilityTabLinks" condition="sri.getRenderMode() !== 'qvt'">
+                        <!-- the other modes (html): a link button for each tab, the current one primary -->
+                        <section name="FacilityTabLinks" condition="!['qvt', 'tui'].includes(sri.getRenderMode())">
                             <widgets>
                                 <container id="FacilityTabs" style="row q-gutter-xs q-mb-sm">
                                     <section-iterate name="FacilityTab" list="facilityTabItems" entry="tab">

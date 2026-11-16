@@ -168,15 +168,33 @@ feature("Product360 keeps its tab and link context when a request supplies forge
         r.mode !== "html" || !/Product360\/(Replenishment|PurchaseHistory|KitComponents|Equipment|PaidAccess)/.test(rendered)
     }
 })
-feature("Product360's qvt level draws its tabs from the server-derived list and follows the active path in the browser", {
+// a tui node and its children, depth first
+const tuiNodes = node => [node].concat(...(node.c || []).map(tuiNodes))
+feature("Product360's qvt and terminal levels draw its tabs from the server-derived list, the browser's following the active path", {
     when() {
-        return as("catalog.reader", false, () =>
-            ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml").renderMode("qvt").withStaticData()
-                .render("Products/Product360.qvt", {productId: "BOSS_PRD_OWN"}, null))
+        return as("catalog.reader", false, () => {
+            const r = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml").renderMode("qvt").withStaticData()
+                .render("Products/Product360.qvt", {productId: "BOSS_PRD_OWN"}, null)
+            // the terminal's Product360 level above the Summary tab: its own tui text, a link for each tab
+            const tui = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Products.xml").renderMode("tui")
+                .render("Products/Product360/Summary", {productId: "BOSS_PRD_OWN", lastStandalone: "-2"}, null)
+            const nodes = tuiNodes(JSON.parse(String(tui.output)))
+            return {status: r.status, errorMessages: r.errorMessages, output: r.output, tuiStatus: tui.status,
+                tuiErrors: tui.errorMessages, tabRow: nodes.find(node => node.id === "ProductTabRow"),
+                tabLinks: nodes.find(node => node.id === "ProductTabLinks")}
+        })
     },
     then(r) {
         r.status == 200
         r.errorMessages.length == 0
+        r.tuiStatus == 200
+        r.tuiErrors.length == 0
+        r.tabRow.c.every(link => link.t === "link" && link.url.includes("/Product360/"))
+        r.tabRow.c.some(link => link.id === "ProductTab_Features")
+        !r.tabRow.c.some(link => /^ProductTab_(Replenishment|PurchaseHistory|KitComponents|Equipment|PaidAccess)$/.test(link.id))
+        r.tabRow.c.filter(link => link.btnType === "primary").map(link => link.id) == ["ProductTab_Summary"]
+        // the html link buttons are left out of the terminal
+        r.tabLinks.c == []
         r.output.includes('<q-tab name="Features"')
         !/<q-tab name="(Replenishment|PurchaseHistory|KitComponents|Equipment|PaidAccess)"/.test(r.output)
         r.output.includes(":model-value=\"$root.currentPathList[$root.currentPathList.lastIndexOf('Product360') + 1]\"")
