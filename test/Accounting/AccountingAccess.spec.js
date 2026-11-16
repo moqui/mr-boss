@@ -1226,6 +1226,31 @@ feature("a section a role lacks does not open, and the screens with no logic spe
             [
                 "the return as AP",
                 as("finance.ap", () => lib.page("Records/ReturnDetail", {returnId}).output.includes("Return not available"))
+            ],
+            // the rates are every organization's (ACC-UI-039): an administrator of some organizations sees their writers
+            // disabled with the reason and no dialog; a system administrator gets the dialogs
+            [
+                "currencies as an administrator of some organizations",
+                as("finance.admin", () =>
+                    shows(
+                        lib.page("Settings/Currencies", {organizationPartyId: org}),
+                        [
+                            'aria-label="Add exchange rate: Exchange rates need finance administration of every organization"',
+                            'aria-label="Import rates: Exchange rates need finance administration of every organization"'
+                        ],
+                        ['<m-container-dialog id="AddRateDialog"', '<m-container-dialog id="ImportRatesDialog"']
+                    )
+                )
+            ],
+            [
+                "currencies as a system administrator",
+                as("john.doe", () =>
+                    shows(
+                        lib.page("Settings/Currencies", {organizationPartyId: org}),
+                        ['<m-container-dialog id="AddRateDialog"', '<m-container-dialog id="ImportRatesDialog"'],
+                        ["Exchange rates need finance administration"]
+                    )
+                )
             ]
         ].map(([name, ok]) => [name, ok, true])
         return {problems: mismatches(refused.concat(pages))}

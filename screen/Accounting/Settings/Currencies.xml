@@ -97,6 +97,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="importResults" from="rateImport?.results || []"/>
         <set field="rateProviderName" from="settings?.rateProviderServiceName || null"/>
         <set field="proposals" from="[]"/>
+        <!-- the rates are every organization's: their writers show disabled, with the reason, to a finance administrator of some
+            organizations (ACC-UI-039) -->
+        <service-call name="mantle.ledger.CurrencyServices.get#RateAccess" out-map="rateAccess"/>
         <if condition="organizationPartyId">
             <service-call name="mantle.ledger.CurrencyServices.get#RateProposals"
                     in-map="{organizationPartyId:organizationPartyId}" out-map="proposalOut"/>
@@ -113,7 +116,9 @@ along with this software (see the LICENSE.md file). If not, see
                             button-text="Add exchange rate"
                             type="primary"
                             icon="sym_o_add"
-                            title="Add a dated exchange rate">
+                            title="Add a dated exchange rate"
+                            disable-condition="!rateAccess.mayStoreRates"
+                            disable-message="${rateAccess.rateAccessText}">
                         <form-single name="ExchangeRate" transition="rate">
                             <field name="organizationPartyId" from="organizationPartyId">
                                 <default-field>
@@ -246,7 +251,9 @@ along with this software (see the LICENSE.md file). If not, see
                     <container-dialog id="ImportRatesDialog"
                             button-text="Import rates"
                             icon="sym_o_add"
-                            title="Import exchange rates from CSV">
+                            title="Import exchange rates from CSV"
+                            disable-condition="!rateAccess.mayStoreRates"
+                            disable-message="${rateAccess.rateAccessText}">
                         <form-single name="ImportRates" transition="import">
                             <field name="organizationPartyId" from="organizationPartyId">
                                 <default-field>
