@@ -108,11 +108,26 @@ along with this software (see the LICENSE.md file). If not, see
         handler does not see it; the People administrator and ADMIN open it through the root. Mantle checks each report again. -->
     <artifactGroups artifactGroupId="BOSS_PPL_REPORTS" description="People reports">
         <artifacts artifactName="component://mr-boss/screen/People/Reports.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
-        <authz artifactAuthzId="BOSS_PPL_REPORTS_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
-        <authz artifactAuthzId="BOSS_PPL_REPORTS_RECRUIT" userGroupId="BOSS_PEOPLE_RECRUIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
-        <authz artifactAuthzId="BOSS_PPL_REPORTS_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
-        <authz artifactAuthzId="BOSS_PPL_REPORTS_PAYROLL" userGroupId="BOSS_PEOPLE_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
-        <authz artifactAuthzId="BOSS_PPL_REPORTS_PAYAPPROVE" userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_RECRUIT" userGroupId="BOSS_PEOPLE_RECRUIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_PAYROLL" userGroupId="BOSS_PEOPLE_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_REPORTS_PAYAPPROVE" userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
         <authz artifactAuthzId="BOSS_PPL_REPORTS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
 

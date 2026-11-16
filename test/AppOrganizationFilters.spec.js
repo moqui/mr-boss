@@ -16,6 +16,15 @@ feature('Commons and Comms are granted to the BOSS users group and ADMIN, and no
 feature('ordinary Commons Comms Projects and Products users carry their own-organization filter',{
  expect(){['BOSS_COMMONS_USERS','BOSS_COMMS_USERS','BOSS_PROJECTS_MANAGER','BOSS_PROJECTS_TEAM','BOSS_PRODUCTS_READER'].filter(id=>{const filters=rows('moqui.security.ArtifactAuthzFilter',{artifactAuthzId:id}).map(r=>r.entityFilterSetId);return !(filters.includes('MANTLE_USER_ORG')&&!filters.includes('MANTLE_ACTIVE_ORG')&&filters.includes('MANTLE_PRIVATE_CONTACT'))}).join(', ')==''},
 })
+// SEC-BOS-01: the filters come from the record that authorized the frame, and a role group's ALWAYS row on an area below a root
+// (Accounting's Receivables, People's Payroll) is that record for everything under it, so each carries the organization and
+// private-contact filter sets its root gives: the app administrators and ADMIN the active organization's, the others their own
+feature('every ALWAYS row of a BOSS screen carries an organization filter set and the private-contact one',{
+ expect(){const screenGroups=new Set(rows('moqui.security.ArtifactGroupMember',{artifactTypeEnumId:'AT_XML_SCREEN'}).filter(r=>String(r.artifactName).startsWith('component://mr-boss/screen/')).map(r=>r.artifactGroupId));rows('moqui.security.ArtifactAuthz',{authzTypeEnumId:'AUTHZT_ALWAYS'}).filter(r=>screenGroups.has(r.artifactGroupId)).filter(r=>{const filters=rows('moqui.security.ArtifactAuthzFilter',{artifactAuthzId:r.artifactAuthzId}).map(f=>f.entityFilterSetId);return !(filters.includes('MANTLE_PRIVATE_CONTACT')&&(filters.includes('MANTLE_USER_ORG')||filters.includes('MANTLE_ACTIVE_ORG')))}).map(r=>r.artifactAuthzId).join(', ')==''},
+})
+feature('a role user under an area finds only their own organizations and shared masters',{
+ when(){ec.artifactExecution.disableAuthz();create('moqui.security.ArtifactGroupMember',{artifactGroupId:'BOSS_ACCT_RECEIVABLES',artifactName:fixture,artifactTypeEnumId:'AT_XML_SCREEN',inheritAuthz:'Y'});try{return filtered('finance.ar',null)}finally{ec.artifactExecution.disableAuthz();ec.entity.find('moqui.security.ArtifactGroupMember').condition({artifactGroupId:'BOSS_ACCT_RECEIVABLES',artifactName:fixture}).deleteAll()}},then({products,filters}){filters.includes('MANTLE_USER_ORG');products==['ORG_FILTER_SHARED']},
+})
 feature('ordinary users see their own and shared masters with no active organization, their own campaigns, segments and lists and every mailbox, and never another personal contact',{
  where:[{user:'catalog.reader'},{user:'bob.developer'}],when({user}){return filtered(user,null)},then({products,categories,features,parties,campaigns,segments,contactLists}){products==['ORG_FILTER_OWN','ORG_FILTER_SHARED'];categories==products;features==products;!parties.includes('ORG_FILTER_PRIVATE');campaigns==['ORG_FILTER_OWN'];segments==campaigns;contactLists==['ORG_FILTER_OWN','ORG_FILTER_SHARED_MAILBOX']},
 })
