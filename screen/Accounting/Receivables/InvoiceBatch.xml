@@ -65,12 +65,22 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response type="none"/>
     </transition>
+    <!-- an invoice the batch printed no PDF for (not selected, failed, another operation's) answers 404 with the reason, not
+        an empty 200 (ACC-UI-038) -->
     <transition name="downloadPrintedInvoice" read-only="true">
         <actions>
-            <service-call name="ironstone.accounting.ReceivableServices.get#InvoiceBatchOutput"
-                    out-map="printed"
-                    in-map="{organizationPartyId:organizationPartyId, invoiceId:downloadInvoiceId, operationKey:operationKey}"/>
-            <script>ec.web.sendResourceResponse(printed.fileLocation, false, printed.fileName)</script>
+            <script><![CDATA[
+                const printed = ec.service.sync().name('ironstone.accounting.ReceivableServices.get#InvoiceBatchOutput')
+                    .parameters({organizationPartyId, invoiceId: downloadInvoiceId, operationKey}).call()
+                if (ec.message.hasError() || !printed?.fileLocation) {
+                    const reason = String(ec.message.getErrorsString() || 'The invoice output is not available').trim()
+                        .replace(/^(?:Error: )+/, '')
+                    const missing = new Error(reason)
+                    missing.moquiErrorKind = /DENIED|REQUIRED/.test(reason) ? 'Unauthorized' : 'NotFound'
+                    throw missing
+                }
+                ec.web.sendResourceResponse(printed.fileLocation, false, printed.fileName)
+            ]]></script>
         </actions>
         <default-response type="none"/>
     </transition>

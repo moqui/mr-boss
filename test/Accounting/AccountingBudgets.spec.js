@@ -74,7 +74,8 @@ feature("the controls show the Stop, the order commitment, and the variance repo
             }),
             report: helper().call("mantle.other.BudgetReportServices.run#BudgetVariance", budget),
             asApproved: helper().call("mantle.other.BudgetReportServices.run#BudgetVariance", {...budget, revisionSeqId: "000"}),
-            page: helper().page("Reports/BudgetVariance", {budgetId: "BOSS_ACCT_BUDGET"}, "html")
+            // the print: its caption names the organization once and the currency, and keeps the budget's own (ACC-UI-037)
+            page: helper().page("Reports/BudgetVariance", {budgetId: "BOSS_ACCT_BUDGET"}, "html-print")
         }))
     },
     then({policies, commitments, report, asApproved, page}) {
@@ -87,6 +88,8 @@ feature("the controls show the Stop, the order commitment, and the variance repo
         page.errors == []
         page.output.includes("Committed")
         page.output.includes("Operating budget")
+        page.output.split("Accounting Demo Company").length == 2
+        page.output.includes("Accounting Demo Company · ") && /Accounting Demo Company · [^<]*USD/.test(page.output)
     }
 })
 

@@ -98,6 +98,57 @@ feature("the trial balance prints its organization by name and its period, witho
     }
 })
 
+// ACC-UI-029: an account opened from the general ledger goes back to the report as it was run, not narrowed to the account
+// (the drill carries the row's account as glAccountId, which AccountDetail declares)
+feature("an account's Back to report keeps the report's own account filter, not the account opened", {
+    when() {
+        // from the webroot, as a request is, so the link's //Accounting path resolves
+        return as("finance.read", () => {
+            const out = ec.screen
+                .makeTest()
+                .rootScreen("component://webroot/screen/webroot.xml")
+                .renderMode("html")
+                .render(
+                    "apps/Accounting/GeneralLedger/AccountDetail",
+                    {
+                        organizationPartyId: org,
+                        recordId: "111100000",
+                        glAccountId: "111100000",
+                        reportReturn: "GeneralLedger",
+                        fromDate: "2026-10-01"
+                    },
+                    null
+                )
+            const output = String(out.output || "")
+            // the Back to report link itself (Open account ledger rightly names the account)
+            const anchor = output.slice(output.lastIndexOf("<a ", output.indexOf("Back to report")), output.indexOf("Back to report"))
+            return {errors: Array.from(out.errorMessages || []), backLink: anchor}
+        })
+    },
+    then({errors, backLink}) {
+        errors == []
+        backLink.includes("Reports/GeneralLedger") && backLink.includes("fromDate=2026-10-01")
+        !backLink.includes("glAccountId=111100000")
+    }
+})
+
+// ACC-UI-030: with a comparison, the export's rows each name their period (one file holds both lists, the same columns)
+feature("the general ledger's export with a comparison names each row's period", {
+    when() {
+        const today = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+        const monthStart = today.slice(0, 8) + "01"
+        const options = {organizationPartyId: org, fromDate: monthStart, thruDate: today, compareFromDate: "2000-01-01", compareThruDate: today}
+        const csv = as("finance.read", () => helper().page("Reports/GeneralLedger", Object.assign({pageNoLimit: "true"}, options), "csv"))
+        return {csv: csv.output, errors: csv.errors, primary: monthStart + " to " + today, comparison: "2000-01-01 to " + today}
+    },
+    then({csv, errors, primary, comparison}) {
+        errors == []
+        csv.split("\n")[0].includes("Period")
+        csv.includes(primary)
+        csv.includes(comparison)
+    }
+})
+
 feature("a balance sheet account opens the general ledger with the report's organization, period and currency", {
     when() {
         return as("finance.read", () => {

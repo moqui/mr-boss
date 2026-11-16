@@ -45,6 +45,17 @@ along with this software (see the LICENSE.md file). If not, see
                     reportOptions)).filter(entry =&gt; entry[1]).map(entry =&gt; entry[0] + '='
                     + encodeURIComponent(entry[1])).join('&amp;')"/>
         <set field="hasComparison" from="!!(compareFromDate || compareThruDate)"/>
+        <!-- with a comparison each row names its period, so the export of both lists (one file, the same columns) and a
+            sum of it keep the periods apart (ACC-UI-030) -->
+        <if condition="hasComparison">
+            <set field="primaryPeriodText" from="fromDate || thruDate ? (fromDate || '…') + ' to ' + (thruDate || '…')
+                    : 'Report period'"/>
+            <set field="comparisonPeriodText" from="(compareFromDate || '…') + ' to ' + (compareThruDate || '…')"/>
+            <set field="reportRows" from="Array.from(reportRows || []).map((row) =&gt; Object.assign({}, row,
+                    {periodText: primaryPeriodText}))"/>
+            <set field="comparisonRows" from="Array.from(comparisonRows || []).map((row) =&gt; Object.assign({}, row,
+                    {periodText: comparisonPeriodText}))"/>
+        </if>
     </actions>
     <widgets>
         <container style="row items-center q-col-gutter-sm">
@@ -73,13 +84,19 @@ along with this software (see the LICENSE.md file). If not, see
                         show-csv-button="true"
                         show-xlsx-button="true"
                         saved-finds="true">
+                    <field name="periodText" hide="!hasComparison">
+                        <default-field title="Period">
+                            <display/>
+                        </default-field>
+                    </field>
                     <field name="glAccountId">
                         <default-field title="Account">
                             <link url="//Accounting/GeneralLedger/AccountDetail"
                                     text="${accountName || glAccountId}"
                                     link-type="anchor"
                                     parameter-map="Object.assign({recordId: glAccountId,
-                                        reportReturn: 'GeneralLedger'}, reportOptions)"/>
+                                        reportReturn: 'GeneralLedger'}, reportOptions,
+                                        {reportGlAccountId: reportOptions.glAccountId || ''})"/>
                         </default-field>
                     </field>
                     <field name="transactionDate">
@@ -97,7 +114,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     text="${acctgTransId}"
                                     link-type="anchor"
                                     parameter-map="Object.assign({recordId: acctgTransId,
-                                        reportReturn: 'GeneralLedger'}, reportOptions)"/>
+                                        reportReturn: 'GeneralLedger'}, reportOptions,
+                                        {reportGlAccountId: reportOptions.glAccountId || ''})"/>
                         </default-field>
                     </field>
                     <field name="amountUomId">
@@ -134,7 +152,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-list>
                 <section name="Comparison" condition="hasComparison">
                     <widgets>
-                        <label text="Comparison period" type="h6"/>
+                        <label text="Comparison period ${comparisonPeriodText}" type="h6"/>
                         <label text="No posted entries in the comparison period." type="p" condition="!comparisonRows.length"/>
                         <form-list name="ComparisonRows"
                                 list="comparisonRows"

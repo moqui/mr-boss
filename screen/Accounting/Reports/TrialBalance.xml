@@ -78,7 +78,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     text="${accountName || glAccountId}"
                                     link-type="anchor"
                                     parameter-map="Object.assign({recordId: glAccountId,
-                                        reportReturn: 'TrialBalance'}, reportOptions)"/>
+                                        reportReturn: 'TrialBalance'}, reportOptions,
+                                        {reportGlAccountId: reportOptions.glAccountId || ''})"/>
                         </default-field>
                     </field>
                     <field name="amountUomId">

@@ -56,13 +56,15 @@ along with this software (see the LICENSE.md file). If not, see
                         .condition('partyId', organizationPartyId).disableAuthz().one() : null"/>
                 <set field="captionPeriod" from="timePeriodId ? ec.entity.find('mantle.party.time.TimePeriod')
                         .condition('timePeriodId', timePeriodId).disableAuthz().one() : null"/>
-                <set field="captionText" from="[captionOrganization?.organizationName || organizationPartyId,
+                <!-- its own name: a report's own captionText (Budget variance's budget and revision) is kept (ACC-UI-037); the
+                    currency is the report's amountUomId option, else the currency the report ran in -->
+                <set field="printCaptionText" from="[captionOrganization?.organizationName || organizationPartyId,
                         captionPeriod ? (captionPeriod.periodName || captionPeriod.timePeriodId) : null,
                         fromDate || thruDate ? (fromDate || '…') + ' to ' + (thruDate || '…') : null,
-                        amountUomId || null].filter(Boolean).join(' · ')"/>
+                        amountUomId || currencyUomId || null].filter(Boolean).join(' · ')"/>
             </actions>
             <widgets>
-                <label text="${captionText}" type="p" condition="captionText"/>
+                <label text="${printCaptionText}" type="p" condition="printCaptionText"/>
             </widgets>
         </section>
         <section name="ReportState">
