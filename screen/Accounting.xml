@@ -22,11 +22,17 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
         <!-- a refusal (no finance read, an organization outside the scope) ends the render with its reason: past it a
             subscreen would run without the shared context, and one that reads its record with ignore-error would clear the
-            refusal and fail on its links -->
+            refusal and fail on its links. A scope or permission refusal answers as one (403), not a server failure
+            (ACC-UI-022). -->
         <script><![CDATA[
             accounting = ec.service.sync().name('ironstone.accounting.AccessServices.get#SharedContext')
                 .parameters({organizationPartyId: organizationPartyId}).call()
-            if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
+            if (ec.message.hasError()) {
+                const reason = String(ec.message.getErrorsString()).trim().replace(/^(?:Error: )+/, '')
+                const refusal = new Error(reason)
+                if (/^[A-Z_]*(?:DENIED|REQUIRED)\b/.test(reason)) refusal.moquiErrorKind = 'Unauthorized'
+                throw refusal
+            }
         ]]></script>
         <set field="sharedLinks" from="accounting.sharedLinks"/>
         <set field="organizationPartyId"

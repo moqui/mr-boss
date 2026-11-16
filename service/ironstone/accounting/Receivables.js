@@ -303,6 +303,20 @@ function batchResult(scope, operationKey) {
     if (!operationKey) return {found: false, results: []}
     return policy.call(nativeInvoice + "get#InvoiceBatchResult", {organizationPartyId: scope.organizationPartyId, operationKey})
 }
+// The versions a batch was reviewed at, given as a map or its JSON; anything else (text a link made of a map) is none, so
+// the review reads them again rather than failing the page or its export (ACC-UI-025).
+function reviewedVersions(value) {
+    if (!value) return null
+    if (typeof value !== "string") return value
+    try {
+        const parsed = JSON.parse(value)
+        return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null
+    } catch (error) {
+        ec.logger.warn("Invoice batch: source versions are not JSON, read again: " + error.message)
+        return null
+    }
+}
+
 function batchContext(parameters) {
     const scope = access(parameters)
     const ids = Array.from(
@@ -378,13 +392,11 @@ function batchContext(parameters) {
         batchRows,
         batchResults,
         batchCsv,
-        sourceVersions: parameters.sourceVersions
-            ? typeof parameters.sourceVersions === "string"
-                ? JSON.parse(parameters.sourceVersions)
-                : parameters.sourceVersions
-            : Object.fromEntries(
-                  batchRows.filter(row => row.available).map(row => [row.invoiceId, policy.ms(row.lastUpdatedStamp)])
-              ),
+        sourceVersions:
+            reviewedVersions(parameters.sourceVersions) ||
+            Object.fromEntries(
+                batchRows.filter(row => row.available).map(row => [row.invoiceId, policy.ms(row.lastUpdatedStamp)])
+            ),
         invoiceIdList: ids,
         batchOperationKey: parameters.operationKey || lib.operationKey("batch"),
         batchCount: ids.length

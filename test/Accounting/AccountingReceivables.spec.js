@@ -195,6 +195,30 @@ feature("batch review names an unavailable invoice without losing the other invo
     }
 })
 
+// ACC-UI-025: the export answered an empty file when its link carried the reviewed versions as a map's text
+feature("the selected invoices export as CSV whether the reviewed versions come as JSON or as text that is not", {
+    when() {
+        return helper.asUser("finance.ar", () => {
+            const exported = sourceVersions => {
+                const out = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/Accounting.xml")
+                    .render(
+                        "Receivables/InvoiceBatch/exportInvoices",
+                        {organizationPartyId: ids.organizationPartyId, invoiceIdList: ids.invoiceId, sourceVersions},
+                        null
+                    )
+                return String(out.output || "")
+            }
+            return {json: exported(JSON.stringify({[ids.invoiceId]: 1})), mapText: exported("[" + ids.invoiceId + ":1]")}
+        })
+    },
+    then({json, mapText}) {
+        json.startsWith('"Invoice","Customer"') && json.includes(ids.invoiceId)
+        mapText.startsWith('"Invoice","Customer"') && mapText.includes(ids.invoiceId)
+    }
+})
+
 feature("customer context checks the organization even with artifact authorization disabled", {
     when() {
         return helper.asUser(

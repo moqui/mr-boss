@@ -82,6 +82,9 @@ along with this software (see the LICENSE.md file). If not, see
                     out-map="context"/>
         </if>
         <set field="selectionParameters" from="{organizationPartyId:organizationPartyId, invoiceIdList:invoiceIdList}"/>
+        <!-- the export names the reviewed versions as JSON: the screen declares sourceVersions, so a link would otherwise
+            add the context's map as text the export cannot read, and answered an empty file (ACC-UI-025) -->
+        <set field="exportParameters" from="Object.assign({sourceVersions:JSON.stringify(sourceVersions || {})}, selectionParameters)"/>
         <set field="againParameters"
                 from="Object.assign({operationKey:'', sourceVersions:'', toAddresses:'',
                     batchAction:'send'}, selectionParameters)"/>
@@ -107,7 +110,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 link-type="anchor-button"
                                 icon="sym_o_download"
                                 condition="batchCount &gt; 0"
-                                parameter-map="selectionParameters"/>
+                                parameter-map="exportParameters"/>
                     </box-toolbar>
                     <box-body-nopad>
                         <form-list name="InvoiceBatchReview" list="batchRows" skip-form="true" paginate="false">

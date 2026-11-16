@@ -260,7 +260,20 @@ feature("an administrator switches the active organization both ways and clears 
                 .render("Home/selectOrganization", Object.assign({activeOrganizationPartyId: organizationPartyId}, extra), "post")
             return {errors: Array.from(result.errorMessages || []), active: ec.user.getPreference("ACTIVE_ORGANIZATION") || ""}
         }
-        return as(
+        // ACC-UI-022: a transition posted outside the reader's scope is refused with its rule once, thrown as a refusal (403
+        // over HTTP), not a server error
+        const importOutside = as("finance.read", () => {
+            const result = ec.screen
+                .makeTest()
+                .rootScreen("component://mr-boss/screen/Accounting.xml")
+                .render(
+                    "Settings/Setup/OpenItems/importItems",
+                    {organizationPartyId: "BOSS_ACCT_NEWCO", csvText: "x", verifyOnly: "Y"},
+                    "post"
+                )
+            return {status: result.status, errors: Array.from(result.errorMessages || []).join(" ")}
+        })
+        return Object.assign({importOutside}, as(
             "finance.admin",
             () => {
                 const toCompany = post(org)
@@ -273,9 +286,11 @@ feature("an administrator switches the active organization both ways and clears 
                 return {toCompany, back, named, cleared, outside}
             },
             "BOSS_ACCT_NEWCO"
-        )
+        ))
     },
-    then({toCompany, back, named, cleared, outside}) {
+    then({importOutside, toCompany, back, named, cleared, outside}) {
+        importOutside.errors.includes("ORGANIZATION_DENIED: Accounting organization is not available")
+        !importOutside.errors.includes("Error: Error:")
         toCompany.errors == [] && toCompany.active == org
         back.errors == [] && back.active == "BOSS_ACCT_NEWCO"
         named.errors == [] && named.active == org
