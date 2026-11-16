@@ -38,11 +38,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="lastDay" from="/^\d{4}-\d{2}-\d{2}$/.test(String(thruDay || '')) ? String(thruDay) : new Date(Date.UTC(Number(firstDay.substring(0, 4)),
                 Number(firstDay.substring(5, 7)) - 1, Number(firstDay.substring(8, 10)) + 14)).toISOString().substring(0, 10)"/>
         <set field="theBucket" from="['day', 'week'].includes(bucket) ? bucket : 'range'"/>
-        <service-call name="mantle.work.ProductionPlanningServices.get#WorkCenterLoad" out-map="load" transaction="force-new"
-                ignore-error="true" in-map="{plantFacilityId:plant, text:text, bucket:theBucket == 'range' ? null : theBucket,
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('mantle.work.ProductionPlanningServices.get#WorkCenterLoad').requireNewTransaction(true)
+                    .parameters({plantFacilityId:plant, text:text, bucket:theBucket == 'range' ? null : theBucket,
                     pageIndex:pageIndex,
                     fromDate:ec.l10n.parseTimestamp(firstDay + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'),
-                    thruDate:ec.l10n.parseTimestamp(lastDay + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')}"/>
+                    thruDate:ec.l10n.parseTimestamp(lastDay + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')}).call()
+            if (probed != null) load = Object.assign({}, load || {}, probed)
+        }</script>
         <set field="loadError" from="load ? '' : ec.message.getErrorsString()"/>
         <script>ec.message.clearErrors()</script>
         <set field="loadRows" from="[]"/>

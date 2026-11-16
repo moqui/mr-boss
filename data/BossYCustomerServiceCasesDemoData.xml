@@ -25,15 +25,15 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.PartyRole partyId="BOSS_CS_ADMIN" roleTypeId="Agent"/>
     <mantle.party.PartyRole partyId="BOSS_CS_SERVICES" roleTypeId="Agent"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_AGENT" relationshipTypeEnumId="PrtServiceTeam"
-            fromPartyId="BOSS_CS_AGENT" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="0"/>
+            fromPartyId="BOSS_CS_AGENT" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_AGENT_WH" relationshipTypeEnumId="PrtServiceTeam"
-            fromPartyId="BOSS_CS_AGENT_WH" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="0"/>
+            fromPartyId="BOSS_CS_AGENT_WH" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_MANAGER" relationshipTypeEnumId="PrtServiceTeam"
-            fromPartyId="BOSS_CS_MANAGER" fromRoleTypeId="Manager" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="0"/>
+            fromPartyId="BOSS_CS_MANAGER" fromRoleTypeId="Manager" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_PRIVACY" relationshipTypeEnumId="PrtServiceTeam"
-            fromPartyId="BOSS_CS_ADMIN" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_PRIVACY" toRoleTypeId="OrgTeam" fromDate="0"/>
+            fromPartyId="BOSS_CS_ADMIN" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_PRIVACY" toRoleTypeId="OrgTeam" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_SERVICES" relationshipTypeEnumId="PrtServiceTeam"
-            fromPartyId="BOSS_CS_SERVICES" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SERVICES" toRoleTypeId="OrgTeam" fromDate="0"/>
+            fromPartyId="BOSS_CS_SERVICES" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SERVICES" toRoleTypeId="OrgTeam" fromDate="2026-01-01 00:00:00"/>
     <mantle.request.Request requestId="BOSS_CS_CASE_THERMO" requestName="Thermostat shows the wrong temperature"
             requestTypeEnumId="RqtSupport" requestCategoryId="BOSS_CS_Q_SUPPORT" statusId="ReqSubmitted" priority="3"
             salesChannelEnumId="ScPhone" requestDate="2026-11-02 09:30:00" requestResolutionEnumId="RrUnresolved"
@@ -74,7 +74,7 @@ along with this software (see the LICENSE.md file). If not, see
         note (never put in an article) -->
     <mantle.party.PartyRole partyId="BOSS_CS_KNOWLEDGE" roleTypeId="Agent"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_KNOWLEDGE" relationshipTypeEnumId="PrtServiceTeam"
-            fromPartyId="BOSS_CS_KNOWLEDGE" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="0"/>
+            fromPartyId="BOSS_CS_KNOWLEDGE" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.communication.CommunicationEvent communicationEventId="BOSS_CS_CE_THERMO_REPLY" communicationEventTypeId="Email"
             contactMechTypeEnumId="CmtEmailAddress" statusId="CeSent" fromPartyId="BOSS_CS_AGENT" toPartyId="CustJqp"
             entryDate="2026-11-02 10:15:00" subject="Your thermostat reading" contentType="text/html"

@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     manager or administrator.
     Built for a second mount (impl-sales §2, F47): the context is get#SharedContext's for the mounting root's appRoot (the `sales`
     map the root sets), every link goes through sharedLinks and a row whose Customer360 the root does not mount shows its name
-    without a link. Marketing's root adds AccountList's row selection and its bulk action "Add to list (evidenced)"
+    without a link, as does, under Marketing, a row Marketing's Customer360 does not open (check#Contacts). Marketing's root adds AccountList's row selection and its bulk action "Add to list (evidenced)"
     (impl-marketing P3) around the form named AccountList. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Accounts" default-menu-index="1">
@@ -48,6 +48,13 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <set field="accountList" from="accountList || []"/>
         <set field="customer360Path" from="sharedLinks['Accounts/Customer360'] || null"/>
+        <!-- Marketing's Customer360 opens only a contact of its audiences (check#Record contact): a row links when it is one -->
+        <set field="linkedPartyIds" from="null"/>
+        <if condition="appRoot == 'Marketing' &amp;&amp; customer360Path &amp;&amp; accountList.length">
+            <service-call name="ironstone.marketing.ContextServices.check#Contacts" out-map="contactsOut"
+                    in-map="{appRoot:appRoot, partyIds:accountList.map(account => account.partyId)}"/>
+            <set field="linkedPartyIds" from="Array.from(contactsOut.contactPartyIds || [])"/>
+        </if>
         <set field="filtered" from="!!(text || organizationPartyId || roleTypeId || partyTypeEnumId || managerPartyId || mine || parentAccountPartyId)"/>
         <set field="newAccountDefaults" from="{organizationPartyId: sales.defaultOrganizationPartyId, roleTypeId: 'Customer'}"/>
         <!-- impl-marketing P3: AccountList's row selection, for Marketing's bulk action alone (a holder of MARKETING_AUDIENCE_EDIT) -->
@@ -166,7 +173,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </header-field>
                     </field>
                     <field name="name">
-                        <conditional-field title="Account" condition="customer360Path">
+                        <conditional-field title="Account" condition="customer360Path &amp;&amp; (linkedPartyIds == null || linkedPartyIds.includes(partyId))">
                             <link url="${customer360Path}" text="${name}" link-type="anchor" parameter-map="{customerPartyId:partyId}"/>
                         </conditional-field>
                         <default-field title="Account">

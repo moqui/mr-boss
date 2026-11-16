@@ -150,28 +150,32 @@ along with this software (see the LICENSE.md file). If not, see
                     </field>
                     <field name="decide" align="right">
                         <default-field title="">
-                            <container style="row no-wrap justify-end items-center q-gutter-xs" condition="canDecide">
-                                <link url="decideBooking" link-type="hidden-form-link" btn-type="primary" icon="sym_o_check" text="Approve"
-                                        parameter-map="{workEffortId:workEffortId, bookingFacilityId:facilityId, bookingAssetId:assetId, decision:'approve',
-                                            expectedStatusId:expectedStatusId, expectedFromDate:expectedFromDate, expectedThruDate:expectedThruDate}"/>
-                                <container-dialog id="DenyBooking_${workEffortId}_${facilityId || assetId}" button-text="Deny" icon="sym_o_block"
-                                        type="danger" width="440" title="Deny the booking of ${resourceName}">
-                                    <label text="${whenText} · ${requesterName}" type="p" style="text-body2"/>
-                                    <form-single name="BookingDecision" transition="decideBooking"
-                                            map="{workEffortId:workEffortId, bookingFacilityId:facilityId, bookingAssetId:assetId, decision:'deny',
-                                                expectedStatusId:expectedStatusId, expectedFromDate:expectedFromDate, expectedThruDate:expectedThruDate}">
-                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
-                                        <field name="bookingFacilityId"><default-field><hidden/></default-field></field>
-                                        <field name="bookingAssetId"><default-field><hidden/></default-field></field>
-                                        <field name="decision"><default-field><hidden/></default-field></field>
-                                        <field name="expectedStatusId"><default-field><hidden/></default-field></field>
-                                        <field name="expectedFromDate"><default-field><hidden/></default-field></field>
-                                        <field name="expectedThruDate"><default-field><hidden/></default-field></field>
-                                        <field name="reason"><default-field title="Reason the organizer is told"><text-area rows="3" cols="50"/></default-field></field>
-                                        <field name="submitButton"><default-field title="Deny"><submit type="danger"/></default-field></field>
-                                    </form-single>
-                                </container-dialog>
-                            </container>
+                            <section name="DecideActions" condition="canDecide">
+                                <widgets>
+                                    <container style="row no-wrap justify-end items-center q-gutter-xs">
+                                        <link url="decideBooking" link-type="hidden-form-link" btn-type="primary" icon="sym_o_check" text="Approve"
+                                                parameter-map="{workEffortId:workEffortId, bookingFacilityId:facilityId, bookingAssetId:assetId, decision:'approve',
+                                                    expectedStatusId:expectedStatusId, expectedFromDate:expectedFromDate, expectedThruDate:expectedThruDate}"/>
+                                        <container-dialog id="DenyBooking_${workEffortId}_${facilityId || assetId}" button-text="Deny" icon="sym_o_block"
+                                                type="danger" width="440" title="Deny the booking of ${resourceName}">
+                                            <label text="${whenText} · ${requesterName}" type="p" style="text-body2"/>
+                                            <form-single name="BookingDecision" transition="decideBooking"
+                                                    map="{workEffortId:workEffortId, bookingFacilityId:facilityId, bookingAssetId:assetId, decision:'deny',
+                                                        expectedStatusId:expectedStatusId, expectedFromDate:expectedFromDate, expectedThruDate:expectedThruDate}">
+                                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                <field name="bookingFacilityId"><default-field><hidden/></default-field></field>
+                                                <field name="bookingAssetId"><default-field><hidden/></default-field></field>
+                                                <field name="decision"><default-field><hidden/></default-field></field>
+                                                <field name="expectedStatusId"><default-field><hidden/></default-field></field>
+                                                <field name="expectedFromDate"><default-field><hidden/></default-field></field>
+                                                <field name="expectedThruDate"><default-field><hidden/></default-field></field>
+                                                <field name="reason"><default-field title="Reason the organizer is told"><text-area rows="3" cols="50"/></default-field></field>
+                                                <field name="submitButton"><default-field title="Deny"><submit type="danger"/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                    </container>
+                                </widgets>
+                            </section>
                         </default-field>
                     </field>
                     <columns type="mobile">

@@ -129,8 +129,12 @@ along with this software (see the LICENSE.md file). If not, see
                         pageNoLimit:(pageNoLimit || null)}"/>
         </if>
         <if condition="attendanceDayId">
-            <service-call name="mantle.humanres.AttendanceServices.get#Day" out-map="opened" transaction="force-new" ignore-error="true"
-                    in-map="{attendanceDayId:attendanceDayId}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.humanres.AttendanceServices.get#Day').requireNewTransaction(true)
+                        .parameters({attendanceDayId:attendanceDayId}).call()
+                if (probed != null) opened = Object.assign({}, opened || {}, probed)
+            }</script>
             <set field="openError" from="ec.message.hasError() ? 'This day is not available to you.' : ''"/>
         </if>
         <script>ec.message.clearErrors()</script>

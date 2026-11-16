@@ -384,7 +384,7 @@ along with this software (see the LICENSE.md file). If not, see
                     isDone: isDone, isOpen: isOpen, canUpdate: !!canUpdate,
                     rootWorkEffortId: task.rootWorkEffortId || null, projectName: task.rootWorkEffortId ? (names[task.rootWorkEffortId] || task.rootWorkEffortId) : '',
                     parentWorkEffortId: task.parentWorkEffortId || null, parentName: task.parentWorkEffortId ? (names[task.parentWorkEffortId] || task.parentWorkEffortId) : '',
-                    priority: task.priority ?? null, priorityText: task.priority != null ? String(task.priority) : '',
+                    priority: task.priority ?? null, priorityText: task.priority != null ? (task.priority <= 3 ? L('High') : task.priority <= 6 ? L('Normal') : L('Low')) + ' (' + task.priority + ')' : '',
                     assigneePartyId: (assignees[id] || [])[0] || null, assigneeText: others.join(', '),
                     milestoneId: plan.WeatMilestone || null, milestoneName: plan.WeatMilestone ? names[plan.WeatMilestone] : '',
                     releaseId: plan.WeatRelease || null, releaseName: plan.WeatRelease ? names[plan.WeatRelease] : '',

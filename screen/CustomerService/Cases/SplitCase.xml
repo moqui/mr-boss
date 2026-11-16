@@ -80,10 +80,14 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="sourceCase" from="sourceOut?.detail?.theCase || null"/>
         <set field="splitError" from="null"/>
         <if condition="sourceCase">
-            <service-call name="mantle.request.SupportCaseServices.preview#SplitCase" out-map="previewOut" transaction="force-new"
-                    ignore-error="true" in-map="{requestId:requestId, communicationEventIds:splitChosen.communicationEventIds,
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.request.SupportCaseServices.preview#SplitCase').requireNewTransaction(true)
+                        .parameters({requestId:requestId, communicationEventIds:splitChosen.communicationEventIds,
                         recordKeys:splitChosen.recordKeys, workEffortIds:splitChosen.workEffortIds,
-                        requestContentIds:splitChosen.requestContentIds}"/>
+                        requestContentIds:splitChosen.requestContentIds}).call()
+                if (probed != null) previewOut = Object.assign({}, previewOut || {}, probed)
+            }</script>
             <set field="splitError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
             <script>ec.message.clearErrors()</script>
         </if>

@@ -102,9 +102,13 @@ along with this software (see the LICENSE.md file). If not, see
             </if>
             <!-- AwardPreview -->
             <if condition="stepName == 'preview'">
-                <service-call name="mantle.order.SourcingServices.preview#Award" out-map="preview"
-                        in-map="{requestId:requestId, allocationsText:allocationsText, sourceRevision:(sourceRevision || null),
-                            quoteRevisions:(quoteRevisions || null)}" transaction="force-new" ignore-error="true"/>
+                <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                <script>{
+                    const probed = ec.service.sync().name('mantle.order.SourcingServices.preview#Award').requireNewTransaction(true)
+                            .parameters({requestId:requestId, allocationsText:allocationsText, sourceRevision:(sourceRevision || null),
+                            quoteRevisions:(quoteRevisions || null)}).call()
+                    if (probed != null) preview = Object.assign({}, preview || {}, probed)
+                }</script>
                 <set field="previewError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
                 <script>ec.message.clearErrors()</script>
                 <set field="commitValue" from="{requestId:requestId, allocationsText:allocationsText, sourceRevision:sourceRevision || '',
@@ -118,8 +122,12 @@ along with this software (see the LICENSE.md file). If not, see
                             in-map="{appRoot:appRoot, requestId:requestId, operationKey:closeKey}" transaction="force-new"
                             ignore-error="true"/>
                 </then><else>
-                    <service-call name="mantle.order.SourcingServices.close#QuoteRequest" out-map="closePreview"
-                            in-map="{requestId:requestId, preview:true}" transaction="force-new" ignore-error="true"/>
+                    <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                    <script>{
+                        const probed = ec.service.sync().name('mantle.order.SourcingServices.close#QuoteRequest').requireNewTransaction(true)
+                                .parameters({requestId:requestId, preview:true}).call()
+                        if (probed != null) closePreview = Object.assign({}, closePreview || {}, probed)
+                    }</script>
                     <set field="closeError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
                     <set field="closeValue" from="{requestId:requestId, sendRegret:'Y', regretMessage:closePreview?.regretMessage || '',
                             operationKey:'rfq-close-' + requestId + '-' + ec.user.randomString(16)}"/>

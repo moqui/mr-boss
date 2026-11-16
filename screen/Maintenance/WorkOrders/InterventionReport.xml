@@ -58,8 +58,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="recordFound" from="!!checked?.recordId"/>
         <script>ec.message.clearErrors()</script>
         <if condition="recordFound">
-            <service-call name="mantle.work.MaintenanceServices.get#InterventionReport" out-map="report" transaction="force-new"
-                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.work.MaintenanceServices.get#InterventionReport').requireNewTransaction(true)
+                        .parameters({workEffortId:workEffortId}).call()
+                if (probed != null) report = Object.assign({}, report || {}, probed)
+            }</script>
             <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?[A-Z_]+: /, '') : ''"/>
             <script>ec.message.clearErrors()</script>
             <service-call name="mantle.work.MaintenanceServices.get#MaintenanceWorkOrder" out-map="workOrderDetail"

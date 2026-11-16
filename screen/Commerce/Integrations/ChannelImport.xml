@@ -52,8 +52,12 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.product.StoreChannelServices.get#ChannelImport" out-map="found" transaction="force-new"
                     ignore-error="true" in-map="{systemMessageId:systemMessageId}"/>
         </then><else>
-            <service-call name="mantle.product.StoreChannelServices.find#StoreIntegrations" out-map="integrationsFound" transaction="force-new"
-                    ignore-error="true" in-map="{connectorId:'ChannelOrders'}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.product.StoreChannelServices.find#StoreIntegrations').requireNewTransaction(true)
+                        .parameters({connectorId:'ChannelOrders'}).call()
+                if (probed != null) integrationsFound = Object.assign({}, integrationsFound || {}, probed)
+            }</script>
         </else></if>
         <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
         <script>ec.message.clearErrors()</script>

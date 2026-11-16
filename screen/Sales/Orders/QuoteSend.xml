@@ -48,8 +48,12 @@ along with this software (see the LICENSE.md file). If not, see
         <script>ec.message.clearErrors()</script>
         <set field="canSend" from="!!issuesOut?.quoteFound &amp;&amp; !!issuesOut.canSend"/>
         <if condition="canSend">
-            <service-call name="mantle.order.SalesQuoteIssueServices.send#Quote" out-map="preview" transaction="force-new" ignore-error="true"
-                    in-map="{orderId:orderId, orderRevision:issuesOut.orderRevision, previewOnly:'Y'}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.order.SalesQuoteIssueServices.send#Quote').requireNewTransaction(true)
+                        .parameters({orderId:orderId, orderRevision:issuesOut.orderRevision, previewOnly:'Y'}).call()
+                if (probed != null) preview = Object.assign({}, preview || {}, probed)
+            }</script>
         </if>
         <script><![CDATA[
             previewError = ec.message.getErrorsString() || ''

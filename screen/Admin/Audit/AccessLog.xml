@@ -91,10 +91,14 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-single>
                     </widgets>
                 </section>
-                <container style="row items-center q-gutter-sm" condition="!!narrowed">
-                    <label type="span" text="Narrowed to ${narrowed}."/>
-                    <link url="." text="Show all" link-type="anchor" condition="!printing" parameter-map="clearValues"/>
-                </container>
+                <section name="NarrowedNote" condition="!!narrowed">
+                    <widgets>
+                        <container style="row items-center q-gutter-sm">
+                            <label type="span" text="Narrowed to ${narrowed}."/>
+                            <link url="." text="Show all" link-type="anchor" condition="!printing" parameter-map="clearValues"/>
+                        </container>
+                    </widgets>
+                </section>
                 <label type="p" style="text-warning" condition="found.truncated" text="Only the newest ${found.exportRows} lines are in this print or file: narrow the dates for the rest."/>
                 <label type="p" style="m-muted" condition="!accessList.length" text="No line matches."/>
                 <form-list name="AccessEvidence" list="accessList" skip-form="true" paginate="true" show-csv-button="true">

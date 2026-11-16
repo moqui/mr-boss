@@ -109,9 +109,13 @@ along with this software (see the LICENSE.md file). If not, see
                 acknowledge:'Y'}"/>
         <!-- RouteTest's result, when a sample was given -->
         <if condition="routing &amp;&amp; testCategoryId &amp;&amp; testFromAddress">
-            <service-call name="mantle.request.SupportCaseServices.preview#ServiceRoute" out-map="testOut" transaction="force-new"
-                    ignore-error="true" in-map="{requestCategoryId:testCategoryId, fromAddress:testFromAddress, subject:(testSubject || null),
-                        inReplyTo:(testInReplyTo || null), headersString:(testHeaders || null)}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.request.SupportCaseServices.preview#ServiceRoute').requireNewTransaction(true)
+                        .parameters({requestCategoryId:testCategoryId, fromAddress:testFromAddress, subject:(testSubject || null),
+                        inReplyTo:(testInReplyTo || null), headersString:(testHeaders || null)}).call()
+                if (probed != null) testOut = Object.assign({}, testOut || {}, probed)
+            }</script>
             <set field="testError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
             <script>ec.message.clearErrors()</script>
         </if>

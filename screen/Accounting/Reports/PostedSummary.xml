@@ -31,11 +31,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="report" from="null"/>
         <set field="reportError" from="null"/>
         <if condition="organizationPartyId">
-            <service-call name="mantle.ledger.LedgerReportServices.run#PostedAmountSummary"
-                    in-map="reportOptions"
-                    out-map="report"
-                    transaction="force-new"
-                    ignore-error="true"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.ledger.LedgerReportServices.run#PostedAmountSummary').requireNewTransaction(true)
+                        .parameters(reportOptions).call()
+                if (probed != null) report = Object.assign({}, report || {}, probed)
+            }</script>
             <if condition="ec.message.hasError()">
                 <set field="reportError" from="ec.message.getErrorsString()"/>
                 <set field="report" from="null"/>

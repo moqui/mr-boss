@@ -93,9 +93,13 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the preview of the Shift form's values: the shift chosen, changed by the values given -->
         <set field="previewed" from="null"/>
         <if condition="canRoster &amp;&amp; (shiftStart || shiftAssignmentId)">
-            <service-call name="mantle.humanres.ScheduleServices.store#Shift" out-map="previewed" transaction="force-new" ignore-error="true"
-                    in-map="{action:'preview', shiftAssignmentId:(shiftAssignmentId || null), partyRelationshipId:(shiftPartyRelationshipId || null),
-                        startText:(shiftStart || null), endText:(shiftEnd || null), breakMinutes:(shiftBreak || null), facilityId:(shiftFacilityId || '')}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.humanres.ScheduleServices.store#Shift').requireNewTransaction(true)
+                        .parameters({action:'preview', shiftAssignmentId:(shiftAssignmentId || null), partyRelationshipId:(shiftPartyRelationshipId || null),
+                        startText:(shiftStart || null), endText:(shiftEnd || null), breakMinutes:(shiftBreak || null), facilityId:(shiftFacilityId || '')}).call()
+                if (probed != null) previewed = Object.assign({}, previewed || {}, probed)
+            }</script>
             <set field="previewError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
             <script>ec.message.clearErrors()</script>
         </if>

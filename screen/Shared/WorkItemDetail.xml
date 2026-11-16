@@ -581,8 +581,8 @@ along with this software (see the LICENSE.md file). If not, see
             captionText = [L('Task') + ' ' + workEffortId, task.purposeLabel, task.projectName ? L('Project') + ': ' + task.projectName : null].filter((part) => part).join(' · ')
             // the key facts: due, priority, assignees (and in Projects the estimate, plan items and labels)
             const fact = (label, value, cls) => '<div class="col-auto"><div class="text-caption m-muted">' + enc(L(label)) + '</div><div class="text-body2' + (cls ? ' ' + cls : '') + '">' + value + '</div></div>'
-            const assignees = (task.assigneeList || []).map((party) => '<span class="row inline items-center no-wrap q-mr-sm"><m-avatar name="' + enc(party.name) + '"' + (party.userId ? ' user-id="' + enc(party.userId) + '"' : '') + ' size="22px" class="q-mr-xs"></m-avatar>'
-                    + enc(party.name) + '</span>').join('')
+            const assignees = (task.assigneeList || []).map((party) => '<span class="row inline items-center no-wrap"><m-avatar name="' + enc(party.name) + '"' + (party.userId ? ' user-id="' + enc(party.userId) + '"' : '') + ' size="22px" class="q-mr-xs"></m-avatar>'
+                    + enc(party.name) + '</span>').join(', ')
             factsHtml = '<div class="row q-col-gutter-lg m-task-facts">'
                 + (projects ? fact('Assignees', assignees || enc(L('Unassigned')), '') : '')
                 + fact('Due', task.dueText ? enc(task.dueText) + (task.overdue ? ' · ' + enc(L('overdue')) : '') : enc(L('No due date')), task.overdue ? 'text-warning text-weight-medium' : '')
@@ -626,6 +626,18 @@ along with this software (see the LICENSE.md file). If not, see
                 url: sri.buildUrl('.').path + base.substring(base.indexOf('?')) + '&tab=' + key}))}
             linkedRecordsHtml = linkedRecordList.map((record) => '<m-record-card record-entity="' + enc(record.recordEntityName) + '" record-id="' + enc(record.recordId)
                     + '" card-url="/apps/Commons/Chatter/recordCard" class="q-mb-xs"></m-record-card>').join('')
+            // the terminal names each linked record by its card (get#RecordCard: its type and title, the id alone for a record the user
+            // may not see), as m-record-card fetches it in the browser
+            linkedRecordTui = sri.getRenderMode() !== 'tui' ? [] : linkedRecordList.map((record) => {
+                let card = null
+                ec.message.pushErrors()
+                try {
+                    card = ec.service.sync().name('ironstone.shared.ChatterServices.get#RecordCard').requireNewTransaction(true)
+                            .parameters({recordEntityName: record.recordEntityName, recordId: record.recordId}).call()?.card || null
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                const kind = card?.typeLabel || String(record.recordEntityName).split('.').pop()
+                return {t: 'text', text: kind + ' ' + (card?.title || record.recordId)}
+            })
             todayText = ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')
             dueEditText = task.dueEditText || ''
             projectLabel = task.projectName || ''
@@ -1058,7 +1070,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                             <econdition field-name="enumTypeId" value="WorkEffortPurpose"/><econdition field-name="parentEnumId" value="WetTask"/>
                                                             <order-by field-name="description"/></entity-find>
                                                     </entity-options></drop-down></default-field></field>
-                                                <field name="priority" from="task.priorityText || '5'"><default-field title="Priority">
+                                                <field name="priority" from="String(task.priority ?? 5)"><default-field title="Priority">
                                                     <drop-down><option key="1" text="1 (highest)"/><option key="2" text="2 (high)"/><option key="3"/><option key="4"/>
                                                         <option key="5" text="5 (normal)"/><option key="6"/><option key="7"/><option key="8" text="8 (low)"/>
                                                         <option key="9" text="9 (lowest)"/></drop-down></default-field></field>
@@ -1098,7 +1110,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <container style="col-12 col-md-6">
                                 <container-box><box-header title="Linked records"/><box-body>
                                     <section name="LinkedRecords" condition="linkedRecordList.length"><widgets>
-                                        <render-mode><text type="qvt"><![CDATA[${linkedRecordsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(linkedRecordList.map((record) => ({t: "text", text: String(record.recordEntityName).split(".").pop() + " " + record.recordId})))}]]></text></render-mode>
+                                        <render-mode><text type="qvt"><![CDATA[${linkedRecordsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(linkedRecordTui)}]]></text></render-mode>
                                     </widgets><fail-widgets>
                                         <label type="p" text="Not on a record. A task made from a record (a request, a contact, an order) shows it here." style="m-muted q-mb-none"/>
                                     </fail-widgets></section>
@@ -1188,7 +1200,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </widgets></section>
                                 <container-box><box-header title="Linked records"/><box-body>
                                     <section name="WorkItemLinkedRecords" condition="linkedRecordList.length"><widgets>
-                                        <render-mode><text type="qvt"><![CDATA[${linkedRecordsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(linkedRecordList.map((record) => ({t: "text", text: String(record.recordEntityName).split(".").pop() + " " + record.recordId})))}]]></text></render-mode>
+                                        <render-mode><text type="qvt"><![CDATA[${linkedRecordsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(linkedRecordTui)}]]></text></render-mode>
                                     </widgets><fail-widgets>
                                         <label type="p" text="Not on a record" style="m-muted q-mb-none"/>
                                     </fail-widgets></section>

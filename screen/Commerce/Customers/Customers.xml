@@ -22,8 +22,12 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="term"/>
     <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
     <actions>
-        <service-call name="mantle.order.StoreOperationsServices.find#StoreCustomers" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{productStoreId:(productStoreId || null), term:term, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('mantle.order.StoreOperationsServices.find#StoreCustomers').requireNewTransaction(true)
+                    .parameters({productStoreId:(productStoreId || null), term:term, pageIndex:pageIndex, pageSize:pageSize}).call()
+            if (probed != null) found = Object.assign({}, found || {}, probed)
+        }</script>
         <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
         <script>ec.message.clearErrors()</script>
         <set field="customers" from="found?.customers || []"/>

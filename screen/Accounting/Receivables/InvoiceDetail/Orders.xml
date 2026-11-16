@@ -81,15 +81,19 @@ along with this software (see the LICENSE.md file). If not, see
                                 style="m-muted"
                                 condition="!receivable.orders.length"/>
                         <!-- a bill the supplier sent from its order's page names the order before its lines are matched (ACC-UI-019) -->
-                        <container id="SubmittedOrder" condition="receivable.submittedOrderId">
-                            <label text="The supplier sent this bill for purchase order" type="span"/>
-                            <link url="${sharedLinks['Records/OrderDetail']}"
-                                    text="${receivable.submittedOrderId}"
-                                    link-type="anchor"
-                                    parameter-map="{orderId:receivable.submittedOrderId, organizationPartyId:organizationPartyId}"/>
-                            <label text="; match its lines on the Match tab." type="span"
-                                    condition="!receivable.orders.length"/>
-                        </container>
+                        <section name="SubmittedOrderNote" condition="receivable.submittedOrderId">
+                            <widgets>
+                                <container id="SubmittedOrder">
+                                    <label text="The supplier sent this bill for purchase order" type="span"/>
+                                    <link url="${sharedLinks['Records/OrderDetail']}"
+                                            text="${receivable.submittedOrderId}"
+                                            link-type="anchor"
+                                            parameter-map="{orderId:receivable.submittedOrderId, organizationPartyId:organizationPartyId}"/>
+                                    <label text="; match its lines on the Match tab." type="span"
+                                            condition="!receivable.orders.length"/>
+                                </container>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
             </widgets>

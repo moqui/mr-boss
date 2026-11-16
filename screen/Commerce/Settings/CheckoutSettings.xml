@@ -205,9 +205,13 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="simValues" from="{productStoreId:productStoreId, simCountryGeoId:simCountryGeoId, simStateGeoId:simStateGeoId,
                     simAmount:(simAmount || '50'), simWeight:(simWeight || '2')}"/>
             <if condition="simCountryGeoId">
-                <service-call name="mantle.product.StoreAdminServices.simulate#StoreShipping" out-map="simOut" transaction="force-new"
-                        ignore-error="true" in-map="{productStoreId:productStoreId, countryGeoId:simCountryGeoId,
-                            stateProvinceGeoId:(simStateGeoId || null), amount:(simAmount || '50'), weight:(simWeight || '2'), weightUomId:'WT_lb'}"/>
+                <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                <script>{
+                    const probed = ec.service.sync().name('mantle.product.StoreAdminServices.simulate#StoreShipping').requireNewTransaction(true)
+                            .parameters({productStoreId:productStoreId, countryGeoId:simCountryGeoId,
+                            stateProvinceGeoId:(simStateGeoId || null), amount:(simAmount || '50'), weight:(simWeight || '2'), weightUomId:'WT_lb'}).call()
+                    if (probed != null) simOut = Object.assign({}, simOut || {}, probed)
+                }</script>
                 <set field="simError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^.*?[A-Z_]+: /, '') : ''"/>
                 <script>ec.message.clearErrors()</script>
             </if>
@@ -215,9 +219,13 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- the tax preview: a sample sale to a destination, when one is asked for -->
             <set field="taxPreviewValues" from="{productStoreId:productStoreId, taxGeoId:taxGeoId, taxAmount:(taxAmount || '100'), taxShipping:taxShipping}"/>
             <if condition="taxGeoId">
-                <service-call name="mantle.product.StoreAdminServices.preview#StoreTax" out-map="taxOut" transaction="force-new"
-                        ignore-error="true" in-map="{productStoreId:productStoreId, destinationGeoId:taxGeoId, amount:(taxAmount || '100'),
-                            shippingAmount:(taxShipping || null)}"/>
+                <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                <script>{
+                    const probed = ec.service.sync().name('mantle.product.StoreAdminServices.preview#StoreTax').requireNewTransaction(true)
+                            .parameters({productStoreId:productStoreId, destinationGeoId:taxGeoId, amount:(taxAmount || '100'),
+                            shippingAmount:(taxShipping || null)}).call()
+                    if (probed != null) taxOut = Object.assign({}, taxOut || {}, probed)
+                }</script>
                 <set field="taxError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^.*?[A-Z_]+: /, '') : ''"/>
                 <script>ec.message.clearErrors()</script>
             </if>

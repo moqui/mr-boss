@@ -37,14 +37,22 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <actions>
         <set field="summaryAudience" from="audience == 'internal' ? 'internal' : 'customer'"/>
-        <service-call name="ironstone.customerservice.AccessServices.check#Record" transaction="force-new" ignore-error="true"
-                in-map="{appRoot:appRoot, recordType:'case', recordId:requestId}" out-map="checked"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('ironstone.customerservice.AccessServices.check#Record').requireNewTransaction(true)
+                    .parameters({appRoot:appRoot, recordType:'case', recordId:requestId}).call()
+            if (probed != null) checked = Object.assign({}, checked || {}, probed)
+        }</script>
         <!-- an ignored error leaves no message: the answer's record says whether the case is the user's -->
         <set field="caseFound" from="!ec.message.hasError() &amp;&amp; !!checked?.recordId"/>
         <script>ec.message.clearErrors()</script>
         <if condition="caseFound">
-            <service-call name="mantle.request.SupportCaseServices.get#CaseSummaryPrint" out-map="printed"
-                    transaction="force-new" ignore-error="true" in-map="{requestId:requestId, audience:summaryAudience}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.request.SupportCaseServices.get#CaseSummaryPrint').requireNewTransaction(true)
+                        .parameters({requestId:requestId, audience:summaryAudience}).call()
+                if (probed != null) printed = Object.assign({}, printed || {}, probed)
+            }</script>
             <set field="printError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : ''"/>
             <script>ec.message.clearErrors()</script>
         </if>

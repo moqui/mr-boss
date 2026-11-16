@@ -101,8 +101,12 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- Maintenance: what moving it under another facility changes, before Edit facility's store#Facility makes the move -->
         <set field="moveEffect" from="null"/>
         <if condition="appRoot == 'Maintenance' &amp;&amp; recordFound &amp;&amp; detail.canEdit &amp;&amp; moveToParentId">
-            <service-call name="mantle.product.MaintenanceResourceServices.preview#MaintenanceFacilityChange" out-map="movePreview"
-                    in-map="{facilityId:facilityId, parentFacilityId:moveToParentId}" transaction="force-new" ignore-error="true"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.product.MaintenanceResourceServices.preview#MaintenanceFacilityChange').requireNewTransaction(true)
+                        .parameters({facilityId:facilityId, parentFacilityId:moveToParentId}).call()
+                if (probed != null) movePreview = Object.assign({}, movePreview || {}, probed)
+            }</script>
             <set field="moveRefusal" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
             <script>ec.message.clearErrors()</script>
             <set field="moveEffect" from="movePreview?.effect || null"/>

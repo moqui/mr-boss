@@ -21,8 +21,12 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="Training certificate" default-menu-include="false">
     <parameter name="personTrainingId" required="true"/>
     <actions>
-        <service-call name="mantle.humanres.DevelopmentServices.get#TrainingCertificate" out-map="certificate" transaction="force-new"
-                ignore-error="true" in-map="{personTrainingId:personTrainingId}"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('mantle.humanres.DevelopmentServices.get#TrainingCertificate').requireNewTransaction(true)
+                    .parameters({personTrainingId:personTrainingId}).call()
+            if (probed != null) certificate = Object.assign({}, certificate || {}, probed)
+        }</script>
         <set field="certificateError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : ''"/>
         <script>ec.message.clearErrors()</script>
         <set field="printBody" from="certificate?.printHtml ? String(certificate.printHtml).replace(/^[\s\S]*&lt;body[^&gt;]*&gt;/i, '')

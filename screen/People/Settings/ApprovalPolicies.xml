@@ -54,10 +54,14 @@ along with this software (see the LICENSE.md file). If not, see
                         includeEnded:(includeEnded == 'Y'), pageIndex:(pageIndex || 0)}"/>
             <script>ec.message.clearErrors()</script>
             <if condition="preview &amp;&amp; organizationPartyId">
-                <service-call name="mantle.humanres.PeopleApprovalServices.resolve#Approvers" out-map="resolved" transaction="force-new"
-                        ignore-error="true" in-map="{organizationPartyId:organizationPartyId, approvalKindEnumId:(approvalKindEnumId || 'PakPosition'),
+                <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                <script>{
+                    const probed = ec.service.sync().name('mantle.humanres.PeopleApprovalServices.resolve#Approvers').requireNewTransaction(true)
+                            .parameters({organizationPartyId:organizationPartyId, approvalKindEnumId:(approvalKindEnumId || 'PakPosition'),
                             departmentPartyId:(departmentPartyId || null), subjectPartyId:(subjectPartyId || null),
-                            requesterPartyId:(requesterPartyId || null)}"/>
+                            requesterPartyId:(requesterPartyId || null)}).call()
+                    if (probed != null) resolved = Object.assign({}, resolved || {}, probed)
+                }</script>
                 <set field="previewError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )+/, '').replace(/^[A-Z_]+: /, '') : null"/>
                 <script>ec.message.clearErrors()</script>
             </if>

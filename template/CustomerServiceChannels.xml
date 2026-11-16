@@ -58,9 +58,12 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="forumTopic" from="forumOut?.topic || null"/>
                 <set field="forumPreview" from="null"/>
                 <if condition="forumTopic &amp;&amp; forumReplyBody">
-                    <service-call name="mantle.forum.ForumServices.preview#CaseReply" out-map="previewOut" transaction="force-new"
-                            ignore-error="true"
-                            in-map="{input:{siteId:forumTopic.siteId, rootCommEventId:forumTopic.rootCommEventId, requestId:requestId, body:forumReplyBody}}"/>
+                    <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                    <script>{
+                        const probed = ec.service.sync().name('mantle.forum.ForumServices.preview#CaseReply').requireNewTransaction(true)
+                                .parameters({input:{siteId:forumTopic.siteId, rootCommEventId:forumTopic.rootCommEventId, requestId:requestId, body:forumReplyBody}}).call()
+                        if (probed != null) previewOut = Object.assign({}, previewOut || {}, probed)
+                    }</script>
                     <set field="forumPreviewError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
                     <script>ec.message.clearErrors()</script>
                     <set field="forumPreview" from="previewOut?.result || null"/>

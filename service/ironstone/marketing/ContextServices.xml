@@ -97,6 +97,21 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="detail" from="record.detail"/>
         </actions>
     </service>
+    <service verb="check" noun="Contacts" allow-remote="false" read-only="true">
+        <description>Of the parties given (a page of Accounts under Marketing), those Marketing's Customer360 opens: each a contact
+            check#Record admits (recordType contact), read with one scope. None for a user who reads no Marketing contact; refuses
+            nothing.</description>
+        <implements service="ironstone.marketing.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="partyIds" type="List" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="contactPartyIds" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="contactPartyIds" from="ec.resource.script('component://mr-boss/service/ironstone/marketing/Marketing.js').execute('checkContacts', context)"/>
+        </actions>
+    </service>
     <service verb="get" noun="Choices" allow-remote="false" read-only="true">
         <description>The options of a Marketing drop-down the user may choose, searched by term in the query ignoring case, with the
             selected value's label (Marketing.js choiceSources): organizations (those of the user's marketing scope); P2 campaigns

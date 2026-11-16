@@ -52,12 +52,13 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="heldCount" from="0"/>
             <!-- each bill on its own: a refusal is named and the others are held -->
             <iterate list="selectedIds" entry="selectedId">
-                <service-call name="mantle.account.InvoiceServices.hold#Invoice"
-                        in-map="{invoiceId:selectedId, organizationPartyId:organizationPartyId,
-                            holdReasonEnumId:holdReasonEnumId, holdComment:holdComment, reviewDate:reviewDate}"
-                        out-map="heldOut"
-                        transaction="force-new"
-                        ignore-error="true"/>
+                <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                <script>{
+                    const probed = ec.service.sync().name('mantle.account.InvoiceServices.hold#Invoice').requireNewTransaction(true)
+                            .parameters({invoiceId:selectedId, organizationPartyId:organizationPartyId,
+                            holdReasonEnumId:holdReasonEnumId, holdComment:holdComment, reviewDate:reviewDate}).call()
+                    if (probed != null) heldOut = Object.assign({}, heldOut || {}, probed)
+                }</script>
                 <if condition="ec.message.hasError()">
                     <then>
                         <set field="holdError" from="ec.message.getErrorsString()"/>

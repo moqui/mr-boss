@@ -188,38 +188,42 @@ along with this software (see the LICENSE.md file). If not, see
             </box-body-nopad>
         </container-box>
         <!-- P5: UtmSourceMap (design §9) -->
-        <container style="row items-center q-col-gutter-sm q-mt-md" condition="setupFound">
-            <container style="col">
-                <label text="Tracked links" type="h6"/>
-                <label type="p" style="text-caption m-muted q-mb-none"
-                        text="A lead from a tracked link takes the source its UTM source and medium map to; a source with no medium mapped covers every medium, and an unmapped link keeps the form's or rule's own source."/>
-            </container>
-            <container style="col-auto">
-                <container-dialog id="NewMappingDialog" button-text="Map a source" icon="sym_o_add" type="default" width="520"
-                        title="Map a tracked link's source" condition="offeredSources.length">
-                    <form-single name="NewMapping" transition="storeMapping" map="newMapping">
-                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
-                        <!-- impl-marketing P13: Marketing's vocabulary when there is one -->
-                        <field name="utmSource">
-                            <conditional-field title="UTM source" condition="utmSourceOptions.length">
-                                <drop-down allow-empty="false"><list-options list="utmSourceOptions" key="${value}" text="${label}"/></drop-down>
-                            </conditional-field>
-                            <default-field title="UTM source" tooltip="As the link carries it, such as newsletter"><text-line size="30"/></default-field>
-                        </field>
-                        <field name="utmMedium">
-                            <conditional-field title="UTM medium" condition="utmMediumOptions.length">
-                                <drop-down allow-empty="true"><list-options list="utmMediumOptions" key="${value}" text="${label}"/></drop-down>
-                            </conditional-field>
-                            <default-field title="UTM medium" tooltip="Empty for every medium"><text-line size="30"/></default-field>
-                        </field>
-                        <field name="dataSourceId">
-                            <default-field title="Lead source"><drop-down><list-options list="offeredSources" key="${dataSourceId}" text="${description}"/></drop-down></default-field>
-                        </field>
-                        <field name="submitButton"><default-field title="Add mapping"><submit/></default-field></field>
-                    </form-single>
-                </container-dialog>
-            </container>
-        </container>
+        <section name="TrackedLinks" condition="setupFound">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mt-md">
+                    <container style="col">
+                        <label text="Tracked links" type="h6"/>
+                        <label type="p" style="text-caption m-muted q-mb-none"
+                                text="A lead from a tracked link takes the source its UTM source and medium map to; a source with no medium mapped covers every medium, and an unmapped link keeps the form's or rule's own source."/>
+                    </container>
+                    <container style="col-auto">
+                        <container-dialog id="NewMappingDialog" button-text="Map a source" icon="sym_o_add" type="default" width="520"
+                                title="Map a tracked link's source" condition="offeredSources.length">
+                            <form-single name="NewMapping" transition="storeMapping" map="newMapping">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <!-- impl-marketing P13: Marketing's vocabulary when there is one -->
+                                <field name="utmSource">
+                                    <conditional-field title="UTM source" condition="utmSourceOptions.length">
+                                        <drop-down allow-empty="false"><list-options list="utmSourceOptions" key="${value}" text="${label}"/></drop-down>
+                                    </conditional-field>
+                                    <default-field title="UTM source" tooltip="As the link carries it, such as newsletter"><text-line size="30"/></default-field>
+                                </field>
+                                <field name="utmMedium">
+                                    <conditional-field title="UTM medium" condition="utmMediumOptions.length">
+                                        <drop-down allow-empty="true"><list-options list="utmMediumOptions" key="${value}" text="${label}"/></drop-down>
+                                    </conditional-field>
+                                    <default-field title="UTM medium" tooltip="Empty for every medium"><text-line size="30"/></default-field>
+                                </field>
+                                <field name="dataSourceId">
+                                    <default-field title="Lead source"><drop-down><list-options list="offeredSources" key="${dataSourceId}" text="${description}"/></drop-down></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Add mapping"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+            </widgets>
+        </section>
         <container-box condition="setupFound">
             <box-body-nopad>
                 <form-list name="UtmSourceMap" list="mappingList" skip-form="true" paginate="false">
@@ -245,11 +249,15 @@ along with this software (see the LICENSE.md file). If not, see
             </box-body-nopad>
         </container-box>
         <!-- P5: Mail intake (design §1.4 CX-MAIL-INTAKE) -->
-        <container style="q-mt-md" condition="setupFound">
-            <label text="Mail intake" type="h6"/>
-            <label type="p" style="text-caption m-muted q-mb-none"
-                    text="Mail to sales+tag@ your intake mailbox becomes a lead in that team's queue when the mailbox has a rule whose action is Make a sales lead. Mail from anyone makes an inquiry, never a contact; the same message twice makes one lead."/>
-        </container>
+        <section name="MailIntake" condition="setupFound">
+            <widgets>
+                <container style="q-mt-md">
+                    <label text="Mail intake" type="h6"/>
+                    <label type="p" style="text-caption m-muted q-mb-none"
+                            text="Mail to sales+tag@ your intake mailbox becomes a lead in that team's queue when the mailbox has a rule whose action is Make a sales lead. Mail from anyone makes an inquiry, never a contact; the same message twice makes one lead."/>
+                </container>
+            </widgets>
+        </section>
         <container-box condition="setupFound">
             <box-body-nopad>
                 <form-list name="TeamIntakes" list="teamIntakeList" skip-form="true" paginate="false">

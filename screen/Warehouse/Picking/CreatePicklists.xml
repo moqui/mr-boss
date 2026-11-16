@@ -42,11 +42,14 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="searchInputs" from="Object.fromEntries([['carrierPartyId', carrierPartyId],
                 ['shipmentMethodEnumId', shipmentMethodEnumId]].filter(pair =&gt; pair[1]))"/>
         <if condition="preview &amp;&amp; waveFacilityId &amp;&amp; warehouse.capabilities.loadEdit">
-            <service-call name="mantle.work.ShipmentWorkServices.preview#ShipmentLoadsForOrders" out-map="previewed"
-                    transaction="force-new" ignore-error="true"
-                    in-map="{facilityId:waveFacilityId, workEffortName:selection.workEffortName,
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.work.ShipmentWorkServices.preview#ShipmentLoadsForOrders').requireNewTransaction(true)
+                        .parameters({facilityId:waveFacilityId, workEffortName:selection.workEffortName,
                         ordersPerPicklist:selection.ordersPerPicklist, orderParts:orderPartList.length ? orderPartList : null,
-                        inputFieldsMap:searchInputs, excludeNotPickLoc:selection.excludeNotPickLoc == 'N' ? 'false' : 'true'}"/>
+                        inputFieldsMap:searchInputs, excludeNotPickLoc:selection.excludeNotPickLoc == 'N' ? 'false' : 'true'}).call()
+                if (probed != null) previewed = Object.assign({}, previewed || {}, probed)
+            }</script>
             <set field="previewError" from="ec.message.getErrorsString() || null"/>
             <script>ec.message.clearErrors()</script>
         </if>

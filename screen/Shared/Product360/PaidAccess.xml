@@ -43,16 +43,24 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <actions>
-        <service-call name="mantle.product.ShopSubscriptionServices.get#ProductPaidAccess" in-map="{productId:productId}" out-map="paid"
-                transaction="force-new" ignore-error="true"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('mantle.product.ShopSubscriptionServices.get#ProductPaidAccess').requireNewTransaction(true)
+                    .parameters({productId:productId}).call()
+            if (probed != null) paid = Object.assign({}, paid || {}, probed)
+        }</script>
         <set field="paidFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
         <script>ec.message.clearErrors()</script>
         <set field="paidTerms" from="paid?.terms || []"/>
         <set field="paidEdit" from="appRoot == 'Commerce' &amp;&amp; !!paid?.canEdit"/>
         <set field="resourceOptions" from="paid?.resourceOptions || []"/>
         <if condition="appRoot == 'Commerce'">
-            <service-call name="mantle.product.ShopSubscriptionServices.find#StoreSubscriptions" in-map="{productId:productId, pageSize:20}"
-                    out-map="usage" transaction="force-new" ignore-error="true"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.product.ShopSubscriptionServices.find#StoreSubscriptions').requireNewTransaction(true)
+                        .parameters({productId:productId, pageSize:20}).call()
+                if (probed != null) usage = Object.assign({}, usage || {}, probed)
+            }</script>
             <set field="usageFailure" from="ec.message.hasError()"/>
             <script>ec.message.clearErrors()</script>
         </if>

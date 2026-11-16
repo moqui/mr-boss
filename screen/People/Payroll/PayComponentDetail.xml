@@ -107,9 +107,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="recordFound" from="!!component"/>
         <set field="openTerm" from="component ? Array.from(found.terms || []).find(row => row.payrollComponentTermId === component.openTermId) || null : null"/>
         <if condition="openTerm">
-            <service-call name="mantle.humanres.PayrollSetupServices.preview#Component" out-map="preview" transaction="force-new" ignore-error="true"
-                    in-map="{payrollComponentId:payrollComponentId, payrollComponentTermId:openTerm.payrollComponentTermId,
-                        inputValues:(sampleValues || null)}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.humanres.PayrollSetupServices.preview#Component').requireNewTransaction(true)
+                        .parameters({payrollComponentId:payrollComponentId, payrollComponentTermId:openTerm.payrollComponentTermId,
+                        inputValues:(sampleValues || null)}).call()
+                if (probed != null) preview = Object.assign({}, preview || {}, probed)
+            }</script>
             <script>sampleError = ec.message.errorsString; ec.message.clearErrors()</script>
         </if>
         <script><![CDATA[

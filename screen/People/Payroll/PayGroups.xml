@@ -70,8 +70,12 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{payrollGroupId:payrollGroupId}"/>
             <script>ec.message.clearErrors()</script>
             <if condition="opened?.group &amp;&amp; previewCount">
-                <service-call name="mantle.humanres.PayrollSetupServices.prepare#Periods" out-map="previewed" transaction="force-new" ignore-error="true"
-                        in-map="{payrollGroupId:payrollGroupId, periodCount:previewCount, preview:true}"/>
+                <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                <script>{
+                    const probed = ec.service.sync().name('mantle.humanres.PayrollSetupServices.prepare#Periods').requireNewTransaction(true)
+                            .parameters({payrollGroupId:payrollGroupId, periodCount:previewCount, preview:true}).call()
+                    if (probed != null) previewed = Object.assign({}, previewed || {}, probed)
+                }</script>
                 <script>previewError = ec.message.errorsString; ec.message.clearErrors()</script>
             </if>
         </if>

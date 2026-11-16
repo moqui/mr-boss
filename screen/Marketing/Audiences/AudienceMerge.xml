@@ -33,8 +33,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="canEdit" from="!!can.audienceEdit"/>
         <set field="sourceListIdList" from="sourceListIds ? (sourceListIds instanceof Array ? sourceListIds : String(sourceListIds).split(',')).map(id =&gt; String(id).trim()).filter(Boolean) : []"/>
         <if condition="canEdit &amp;&amp; contactListId &amp;&amp; sourceListIdList.length">
-            <service-call name="mantle.marketing.AudienceServices.preview#ListMerge" out-map="preview" transaction="force-new" ignore-error="true"
-                    in-map="{contactListId:contactListId, sourceListIdList:sourceListIdList, archiveSources:(archiveSources == 'Y'), pageIndex:pageIndex}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.marketing.AudienceServices.preview#ListMerge').requireNewTransaction(true)
+                        .parameters({contactListId:contactListId, sourceListIdList:sourceListIdList, archiveSources:(archiveSources == 'Y'), pageIndex:pageIndex}).call()
+                if (probed != null) preview = Object.assign({}, preview || {}, probed)
+            }</script>
             <set field="previewFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
         </if>
         <script>ec.message.clearErrors()</script>

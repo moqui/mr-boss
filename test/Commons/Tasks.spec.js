@@ -123,7 +123,7 @@ feature("each smart list has john.doe's tasks of the demo, with the counts of ev
         plan.statusLabel == "In Progress"
         plan.statusColor == "primary"
         plan.canUpdate
-        plan.priorityText == "2"
+        plan.priorityText == "High (2)"
         plan.url == "/qapps/Commons/Tasks/TaskDetail?workEffortId=BOSS_DEMO_TASK_PLAN"
         const call_ = lists.today.rowList.find((row) => row.workEffortId === "BOSS_DEMO_TODAY_CALL")
         call_.recordCaption.includes("Set up the shared team calendar")
@@ -252,7 +252,7 @@ feature("the due date and the priority change in place, as JSON for m-editable; 
         due.json.valueText == inThreeText
         due.json.messageInfos[0].message.includes("due " + inThreeText)
         priority.errors == ""
-        priority.json.valueText == "2"
+        priority.json.valueText == "High (2)"
         loaded.json.value == inThreeText
         dayOf(task.estimatedCompletionDate) == inThreeText
         // a date only keeps the time of day: none

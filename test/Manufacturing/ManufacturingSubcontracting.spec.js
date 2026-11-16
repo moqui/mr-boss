@@ -3,7 +3,8 @@
 // planner requests outside processing for an operation of a released work order; the buyer (Purchasing's buyer group) converts
 // it through the Planning mount's convertSuggestions into a draft service purchase order line; the demo places the order
 // until Purchasing does; a run planner without the buyer's grant sees no purchase price on the screens, the buyer does;
-// Supplier360, OrderDetail and ShipmentDetail show the subcontract with the Manufacturing context. The conversion's lines
+// Supplier360, OrderDetail and ShipmentDetail show the subcontract with the Manufacturing context; the demo operation's agreement is
+// on its purchase order, and SubcontractDetail of an operation on a purchase line with no agreement names the order. The conversion's lines
 // and links, the planner's refusal, a second conversion, the prices by reader, the dispatch, output receipt, acceptance,
 // accrual and bill match are Mantle's ProductionSubcontract spec; SupplyPlanning's other renders are ManufacturingPlanning's. The
 // run is this spec's (setupSpec), of the demo's released method.
@@ -51,6 +52,7 @@ spec({
                 })
                 state.runId = created.workEffortId
                 state.operationId = released.result.operationWorkEffortIds[0]
+                state.otherOperationId = released.result.operationWorkEffortIds[1]
                 state.plan = invoke(S + "run#SupplyPlan", {facilityIds: [ids.plantId], productIds: [ids.serviceProductId]})
             },
             false
@@ -133,6 +135,7 @@ feature("a buyer converts it through the Planning mount's convertSuggestions to 
         )
         const links = system(() => rowsOf("mantle.order.OrderItemWorkEffort", {workEffortId: state.operationId}))
         state.orderId = links[0]?.orderId
+        state.orderItemSeqId = links[0]?.orderItemSeqId
         return {buyerPlan, plannerPlan, scheduler, first, links}
     },
     then({buyerPlan, plannerPlan, scheduler, first, links}) {
@@ -211,5 +214,33 @@ feature("Supplier360, OrderDetail and ShipmentDetail show the demo subcontract w
         instructions.errors.length == 0
         instructions.output.includes("Dispatch instructions")
         instructions.output.includes("remain the property of")
+    }
+})
+
+feature("the demo operation's agreement is on its order; an operation on a purchase line with no agreement names the order", {
+    when() {
+        // the service as the planner, its own checks deciding (below the screen's grant)
+        const demo = asUser(users.plan, () =>
+            system(() => invoke("mantle.work.ProductionServices.get#SubcontractStatus", {operationWorkEffortId: ids.operationId}))
+        )
+        // the spec's service line linked to the run's second operation too, which has no agreement of its own
+        system(() =>
+            ec.service
+                .sync()
+                .name("create#mantle.order.OrderItemWorkEffort")
+                .parameters({orderId: state.orderId, orderItemSeqId: state.orderItemSeqId, workEffortId: state.otherOperationId})
+                .call()
+        )
+        const detail = asUser(users.plan, () =>
+            html("Subcontracting/SubcontractDetail", {workEffortId: state.otherOperationId})
+        )
+        return {demo, detail}
+    },
+    then({demo, detail}) {
+        demo.subcontract.productionSubcontractId == "BOSS_WH_SUB"
+        demo.subcontract.orderId == ids.serviceOrderId
+        detail.errors.length == 0
+        detail.output.includes("No outside-processing agreement is recorded for this operation; it is on purchase order " + state.orderId)
+        !detail.output.includes("No outside processing has been asked")
     }
 })

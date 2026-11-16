@@ -50,9 +50,12 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- a move asked for (the Move dialog reloads the tab with the destination): its effect, before the move is made -->
         <set field="moveEffect" from="null"/>
         <if condition="found?.canMove &amp;&amp; moveToFacilityId">
-            <service-call name="mantle.product.MaintenanceResourceServices.move#MaintenanceEquipment" out-map="movePreview"
-                    in-map="{assetId:assetId, toFacilityId:moveToFacilityId, toLocationSeqId:(moveToLocationSeqId || null), preview:true}"
-                    transaction="force-new" ignore-error="true"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.product.MaintenanceResourceServices.move#MaintenanceEquipment').requireNewTransaction(true)
+                        .parameters({assetId:assetId, toFacilityId:moveToFacilityId, toLocationSeqId:(moveToLocationSeqId || null), preview:true}).call()
+                if (probed != null) movePreview = Object.assign({}, movePreview || {}, probed)
+            }</script>
             <set field="moveRefusal" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
             <script>ec.message.clearErrors()</script>
             <set field="moveEffect" from="movePreview?.effect || null"/>

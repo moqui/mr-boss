@@ -42,8 +42,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="loadRefusal" value=""/>
         <set field="report" from="null"/>
         <if condition="sales.capabilities.reportRead">
-            <service-call name="mantle.sales.ForecastServices.get#WinLoss" out-map="report" transaction="force-new" ignore-error="true"
-                    in-map="Object.assign({}, optionValues, {pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit})"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.sales.ForecastServices.get#WinLoss').requireNewTransaction(true)
+                        .parameters(Object.assign({}, optionValues, {pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit})).call()
+                if (probed != null) report = Object.assign({}, report || {}, probed)
+            }</script>
             <set field="loadRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
             <if condition="loadRefusal"><set field="report" from="null"/></if>
             <script>ec.message.clearErrors()</script>

@@ -1,7 +1,7 @@
 ---
 name: people-policy-question
 title: Answering a People policy question
-description: Use when someone asks about a workplace or HR policy, such as leave rules, expenses, working hours, conduct, benefits or how to raise a concern, and the answer is in the organization's knowledge pages.
+description: Use when someone asks about a workplace or HR policy (leave, expenses, hours, conduct, benefits, raising a concern) the organization's knowledge pages answer.
 kind: procedure
 aliases: [policy, hr policy, handbook, employee handbook, leave policy, expense policy, code of conduct, working hours, benefits, how do i, am i allowed, what is the rule]
 screens: [/qapps/Commons/Knowledge, /qapps/People/SelfService, /qapps/Commons/People/SelfService, /qapps/People/Home]

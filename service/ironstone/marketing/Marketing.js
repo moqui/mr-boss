@@ -683,6 +683,14 @@ function checkRecord(p) {
     return recordOf(userScope, p.recordType, p.recordId)
 }
 
+// check#Contacts: of a page of parties (Accounts under Marketing), those check#Record contact admits, with one scope: the rows that
+// link to Marketing's Customer360. A user who reads no Marketing contact gets none.
+function checkContacts(p) {
+    const userScope = scope()
+    if (!userScope.read || !userScope.capabilities.customerRead) return []
+    return Array.from(new Set(p.partyIds || [])).filter(partyId => partyId && !!recordKinds.contact.read(userScope, partyId))
+}
+
 // ===== choices =====
 // Each Marketing drop-down: its options for the user, searched in the query ignoring case, with the selected value's label when
 // it is in scope but not on the page. An unknown choice throws. Later phases add sources (campaigns, lists, segments, templates).
@@ -2057,7 +2065,7 @@ function today(p) {
 }
 // ===== end of Marketing P21 =====
 
-const operations = {sharedContext, checkRecord, choices, search, today, lookup, callContext}
+const operations = {sharedContext, checkRecord, checkContacts, choices, search, today, lookup, callContext}
 function run(op, p) {
     if (!Object.hasOwn(operations, op)) throw new Error("Unknown Marketing operation " + op)
     return operations[op](p || {})

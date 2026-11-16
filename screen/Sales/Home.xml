@@ -74,15 +74,19 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <container style="row items-center q-col-gutter-sm q-mb-sm">
             <container style="col"><label text="Sales" type="h5"/></container>
-            <container style="col-auto row items-center q-gutter-xs" condition="can.anyRead &amp;&amp; canEdit">
-                <link url="${sharedLinks['Pipeline/Opportunities']}" text="New opportunity" link-type="anchor-button" btn-type="primary" icon="sym_o_add"
-                        parameter-map="{_openDialog:'NewOpportunityDialog'}"/>
-                <link url="${sharedLinks['Pipeline/Leads']}" text="New lead" link-type="anchor-button" icon="sym_o_person_add"
-                        parameter-map="{_openDialog:'NewLeadDialog'}"/>
-                <link url="${sharedLinks['QuickCreate']}/NewActivity" text="Schedule activity" link-type="anchor-button" icon="sym_o_event"/>
-                <link url="${sharedLinks['Pipeline/OpportunityImport']}" text="Import" link-type="anchor-button" icon="sym_o_upload"
-                        condition="canImport"/>
-            </container>
+            <section name="HomeActions" condition="can.anyRead &amp;&amp; canEdit">
+                <widgets>
+                    <container style="col-auto row items-center q-gutter-xs">
+                        <link url="${sharedLinks['Pipeline/Opportunities']}" text="New opportunity" link-type="anchor-button" btn-type="primary" icon="sym_o_add"
+                                parameter-map="{_openDialog:'NewOpportunityDialog'}"/>
+                        <link url="${sharedLinks['Pipeline/Leads']}" text="New lead" link-type="anchor-button" icon="sym_o_person_add"
+                                parameter-map="{_openDialog:'NewLeadDialog'}"/>
+                        <link url="${sharedLinks['QuickCreate']}/NewActivity" text="Schedule activity" link-type="anchor-button" icon="sym_o_event"/>
+                        <link url="${sharedLinks['Pipeline/OpportunityImport']}" text="Import" link-type="anchor-button" icon="sym_o_upload"
+                                condition="canImport"/>
+                    </container>
+                </widgets>
+            </section>
         </container>
         <section name="NoRead" condition="!can.anyRead">
             <widgets>
@@ -170,12 +174,16 @@ along with this software (see the LICENSE.md file). If not, see
                         <section name="EmptyPipeline" condition="pipelineCount === 0">
                             <widgets>
                                 <label text="You have no open opportunities." type="p" style="m-muted"/>
-                                <container style="row q-gutter-xs" condition="canEdit">
-                                    <link url="${sharedLinks['Pipeline/Leads']}" text="New lead" link-type="anchor-button" icon="sym_o_person_add"
-                                            parameter-map="{_openDialog:'NewLeadDialog'}"/>
-                                    <link url="${sharedLinks['Pipeline/Opportunities']}" text="New opportunity" link-type="anchor-button" icon="sym_o_add"
-                                            parameter-map="{_openDialog:'NewOpportunityDialog'}"/>
-                                </container>
+                                <section name="EmptyPipelineActions" condition="canEdit">
+                                    <widgets>
+                                        <container style="row q-gutter-xs">
+                                            <link url="${sharedLinks['Pipeline/Leads']}" text="New lead" link-type="anchor-button" icon="sym_o_person_add"
+                                                    parameter-map="{_openDialog:'NewLeadDialog'}"/>
+                                            <link url="${sharedLinks['Pipeline/Opportunities']}" text="New opportunity" link-type="anchor-button" icon="sym_o_add"
+                                                    parameter-map="{_openDialog:'NewOpportunityDialog'}"/>
+                                        </container>
+                                    </widgets>
+                                </section>
                             </widgets>
                         </section>
                         <label text="Your pipeline is unavailable right now." type="p" style="text-negative" condition="pipelineCount == null"/>

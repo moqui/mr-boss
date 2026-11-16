@@ -42,14 +42,14 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PROJECT_CLIENT" userId="ORG_BLUTH_GOB" fromDate="2026-10-01 00:00:00"/>
     <mantle.party.Party partyId="BOSS_PRD_READER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_READER" firstName="Catalog" lastName="Reader"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_READER_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_READER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_READER_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_READER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_READER" username="catalog.reader" userFullName="Catalog Reader" partyId="BOSS_PRD_READER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_READER" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS" userId="BOSS_PRD_READER" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_CATALOG_EDIT" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_CATALOG_EDIT" firstName="Catalog" lastName="Editor"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_CATALOG_EDIT_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_CATALOG_EDIT" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_CATALOG_EDIT_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_CATALOG_EDIT" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_CATALOG_EDIT" username="catalog.edit" userFullName="Catalog Editor" partyId="BOSS_PRD_CATALOG_EDIT"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_CATALOG_EDIT" fromDate="0"/>
@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" userId="BOSS_PRD_CATALOG_EDIT" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_PRICE_READ" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_PRICE_READ" firstName="Catalog" lastName="Price reader"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_PRICE_READ_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_PRICE_READ" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_PRICE_READ_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_PRICE_READ" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_PRICE_READ" username="catalog.price.read" userFullName="Catalog Price reader" partyId="BOSS_PRD_PRICE_READ"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_PRICE_READ" fromDate="0"/>
@@ -65,7 +65,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_PRICE_READ" userId="BOSS_PRD_PRICE_READ" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_PRICE_EDIT" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_PRICE_EDIT" firstName="Catalog" lastName="Price editor"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_PRICE_EDIT_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_PRICE_EDIT" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_PRICE_EDIT_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_PRICE_EDIT" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_PRICE_EDIT" username="catalog.price.edit" userFullName="Catalog Price editor" partyId="BOSS_PRD_PRICE_EDIT"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_PRICE_EDIT" fromDate="0"/>
@@ -73,7 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_PRICE_EDIT" userId="BOSS_PRD_PRICE_EDIT" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_SUPPLIER_PRICE_READ" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_SUPPLIER_PRICE_READ" firstName="Catalog" lastName="Supplier reader"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_SUPPLIER_PRICE_READ_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_SUPPLIER_PRICE_READ" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_SUPPLIER_PRICE_READ_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_SUPPLIER_PRICE_READ" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_SUPPLIER_PRICE_READ" username="catalog.supplier.price.read" userFullName="Catalog Supplier reader" partyId="BOSS_PRD_SUPPLIER_PRICE_READ"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_SUPPLIER_PRICE_READ" fromDate="0"/>
@@ -81,7 +81,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_READ" userId="BOSS_PRD_SUPPLIER_PRICE_READ" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_SUPPLIER_PRICE_EDIT" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_SUPPLIER_PRICE_EDIT" firstName="Catalog" lastName="Supplier editor"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_SUPPLIER_PRICE_EDIT_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_SUPPLIER_PRICE_EDIT" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_SUPPLIER_PRICE_EDIT_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_SUPPLIER_PRICE_EDIT" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_SUPPLIER_PRICE_EDIT" username="catalog.supplier.price.edit" userFullName="Catalog Supplier editor" partyId="BOSS_PRD_SUPPLIER_PRICE_EDIT"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_SUPPLIER_PRICE_EDIT" fromDate="0"/>
@@ -89,7 +89,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_EDIT" userId="BOSS_PRD_SUPPLIER_PRICE_EDIT" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_COST_READ" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_COST_READ" firstName="Catalog" lastName="Cost reader"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_COST_READ_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_COST_READ" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_COST_READ_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_COST_READ" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_COST_READ" username="catalog.cost.read" userFullName="Catalog Cost reader" partyId="BOSS_PRD_COST_READ"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_COST_READ" fromDate="0"/>
@@ -97,7 +97,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_COST_READ" userId="BOSS_PRD_COST_READ" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_COST_ESTIMATE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_COST_ESTIMATE" firstName="Catalog" lastName="Estimator"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_COST_ESTIMATE_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_COST_ESTIMATE" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_COST_ESTIMATE_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_COST_ESTIMATE" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_COST_ESTIMATE" username="catalog.cost.estimate" userFullName="Catalog Estimator" partyId="BOSS_PRD_COST_ESTIMATE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_COST_ESTIMATE" fromDate="0"/>
@@ -105,7 +105,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_COST_ESTIMATE" userId="BOSS_PRD_COST_ESTIMATE" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_COST_APPROVE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_COST_APPROVE" firstName="Catalog" lastName="Approver"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_COST_APPROVE_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_COST_APPROVE" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_COST_APPROVE_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_COST_APPROVE" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_COST_APPROVE" username="catalog.cost.approve" userFullName="Catalog Approver" partyId="BOSS_PRD_COST_APPROVE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_COST_APPROVE" fromDate="0"/>
@@ -113,7 +113,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_COST_APPROVE" userId="BOSS_PRD_COST_APPROVE" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_ADMIN" firstName="Catalog" lastName="Administrator"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_ADMIN_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_ADMIN" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_ADMIN_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_ADMIN" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_ADMIN" username="catalog.admin" userFullName="Catalog Administrator" partyId="BOSS_PRD_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_ADMIN" fromDate="0"/>
@@ -121,35 +121,35 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_ADMIN" userId="BOSS_PRD_ADMIN" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_STOCK_PLAN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_STOCK_PLAN" firstName="Catalog" lastName="Stock planner"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_STOCK_PLAN_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_STOCK_PLAN" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_STOCK_PLAN_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_STOCK_PLAN" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_STOCK_PLAN" username="catalog.stock.plan" userFullName="Catalog Stock planner" partyId="BOSS_PRD_STOCK_PLAN" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_STOCK_PLAN" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS" userId="BOSS_PRD_STOCK_PLAN" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_STOCK_PLANNER" userId="BOSS_PRD_STOCK_PLAN" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_METHOD" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_METHOD" firstName="Catalog" lastName="Method engineer"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_METHOD_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_METHOD" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_METHOD_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_METHOD" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_METHOD" username="catalog.method" userFullName="Catalog Method engineer" partyId="BOSS_PRD_METHOD" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_METHOD" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS" userId="BOSS_PRD_METHOD" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_METHOD" userId="BOSS_PRD_METHOD" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_METHOD_APPROVE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_METHOD_APPROVE" firstName="Catalog" lastName="Method approver"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_METHOD_APPROVE_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_METHOD_APPROVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_METHOD_APPROVE_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_METHOD_APPROVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_METHOD_APPROVE" username="catalog.method.approve" userFullName="Catalog Method approver" partyId="BOSS_PRD_METHOD_APPROVE" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_METHOD_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS" userId="BOSS_PRD_METHOD_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userId="BOSS_PRD_METHOD_APPROVE" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_METHOD_READ" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_METHOD_READ" firstName="Catalog" lastName="Method reader"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_METHOD_READ_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_METHOD_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_METHOD_READ_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_METHOD_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_METHOD_READ" username="catalog.method.read" userFullName="Catalog Method reader" partyId="BOSS_PRD_METHOD_READ" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_METHOD_READ" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS" userId="BOSS_PRD_METHOD_READ" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_PRD_METHOD_READ" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_METHOD_RESOURCE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_METHOD_RESOURCE" firstName="Catalog" lastName="Method resource administrator"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_METHOD_RESOURCE_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_METHOD_RESOURCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_METHOD_RESOURCE_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_METHOD_RESOURCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_METHOD_RESOURCE" username="catalog.method.resource" userFullName="Catalog Method resource administrator" partyId="BOSS_PRD_METHOD_RESOURCE" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_METHOD_RESOURCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS" userId="BOSS_PRD_METHOD_RESOURCE" fromDate="0"/>
@@ -158,7 +158,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_COST_APPROVE" userId="BOSS_PRD_METHOD_RESOURCE" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_METHOD_WALK" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_METHOD_WALK" firstName="Catalog" lastName="Method demonstration"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_METHOD_WALK_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_METHOD_WALK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_METHOD_WALK_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_METHOD_WALK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_METHOD_WALK" username="catalog.method.walk" userFullName="Catalog Method demonstration" partyId="BOSS_PRD_METHOD_WALK" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_METHOD_WALK" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS" userId="BOSS_PRD_METHOD_WALK" fromDate="0"/>
@@ -169,7 +169,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_COST_APPROVE" userId="BOSS_PRD_METHOD_WALK" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_PRD_COST_GL" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PRD_COST_GL" firstName="Catalog" lastName="Inventory accountant"/>
-    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_COST_GL_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_COST_GL" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PRD_COST_GL_ORG" relationshipTypeEnumId="PrtAgent" fromPartyId="BOSS_PRD_COST_GL" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PRD_COST_GL" username="catalog.cost.gl" userFullName="Catalog Inventory accountant" partyId="BOSS_PRD_COST_GL" currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_PRD_COST_GL" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS" userId="BOSS_PRD_COST_GL" fromDate="0"/>
@@ -180,7 +180,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_RECEIVE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_RECEIVE" firstName="Warehouse" lastName="Receiving"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_RECEIVE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_RECEIVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_RECEIVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_RECEIVE" username="warehouse.receive"
             userFullName="Warehouse Receiving" partyId="BOSS_WH_RECEIVE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -190,7 +190,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_INSPECT" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_INSPECT" firstName="Warehouse" lastName="Inspection"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_INSPECT_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_INSPECT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_INSPECT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_INSPECT" username="warehouse.inspect"
             userFullName="Warehouse Inspection" partyId="BOSS_WH_INSPECT"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -200,7 +200,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_ISSUE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_ISSUE" firstName="Warehouse" lastName="Issue"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_ISSUE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_ISSUE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_ISSUE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_ISSUE" username="warehouse.issue"
             userFullName="Warehouse Issue" partyId="BOSS_WH_ISSUE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -210,7 +210,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_MOVE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_MOVE" firstName="Warehouse" lastName="Moves"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_MOVE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_MOVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_MOVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_MOVE" username="warehouse.move"
             userFullName="Warehouse Moves" partyId="BOSS_WH_MOVE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -220,7 +220,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_COUNT" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_COUNT" firstName="Warehouse" lastName="Counts"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_COUNT_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_COUNT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_COUNT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_COUNT" username="warehouse.count"
             userFullName="Warehouse Counts" partyId="BOSS_WH_COUNT"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -230,7 +230,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_COUNTREVIEW" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_COUNTREVIEW" firstName="Warehouse" lastName="Count review"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_COUNTREVIEW_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_COUNTREVIEW" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_COUNTREVIEW" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_COUNTREVIEW" username="warehouse.countreview"
             userFullName="Warehouse Count review" partyId="BOSS_WH_COUNTREVIEW"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -240,7 +240,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_ADJUST" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_ADJUST" firstName="Warehouse" lastName="Adjustments"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_ADJUST_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_ADJUST" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_ADJUST" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_ADJUST" username="warehouse.adjust"
             userFullName="Warehouse Adjustments" partyId="BOSS_WH_ADJUST"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -250,7 +250,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_PICK" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_PICK" firstName="Warehouse" lastName="Picking"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_PICK_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_PICK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_PICK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_PICK" username="warehouse.pick"
             userFullName="Warehouse Picking" partyId="BOSS_WH_PICK"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -260,7 +260,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_PICKSUPERVISOR" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_PICKSUPERVISOR" firstName="Warehouse" lastName="Pick supervisor"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_PICKSUPERVISOR_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_PICKSUPERVISOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_PICKSUPERVISOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_PICKSUPERVISOR" username="warehouse.picksupervisor"
             userFullName="Warehouse Pick supervisor" partyId="BOSS_WH_PICKSUPERVISOR"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -270,7 +270,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_PACK" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_PACK" firstName="Warehouse" lastName="Packing"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_PACK_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_PACK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_PACK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_PACK" username="warehouse.pack"
             userFullName="Warehouse Packing" partyId="BOSS_WH_PACK"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -280,7 +280,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_SHIP" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_SHIP" firstName="Warehouse" lastName="Shipping"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_SHIP_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_SHIP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_SHIP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_SHIP" username="warehouse.ship"
             userFullName="Warehouse Shipping" partyId="BOSS_WH_SHIP"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -290,7 +290,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_DISPATCH" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_DISPATCH" firstName="Warehouse" lastName="Dispatch"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_DISPATCH_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_DISPATCH" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_DISPATCH" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_DISPATCH" username="warehouse.dispatch"
             userFullName="Warehouse Dispatch" partyId="BOSS_WH_DISPATCH"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -300,7 +300,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_SHIPPINGMANAGER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_SHIPPINGMANAGER" firstName="Warehouse" lastName="Shipping manager"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_SHIPPINGMANAGER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_SHIPPINGMANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_SHIPPINGMANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_SHIPPINGMANAGER" username="warehouse.shippingmanager"
             userFullName="Warehouse Shipping manager" partyId="BOSS_WH_SHIPPINGMANAGER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -310,7 +310,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_PLANNER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_PLANNER" firstName="Warehouse" lastName="Stock planner"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_PLANNER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_PLANNER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_PLANNER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_PLANNER" username="warehouse.planner"
             userFullName="Warehouse Stock planner" partyId="BOSS_WH_PLANNER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -320,7 +320,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_MANAGER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_MANAGER" firstName="Warehouse" lastName="Manager"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_MANAGER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_MANAGER" username="warehouse.manager"
             userFullName="Warehouse Manager" partyId="BOSS_WH_MANAGER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -330,7 +330,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_QUALITY" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_QUALITY" firstName="Warehouse" lastName="Quality manager"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_QUALITY_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_QUALITY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_QUALITY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_QUALITY" username="warehouse.quality"
             userFullName="Warehouse Quality manager" partyId="BOSS_WH_QUALITY"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -340,7 +340,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_FACILITY" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_FACILITY" firstName="Warehouse" lastName="Facility admin"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_FACILITY_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_FACILITY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_FACILITY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_FACILITY" username="warehouse.facility"
             userFullName="Warehouse Facility admin" partyId="BOSS_WH_FACILITY"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -350,7 +350,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_INTEGRATION" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_INTEGRATION" firstName="Warehouse" lastName="Integration operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_INTEGRATION_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_INTEGRATION" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_INTEGRATION" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_INTEGRATION" username="warehouse.integration"
             userFullName="Warehouse Integration operator" partyId="BOSS_WH_INTEGRATION"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -360,7 +360,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_READ" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_READ" firstName="Warehouse" lastName="Reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_READ_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_READ" username="warehouse.read"
             userFullName="Warehouse Reader" partyId="BOSS_WH_READ"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -369,7 +369,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_WH_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_WH_ADMIN" firstName="Warehouse" lastName="Admin"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_WH_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_WH_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_WH_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_WH_ADMIN" username="warehouse.admin"
             userFullName="Warehouse Admin" partyId="BOSS_WH_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -385,7 +385,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_READ" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_READ" firstName="Manufacturing" lastName="Reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_READ_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_READ" username="manufacturing.read"
             userFullName="Manufacturing Reader" partyId="BOSS_MFG_READ"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -395,7 +395,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_PLAN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_PLAN" firstName="Manufacturing" lastName="Planner"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_PLAN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_PLAN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_PLAN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_PLAN" username="manufacturing.plan"
             userFullName="Manufacturing Planner" partyId="BOSS_MFG_PLAN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -405,7 +405,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_SCHEDULE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_SCHEDULE" firstName="Manufacturing" lastName="Scheduler"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_SCHEDULE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_SCHEDULE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_SCHEDULE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_SCHEDULE" username="manufacturing.schedule"
             userFullName="Manufacturing Scheduler" partyId="BOSS_MFG_SCHEDULE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -415,7 +415,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_METHOD" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_METHOD" firstName="Manufacturing" lastName="Method engineer"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_METHOD_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_METHOD" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_METHOD" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_METHOD" username="manufacturing.method"
             userFullName="Manufacturing Method engineer" partyId="BOSS_MFG_METHOD"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -425,7 +425,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_METHOD_APPROVE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_METHOD_APPROVE" firstName="Manufacturing" lastName="Method approver"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_METHOD_APPROVE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_METHOD_APPROVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_METHOD_APPROVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_METHOD_APPROVE" username="manufacturing.methodapprove"
             userFullName="Manufacturing Method approver" partyId="BOSS_MFG_METHOD_APPROVE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -435,7 +435,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_OPERATE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_OPERATE" firstName="Manufacturing" lastName="Operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_OPERATE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_OPERATE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_OPERATE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_OPERATE" username="manufacturing.operate"
             userFullName="Manufacturing Operator" partyId="BOSS_MFG_OPERATE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -449,7 +449,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_SUPERVISE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_SUPERVISE" firstName="Manufacturing" lastName="Supervisor"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_SUPERVISE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_SUPERVISE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_SUPERVISE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_SUPERVISE" username="manufacturing.supervise"
             userFullName="Manufacturing Supervisor" partyId="BOSS_MFG_SUPERVISE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -459,7 +459,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_INSPECT" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_INSPECT" firstName="Manufacturing" lastName="Quality inspector"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_INSPECT_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_INSPECT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_INSPECT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_INSPECT" username="manufacturing.inspect"
             userFullName="Manufacturing Quality inspector" partyId="BOSS_MFG_INSPECT"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -469,7 +469,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_VERIFY" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_VERIFY" firstName="Manufacturing" lastName="Quality verifier"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_VERIFY_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_VERIFY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_VERIFY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_VERIFY" username="manufacturing.verify"
             userFullName="Manufacturing Quality verifier" partyId="BOSS_MFG_VERIFY"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -479,7 +479,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_QUALITY_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_QUALITY_ADMIN" firstName="Manufacturing" lastName="Quality administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_QUALITY_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_QUALITY_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_QUALITY_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_QUALITY_ADMIN" username="manufacturing.qualityadmin"
             userFullName="Manufacturing Quality administrator" partyId="BOSS_MFG_QUALITY_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -489,7 +489,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_COST" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_COST" firstName="Manufacturing" lastName="Cost estimator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_COST_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_COST" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_COST" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_COST" username="manufacturing.cost"
             userFullName="Manufacturing Cost estimator" partyId="BOSS_MFG_COST"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -499,7 +499,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_RESOURCE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_RESOURCE" firstName="Manufacturing" lastName="Resource administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_RESOURCE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_RESOURCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_RESOURCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_RESOURCE" username="manufacturing.resource"
             userFullName="Manufacturing Resource administrator" partyId="BOSS_MFG_RESOURCE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -509,7 +509,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_ADMIN" firstName="Manufacturing" lastName="Admin"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_ADMIN" username="manufacturing.admin"
             userFullName="Manufacturing Admin" partyId="BOSS_MFG_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -519,7 +519,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_DISPLAY" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_DISPLAY" firstName="Manufacturing" lastName="Plant display"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_DISPLAY_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_DISPLAY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_DISPLAY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_DISPLAY" username="manufacturing.display"
             userFullName="Manufacturing Plant display" partyId="BOSS_MFG_DISPLAY"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -528,7 +528,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_SERVICES" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_SERVICES" firstName="Manufacturing" lastName="Services reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_SERVICES_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_SERVICES" username="manufacturing.services"
             userFullName="Manufacturing Services reader" partyId="BOSS_MFG_SERVICES"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -540,7 +540,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_FINANCE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_FINANCE" firstName="Manufacturing" lastName="Finance reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_FINANCE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_FINANCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_FINANCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_FINANCE" username="manufacturing.finance"
             userFullName="Manufacturing Finance reader" partyId="BOSS_MFG_FINANCE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -555,7 +555,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_MATERIAL" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_MATERIAL" firstName="Manufacturing" lastName="Material handler"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_MATERIAL_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_MATERIAL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_MATERIAL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_MATERIAL" username="manufacturing.material"
             userFullName="Manufacturing Material handler" partyId="BOSS_MFG_MATERIAL"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -573,7 +573,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_BUYER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_BUYER" firstName="Manufacturing" lastName="Buyer"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_BUYER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_BUYER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_BUYER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_BUYER" username="manufacturing.buyer"
             userFullName="Manufacturing Buyer" partyId="BOSS_MFG_BUYER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -586,7 +586,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MFG_COST_CLOSE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_COST_CLOSE" firstName="Manufacturing" lastName="Cost close approver"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_COST_CLOSE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MFG_COST_CLOSE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MFG_COST_CLOSE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MFG_COST_CLOSE" username="manufacturing.costclose"
             userFullName="Manufacturing Cost close approver" partyId="BOSS_MFG_COST_CLOSE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -603,7 +603,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PUR_REQUESTER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PUR_REQUESTER" firstName="Purchasing" lastName="Requester"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_REQUESTER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PUR_REQUESTER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PUR_REQUESTER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PUR_REQUESTER" username="purchasing.requester"
             userFullName="Purchasing Requester" partyId="BOSS_PUR_REQUESTER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -613,7 +613,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PUR_BUYER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PUR_BUYER" firstName="Purchasing" lastName="Buyer"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_BUYER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PUR_BUYER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PUR_BUYER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PUR_BUYER" username="purchasing.buyer"
             userFullName="Purchasing Buyer" partyId="BOSS_PUR_BUYER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -623,7 +623,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PUR_PLANNER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PUR_PLANNER" firstName="Purchasing" lastName="Planner"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_PLANNER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PUR_PLANNER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PUR_PLANNER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PUR_PLANNER" username="purchasing.planner"
             userFullName="Purchasing Planner" partyId="BOSS_PUR_PLANNER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -633,7 +633,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PUR_APPROVE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PUR_APPROVE" firstName="Purchasing" lastName="Approver"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_APPROVE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PUR_APPROVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PUR_APPROVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PUR_APPROVE" username="purchasing.approve"
             userFullName="Purchasing Approver" partyId="BOSS_PUR_APPROVE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -643,7 +643,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PUR_READ" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PUR_READ" firstName="Purchasing" lastName="Reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_READ_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PUR_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PUR_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PUR_READ" username="purchasing.read"
             userFullName="Purchasing Reader" partyId="BOSS_PUR_READ"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -653,7 +653,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PUR_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PUR_ADMIN" firstName="Purchasing" lastName="Administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PUR_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PUR_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PUR_ADMIN" username="purchasing.admin"
             userFullName="Purchasing Administrator" partyId="BOSS_PUR_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -662,7 +662,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PUR_MATCH" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PUR_MATCH" firstName="Purchasing" lastName="Buyer matcher"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_MATCH_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PUR_MATCH" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PUR_MATCH" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PUR_MATCH" username="purchasing.buymatch"
             userFullName="Purchasing Buyer matcher" partyId="BOSS_PUR_MATCH"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -673,7 +673,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PUR_RECEIVE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PUR_RECEIVE" firstName="Purchasing" lastName="Buyer receiver"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_RECEIVE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PUR_RECEIVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PUR_RECEIVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PUR_RECEIVE" username="purchasing.buyreceive"
             userFullName="Purchasing Buyer receiver" partyId="BOSS_PUR_RECEIVE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -685,7 +685,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PUR_SERVICES" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PUR_SERVICES" firstName="Purchasing" lastName="Services reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_SERVICES_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PUR_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PUR_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PUR_SERVICES" username="purchasing.services"
             userFullName="Purchasing Services reader" partyId="BOSS_PUR_SERVICES"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -729,7 +729,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_CS_AGENT" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_CS_AGENT" firstName="Service" lastName="Agent"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_AGENT_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_CS_AGENT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_CS_AGENT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_CS_AGENT" username="customerservice.agent"
             userFullName="Service Agent" partyId="BOSS_CS_AGENT"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -739,7 +739,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_CS_MANAGER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_CS_MANAGER" firstName="Service" lastName="Manager"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_MANAGER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_CS_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_CS_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_CS_MANAGER" username="customerservice.manager"
             userFullName="Service Manager" partyId="BOSS_CS_MANAGER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -749,7 +749,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_CS_ORDER_DESK" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_CS_ORDER_DESK" firstName="Service" lastName="Order desk"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_ORDER_DESK_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_CS_ORDER_DESK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_CS_ORDER_DESK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_CS_ORDER_DESK" username="customerservice.orderdesk"
             userFullName="Service Order desk" partyId="BOSS_CS_ORDER_DESK"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -759,7 +759,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_CS_RETURNS" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_CS_RETURNS" firstName="Service" lastName="Return authorizer"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_RETURNS_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_CS_RETURNS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_CS_RETURNS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_CS_RETURNS" username="customerservice.returns"
             userFullName="Service Return authorizer" partyId="BOSS_CS_RETURNS"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -769,7 +769,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_CS_KNOWLEDGE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_CS_KNOWLEDGE" firstName="Service" lastName="Knowledge author"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_KNOWLEDGE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_CS_KNOWLEDGE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_CS_KNOWLEDGE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_CS_KNOWLEDGE" username="customerservice.knowledge"
             userFullName="Service Knowledge author" partyId="BOSS_CS_KNOWLEDGE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -779,7 +779,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_CS_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_CS_ADMIN" firstName="Service" lastName="Administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_CS_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_CS_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_CS_ADMIN" username="customerservice.admin"
             userFullName="Service Administrator" partyId="BOSS_CS_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -788,7 +788,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_CS_AGENT_WH" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_CS_AGENT_WH" firstName="Service" lastName="Agent receiver"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_AGENT_WH_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_CS_AGENT_WH" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_CS_AGENT_WH" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_CS_AGENT_WH" username="customerservice.agentwh"
             userFullName="Service Agent receiver" partyId="BOSS_CS_AGENT_WH"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -800,7 +800,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_CS_RETURNS_AR" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_CS_RETURNS_AR" firstName="Service" lastName="Return authorizer receivables"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_RETURNS_AR_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_CS_RETURNS_AR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_CS_RETURNS_AR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_CS_RETURNS_AR" username="customerservice.returnsar"
             userFullName="Service Return authorizer receivables" partyId="BOSS_CS_RETURNS_AR"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -811,7 +811,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_CS_READ" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_CS_READ" firstName="Service" lastName="Reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_READ_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_CS_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_CS_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_CS_READ" username="customerservice.read"
             userFullName="Service Reader" partyId="BOSS_CS_READ"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -820,7 +820,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_CS_SERVICES" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_CS_SERVICES" firstName="Service" lastName="Services agent"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_SERVICES_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_CS_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_CS_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_CS_SERVICES" username="customerservice.services"
             userFullName="Service Services agent" partyId="BOSS_CS_SERVICES"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -837,7 +837,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_MANAGER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_MANAGER" firstName="Commerce" lastName="Store manager"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_MANAGER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_MANAGER" username="commerce.manager"
             userFullName="Commerce Store manager" partyId="BOSS_COM_MANAGER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -847,7 +847,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_MERCHANDISER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_MERCHANDISER" firstName="Commerce" lastName="Merchandiser"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_MERCHANDISER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_MERCHANDISER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_MERCHANDISER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_MERCHANDISER" username="commerce.merchandiser"
             userFullName="Commerce Merchandiser" partyId="BOSS_COM_MERCHANDISER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -857,7 +857,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_DESIGNER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_DESIGNER" firstName="Commerce" lastName="Designer"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_DESIGNER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_DESIGNER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_DESIGNER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_DESIGNER" username="commerce.designer"
             userFullName="Commerce Designer" partyId="BOSS_COM_DESIGNER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -867,7 +867,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_DEVELOPER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_DEVELOPER" firstName="Commerce" lastName="Theme developer"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_DEVELOPER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_DEVELOPER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_DEVELOPER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_DEVELOPER" username="commerce.developer"
             userFullName="Commerce Theme developer" partyId="BOSS_COM_DEVELOPER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -877,7 +877,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_PUBLISHER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_PUBLISHER" firstName="Commerce" lastName="Publisher"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_PUBLISHER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_PUBLISHER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_PUBLISHER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_PUBLISHER" username="commerce.publisher"
             userFullName="Commerce Publisher" partyId="BOSS_COM_PUBLISHER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -887,7 +887,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_OPERATOR" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_OPERATOR" firstName="Commerce" lastName="Operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_OPERATOR_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_OPERATOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_OPERATOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_OPERATOR" username="commerce.operator"
             userFullName="Commerce Operator" partyId="BOSS_COM_OPERATOR"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -897,7 +897,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_CHANNEL" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_CHANNEL" firstName="Commerce" lastName="Channel operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_CHANNEL_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_CHANNEL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_CHANNEL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_CHANNEL" username="commerce.channel"
             userFullName="Commerce Channel operator" partyId="BOSS_COM_CHANNEL"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -907,7 +907,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_SUBSCRIPTIONS" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_SUBSCRIPTIONS" firstName="Commerce" lastName="Subscription operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_SUBSCRIPTIONS_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_SUBSCRIPTIONS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_SUBSCRIPTIONS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_SUBSCRIPTIONS" username="commerce.subscriptions"
             userFullName="Commerce Subscription operator" partyId="BOSS_COM_SUBSCRIPTIONS"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -917,7 +917,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_ADMIN" firstName="Commerce" lastName="Administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_ADMIN" username="commerce.admin"
             userFullName="Commerce Administrator" partyId="BOSS_COM_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -926,7 +926,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_READ" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_READ" firstName="Commerce" lastName="Reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_READ_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_READ" username="commerce.read"
             userFullName="Commerce Reader" partyId="BOSS_COM_READ"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -935,9 +935,9 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_STAFF" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_STAFF" firstName="Commerce" lastName="Store staff"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_STAFF_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_STAFF" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_STAFF" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_STAFF_ORG2" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_STAFF" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_STAFF" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_STAFF" username="commerce.storestaff"
             userFullName="Commerce Store staff" partyId="BOSS_COM_STAFF"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -947,7 +947,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_COM_SERVICES" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_COM_SERVICES" firstName="Commerce" lastName="Services manager"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_SERVICES_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_COM_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_COM_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_COM_SERVICES" username="commerce.services"
             userFullName="Commerce Services manager" partyId="BOSS_COM_SERVICES"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -969,7 +969,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_READER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_READER" firstName="Admin" lastName="Reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_READER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_READER" username="admin.reader"
             userFullName="Admin Reader" partyId="BOSS_ADM_READER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -979,7 +979,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_IDENTITY" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_IDENTITY" firstName="Admin" lastName="Identity operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_IDENTITY_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_IDENTITY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_IDENTITY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_IDENTITY" username="admin.identity"
             userFullName="Admin Identity operator" partyId="BOSS_ADM_IDENTITY"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -989,7 +989,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_ACCESS" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_ACCESS" firstName="Admin" lastName="Access administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_ACCESS_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_ACCESS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_ACCESS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_ACCESS" username="admin.access"
             userFullName="Admin Access administrator" partyId="BOSS_ADM_ACCESS"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -999,7 +999,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_CONFIGURE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_CONFIGURE" firstName="Admin" lastName="Configuration administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_CONFIGURE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_CONFIGURE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_CONFIGURE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_CONFIGURE" username="admin.configure"
             userFullName="Admin Configuration administrator" partyId="BOSS_ADM_CONFIGURE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1009,7 +1009,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_INTEGRATIONS" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_INTEGRATIONS" firstName="Admin" lastName="Integration administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_INTEGRATIONS_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_INTEGRATIONS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_INTEGRATIONS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_INTEGRATIONS" username="admin.integrations"
             userFullName="Admin Integration administrator" partyId="BOSS_ADM_INTEGRATIONS"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1019,7 +1019,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_OPERATIONS" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_OPERATIONS" firstName="Admin" lastName="Operations operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_OPERATIONS_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_OPERATIONS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_OPERATIONS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_OPERATIONS" username="admin.operations"
             userFullName="Admin Operations operator" partyId="BOSS_ADM_OPERATIONS"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1029,7 +1029,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_DATA" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_DATA" firstName="Admin" lastName="Data operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_DATA_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_DATA" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_DATA" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_DATA" username="admin.data"
             userFullName="Admin Data operator" partyId="BOSS_ADM_DATA"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1039,7 +1039,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_AUDIT" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_AUDIT" firstName="Admin" lastName="Audit reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_AUDIT_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_AUDIT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_AUDIT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_AUDIT" username="admin.audit"
             userFullName="Admin Audit reader" partyId="BOSS_ADM_AUDIT"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1049,7 +1049,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_PRIVACY" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_PRIVACY" firstName="Admin" lastName="Privacy administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_PRIVACY_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_PRIVACY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_PRIVACY" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_PRIVACY" username="admin.privacy"
             userFullName="Admin Privacy administrator" partyId="BOSS_ADM_PRIVACY"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1059,7 +1059,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_BACKUP" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_BACKUP" firstName="Admin" lastName="Backup operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_BACKUP_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_BACKUP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_BACKUP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_BACKUP" username="admin.backup"
             userFullName="Admin Backup operator" partyId="BOSS_ADM_BACKUP"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1069,7 +1069,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_ADMIN" firstName="Admin" lastName="Administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_ADMIN" username="admin.admin"
             userFullName="Admin Administrator" partyId="BOSS_ADM_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1078,7 +1078,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_DELEGATE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_DELEGATE" firstName="Admin" lastName="Delegated access administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_DELEGATE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_DELEGATE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_DELEGATE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_DELEGATE" username="admin.delegate"
             userFullName="Admin Delegated access administrator" partyId="BOSS_ADM_DELEGATE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1088,9 +1088,9 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_ADM_SHARED" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_ADM_SHARED" firstName="Staff" lastName="Shared"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_SHARED_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_SHARED" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_SHARED" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_ADM_SHARED_ORG2" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_ADM_SHARED" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_ADM_SHARED" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_ADM_SHARED" username="shared.staff"
             userFullName="Staff Shared" partyId="BOSS_ADM_SHARED"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1106,7 +1106,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_INS_READER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_INS_READER" firstName="Insights" lastName="Reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_READER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_INS_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_INS_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_INS_READER" username="insights.reader"
             userFullName="Insights Reader" partyId="BOSS_INS_READER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1116,7 +1116,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_INS_AUTHOR" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_INS_AUTHOR" firstName="Insights" lastName="Author"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_AUTHOR_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_INS_AUTHOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_INS_AUTHOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_INS_AUTHOR" username="insights.author"
             userFullName="Insights Author" partyId="BOSS_INS_AUTHOR"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1126,7 +1126,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_INS_STEWARD" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_INS_STEWARD" firstName="Insights" lastName="Dataset steward"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_STEWARD_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_INS_STEWARD" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_INS_STEWARD" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_INS_STEWARD" username="insights.steward"
             userFullName="Insights Dataset steward" partyId="BOSS_INS_STEWARD"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1136,7 +1136,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_INS_DISTRIBUTOR" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_INS_DISTRIBUTOR" firstName="Insights" lastName="Distributor"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_DISTRIBUTOR_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_INS_DISTRIBUTOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_INS_DISTRIBUTOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_INS_DISTRIBUTOR" username="insights.distributor"
             userFullName="Insights Distributor" partyId="BOSS_INS_DISTRIBUTOR"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1146,7 +1146,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_INS_FLOW" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_INS_FLOW" firstName="Insights" lastName="Flow editor"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_FLOW_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_INS_FLOW" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_INS_FLOW" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_INS_FLOW" username="insights.flow"
             userFullName="Insights Flow editor" partyId="BOSS_INS_FLOW"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1156,7 +1156,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_INS_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_INS_ADMIN" firstName="Insights" lastName="Administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_INS_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_INS_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_INS_ADMIN" username="insights.admin"
             userFullName="Insights Administrator" partyId="BOSS_INS_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1165,7 +1165,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_INS_SERVICES" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_INS_SERVICES" firstName="Insights" lastName="Services reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_SERVICES_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_INS_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_INS_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_INS_SERVICES" username="insights.services"
             userFullName="Insights Services reader" partyId="BOSS_INS_SERVICES"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1175,7 +1175,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_INS_FINANCE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_INS_FINANCE" firstName="Insights" lastName="Financial reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_FINANCE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_INS_FINANCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_INS_FINANCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_INS_FINANCE" username="insights.finance"
             userFullName="Insights Financial reader" partyId="BOSS_INS_FINANCE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1198,7 +1198,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_INS_SVC_MANAGER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_INS_SVC_MANAGER" firstName="Insights" lastName="Service manager"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_SVC_MANAGER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_INS_SVC_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_INS_SVC_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_INS_SVC_MANAGER" username="insights.servicemanager"
             userFullName="Insights Service manager" partyId="BOSS_INS_SVC_MANAGER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1210,7 +1210,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_INS_WAREHOUSE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_INS_WAREHOUSE" firstName="Insights" lastName="Warehouse reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_WAREHOUSE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_INS_WAREHOUSE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_INS_WAREHOUSE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_INS_WAREHOUSE" username="insights.warehouse"
             userFullName="Insights Warehouse reader" partyId="BOSS_INS_WAREHOUSE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1239,7 +1239,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PPL_READER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_READER" firstName="People" lastName="Directory reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_READER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PPL_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PPL_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PPL_READER" username="people.reader"
             userFullName="People Directory reader" partyId="BOSS_PPL_READER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1261,7 +1261,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PPL_HR" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_HR" firstName="People" lastName="HR officer"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_HR_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PPL_HR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PPL_HR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PPL_HR" username="people.hr"
             userFullName="People HR officer" partyId="BOSS_PPL_HR"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1271,7 +1271,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PPL_RECRUITER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_RECRUITER" firstName="People" lastName="Recruiter"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_RECRUITER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PPL_RECRUITER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PPL_RECRUITER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PPL_RECRUITER" username="people.recruiter"
             userFullName="People Recruiter" partyId="BOSS_PPL_RECRUITER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1281,7 +1281,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PPL_PAYROLL" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_PAYROLL" firstName="People" lastName="Payroll operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_PAYROLL_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PPL_PAYROLL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PPL_PAYROLL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PPL_PAYROLL" username="people.payroll"
             userFullName="People Payroll operator" partyId="BOSS_PPL_PAYROLL"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1291,7 +1291,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PPL_PAYAPPROVER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_PAYAPPROVER" firstName="People" lastName="Payroll approver"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_PAYAPPROVER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PPL_PAYAPPROVER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PPL_PAYAPPROVER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PPL_PAYAPPROVER" username="people.payapprover"
             userFullName="People Payroll approver" partyId="BOSS_PPL_PAYAPPROVER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1301,7 +1301,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PPL_DEVELOP" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_DEVELOP" firstName="People" lastName="Learning administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_DEVELOP_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PPL_DEVELOP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PPL_DEVELOP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PPL_DEVELOP" username="people.develop"
             userFullName="People Learning administrator" partyId="BOSS_PPL_DEVELOP"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1311,7 +1311,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PPL_CASE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_CASE" firstName="People" lastName="Case handler"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_CASE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PPL_CASE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PPL_CASE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PPL_CASE" username="people.case"
             userFullName="People Case handler" partyId="BOSS_PPL_CASE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1321,9 +1321,9 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PPL_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_ADMIN" firstName="People" lastName="Administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PPL_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PPL_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_ADMIN_ORG2" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PPL_ADMIN" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PPL_ADMIN" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PPL_ADMIN" username="people.admin"
             userFullName="People Administrator" partyId="BOSS_PPL_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1335,7 +1335,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_PPL_ANALYST" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_PPL_ANALYST" firstName="People" lastName="Analyst"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PPL_ANALYST_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_PPL_ANALYST" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_PPL_ANALYST" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_PPL_ANALYST" username="people.analyst"
             userFullName="People Analyst" partyId="BOSS_PPL_ANALYST" emailAddress="people.analyst@ziziwork.example"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1353,7 +1353,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_READER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_READER" firstName="Maintenance" lastName="Reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_READER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_READER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_READER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_READER" username="maint.reader"
             userFullName="Maintenance Reader" partyId="BOSS_MNT_READER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1363,7 +1363,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_REQUESTER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_REQUESTER" firstName="Maintenance" lastName="Requester"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_REQUESTER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_REQUESTER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_REQUESTER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_REQUESTER" username="maint.requester"
             userFullName="Maintenance Requester" partyId="BOSS_MNT_REQUESTER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1372,7 +1372,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_PLANNER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_PLANNER" firstName="Maintenance" lastName="Planner"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_PLANNER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_PLANNER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_PLANNER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_PLANNER" username="maint.planner"
             userFullName="Maintenance Planner" partyId="BOSS_MNT_PLANNER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1382,7 +1382,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_TECH" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_TECH" firstName="Maintenance" lastName="Technician"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_TECH_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_TECH" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_TECH" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_TECH" username="maint.tech"
             userFullName="Maintenance Technician" partyId="BOSS_MNT_TECH"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1392,7 +1392,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_TECH2" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_TECH2" firstName="Maintenance" lastName="Second technician"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_TECH2_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_TECH2" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_TECH2" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_TECH2" username="maint.tech2"
             userFullName="Maintenance Second technician" partyId="BOSS_MNT_TECH2"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1402,7 +1402,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_SUPERVISOR" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_SUPERVISOR" firstName="Maintenance" lastName="Supervisor"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_SUPERVISOR_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_SUPERVISOR" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_SUPERVISOR" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_SUPERVISOR" username="maint.supervisor"
             userFullName="Maintenance Supervisor" partyId="BOSS_MNT_SUPERVISOR"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1412,7 +1412,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_AUTHOR" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_AUTHOR" firstName="Maintenance" lastName="Procedure author"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_AUTHOR_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_AUTHOR" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_AUTHOR" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_AUTHOR" username="maint.author"
             userFullName="Maintenance Procedure author" partyId="BOSS_MNT_AUTHOR"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1422,7 +1422,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_APPROVER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_APPROVER" firstName="Maintenance" lastName="Procedure approver"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_APPROVER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_APPROVER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_APPROVER" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_APPROVER" username="maint.approver"
             userFullName="Maintenance Procedure approver" partyId="BOSS_MNT_APPROVER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1432,7 +1432,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_BOOKING" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_BOOKING" firstName="Maintenance" lastName="Resource approver"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_BOOKING_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_BOOKING" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_BOOKING" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_BOOKING" username="maint.booking"
             userFullName="Maintenance Resource approver" partyId="BOSS_MNT_BOOKING"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1442,7 +1442,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_RESOURCES" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_RESOURCES" firstName="Maintenance" lastName="Resource administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_RESOURCES_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_RESOURCES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_RESOURCES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_RESOURCES" username="maint.resources"
             userFullName="Maintenance Resource administrator" partyId="BOSS_MNT_RESOURCES"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1452,7 +1452,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_COST" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_COST" firstName="Maintenance" lastName="Cost reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_COST_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_COST" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_COST" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_COST" username="maint.cost"
             userFullName="Maintenance Cost reader" partyId="BOSS_MNT_COST"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1462,7 +1462,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_RETAIL" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_RETAIL" firstName="Maintenance" lastName="Retail planner"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_RETAIL_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_RETAIL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_RETAIL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_RETAIL" username="maint.retail"
             userFullName="Maintenance Retail planner" partyId="BOSS_MNT_RETAIL"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1472,9 +1472,9 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_MNT_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MNT_ADMIN" firstName="Maintenance" lastName="Administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_ADMIN" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_ADMIN" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MNT_ADMIN_ORG2" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_MNT_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_MNT_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_MNT_ADMIN" username="maint.admin"
             userFullName="Maintenance Administrator" partyId="BOSS_MNT_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1488,7 +1488,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_SAL_REP" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_SAL_REP" firstName="Sales" lastName="Representative"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_REP_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_REP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_REP" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_SAL_REP" username="sales.rep"
             userFullName="Sales Representative" partyId="BOSS_SAL_REP"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1498,7 +1498,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_SAL_REP2" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_SAL_REP2" firstName="Sales" lastName="Second representative"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_REP2_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_REP2" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_REP2" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_SAL_REP2" username="sales.rep2"
             userFullName="Sales Second representative" partyId="BOSS_SAL_REP2"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1508,7 +1508,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_SAL_MANAGER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_SAL_MANAGER" firstName="Sales" lastName="Manager"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_MANAGER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_SAL_MANAGER" username="sales.manager"
             userFullName="Sales Manager" partyId="BOSS_SAL_MANAGER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1518,7 +1518,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_SAL_APPROVER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_SAL_APPROVER" firstName="Sales" lastName="Approver"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_APPROVER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_APPROVER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_APPROVER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_SAL_APPROVER" username="sales.approver"
             userFullName="Sales Approver" partyId="BOSS_SAL_APPROVER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1528,7 +1528,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_SAL_CHANGE" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_SAL_CHANGE" firstName="Sales" lastName="Change operator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_CHANGE_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_CHANGE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_CHANGE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_SAL_CHANGE" username="sales.change"
             userFullName="Sales Change operator" partyId="BOSS_SAL_CHANGE"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1538,7 +1538,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_SAL_AGREEMENT" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_SAL_AGREEMENT" firstName="Sales" lastName="Agreement keeper"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_AGREEMENT_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_AGREEMENT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_AGREEMENT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_SAL_AGREEMENT" username="sales.agreement"
             userFullName="Sales Agreement keeper" partyId="BOSS_SAL_AGREEMENT"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1548,7 +1548,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_SAL_READER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_SAL_READER" firstName="Sales" lastName="Reader"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_READER_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_SAL_READER" username="sales.reader"
             userFullName="Sales Reader" partyId="BOSS_SAL_READER"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1558,7 +1558,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_SAL_REP3" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_SAL_REP3" firstName="Sales" lastName="Representative of Ziziwork Sales"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_REP3_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_REP3" toPartyId="ORG_ZIZI_SALES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_REP3" toPartyId="ORG_ZIZI_SALES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_SAL_REP3" username="sales.rep3"
             userFullName="Sales Representative of Ziziwork Sales" partyId="BOSS_SAL_REP3"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1568,9 +1568,9 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_SAL_MANAGER2" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_SAL_MANAGER2" firstName="Sales" lastName="Manager of both"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_MANAGER2_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_MANAGER2" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_MANAGER2" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_MANAGER2_ORG2" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_MANAGER2" toPartyId="ORG_ZIZI_SALES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_MANAGER2" toPartyId="ORG_ZIZI_SALES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_SAL_MANAGER2" username="sales.manager2"
             userFullName="Sales Manager of both" partyId="BOSS_SAL_MANAGER2"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
@@ -1580,9 +1580,9 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.Party partyId="BOSS_SAL_ADMIN" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_SAL_ADMIN" firstName="Sales" lastName="Administrator"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_ADMIN_ORG2" relationshipTypeEnumId="PrtAgent"
-            fromPartyId="BOSS_SAL_ADMIN" toPartyId="ORG_ZIZI_SALES" toRoleTypeId="OrgInternal" fromDate="0"/>
+            fromPartyId="BOSS_SAL_ADMIN" toPartyId="ORG_ZIZI_SALES" toRoleTypeId="OrgInternal" fromDate="2026-01-01 00:00:00"/>
     <moqui.security.UserAccount userId="BOSS_SAL_ADMIN" username="sales.admin"
             userFullName="Sales Administrator" partyId="BOSS_SAL_ADMIN"
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>

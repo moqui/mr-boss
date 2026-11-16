@@ -445,6 +445,13 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.order.OrderItem orderId="BOSS_WH_SUB_PO" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
             productId="BOSS_WH_COATING" itemDescription="Coat 4 filters" quantity="4" unitAmount="3"/>
     <mantle.order.OrderItemWorkEffort orderId="BOSS_WH_SUB_PO" orderItemSeqId="01" workEffortId="BOSS_WH_RUN_OP"/>
+    <!-- the outside-processing agreement the PO line was made from (request#SubcontractService, then the buyer's conversion),
+        on order -->
+    <mantle.work.production.ProductionSubcontract productionSubcontractId="BOSS_WH_SUB" organizationPartyId="ORG_ZIZI_RETAIL"
+            workEffortId="BOSS_WH_RUN" operationWorkEffortId="BOSS_WH_RUN_OP" supplierPartyId="ZiddlemanInc"
+            productId="BOSS_WH_COATING" quantity="4" quantityUomId="OTH_ea" requiredByDate="2026-11-06 00:00:00"
+            leadTimeDays="3" vendorFacilityId="BOSS_WH_VENDOR" priceBasisNote="3.00 per filter" orderId="BOSS_WH_SUB_PO"
+            orderItemSeqId="01" statusId="PscOrdered" revision="1" createdDate="2026-10-25 00:00:00"/>
     <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_SUB" shipmentTypeEnumId="ShpTpTransfer" statusId="ShipInput"
             fromPartyId="ORG_ZIZI_RETAIL" toPartyId="ORG_ZIZI_RETAIL" subcontractWorkEffortId="BOSS_WH_RUN_OP"
             subcontractOrderId="BOSS_WH_SUB_PO" subcontractOrderItemSeqId="01" estimatedShipDate="2026-11-03 00:00:00"/>

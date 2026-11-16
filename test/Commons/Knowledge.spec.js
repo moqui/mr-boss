@@ -599,11 +599,11 @@ feature("a page copied into a git space keeps its file", {
 })
 
 // KnowledgeTui is the terminal's Knowledge (its one tui render): with a page open, a space's link opens that space's home,
-// not the open page's path in another space
-feature("the terminal's space links open the space's home, not the open page's path", {
+// not the open page's path in another space; the page's [[path|text]] link is a link to that page of the space
+feature("the terminal's space links open the space's home, not the open page's path; a wiki link opens its page", {
     when() {
         const str = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").renderMode("tui")
-                .render("apps/Commons/KnowledgeTui", { wikiSpaceId: "BOSSKB", pagePath: "Policies/Travel" }, null)
+                .render("apps/Commons/KnowledgeTui", { wikiSpaceId: "BOSSKB", pagePath: "Policies/Expenses" }, null)
         ec.message.clearErrors()
         const output = String(str.output || "")
         return { output, spaceUrls: (output.match(/"url":"[^"]*wikiSpaceId=BOSSENG[^"]*"/g) || []) }
@@ -611,5 +611,7 @@ feature("the terminal's space links open the space's home, not the open page's p
     then({ output, spaceUrls }) {
         !/Error rendering|Exception in render/.test(output)
         spaceUrls == ['"url":"/apps/Commons/Knowledge?wikiSpaceId=BOSSENG"']
+        output.includes("See also [Travel](/apps/Commons/Knowledge?wikiSpaceId=BOSSKB&pagePath=Policies%2FTravel).")
+        !output.includes("[[")
     },
 })

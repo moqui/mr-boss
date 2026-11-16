@@ -52,8 +52,15 @@ along with this software (see the LICENSE.md file). If not, see
             const wasDisabled = ec.artifactExecution.disableAuthz()
             try {
                 const store = (entityName, fields) => ec.service.sync().name('store#' + entityName).parameters(fields).call()
-                const textOf = (html) => String(html || '').replace(/<(style|script)[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]*>/g, ' ')
-                        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim()
+                // the text part of an HTML body: a paragraph, heading or list a block of its own, a line break a new line and a quoted
+                // part's lines starting "> ", the spaces within a line squeezed
+                const textOf = (html) => String(html || '').replace(/<(style|script)[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/\s+/g, ' ')
+                        .replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (whole, quoted) =>
+                            '\n\n' + textOf(quoted).split('\n').map((line) => (line ? '> ' + line : '>')).join('\n') + '\n\n')
+                        .replace(/<br\s*\/?>/gi, '\n').replace(/<li[^>]*>/gi, '\n- ').replace(/<\/(p|div|h[1-6]|ul|ol|table|tr)>/gi, '\n\n')
+                        .replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+                        .replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+                        .split('\n').map((line) => line.replace(/[ \t]+/g, ' ').trim()).join('\n').replace(/\n{3,}/g, '\n\n').trim()
 
                 // the account, its folders, labels and identity
                 store('moqui.basic.email.EmailAccount', {emailAccountId: ACCT, ownerUserId: 'EX_JOHN_DOE', accountKindEnumId: 'EakExternal', emailAddress: ME,
@@ -74,12 +81,13 @@ along with this software (see the LICENSE.md file). If not, see
                 const mail = (id, fields) => {
                     const html = fields.body || null
                     const text = fields.bodyText || (html ? textOf(html) : '')
+                    const flat = text.replace(/\s+/g, ' ').trim()
                     // a load again puts back what the user changed: folder, flags, snooze, archive, labels
                     ec.entity.find('moqui.basic.email.EmailMessageLabel').condition('emailMessageId', id).deleteAll()
                     const row = Object.assign({emailMessageId: id, emailAccountId: ACCT, statusId: 'ES_RECEIVED', toAddresses: `"John Doe" <${ME}>`, isRead: 'N',
                         snoozedThruDate: null, scheduledSendDate: null, archivedDate: null, sendError: null, rootEmailMessageId: null, parentEmailMessageId: null,
                         isFlagged: 'N', isAnswered: 'N', hasAttachment: 'N', contentType: html ? 'text/html' : 'text/plain', bodyText: text,
-                        snippet: text.length > 140 ? text.substring(0, 137) + '...' : text, messageSize: String(html || '').length + text.length,
+                        snippet: flat.length > 140 ? flat.substring(0, 137) + '...' : flat, messageSize: String(html || '').length + text.length,
                         messageId: `<${id.toLowerCase()}@demo.ironstone.example>`}, fields)
                     if (!row.receivedDate && row.statusId === 'ES_RECEIVED') row.receivedDate = row.messageDate
                     store('moqui.basic.email.EmailMessage', row)

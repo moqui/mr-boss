@@ -43,8 +43,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="recordFound" from="!!detail?.send"/>
         <set field="sampleError" from="null"/>
         <if condition="recordFound">
-            <service-call name="mantle.marketing.CampaignSendServices.preview#Send" out-map="preview" transaction="force-new" ignore-error="true"
-                    in-map="{campaignSendId:campaignSendId, samplePartyId:(samplePartyId || null)}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.marketing.CampaignSendServices.preview#Send').requireNewTransaction(true)
+                        .parameters({campaignSendId:campaignSendId, samplePartyId:(samplePartyId || null)}).call()
+                if (probed != null) preview = Object.assign({}, preview || {}, probed)
+            }</script>
             <if condition="ec.message.hasError()">
                 <set field="sampleError" from="ec.message.getErrorsString()"/>
                 <script>ec.message.clearErrors()</script>

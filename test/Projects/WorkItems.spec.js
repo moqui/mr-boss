@@ -156,6 +156,7 @@ feature("the smart lists and the find narrow the work items, each row with its t
         // a row as the views read it
         const three = found.review.rowList[0]
         three.statusLabel == "In Review"
+        three.priorityText == "High (3)"
         three.assigneeText == "Joe Developer"
         three.assigneePartyId == "ORG_ZIZI_JD"
         three.milestoneId == "IRON-MS-1"
@@ -298,7 +299,7 @@ feature("in-place edits, the board's moves (the status along the flow, the assig
     },
     then({ priority, loaded, begun, toBob, inBeta, due, item, assignees, milestones }) {
         priority.errors == ""
-        priority.json.valueText == "2"
+        priority.json.valueText == "High (2)"
         loaded.json.value == "2"
         begun.errors == ""
         toBob.errors == ""

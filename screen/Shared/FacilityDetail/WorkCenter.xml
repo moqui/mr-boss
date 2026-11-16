@@ -388,10 +388,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <!-- P12: the center's offline times, and a planned one previewed before it is recorded -->
                 <section name="OfflinePreview" condition="canOffline &amp;&amp; offlineFrom &amp;&amp; offlineThru">
                     <actions>
-                        <service-call name="mantle.work.ProductionPlanningServices.store#WorkCenterOffline" out-map="offlinePreviewed"
-                                transaction="force-new" ignore-error="true"
-                                in-map="{action:'preview', facilityId:facilityId, fromDate:offlineFrom, thruDate:offlineThru,
-                                    reason:offlineReason}"/>
+                        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                        <script>{
+                            const probed = ec.service.sync().name('mantle.work.ProductionPlanningServices.store#WorkCenterOffline').requireNewTransaction(true)
+                                    .parameters({action:'preview', facilityId:facilityId, fromDate:offlineFrom, thruDate:offlineThru,
+                                    reason:offlineReason}).call()
+                            if (probed != null) offlinePreviewed = Object.assign({}, offlinePreviewed || {}, probed)
+                        }</script>
                         <set field="offlinePreview" from="offlinePreviewed?.result || null"/>
                         <set field="offlineError" from="offlinePreview ? '' : ec.message.getErrorsString()"/>
                         <script>ec.message.clearErrors()</script>

@@ -68,9 +68,13 @@ along with this software (see the LICENSE.md file). If not, see
             <actions>
                 <set field="replyBlockId" from="replyBlockId || null"/>
                 <if condition="replyBlockId">
-                    <service-call name="mantle.request.SupportCaseServices.preview#SavedReply" out-map="replyOut" transaction="force-new"
-                            ignore-error="true" in-map="{requestId:requestId, emailTextBlockId:replyBlockId, bodyHtml:(replyBody || null),
-                                subject:(replySubject || null)}"/>
+                    <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                    <script>{
+                        const probed = ec.service.sync().name('mantle.request.SupportCaseServices.preview#SavedReply').requireNewTransaction(true)
+                                .parameters({requestId:requestId, emailTextBlockId:replyBlockId, bodyHtml:(replyBody || null),
+                                subject:(replySubject || null)}).call()
+                        if (probed != null) replyOut = Object.assign({}, replyOut || {}, probed)
+                    }</script>
                     <set field="replyProblem" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/\n[\s\S]*$/, '') : ''"/>
                     <script>ec.message.clearErrors()</script>
                 </if>

@@ -70,9 +70,13 @@ along with this software (see the LICENSE.md file). If not, see
         <script>ec.message.clearErrors()</script>
         <!-- the preview of the request's terms (the second step) -->
         <if condition="request == 'Y' &amp;&amp; rqTypeEnumId &amp;&amp; rqFromDate">
-            <service-call name="mantle.humanres.LeaveServices.preview#Request" out-map="previewed" transaction="force-new" ignore-error="true"
-                    in-map="{partyRelationshipId:(rqEmploymentId || null), leaveTypeEnumId:rqTypeEnumId, fromDate:rqFromDate,
-                        thruDate:(rqThruDate || null), dayPartEnumId:(rqPartEnumId || null)}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.humanres.LeaveServices.preview#Request').requireNewTransaction(true)
+                        .parameters({partyRelationshipId:(rqEmploymentId || null), leaveTypeEnumId:rqTypeEnumId, fromDate:rqFromDate,
+                        thruDate:(rqThruDate || null), dayPartEnumId:(rqPartEnumId || null)}).call()
+                if (probed != null) previewed = Object.assign({}, previewed || {}, probed)
+            }</script>
             <set field="previewError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
             <script>ec.message.clearErrors()</script>
         </if>

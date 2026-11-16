@@ -85,8 +85,12 @@ along with this software (see the LICENSE.md file). If not, see
                 }
             ]]></script>
             <if condition="!mergeCheckErrors.length">
-                <service-call name="mantle.request.SupportCaseServices.preview#MergeCases" out-map="previewOut" transaction="force-new"
-                        ignore-error="true" in-map="{targetRequestId:mergeTarget, sourceRequestIds:mergeSourceList}"/>
+                <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                <script>{
+                    const probed = ec.service.sync().name('mantle.request.SupportCaseServices.preview#MergeCases').requireNewTransaction(true)
+                            .parameters({targetRequestId:mergeTarget, sourceRequestIds:mergeSourceList}).call()
+                    if (probed != null) previewOut = Object.assign({}, previewOut || {}, probed)
+                }</script>
                 <set field="mergeError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
                 <script>ec.message.clearErrors()</script>
             </if>

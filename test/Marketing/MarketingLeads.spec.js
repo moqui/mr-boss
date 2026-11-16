@@ -3,7 +3,8 @@
 // routed to Retail East, its mapping and notice, the preview of a sample answer, the failed handoff with its reason and Try again); the
 // Leads area of an author who reads no Sales (its one tab the lead rules, Sales' Leads telling them they read no leads, nothing of a
 // lead shown); the campaign's handoff counts for a reader with MARKETING_VIEW alone; and Sales' lead forms' campaign choices, offered
-// only to a user who reads Marketing. The rules are Mantle's (test/marketing/LeadCapture); the access rules MarketingAccess's. The lead
+// only to a user who reads Marketing; Accounts under Marketing links an account to Customer360 only when Marketing's contact check admits
+// it (check#Contacts). The rules are Mantle's (test/marketing/LeadCapture); the access rules MarketingAccess's. The lead
 // scenario is the acceptance MarketingLeadScenario.
 // Run: ./moq test mr-boss --spec MarketingLeads
 const lib = ec.resource.script("component://mr-boss/test/Marketing/MarketingSpecLib.js")
@@ -74,3 +75,24 @@ feature(
         }
     }
 )
+
+feature("Accounts under Marketing links an account only when Marketing's Customer360 opens it", {
+    when() {
+        const accountId = "BOSS_SAL_ACC_CONTOSO"
+        const accounts = asUser(users.system, () => page("Leads/Accounts", {text: "Contoso"}, "html"))
+        const contacts = asUser(users.system, () =>
+            invoke("ironstone.marketing.ContextServices.check#Contacts", {
+                appRoot: "Marketing",
+                partyIds: [accountId, ids.acceptedPartyId]
+            })
+        )
+        return {accounts, contactIds: Array.from(contacts.contactPartyIds || [])}
+    },
+    then({accounts, contactIds}) {
+        accounts.status == 200
+        accounts.errors == []
+        accounts.output.includes("Contoso Labs")
+        !/<a [^>]*>Contoso Labs<\/a>/.test(accounts.output)
+        JSON.stringify(contactIds) === JSON.stringify([ids.acceptedPartyId])
+    }
+})

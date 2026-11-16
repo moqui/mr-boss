@@ -46,9 +46,13 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="appRoot == 'Sales'">
             <set field="can" from="sales.capabilities"/>
             <if condition="can.anyRead">
-                <service-call name="mantle.order.SalesRecurrenceServices.find#SalesSubscriptions" out-map="salesFound" transaction="force-new"
-                        ignore-error="true" in-map="{organizationPartyId:(organizationPartyId || null), customerPartyId:(customerPartyId || null),
-                            agreementId:(agreementId || null), productStoreId:(productStoreId || null), kind:(kind || null), pageIndex:pageIndex}"/>
+                <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+                <script>{
+                    const probed = ec.service.sync().name('mantle.order.SalesRecurrenceServices.find#SalesSubscriptions').requireNewTransaction(true)
+                            .parameters({organizationPartyId:(organizationPartyId || null), customerPartyId:(customerPartyId || null),
+                            agreementId:(agreementId || null), productStoreId:(productStoreId || null), kind:(kind || null), pageIndex:pageIndex}).call()
+                    if (probed != null) salesFound = Object.assign({}, salesFound || {}, probed)
+                }</script>
             </if>
             <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
             <script>ec.message.clearErrors()</script>
@@ -70,10 +74,14 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <!-- Commerce (impl-commerce P12): the contracts of the user's stores -->
         <if condition="appRoot != 'Sales'">
-            <service-call name="mantle.product.ShopSubscriptionServices.find#StoreSubscriptions" out-map="found" transaction="force-new" ignore-error="true"
-                    in-map="{productStoreId:(productStoreId || null), customerPartyId:(customerPartyId || null), productId:(productId || null),
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.product.ShopSubscriptionServices.find#StoreSubscriptions').requireNewTransaction(true)
+                        .parameters({productStoreId:(productStoreId || null), customerPartyId:(customerPartyId || null), productId:(productId || null),
                         subscriptionResourceId:(subscriptionResourceId || null), stateEnumId:(stateEnumId || null),
-                        renewalFromDate:(renewalFromDate || null), renewalThruDate:(renewalThruDate || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+                        renewalFromDate:(renewalFromDate || null), renewalThruDate:(renewalThruDate || null), pageIndex:pageIndex, pageSize:pageSize}).call()
+                if (probed != null) found = Object.assign({}, found || {}, probed)
+            }</script>
             <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
             <script>ec.message.clearErrors()</script>
             <set field="subscriptions" from="found?.subscriptions || []"/>
@@ -95,13 +103,17 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="SalesSubscriptions" condition="appRoot == 'Sales'">
             <widgets>
                 <label text="You do not read Sales." type="p" style="m-muted" condition="!can.anyRead"/>
-                <container style="row items-center q-col-gutter-sm q-mb-sm" condition="can.anyRead">
-                    <container style="col">
-                        <label text="Subscriptions" type="h5"/>
-                        <label text="Access customers pay for: store contracts beside subscriptions of orders with no store. Commerce and Accounting change them; follow up renewals here."
-                                type="p" style="text-caption m-muted"/>
-                    </container>
-                </container>
+                <section name="SubscriptionsHeader" condition="can.anyRead">
+                    <widgets>
+                        <container style="row items-center q-col-gutter-sm q-mb-sm">
+                            <container style="col">
+                                <label text="Subscriptions" type="h5"/>
+                                <label text="Access customers pay for: store contracts beside subscriptions of orders with no store. Commerce and Accounting change them; follow up renewals here."
+                                        type="p" style="text-caption m-muted"/>
+                            </container>
+                        </container>
+                    </widgets>
+                </section>
                 <label type="p" style="text-negative" condition="failure" text="${failure}"/>
                 <label type="p" style="text-caption m-muted" condition="salesFound?.truncated" text="Only the newest 500 of each kind are listed; narrow the find."/>
                 <form-list name="SalesSubscriptionList" list="salesSubscriptions" skip-form="true" paginate="true" header-dialog="true">

@@ -22,14 +22,22 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="Return authorization" default-menu-include="false">
     <parameter name="returnId" required="true"/>
     <actions>
-        <service-call name="ironstone.customerservice.AccessServices.check#Record" transaction="force-new" ignore-error="true"
-                in-map="{appRoot:appRoot, recordType:'return', recordId:returnId}" out-map="checked"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('ironstone.customerservice.AccessServices.check#Record').requireNewTransaction(true)
+                    .parameters({appRoot:appRoot, recordType:'return', recordId:returnId}).call()
+            if (probed != null) checked = Object.assign({}, checked || {}, probed)
+        }</script>
         <!-- an ignored error leaves no message: the answer's record says whether the return is the user's (P16) -->
         <set field="returnFound" from="!ec.message.hasError() &amp;&amp; !!checked?.recordId"/>
         <script>ec.message.clearErrors()</script>
         <if condition="returnFound">
-            <service-call name="mantle.order.ReturnPolicyServices.get#ReturnAuthorizationPrint" out-map="printed"
-                    transaction="force-new" ignore-error="true" in-map="{returnId:returnId}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.order.ReturnPolicyServices.get#ReturnAuthorizationPrint').requireNewTransaction(true)
+                        .parameters({returnId:returnId}).call()
+                if (probed != null) printed = Object.assign({}, printed || {}, probed)
+            }</script>
             <set field="printError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : ''"/>
             <script>ec.message.clearErrors()</script>
         </if>

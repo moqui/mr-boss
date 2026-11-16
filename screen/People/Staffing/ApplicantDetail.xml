@@ -246,15 +246,19 @@ along with this software (see the LICENSE.md file). If not, see
                             <label text="${app.applicantName}" type="h5"/>
                             <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none" condition="captionText"/>
                         </container>
-                        <container style="col-12 col-md-auto row items-center q-gutter-xs m-record-status" condition="recruiter">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${app.stageColor}">${
-                                    WebUtilities.encodeHtml(app.stageText)}</q-chip>${app.possibleDuplicate ? ' <q-chip dense square class="q-ma-none m-tonal text-warning">' +
-                                    WebUtilities.encodeHtml(ec.l10n.localize('Possible duplicate')) + '</q-chip>' : ''}]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: app.stageText + (app.possibleDuplicate ? " · possible duplicate" : "")})}]]></text>
-                                <text type="html">${app.stageText}</text>
-                            </render-mode>
-                        </container>
+                        <section name="RecruiterStatus" condition="recruiter">
+                            <widgets>
+                                <container style="col-12 col-md-auto row items-center q-gutter-xs m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${app.stageColor}">${
+                                            WebUtilities.encodeHtml(app.stageText)}</q-chip>${app.possibleDuplicate ? ' <q-chip dense square class="q-ma-none m-tonal text-warning">' +
+                                            WebUtilities.encodeHtml(ec.l10n.localize('Possible duplicate')) + '</q-chip>' : ''}]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: app.stageText + (app.possibleDuplicate ? " · possible duplicate" : "")})}]]></text>
+                                        <text type="html">${app.stageText}</text>
+                                    </render-mode>
+                                </container>
+                            </widgets>
+                        </section>
                         <container style="col-12 col-md-auto m-record-actions">
                             <!-- P17: an offer of the application, the primary once assessed -->
                             <container-dialog id="CreateOfferDialog" button-text="Create offer" icon="sym_o_contract"

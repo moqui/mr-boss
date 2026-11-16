@@ -46,8 +46,12 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."><parameter name="organizationPartyId"/></error-response>
     </transition>
     <actions>
-        <service-call name="mantle.humanres.PeopleServices.get#Settings" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{organizationPartyId:(organizationPartyId || null)}"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('mantle.humanres.PeopleServices.get#Settings').requireNewTransaction(true)
+                    .parameters({organizationPartyId:(organizationPartyId || null)}).call()
+            if (probed != null) found = Object.assign({}, found || {}, probed)
+        }</script>
         <set field="settingsError" from="ec.message.hasError()"/>
         <script>ec.message.clearErrors()</script>
         <set field="employerRows" from="Array.from(found?.employers || [])"/>

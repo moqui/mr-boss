@@ -20,8 +20,12 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="organizationPartyId"/>
     <actions>
         <set field="organizationPartyId" from="organizationPartyId || marketing.activeOrganizationPartyId || null"/>
-        <service-call name="mantle.marketing.MarketingReportServices.get#ReportCatalog" in-map="{appRoot:'Marketing'}" out-map="catalog"
-                transaction="force-new" ignore-error="true"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('mantle.marketing.MarketingReportServices.get#ReportCatalog').requireNewTransaction(true)
+                    .parameters({appRoot:'Marketing'}).call()
+            if (probed != null) catalog = Object.assign({}, catalog || {}, probed)
+        }</script>
         <set field="catalogRefused" from="ec.message.hasError()"/>
         <script>ec.message.clearErrors()</script>
         <set field="reportRows" from="Array.from(catalog?.reports || []).map(row =&gt; Object.assign({}, row,

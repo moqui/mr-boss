@@ -32,9 +32,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>
         <set field="loadRefusal" value=""/>
         <if condition="sales.capabilities.reportRead &amp;&amp; organizationPartyId">
-            <service-call name="mantle.sales.ForecastServices.get#TargetAttainment" out-map="context" transaction="force-new" ignore-error="true"
-                    in-map="{organizationPartyId:organizationPartyId, timePeriodId:(timePeriodId || null), currencyUomId:(currencyUomId || null),
-                        basisEnumId:(basisEnumId || null), asOfDate:(asOfDate || null), pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.sales.ForecastServices.get#TargetAttainment').requireNewTransaction(true)
+                        .parameters({organizationPartyId:organizationPartyId, timePeriodId:(timePeriodId || null), currencyUomId:(currencyUomId || null),
+                        basisEnumId:(basisEnumId || null), asOfDate:(asOfDate || null), pageIndex:pageIndex, pageNoLimit:ec.context.pageNoLimit}).call()
+                if (probed != null) for (const key of Object.keys(probed)) if (!Object.prototype.hasOwnProperty.call(globalThis, key)) globalThis[key] = probed[key]
+            }</script>
             <!-- a refusal is said as Mantle words it (a period of another organization, too many records to count) -->
             <set field="loadRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
             <script>ec.message.clearErrors()</script>

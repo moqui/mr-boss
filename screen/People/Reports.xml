@@ -51,8 +51,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="chosen" from="reportList.find(row =&gt; row.reportId === reportId) || reportList[0] || null"/>
         <set field="answer" from="null"/>
         <if condition="chosen">
-            <service-call name="mantle.humanres.PeopleReportServices.run#Report" out-map="answer" transaction="force-new" ignore-error="true"
-                    in-map="Object.assign({}, reportOptions, {reportId:chosen.reportId})"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.humanres.PeopleReportServices.run#Report').requireNewTransaction(true)
+                        .parameters(Object.assign({}, reportOptions, {reportId:chosen.reportId})).call()
+                if (probed != null) answer = Object.assign({}, answer || {}, probed)
+            }</script>
             <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : null"/>
             <script>ec.message.clearErrors()</script>
         </if>

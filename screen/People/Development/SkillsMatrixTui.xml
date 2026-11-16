@@ -43,17 +43,25 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <actions>
-        <service-call name="mantle.humanres.DevelopmentServices.get#SkillsMatrix" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{organizationPartyId:(organizationPartyId || null), unitPartyId:(unitPartyId || null),
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('mantle.humanres.DevelopmentServices.get#SkillsMatrix').requireNewTransaction(true)
+                    .parameters({organizationPartyId:(organizationPartyId || null), unitPartyId:(unitPartyId || null),
                     emplPositionClassId:(emplPositionClassId || null), skillTypeEnumId:(skillTypeEnumId || null), term:(term || null),
-                    pageIndex:(pageIndex || 0)}"/>
+                    pageIndex:(pageIndex || 0)}).call()
+            if (probed != null) found = Object.assign({}, found || {}, probed)
+        }</script>
         <set field="matrixError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
         <script>ec.message.clearErrors()</script>
         <if condition="availableFromDate &amp;&amp; availableThruDate &amp;&amp; availableHours">
-            <service-call name="ironstone.people.ContextServices.find#AvailablePeople" out-map="available" transaction="force-new" ignore-error="true"
-                    in-map="{organizationPartyId:(organizationPartyId || null), unitPartyId:(unitPartyId || null),
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('ironstone.people.ContextServices.find#AvailablePeople').requireNewTransaction(true)
+                        .parameters({organizationPartyId:(organizationPartyId || null), unitPartyId:(unitPartyId || null),
                         emplPositionClassId:(emplPositionClassId || null), term:(term || null), skillTypeEnumId:(availableSkillTypeEnumId || null),
-                        fromDate:availableFromDate, thruDate:availableThruDate, hoursPerWeek:availableHours}"/>
+                        fromDate:availableFromDate, thruDate:availableThruDate, hoursPerWeek:availableHours}).call()
+                if (probed != null) available = Object.assign({}, available || {}, probed)
+            }</script>
             <set field="availableError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
             <script>ec.message.clearErrors()</script>
         </if>

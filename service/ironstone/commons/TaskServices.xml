@@ -536,7 +536,7 @@ along with this software (see the LICENSE.md file). If not, see
                     isDone: isDone, isOpen: isOpen, canUpdate: canUpdate, isOwner: isOwner, roleList: roles, follower: !!entry.follower,
                     dueMillis: due, dueText: dueText, dueEditText: due != null ? dayText(due) : '', estimatedCompletionDate: due != null ? dayText(due) : null, dueAllDay: 'Y',
                     overdue: isOpen && due != null && due < todayStart, dueToday: due != null && due >= todayStart && due < tomorrowStart,
-                    priority: task.priority ?? null, priorityText: task.priority != null ? String(task.priority) : '',
+                    priority: task.priority ?? null, priorityText: task.priority != null ? (task.priority <= 3 ? L('High') : task.priority <= 6 ? L('Normal') : L('Low')) + ' (' + task.priority + ')' : '',
                     purposeEnumId: task.purposeEnumId || null, purposeLabel: enumLabel(task.purposeEnumId),
                     rootWorkEffortId: task.rootWorkEffortId || null, projectName: task.rootWorkEffortId ? (projects[task.rootWorkEffortId] || task.rootWorkEffortId) : '',
                     parentWorkEffortId: task.parentWorkEffortId || null,
@@ -711,7 +711,8 @@ along with this software (see the LICENSE.md file). If not, see
                     if (priority == null) { ec.message.addError(ec.l10n.localize('A priority is 1 (highest) to 9 (lowest)')); return }
                     ec.service.sync().name('mantle.work.TaskServices.update#Task').parameters({workEffortId: workEffortId, priority: priority}).call()
                     if (ec.message.hasError()) return
-                    valueText = String(priority)
+                    // as the lists show it (decorate#TaskRows): High 1-3, Normal 4-6, Low 7-9
+                    valueText = ec.l10n.localize(priority <= 3 ? 'High' : priority <= 6 ? 'Normal' : 'Low') + ' (' + priority + ')'
                     message = ec.resource.expand('${name}: priority ${priority}', '', {name: name, priority: priority})
                 } else {
                     ec.message.addError(ec.resource.expand('${field} is not a field of the task list', '', {field: field}))

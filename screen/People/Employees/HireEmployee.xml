@@ -64,10 +64,14 @@ along with this software (see the LICENSE.md file). If not, see
         </container>
         <label type="p" style="text-caption m-muted" condition="!(people.capabilities.hrView &amp;&amp; people.capabilities.hrEdit)"
                 text="Hiring is open to HR officers of the employer."/>
-        <container style="row items-center q-gutter-sm text-caption m-muted" condition="hireDraftId">
-            <label text="A hire you started ${hireDraftSince}, resumed"/>
-            <link url="discardDraft" link-type="hidden-form-link" text="Discard it" confirmation="Discard the hire you started and start again?"/>
-        </container>
+        <section name="HireDraftNote" condition="hireDraftId">
+            <widgets>
+                <container style="row items-center q-gutter-sm text-caption m-muted">
+                    <label text="A hire you started ${hireDraftSince}, resumed"/>
+                    <link url="discardDraft" link-type="hidden-form-link" text="Discard it" confirmation="Discard the hire you started and start again?"/>
+                </container>
+            </widgets>
+        </section>
         <subscreens-panel id="HireWizard" type="wizard" finish-text="Hire"/>
     </widgets>
 </screen>

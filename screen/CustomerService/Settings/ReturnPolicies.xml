@@ -71,9 +71,12 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="organizationPartyId"/><parameter name="previewOrderId"/></default-response>
     </transition>
     <actions>
-        <service-call name="ironstone.customerservice.ReturnServices.get#ReturnPolicySettings" out-map="out" transaction="force-new"
-                ignore-error="true"
-                in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId, previewOrderId:previewOrderId}"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('ironstone.customerservice.ReturnServices.get#ReturnPolicySettings').requireNewTransaction(true)
+                    .parameters({appRoot:appRoot, organizationPartyId:organizationPartyId, previewOrderId:previewOrderId}).call()
+            if (probed != null) out = Object.assign({}, out || {}, probed)
+        }</script>
         <set field="settingsError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
         <script>ec.message.clearErrors()</script>
         <set field="cfg" from="out?.settings || {policies: [], reasons: [], organizations: []}"/>

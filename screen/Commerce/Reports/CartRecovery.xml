@@ -37,8 +37,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="options" from="{productStoreId:productStoreId || null, interval:interval || 'M', periodDate:periodDate || null, currencyUomId:currencyUomId || null}"/>
     </always-actions>
     <actions>
-        <service-call name="ironstone.commerce.ReportingServices.get#CartRecovery" out-map="found"
-                in-map="Object.assign({}, options, {appRoot:appRoot})" transaction="force-new" ignore-error="true"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('ironstone.commerce.ReportingServices.get#CartRecovery').requireNewTransaction(true)
+                    .parameters(Object.assign({}, options, {appRoot:appRoot})).call()
+            if (probed != null) found = Object.assign({}, found || {}, probed)
+        }</script>
         <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : null"/>
         <script>ec.message.clearErrors()</script>
         <set field="answer" from="found?.answer || null"/>

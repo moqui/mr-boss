@@ -66,8 +66,12 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."><parameter name="systemMessageRemoteId"/></error-response>
     </transition>
     <actions>
-        <service-call name="mantle.product.StoreChannelServices.get#StoreIntegration" out-map="found" transaction="force-new"
-                ignore-error="true" in-map="{systemMessageRemoteId:systemMessageRemoteId}"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('mantle.product.StoreChannelServices.get#StoreIntegration').requireNewTransaction(true)
+                    .parameters({systemMessageRemoteId:systemMessageRemoteId}).call()
+            if (probed != null) found = Object.assign({}, found || {}, probed)
+        }</script>
         <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
         <script>ec.message.clearErrors()</script>
         <set field="integration" from="found?.integration || null"/>
@@ -78,9 +82,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="managed" from="!!integration?.managed"/>
         <set field="takesCustomer" from="parameterFields.some((field) =&gt; field.name == 'customerPartyId')"/>
         <if condition="integration">
-            <service-call name="mantle.product.StoreChannelServices.find#StoreMessages" out-map="messagesFound" transaction="force-new"
-                    ignore-error="true" in-map="{systemMessageRemoteId:systemMessageRemoteId, state:(state || null), term:(term || null),
-                        pageIndex:pageIndex, pageSize:pageSize}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.product.StoreChannelServices.find#StoreMessages').requireNewTransaction(true)
+                        .parameters({systemMessageRemoteId:systemMessageRemoteId, state:(state || null), term:(term || null),
+                        pageIndex:pageIndex, pageSize:pageSize}).call()
+                if (probed != null) messagesFound = Object.assign({}, messagesFound || {}, probed)
+            }</script>
             <set field="messagesFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
             <script>ec.message.clearErrors()</script>
         </if>
@@ -94,8 +102,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="retryable" from="messages.filter((row) =&gt; row.retryable)"/>
         <set field="retryableDocuments" from="ediDocuments.filter((row) =&gt; row.retryable)"/>
         <if condition="integration &amp;&amp; systemMessageId">
-            <service-call name="mantle.product.StoreChannelServices.get#StoreMessage" out-map="detail" transaction="force-new"
-                    ignore-error="true" in-map="{systemMessageId:systemMessageId}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.product.StoreChannelServices.get#StoreMessage').requireNewTransaction(true)
+                        .parameters({systemMessageId:systemMessageId}).call()
+                if (probed != null) detail = Object.assign({}, detail || {}, probed)
+            }</script>
             <set field="detailFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
             <script>ec.message.clearErrors()</script>
         </if>

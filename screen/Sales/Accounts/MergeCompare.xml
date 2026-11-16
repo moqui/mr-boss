@@ -47,8 +47,12 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="can.mergeAccounts">
             <service-call name="ironstone.commons.ContactServices.get#ComparePair" in-map="{partyId:partyId, otherPartyId:otherPartyId}"
                     out-map="pair" transaction="force-new" ignore-error="true"/>
-            <service-call name="mantle.sales.SalesWorkspaceServices.get#AccountDocumentCounts" out-map="countsOut"
-                    in-map="{partyIdList:[partyId, otherPartyId]}" transaction="force-new" ignore-error="true"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.sales.SalesWorkspaceServices.get#AccountDocumentCounts').requireNewTransaction(true)
+                        .parameters({partyIdList:[partyId, otherPartyId]}).call()
+                if (probed != null) countsOut = Object.assign({}, countsOut || {}, probed)
+            }</script>
         </if>
         <script><![CDATA[
             pairFound = !!can.mergeAccounts && !ec.message.hasError() && pair?.left != null && pair?.right != null

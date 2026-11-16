@@ -101,9 +101,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="structure" from="found?.structure || null"/>
         <set field="recordFound" from="!!structure"/>
         <if condition="recordFound &amp;&amp; runPreview == 'true'">
-            <service-call name="mantle.humanres.PayrollSetupServices.preview#Structure" out-map="preview" transaction="force-new" ignore-error="true"
-                    in-map="{payrollStructureId:payrollStructureId, asOfDate:(asOfDate || null), inputValues:(sampleValues || null),
-                        payrollGroupId:(payrollGroupId || null), payrollLocalizationId:(payrollLocalizationId || null)}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.humanres.PayrollSetupServices.preview#Structure').requireNewTransaction(true)
+                        .parameters({payrollStructureId:payrollStructureId, asOfDate:(asOfDate || null), inputValues:(sampleValues || null),
+                        payrollGroupId:(payrollGroupId || null), payrollLocalizationId:(payrollLocalizationId || null)}).call()
+                if (probed != null) preview = Object.assign({}, preview || {}, probed)
+            }</script>
             <script>previewError = ec.message.errorsString; ec.message.clearErrors()</script>
         </if>
         <script><![CDATA[

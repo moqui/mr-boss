@@ -43,8 +43,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="templateLines" from="detail?.lines || []"/>
         <set field="templateHistory" from="detail?.history || []"/>
         <if condition="recordFound">
-            <service-call name="mantle.order.SalesQuoteServices.preview#QuoteTemplate" out-map="previewOut" transaction="force-new"
-                    ignore-error="true" in-map="{orderId:orderId, customerPartyId:(previewCustomerPartyId || null), validDate:(previewDate || null)}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.order.SalesQuoteServices.preview#QuoteTemplate').requireNewTransaction(true)
+                        .parameters({orderId:orderId, customerPartyId:(previewCustomerPartyId || null), validDate:(previewDate || null)}).call()
+                if (probed != null) previewOut = Object.assign({}, previewOut || {}, probed)
+            }</script>
             <set field="previewRefusal" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?([A-Z_]+: )/, '') : ''"/>
             <script>ec.message.clearErrors()</script>
         </if>
@@ -320,10 +324,14 @@ along with this software (see the LICENSE.md file). If not, see
                                 <column><field-ref name="amountText"/></column>
                             </columns>
                         </form-list>
-                        <container style="row justify-end q-pa-sm" condition="preview">
-                            <label text="${ec.l10n.localize('Example total')} ${preview?.totalText} · ${ec.l10n.localize('before tax, which the quote’s address decides')}"
-                                    type="span" style="text-subtitle1 text-weight-medium"/>
-                        </container>
+                        <section name="PreviewTotal" condition="preview">
+                            <widgets>
+                                <container style="row justify-end q-pa-sm">
+                                    <label text="${ec.l10n.localize('Example total')} ${preview?.totalText} · ${ec.l10n.localize('before tax, which the quote’s address decides')}"
+                                            type="span" style="text-subtitle1 text-weight-medium"/>
+                                </container>
+                            </widgets>
+                        </section>
                     </box-body-nopad>
                 </container-box>
                 <container-box>

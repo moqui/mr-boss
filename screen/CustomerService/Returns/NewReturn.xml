@@ -85,9 +85,12 @@ along with this software (see the LICENSE.md file). If not, see
         </error-response>
     </transition>
     <actions>
-        <service-call name="ironstone.customerservice.ReturnServices.prepare#Return" out-map="prepareOut" transaction="force-new"
-                ignore-error="true"
-                in-map="{appRoot:appRoot, customerPartyId:customerPartyId, orderId:orderId, requestId:requestId}"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('ironstone.customerservice.ReturnServices.prepare#Return').requireNewTransaction(true)
+                    .parameters({appRoot:appRoot, customerPartyId:customerPartyId, orderId:orderId, requestId:requestId}).call()
+            if (probed != null) prepareOut = Object.assign({}, prepareOut || {}, probed)
+        }</script>
         <set field="prepareError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
         <script>ec.message.clearErrors()</script>
         <set field="prepared" from="prepareOut?.prepared || {orderOptions: [], lineRows: []}"/>

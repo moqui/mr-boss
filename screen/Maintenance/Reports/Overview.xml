@@ -27,17 +27,25 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:facilityId || null, fromDate:fromDate || null,
                 thruDate:thruDate || null}"/>
-        <service-call name="ironstone.maintenance.ReportServices.get#ReportCatalogue" out-map="catalogue" transaction="force-new"
-                ignore-error="true" in-map="{appRoot:'Maintenance'}"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('ironstone.maintenance.ReportServices.get#ReportCatalogue').requireNewTransaction(true)
+                    .parameters({appRoot:'Maintenance'}).call()
+            if (probed != null) catalogue = Object.assign({}, catalogue || {}, probed)
+        }</script>
         <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z][A-Z0-9_]+: /, '') : null"/>
         <script>ec.message.clearErrors()</script>
         <set field="readable" from="(catalogue?.reports || []).map(row =&gt; row.entryId)"/>
         <if condition="readable.length">
             <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceHome" out-map="home" transaction="force-new"
                     ignore-error="true" in-map="{organizationPartyId:options.organizationPartyId, facilityId:options.facilityId}"/>
-            <service-call name="mantle.work.MaintenanceReportServices.get#MaintenanceCompliance" out-map="compliance" transaction="force-new"
-                    ignore-error="true" in-map="{organizationPartyId:options.organizationPartyId, facilityId:options.facilityId,
-                        fromDate:options.fromDate, thruDate:options.thruDate, pageSize:1}"/>
+            <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+            <script>{
+                const probed = ec.service.sync().name('mantle.work.MaintenanceReportServices.get#MaintenanceCompliance').requireNewTransaction(true)
+                        .parameters({organizationPartyId:options.organizationPartyId, facilityId:options.facilityId,
+                        fromDate:options.fromDate, thruDate:options.thruDate, pageSize:1}).call()
+                if (probed != null) compliance = Object.assign({}, compliance || {}, probed)
+            }</script>
             <set field="figureError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z][A-Z0-9_]+: /, '') : null"/>
             <script>ec.message.clearErrors()</script>
         </if>

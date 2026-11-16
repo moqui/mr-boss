@@ -49,9 +49,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="caps" from="people?.capabilities || {}"/>
         <set field="showing" from="['mine', 'team', 'all'].includes(show) ? show : 'mine'"/>
         <set field="stateShowing" from="['open', 'closed', 'all'].includes(state) ? state : 'open'"/>
-        <service-call name="mantle.humanres.ReviewServices.find#Goals" out-map="found" transaction="force-new" ignore-error="true"
-                in-map="{show:showing, state:stateShowing, partyId:(partyId || null), performanceReviewId:(performanceReviewId || null),
-                    pageIndex:(pageIndex || 0)}"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('mantle.humanres.ReviewServices.find#Goals').requireNewTransaction(true)
+                    .parameters({show:showing, state:stateShowing, partyId:(partyId || null), performanceReviewId:(performanceReviewId || null),
+                    pageIndex:(pageIndex || 0)}).call()
+            if (probed != null) found = Object.assign({}, found || {}, probed)
+        }</script>
         <set field="goalsError" from="ec.message.hasError()"/>
         <script>ec.message.clearErrors()</script>
         <script><![CDATA[

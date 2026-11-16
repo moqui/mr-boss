@@ -104,8 +104,12 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response type="none"/>
     </transition>
     <actions>
-        <service-call name="ironstone.purchasing.AccessServices.check#Record" out-map="rfqRecord"
-                in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId}" transaction="force-new" ignore-error="true"/>
+        <!-- in a transaction of its own, its refusal left for the lines below to read (ignore-error clears it) -->
+        <script>{
+            const probed = ec.service.sync().name('ironstone.purchasing.AccessServices.check#Record').requireNewTransaction(true)
+                    .parameters({appRoot:appRoot, recordType:'rfq', recordId:requestId}).call()
+            if (probed != null) rfqRecord = Object.assign({}, rfqRecord || {}, probed)
+        }</script>
         <set field="unavailableText" from="ec.message.hasError() ? 'RFQ ' + requestId + ' is not available: it does not exist or it '
                 + 'is not a request for quotation of your organizations.' : null"/>
         <script>ec.message.clearErrors()</script>
