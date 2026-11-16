@@ -39,12 +39,14 @@ spec({
     stepwise: true,
     setupSpec() {
         login("john.doe")
-        system(() => {
+        // last week as the manager sees it, who sends the reminder: john.doe's US/Central and her server time zone part on
+        // a Sunday evening, when they name different weeks
+        asUser(users.manager, () => system(() => {
             const week = invoke(TS + "get#WeekRange", {weekStart: 1})
             const last = invoke(TS + "get#WeekRange", {weekStart: 1, date: Number(String(week.fromDate)) - 86400000})
             state.lastWeekDay = last.weekStartDay
             state.lastFrom = Number(String(last.fromDate))
-        })
+        }))
     },
     cleanupSpec() {
         ec.message.clearErrors()
