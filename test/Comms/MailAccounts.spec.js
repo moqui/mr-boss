@@ -224,21 +224,20 @@ feature("Test fails at once on a server that is not there, with what to try; Nex
 
 feature("Options saves the name, the sync window and the filing; a personal account has no members", {
     when() {
+        // the step is a server merge (not server-static), so the members fields are left out of the render itself
         const shown = render("Add/Options", { emailAccountId: personalId })
-        // the step is server-static: whether the members fields show is its data, isShared, which the browser reads
-        const shownData = JSON.parse(ec.screen.makeTest().rootScreen(webroot).render(`apps/Comms/${BASE}/Add/Options/actions`, { emailAccountId: personalId }, null).output || "{}")
         const saved = post("Add/Options/saveOptions", { emailAccountId: personalId, accountName: "Acme", syncWindowDays: "90", recordFilingEnumId: "ErfAllMatches" })
         const members = post("Add/Options/saveOptions", { emailAccountId: personalId, memberUserIds: "ORG_ZIZI_JD" })
         const all = post("Add/Options/saveOptions", { emailAccountId: personalId, syncWindowDays: "all" })
         const account = accountOf("pat@acme.example")
         post("Add/Options/saveOptions", { emailAccountId: personalId, syncWindowDays: "90" })
-        return { shown, shownData, saved, members, all, account, after: accountOf("pat@acme.example") }
+        return { shown, saved, members, all, account, after: accountOf("pat@acme.example") }
     },
-    then({ shown, shownData, saved, members, all, account, after }) {
+    then({ shown, saved, members, all, account, after }) {
         shown.errors == ""
         shown.output.includes("Only what I link")
         shown.output.includes("Every message with a known contact")
-        shownData.isShared === false
+        !shown.output.includes("Add people who share it")
         saved.errors == ""
         members.errors.includes("Only a shared account has members")
         all.errors == ""
