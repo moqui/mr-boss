@@ -106,9 +106,9 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-single>
             </box-body>
         </container-box>
-        <section name="NewListAllowed" condition="pricingAccess.canPriceEdit || pricingAccess.canSupplierEdit">
+        <section name="NewListAllowed">
             <widgets>
-                <container-dialog id="NewPriceListDialog" title="New price list" button-text="New price list" width="960">
+                <container-dialog id="NewPriceListDialog" title="New price list" button-text="New price list" width="960" disable-condition="!(pricingAccess.canPriceEdit || pricingAccess.canSupplierEdit)" disable-message="Needs price or supplier price editing access, which an administrator can grant.">
                     <form-single name="NewPriceList" transition="store" map="newList">
                         <field name="priceListId">
                             <default-field>

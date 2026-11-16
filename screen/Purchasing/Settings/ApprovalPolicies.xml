@@ -110,7 +110,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Approval steps · ${policyRows.length}"/>
                     <box-toolbar>
-                        <container-dialog id="NewApprovalStep" condition="found.canEdit" button-text="New step" icon="sym_o_add"
+                        <container-dialog id="NewApprovalStep" disable-condition="!found.canEdit"
+                                disable-message="Needs purchasing settings access, which an administrator can grant." button-text="New step" icon="sym_o_add"
                                 type="primary" width="760" title="New approval step of ${found.organizationName}">
                             <form-single name="ApprovalPolicy" transition="storePolicy" map="newStepValue">
                                 <field name="organizationPartyId"><default-field><hidden/></default-field></field>

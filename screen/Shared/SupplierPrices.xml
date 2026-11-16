@@ -162,9 +162,9 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-single>
             </box-body>
         </container-box>
-        <section name="NewOfferAllowed" condition="canSupplierPriceEdit">
+        <section name="NewOfferAllowed">
             <widgets>
-                <container-dialog id="NewSupplierOfferDialog" button-text="New supplier offer" title="New supplier offer" width="960">
+                <container-dialog id="NewSupplierOfferDialog" button-text="New supplier offer" title="New supplier offer" width="960" disable-condition="!(canSupplierPriceEdit)" disable-message="Needs supplier price editing access, which an administrator can grant.">
                     <form-single name="NewSupplierOffer" transition="store" map="newOffer">
                         <field name="organizationPartyId">
                             <default-field title="">

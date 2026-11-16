@@ -90,7 +90,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Request purposes"/>
                     <box-toolbar>
                         <container-dialog id="NewPurposeDialog" button-text="New purpose" icon="sym_o_add" width="640"
-                                title="New request purpose" condition="canEdit">
+                                title="New request purpose" disable-condition="!canEdit"
+                                disable-message="Needs purchasing settings access, which an administrator can grant.">
                             <form-single name="NewPurpose" transition="storePurpose">
                                 <field name="description">
                                     <default-field title="Purpose">
@@ -186,7 +187,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Supplier categories"/>
                     <box-toolbar>
                         <container-dialog id="NewCategoryDialog" button-text="New category" icon="sym_o_add" width="640"
-                                title="New supplier category" condition="canEdit">
+                                title="New supplier category" disable-condition="!canEdit"
+                                disable-message="Needs purchasing settings access, which an administrator can grant.">
                             <form-single name="NewCategory" transition="storeCategory">
                                 <field name="description">
                                     <default-field title="Category">

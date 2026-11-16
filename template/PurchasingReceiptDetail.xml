@@ -140,13 +140,15 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <widgets>
         <!-- PrepareReceipt (design §9): "Expected receipt (ASN)", the order part's one open receipt; for a buyer or a receiver -->
-        <section name="PrepareReceiptDialog" condition="purchasing.capabilities.buy || purchasing.capabilities.receive">
+        <section name="PrepareReceiptDialog">
             <actions>
                 <set field="prepareValue" from="{operationKey:'asn-' + ec.user.randomString(24), orderPart:prepareOrderPart || ''}"/>
             </actions>
             <widgets>
                 <container-dialog id="PrepareReceiptDialog" button-text="Expected receipt (ASN)" icon="sym_o_local_shipping"
-                        title="Expected receipt (ASN)" width="640">
+                        title="Expected receipt (ASN)" width="640"
+                        disable-condition="!(purchasing.capabilities.buy || purchasing.capabilities.receive)"
+                        disable-message="Needs purchasing or receiving access, which an administrator can grant.">
                     <label text="Records the receipt the supplier is sending. A purchase order has one open receipt: a second
                             request opens the same one." type="p"/>
                     <form-single name="PrepareReceipt" transition="prepareReceipt" map="prepareValue">

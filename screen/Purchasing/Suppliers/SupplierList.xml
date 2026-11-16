@@ -126,7 +126,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row items-center q-gutter-xs">
                 <container-dialog id="NewSupplierOrganizationDialog" button-text="New supplier" type="primary" icon="sym_o_add"
-                        title="New supplier organization" width="720" condition="canCreate">
+                        title="New supplier organization" width="720" disable-condition="!canCreate"
+                        disable-message="Needs supplier profile editing access, which an administrator can grant.">
                     <form-single name="CreateSupplierOrganization" transition="createSupplier">
                         <field name="organizationName">
                             <default-field title="Organization name">
@@ -176,7 +177,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </form-single>
                 </container-dialog>
                 <container-dialog id="NewSupplierPersonDialog" button-text="New individual supplier" icon="sym_o_person_add"
-                        title="New individual supplier" width="720" condition="canCreate">
+                        title="New individual supplier" width="720" disable-condition="!canCreate"
+                        disable-message="Needs supplier profile editing access, which an administrator can grant.">
                     <form-single name="CreateSupplierPerson" transition="createSupplier">
                         <field name="firstName">
                             <default-field title="First name">
