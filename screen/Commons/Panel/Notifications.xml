@@ -192,7 +192,10 @@ along with this software (see the LICENSE.md file). If not, see
                     <q-item-section avatar style="min-width: 28px;"><q-icon name="sym_o_how_to_reg" color="info" size="xs"></q-icon></q-item-section>
                     <q-item-section><q-item-label lines="2">]]></text><text type="tui" template="false">[]</text></render-mode>
                 <render-mode><text type="qvt"><![CDATA[<m-form action="${openAction}"><input type="hidden" name="notificationMessageId" value="${row.notificationMessageId}"><q-btn flat dense no-caps align="left" type="submit" padding="none" color="primary" class="full-width text-left"><div class="full-width text-left">]]></text><text type="tui" template="false">[]</text></render-mode>
-                <label type="span" text="${row.titleText}"/>
+                <!-- in the terminal a link to its record, which a row opens (a post never does there) -->
+                <section name="ApprovalTitle" condition="row.openUrl &amp;&amp; sri.getRenderMode() === 'tui'"><widgets>
+                    <link url="${row.openUrl}" url-type="plain" link-type="anchor" text="${row.titleText}"/>
+                </widgets><fail-widgets><label type="span" text="${row.titleText}"/></fail-widgets></section>
                 <render-mode><text type="qvt"><![CDATA[</div></q-btn></m-form></q-item-label><q-item-label caption lines="2">]]></text><text type="tui" template="false">[]</text></render-mode>
                 <label type="span" text="${row.caption}"/>
                 <render-mode><text type="qvt"><![CDATA[</q-item-label>
@@ -239,7 +242,10 @@ along with this software (see the LICENSE.md file). If not, see
                     </widgets></section>
                     <render-mode><text type="qvt"><![CDATA[</q-item-section><q-item-section><q-item-label lines="2" class="${row.unread ? 'text-weight-medium' : ''}">]]></text><text type="tui" template="false">[]</text></render-mode>
                     <render-mode><text type="qvt"><![CDATA[<m-form action="${openAction}"><input type="hidden" name="notificationMessageId" value="${row.notificationMessageId}"><q-btn flat dense no-caps align="left" type="submit" padding="none" color="primary" class="full-width text-left"><div class="full-width text-left">]]></text><text type="tui" template="false">[]</text></render-mode>
-                    <label type="span" text="${row.titleText}"/>
+                    <!-- in the terminal a link to its record, which a row opens (a post never does there) -->
+                    <section name="NotificationTitle" condition="row.openUrl &amp;&amp; sri.getRenderMode() === 'tui'"><widgets>
+                        <link url="${row.openUrl}" url-type="plain" link-type="anchor" text="${row.titleText}"/>
+                    </widgets><fail-widgets><label type="span" text="${row.titleText}"/></fail-widgets></section>
                     <render-mode><text type="qvt"><![CDATA[</div></q-btn></m-form></q-item-label><q-item-label caption lines="1">]]></text><text type="tui" template="false">[]</text></render-mode>
                     <label type="span" text="${row.caption}"/>
                     <render-mode><text type="qvt"><![CDATA[</q-item-label></q-item-section>]]></text><text type="tui" template="false">[]</text></render-mode>

@@ -59,6 +59,46 @@ feature("the Notifications tab lists the approval waiting, the unread and the ea
     },
 })
 
+// the terminal's rows (the titles' tui twins, ACC-UI-040): in the tray's panel and in the center (an app's Approvals mounts
+// it), a title is a link to its record, which Right opens (a post does not)
+feature("in the terminal a notification's and an approval's title is a link to its record, in the panel and the center", {
+    when() {
+        // a node and what it holds: its children, and a list's rows' cells
+        const walk = (node) => !node || typeof node !== "object" ? [] : [node].concat(...(Array.isArray(node) ? node
+            : (node.c || []).concat(...(node.rows || []).map((row) => row.cells || []))).map(walk))
+        const titles = (path, parameters) => {
+            const str = ec.screen.makeTest().rootScreen(commons).renderMode("tui").render(path, Object.assign({ lastStandalone: "-2" }, parameters), null)
+            const output = String(str.output || "")
+            const links = walk(JSON.parse(output)).filter((node) => node.t === "link")
+            const linkOf = (text) => links.find((node) => String(node.text || "").startsWith(text)) || {}
+            ec.message.clearErrors()
+            return {
+                status: str.status, broken: /Error rendering|Exception in render/.test(output),
+                mention: linkOf("Joe Developer mentioned you on Request BOSS_DEMO_REQUEST"),
+                approval: linkOf("Approve the shared calendar subscription"),
+                posts: links.filter((node) => String(node.url || "").includes("openNotification")).length
+            }
+        }
+        return { panel: titles("Panel/Notifications", {}), center: titles("Notifications", { appName: "Commons" }) }
+    },
+    then({ panel, center }) {
+        panel.status == 200
+        !panel.broken
+        panel.mention.url.includes("/Commons/Requests/RequestDetail?requestId=BOSS_DEMO_REQUEST")
+        panel.mention.method == null
+        panel.approval.url.length > 0
+        panel.approval.method == null
+        panel.posts == 0
+        center.status == 200
+        !center.broken
+        center.mention.url.includes("/Commons/Requests/RequestDetail?requestId=BOSS_DEMO_REQUEST")
+        center.mention.method == null
+        center.approval.url.length > 0
+        center.approval.method == null
+        center.posts == 0
+    },
+})
+
 // with the Commons app chip: in a run of every component the Mantle specs before this one leave many newer record updates
 feature("the Updates toggle lists the automatic inbox, with no approvals", {
     when() { return render("Panel/Notifications", { inboxEnumId: "NinUpdates", appName: "Commons" }) },

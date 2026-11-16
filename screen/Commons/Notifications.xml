@@ -225,7 +225,12 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field-layout><field-row-big><field-ref name="approveButton"/></field-row-big></field-layout>
                                 </form-single></action>
                             </row-selection>
-                            <field name="titleText"><default-field title="What">
+                            <field name="titleText">
+                                <!-- the terminal opens the row by a link to its record (a post never opens a row there); the
+                                    approval stays until its decision -->
+                                <conditional-field condition="openUrl &amp;&amp; sri.getRenderMode() === 'tui'" title="What">
+                                    <link url="${openUrl}" url-type="plain" link-type="anchor" text="${titleText}"/></conditional-field>
+                                <default-field title="What">
                                 <render-mode><text type="qvt"><![CDATA[<q-btn flat dense no-caps align="left" type="submit" form="NotificationOpen_${notificationMessageId}" padding="none" color="primary" class="text-left"><div class="full-width text-left">]]></text><text type="tui" template="false">[]</text></render-mode>
                                 <label type="span" text="${titleText}"/>
                                 <render-mode><text type="qvt"><![CDATA[</div></q-btn>]]></text><text type="tui" template="false">[]</text></render-mode>
@@ -283,7 +288,12 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field-layout><field-row-big><field-ref name="markButton"/></field-row-big></field-layout>
                             </form-single></action>
                         </row-selection>
-                        <field name="titleText"><default-field title="Notification">
+                        <field name="titleText">
+                            <!-- the terminal opens the row by a link to its record (a post never opens a row there); reading it
+                                there leaves it unread until Mark read -->
+                            <conditional-field condition="openUrl &amp;&amp; sri.getRenderMode() === 'tui'" title="Notification">
+                                <link url="${openUrl}" url-type="plain" link-type="anchor" text="${titleText}"/></conditional-field>
+                            <default-field title="Notification">
                             <render-mode><text type="qvt"><![CDATA[<q-btn flat dense no-caps align="left" type="submit" form="NotificationOpen_${notificationMessageId}" padding="none" color="primary" class="text-left${unread ? ' text-weight-medium' : ''}"><div class="full-width text-left">]]></text><text type="tui" template="false">[]</text></render-mode>
                             <label type="span" text="${titleText}"/>
                             <render-mode><text type="qvt"><![CDATA[</div></q-btn>]]></text><text type="tui" template="false">[]</text></render-mode>
