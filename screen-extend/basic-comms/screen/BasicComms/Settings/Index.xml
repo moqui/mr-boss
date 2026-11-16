@@ -22,11 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
         <row-col md="4" sm="6"><container-box><box-header title="Reading and keys"/><box-body>
             <label type="p" text="Where the reading pane goes, marking mail read, undo send, pictures in mail, and the keyboard shortcuts are in Commons Preferences." style="m-muted"/>
             <container style="row q-gutter-sm">
-                <render-mode><text type="qvt"><![CDATA[<m-link href="/qapps/Commons/Settings/Preferences"><q-btn dense unelevated no-caps class="m-btn-tonal" icon="sym_o_tune">]]></text><text type="tui" template="false">[]</text></render-mode>
-                <label type="span" text="Preferences" style="q-ml-sm"/>
-                <render-mode><text type="qvt"><![CDATA[</q-btn></m-link><m-link href="/qapps/Commons/Settings/Notifications"><q-btn dense unelevated no-caps class="m-btn-tonal" icon="sym_o_notifications">]]></text><text type="tui" template="false">[]</text></render-mode>
-                <label type="span" text="Notifications" style="q-ml-sm"/>
-                <render-mode><text type="qvt"><![CDATA[</q-btn></m-link>]]></text><text type="tui" template="false">[]</text></render-mode>
+                <link url="//Commons/Settings/Preferences" text="Preferences" icon="sym_o_tune"/>
+                <link url="//Commons/Settings/Notifications" text="Notifications" icon="sym_o_notifications"/>
             </container>
         </box-body></container-box></row-col>
     </widgets-extend>

@@ -62,9 +62,14 @@ spec({
     },
 })
 
+// rendered in Standard (html): the Reading and keys card's links to Commons Preferences and Notifications are anchors there too,
+// and Call handling has its own card (DC-UI-045)
 feature("the settings index has a card per group and says an account needs attention; Comms Settings opens on it", {
     when() {
-        const index = render("Comms/Settings/Index", {})
+        const str = ec.screen.makeTest().rootScreen(webroot).renderMode("html").render("apps/Comms/Settings/Index", { lastStandalone: "true" }, null)
+        const html = String(str.output || "")
+        const index = { errors: str.errorMessages.join(" | "), output: html, broken: /Error rendering|Exception in render/.test(html) }
+        ec.message.clearErrors()
         // the path of Comms Settings itself shows the index
         const root = render("Comms/Settings", {}).output
         return { index, root }
@@ -72,7 +77,10 @@ feature("the settings index has a card per group and says an account needs atten
     then({ index, root }) {
         index.errors == ""
         !index.broken
-        ["Mail accounts", "Identities and signatures", "Rules", "Out of office", "Text blocks", "Chat settings", "Reading and keys"].every((text) => index.output.includes(text))
+        ["Mail accounts", "Identities and signatures", "Rules", "Out of office", "Text blocks", "Chat settings", "Reading and keys", "Call handling"].every((text) => index.output.includes(text))
+        index.output.includes('href="/apps/Commons/Settings/Preferences"')
+        index.output.includes('href="/apps/Commons/Settings/Notifications"')
+        index.output.includes('/apps/Comms/Settings/CallHandling"')
         // the demo's Support account needs attention; in a full run other specs' accounts may too
         /\b(1 needs|\d+ need) your attention/.test(index.output)
         root.includes("Identities and signatures")
