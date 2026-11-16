@@ -84,7 +84,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewPayGradeDialog" button-text="New pay grade" icon="sym_o_add" type="primary" width="720"
-                        title="New pay grade" condition="canEdit">
+                        title="New pay grade" disable-condition="!canEdit"
+                        disable-message="Needs HR editing access, which an administrator can grant.">
                     <label type="p" text="A grade's band is its minimum, reference and maximum pay in a currency and a pay frequency, from a date."/>
                     <form-single name="NewPayGrade" transition="storePayGrade">
                         <field name="gradeName"><default-field title="Name"><text-line size="30"/></default-field></field>

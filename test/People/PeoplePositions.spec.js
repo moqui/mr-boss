@@ -86,7 +86,9 @@ feature("PayGrades shows an HR officer without PAYROLL_VIEW the grades' names an
         rendered.output.includes("Associate")
         rendered.output.includes("Manager")
         rendered.output.includes("Their amounts are shown to payroll only")
-        !rendered.output.includes("New pay grade")
+        // New pay grade is shown disabled with the reason, no dialog
+        !rendered.output.includes('id="NewPayGradeDialog"')
+        rendered.output.includes("New pay grade: Needs")
         !rendered.output.includes("Reference")
         !/3,?000|6,?000|4,?200|USD/.test(rendered.output)
     }

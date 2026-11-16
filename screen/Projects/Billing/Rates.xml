@@ -166,7 +166,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="submitButton"><default-field title="Find the rates"><submit/></default-field></field>
                     </form-single>
                 </container-dialog>
-                <container-dialog id="NewRateDialog" button-text="New rate" icon="sym_o_add" width="600" title="New rate" condition="canAddRate">
+                <container-dialog id="NewRateDialog" button-text="New rate" icon="sym_o_add" width="600" title="New rate" disable-condition="!canAddRate" disable-message="Needs billing rate editing access, which an administrator can grant.">
                     <form-single name="NewRate" transition="saveRate" map="newRateValue">
                         <field name="ratePurposeEnumId"><conditional-field condition="!rateAccess.client"><hidden/></conditional-field>
                             <default-field title="For"><radio>

@@ -69,7 +69,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewComponentDialog" button-text="New component" icon="sym_o_add" type="primary" width="720"
-                        title="New pay component" condition="canEdit">
+                        title="New pay component" disable-condition="!canEdit"
+                        disable-message="Needs payroll editing access, which an administrator can grant.">
                     <label type="p" text="A component's code is the name its formula and other components' formulas use for its result. Its calculation, examples and accounts are set on the component, then published."/>
                     <form-single name="NewComponent" transition="storeComponent">
                         <field name="componentCode">

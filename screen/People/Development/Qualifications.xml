@@ -107,7 +107,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="AddQualificationDialog" button-text="Add qualification" icon="sym_o_add" type="primary" width="760"
-                        title="Add a qualification" condition="canAdd">
+                        title="Add a qualification" disable-condition="!canAdd"
+                        disable-message="Needs qualification editing access, which an administrator can grant.">
                     <label type="p" style="text-caption m-muted"
                             text="It waits for verification by HR or a development administrator. Attach the certificate or document after saving, under Files."/>
                     <form-single name="AddQualification" transition="storeQualification">

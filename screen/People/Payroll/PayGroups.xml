@@ -126,7 +126,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewGroupDialog" button-text="New pay group" icon="sym_o_add" type="primary" width="760"
-                        title="New pay group" condition="canEdit">
+                        title="New pay group" disable-condition="!canEdit"
+                        disable-message="Needs payroll editing access, which an administrator can grant.">
                     <label type="p" text="A pay group is paid together: one employer, one currency, one calendar. Nothing is assumed, so each policy is chosen here."/>
                     <form-single name="NewGroup" transition="storeGroup">
                         <field name="groupName"><default-field title="Name"><text-line size="30"/></default-field></field>

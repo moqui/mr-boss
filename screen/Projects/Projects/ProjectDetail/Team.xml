@@ -119,7 +119,7 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="TeamFound" condition="recordFound"><widgets>
         <container-box><box-header title="Members · ${memberList.length}"/>
             <box-toolbar>
-                <container-dialog id="TeamAddMemberDialog" button-text="Add member" icon="sym_o_person_add" width="520" title="Add a member to ${project.workEffortName}" condition="canManage">
+                <container-dialog id="TeamAddMemberDialog" button-text="Add member" icon="sym_o_person_add" width="520" title="Add a member to ${project.workEffortName}" disable-condition="!canManage" disable-message="Needs project management access, which an administrator can grant.">
                     <form-single name="AddMember" transition="addMember">
                         <field name="workEffortId"><default-field><hidden/></default-field></field>
                         <field name="partyId"><default-field title="Person">
@@ -152,7 +152,7 @@ along with this software (see the LICENSE.md file). If not, see
             <row-col md="6">
                 <container-box><box-header title="Teams"/>
                     <box-toolbar>
-                        <container-dialog id="TeamAddTeamDialog" button-text="Add team" icon="sym_o_groups" width="520" title="Add a team to ${project.workEffortName}" condition="canManage">
+                        <container-dialog id="TeamAddTeamDialog" button-text="Add team" icon="sym_o_groups" width="520" title="Add a team to ${project.workEffortName}" disable-condition="!canManage" disable-message="Needs project management access, which an administrator can grant.">
                             <form-single name="AddTeam" transition="addMember">
                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
                                 <field name="roleTypeId" from="'OrgTeam'"><default-field><hidden/></default-field></field>
@@ -179,7 +179,7 @@ along with this software (see the LICENSE.md file). If not, see
             <row-col md="6">
                 <container-box><box-header title="Client contacts"/>
                     <box-toolbar>
-                        <container-dialog id="TeamAddClientDialog" button-text="Add contact" icon="sym_o_contact_mail" width="520" title="Add a client contact to ${project.workEffortName}" condition="canManage">
+                        <container-dialog id="TeamAddClientDialog" button-text="Add contact" icon="sym_o_contact_mail" width="520" title="Add a client contact to ${project.workEffortName}" disable-condition="!canManage" disable-message="Needs project management access, which an administrator can grant.">
                             <form-single name="AddClientContact" transition="addMember">
                                 <field name="workEffortId"><default-field><hidden/></default-field></field>
                                 <field name="partyId"><default-field title="Person">
@@ -212,7 +212,8 @@ along with this software (see the LICENSE.md file). If not, see
             <box-toolbar>
                 <link url="${plannerUrl}" url-type="plain" link-type="anchor" text="Team planner" icon="sym_o_group_work"/>
                 <container-dialog id="TeamRequestAllocationDialog" button-text="Request allocation" icon="sym_o_event_available" width="600"
-                        title="An allocation on ${project.workEffortName}" condition="canRequestAllocation">
+                        title="An allocation on ${project.workEffortName}" disable-condition="!canRequestAllocation"
+                        disable-message="Needs resource allocation access, which an administrator can grant.">
                     <form-single name="RequestAllocation" transition="requestAllocation">
                         <field name="workEffortId"><default-field><hidden/></default-field></field>
                         <field name="allocPartyId"><default-field title="Person (empty: a role to staff)">

@@ -141,7 +141,7 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col"/>
             <container style="row q-gutter-xs">
                 <link url="${timelineUrl}" url-type="plain" text="Timeline" icon="sym_o_view_timeline" link-type="anchor-button"/>
-                <container-dialog id="NewMilestoneDialog" button-text="New milestone" icon="sym_o_flag" width="520" title="New milestone" condition="canAdd" type="primary">
+                <container-dialog id="NewMilestoneDialog" button-text="New milestone" icon="sym_o_flag" width="520" title="New milestone" disable-condition="!canAdd" disable-message="Needs project planning access, which an administrator can grant." type="primary">
                     <form-single name="NewMilestone" transition="savePlanItem" focus-field="workEffortName">
                         <field name="workEffortId" from="pageWorkEffortId"><default-field><hidden/></default-field></field>
                         <field name="kind" from="'milestone'"><default-field><hidden/></default-field></field>
@@ -162,7 +162,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-ref name="submitButton"/></field-layout>
                     </form-single>
                 </container-dialog>
-                <container-dialog id="NewReleaseDialog" button-text="New release" icon="sym_o_new_releases" width="520" title="New release" condition="canAdd">
+                <container-dialog id="NewReleaseDialog" button-text="New release" icon="sym_o_new_releases" width="520" title="New release" disable-condition="!canAdd" disable-message="Needs project planning access, which an administrator can grant.">
                     <form-single name="NewRelease" transition="savePlanItem" focus-field="workEffortName">
                         <field name="workEffortId" from="pageWorkEffortId"><default-field><hidden/></default-field></field>
                         <field name="kind" from="'release'"><default-field><hidden/></default-field></field>

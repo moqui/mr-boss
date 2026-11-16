@@ -62,7 +62,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewStructureDialog" button-text="New structure" icon="sym_o_add" type="primary" width="720"
-                        title="New pay structure" condition="canEdit">
+                        title="New pay structure" disable-condition="!canEdit"
+                        disable-message="Needs payroll editing access, which an administrator can grant.">
                     <label type="p" text="A structure is composed of the employer's components in one currency, previewed gross to net and published before employees are assigned to it."/>
                     <form-single name="NewStructure" transition="storeStructure">
                         <field name="structureName"><default-field title="Name"><text-line size="40"/></default-field></field>

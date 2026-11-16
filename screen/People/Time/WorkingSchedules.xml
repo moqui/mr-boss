@@ -66,7 +66,9 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewScheduleDialog" button-text="New schedule" icon="sym_o_add" type="primary" width="720"
-                        title="Start a working schedule" condition="canEdit &amp;&amp; people.organizationPartyIds.length">
+                        title="Start a working schedule" condition="people.organizationPartyIds.length"
+                        disable-condition="!canEdit"
+                        disable-message="Needs HR editing access, which an administrator can grant.">
                     <label type="p" text="A schedule is an employer's working week in a time zone. Add its working hours on the schedule, then assign it to employees from a date."/>
                     <form-single name="NewSchedule" transition="storeSchedule" map="newSchedule">
                         <field name="scheduleName"><default-field title="Name"><text-line size="40"/></default-field></field>

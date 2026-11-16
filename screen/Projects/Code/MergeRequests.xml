@@ -95,7 +95,9 @@ along with this software (see the LICENSE.md file). If not, see
                     <link url="compare" text="New merge request" icon="sym_o_merge" btn-type="primary" parameter-map="newParams"/>
                 </widgets><fail-widgets>
                     <container-dialog id="NewMergeRequestDialog" button-text="New merge request" icon="sym_o_merge" width="480" title="New merge request in"
-                            condition="codeHosting &amp;&amp; repositoryOptions.length &amp;&amp; canOpen">
+                            condition="codeHosting &amp;&amp; repositoryOptions.length"
+                            disable-condition="!canOpen"
+                            disable-message="Needs repository write access, which an administrator can grant.">
                         <form-single name="NewMergeRequestPick" transition="compare">
                             <field name="repositoryId"><default-field title="Repository">
                                 <drop-down><list-options list="repositoryOptions" key="${key}" text="${text}"/></drop-down></default-field></field>
@@ -107,7 +109,7 @@ along with this software (see the LICENSE.md file). If not, see
         </widgets><fail-widgets>
             <container style="row items-center q-mb-sm">
                 <container style="col"/>
-                <link url="compare" text="New merge request" icon="sym_o_merge" parameter-map="{repositoryId:repositoryId}" condition="canOpen"/>
+                <link url="compare" text="New merge request" icon="sym_o_merge" parameter-map="{repositoryId:repositoryId}" disable-condition="!canOpen" disable-message="Needs repository write access, which an administrator can grant."/>
             </container>
         </fail-widgets></section>
 

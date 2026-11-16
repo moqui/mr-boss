@@ -58,7 +58,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewJobClassDialog" button-text="New job class" icon="sym_o_add" type="primary" width="640"
-                        title="New job class" condition="canEdit">
+                        title="New job class" disable-condition="!canEdit"
+                        disable-message="Needs HR editing access, which an administrator can grant.">
                     <label type="p" text="A job class describes work every employer's positions may be of. Add its skills and work types on the next page."/>
                     <form-single name="NewJobClass" transition="storeJobClass">
                         <field name="title"><default-field title="Title"><text-line size="40"/></default-field></field>

@@ -71,7 +71,9 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewHolidayDialog" button-text="Add holiday" icon="sym_o_event" type="default" width="560"
-                        title="Add a holiday" condition="canEdit &amp;&amp; calendarOptions.length">
+                        title="Add a holiday" condition="calendarOptions.length"
+                        disable-condition="!canEdit"
+                        disable-message="Needs HR editing access, which an administrator can grant.">
                     <form-single name="NewHoliday" transition="storeHoliday" map="newHoliday">
                         <field name="holidayCategoryId">
                             <default-field title="Calendar"><drop-down><list-options list="calendarOptions" key="${key}" text="${text}"/></drop-down></default-field>
@@ -83,7 +85,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </form-single>
                 </container-dialog>
                 <container-dialog id="NewCalendarDialog" button-text="New calendar" icon="sym_o_add" type="primary" width="560"
-                        title="New holiday calendar" condition="canEdit">
+                        title="New holiday calendar" disable-condition="!canEdit"
+                        disable-message="Needs HR editing access, which an administrator can grant.">
                     <label type="p" text="A calendar's holidays take the day of every schedule that names it. An employer's calendar is changed by its HR; a shared one by a People administrator."/>
                     <form-single name="NewCalendar" transition="storeCalendar" map="newCalendar">
                         <field name="calendarName"><default-field title="Name"><text-line size="40"/></default-field></field>
