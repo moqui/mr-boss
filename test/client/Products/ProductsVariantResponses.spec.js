@@ -180,6 +180,24 @@ feature("typing an operation key while variants generate keeps the generate resu
     }
 })
 
+// PRD-UI-036: a queue stores its batch under the key it made; typing another key while it is on its way must not lose that key
+feature("typing an operation key while variants queue shows the queued batch's key and summary", {
+    expect() {
+        readyPreview()
+        page.getByRole("button", {name: "Queue selected", exact: true}).click()
+        page.fill("input[name=operationKey]", "operation-typed")
+        page.evaluate(async () => {
+            take("queue").resolve({json: {pendingCount: 1, totalCount: 1, results: [{result: "pending", productId: "A-SKU"}]}})
+            await settle()
+            return true
+        })
+        const queuedKey = page.evaluate(() => calls.find(call => call.name === "queue").params.operationKey)
+        assert.equal(page.evaluate(() => vm.$refs.screen.operationKey), queuedKey)
+        assert.equal(page.evaluate(() => vm.$refs.screen.summary.endsWith(" · Operation " + vm.$refs.screen.operationKey)), true)
+        assert.equal(page.evaluate(() => vm.$refs.screen.pendingCount), 1)
+    }
+})
+
 feature("leaving the component invalidates callbacks instead of refreshing a different page", {
     expect() {
         readyPreview()

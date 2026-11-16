@@ -74,7 +74,7 @@ module.exports = {
         cancelRequests(){this.requestSeq++;this.busy=false;this.error=''},
         clearResults(){this.results=[];this.summary='';this.pendingCount=0;this.operationTotal=0;this.resultPage=0},
         // A typed key names another operation: its earlier results no longer apply, nor does a read or run of the old key.
-        // A preview or generate in flight keeps its own results.
+        // A preview, generate or queue in flight keeps its own results: a queue's key is the batch it stored (PRD-UI-036).
         operationChanged(){if(this.busy&&this.requestKind==='operation')this.cancelRequests();this.clearResults()},
         invalidate(){this.cancelRequests();this.revision='';this.selected=[]},
         sourceChanged(){this.invalidate();this.clearResults();this.operationKey='';this.rows=[];this.totalCount=0;this.sourceOptions=[];this.axes=[];this.groupOptions=[];this.copyFieldOptions=[];this.form.copyFields=null;this.form.groups=[];this.form.copyCategoryMembers='N';this.filters={};this.axisX='';this.axisY=''},
@@ -108,7 +108,7 @@ module.exports = {
             }catch(e){if(this.current(owner))this.error=String(e.message||e)}finally{if(this.current(owner))this.busy=false}
         },
         async queue(){
-            const owner=this.begin('operation'),operationKey='variants-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),params=Object.assign(this.selectedParameters(),{operationKey});
+            const owner=this.begin('queue'),operationKey='variants-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10),params=Object.assign(this.selectedParameters(),{operationKey});
             try{
                 const out=await this.request('queue',params,true,owner.path);if(!this.current(owner))return;
                 this.operationKey=operationKey;this.showResults(out);this.summary+=' · Operation '+operationKey;

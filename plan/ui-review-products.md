@@ -1400,6 +1400,14 @@ client and key presses. A partial row records one current representative and nam
 | PRD-UI-039 | **P2 / live.** `worker-handoffs.log`. | Open a permitted Product360 as a Sales representative or Maintenance planner. Summary mounts Chatter automatically, and the widget's request returns `RECORD_PANEL_UNAVAILABLE`. The page shows an “Internal Server Error” toast during normal read-only navigation. | BOSS Product360 Summary and mounting app panel capabilities |
 | PRD-UI-040 | **P2 / live.** `worker-handoffs.log`. | Sign in as the catalog price reader. The shared pricing tabs offer Standard costs, Cost roll-up and Cost history. Opening Standard costs says separate authority is required and returns no cost data. | BOSS shared pricing navigation |
 
+#### Corrections after the repeat review
+
+Each correction has a regression that failed before it. The live retest belongs to the next pass.
+
+| ID | Correction | Regression | Live retest owed |
+| --- | --- | --- | --- |
+| PRD-UI-036 | Queue is a request of its own kind, as Generate is: typing an operation key while it is on its way clears the old results but no longer drops its answer, so the field shows the stored batch's key and the summary names it. | `test/client/ProductsVariantResponses` (Queue held, a key typed, then answered). | The held Queue in the browser, then Run on the shown key. |
+
 #### Verification and scope
 
 All six named Products fixture specs passed. The selected BOSS server regressions and both Products client
