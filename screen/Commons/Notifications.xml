@@ -43,6 +43,18 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
+    <!-- Standard's title (DC-UI-042): a post, as Mark read is, that reads the row and opens its record under /apps, or the center
+        with the notice of a record that is gone; a link out of the shell goes as it is -->
+    <transition name="openRead">
+        <parameter name="notificationMessageId" required="true"/>
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.commons.CommonsServices.open#Notification').parameters({notificationMessageId: notificationMessageId}).call() || {}
+            if (!ec.message.hasError() && out.notice) ec.message.addMessage(out.notice, 'warning')
+            openTarget = out.redirectUrl || String(out.screenUrl || '/apps/Commons/Notifications').replace(/^\/qapps\//, '/apps/')
+        ]]></script></actions>
+        <default-response url="${openTarget}" url-type="plain"/>
+        <error-response url="."/>
+    </transition>
     <!-- the others change the list, which shows again -->
     <transition name="markRead">
         <service-call name="ironstone.commons.CommonsServices.mark#NotificationsRead" in-map="{notificationMessageId:notificationMessageId}"/>
@@ -230,6 +242,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     approval stays until its decision -->
                                 <conditional-field condition="openUrl &amp;&amp; sri.getRenderMode() === 'tui'" title="What">
                                     <link url="${openUrl}" url-type="plain" link-type="anchor" text="${titleText}"/></conditional-field>
+                                <!-- Standard opens and reads it by a post, as the browser's title does -->
+                                <conditional-field condition="sri.getRenderMode() === 'html'" title="What">
+                                    <link url="openRead" text="${titleText}" link-type="hidden-form-link" parameter-map="{notificationMessageId:notificationMessageId}"/></conditional-field>
                                 <default-field title="What">
                                 <render-mode><text type="qvt"><![CDATA[<q-btn flat dense no-caps align="left" type="submit" form="NotificationOpen_${notificationMessageId}" padding="none" color="primary" class="text-left"><div class="full-width text-left">]]></text><text type="tui" template="false">[]</text></render-mode>
                                 <label type="span" text="${titleText}"/>
@@ -293,6 +308,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 there leaves it unread until Mark read -->
                             <conditional-field condition="openUrl &amp;&amp; sri.getRenderMode() === 'tui'" title="Notification">
                                 <link url="${openUrl}" url-type="plain" link-type="anchor" text="${titleText}"/></conditional-field>
+                            <!-- Standard opens and reads it by a post, as the browser's title does -->
+                            <conditional-field condition="sri.getRenderMode() === 'html'" title="Notification">
+                                <link url="openRead" text="${titleText}" link-type="hidden-form-link" parameter-map="{notificationMessageId:notificationMessageId}"/></conditional-field>
                             <default-field title="Notification">
                             <render-mode><text type="qvt"><![CDATA[<q-btn flat dense no-caps align="left" type="submit" form="NotificationOpen_${notificationMessageId}" padding="none" color="primary" class="text-left${unread ? ' text-weight-medium' : ''}"><div class="full-width text-left">]]></text><text type="tui" template="false">[]</text></render-mode>
                             <label type="span" text="${titleText}"/>
