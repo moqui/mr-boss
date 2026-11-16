@@ -27,14 +27,18 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="workEffortId"/>
     <subscreens default-item="Start"/>
 
-    <!-- the project the steps after Start work on, one the user manages (not another's draft); in always-actions since the client
-        loads a step on its own -->
+    <!-- the project the steps after Start work on, one the user manages (not another's draft) that is still in planning; in
+        always-actions since the client loads a step on its own. A project the user manages that is past planning (a bookmarked
+        step) is startedProject: no step changes it, each step's transitions refuse it, and the screen sends the user to its
+        page (PR-UI-038) -->
     <always-actions>
         <script><![CDATA[
             draftProject = null
+            startedProject = null
             if (workEffortId) {
                 const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'none'}).call() || {}
-                if (access.canManage) draftProject = access.project
+                if (access.canManage && access.inPlanning) draftProject = access.project
+                else if (access.canManage) startedProject = Object.assign({}, access.project, {statusText: access.statusText})
             }
         ]]></script>
     </always-actions>
@@ -45,6 +49,14 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col"/>
             <link url="../List" text="Projects" icon="sym_o_assignment" style="q-ml-sm"/>
         </container>
-        <subscreens-panel id="NewProjectWizard" type="wizard" finish-text="Create"/>
+        <section name="ProjectStarted" condition="startedProject"><widgets>
+            <container-box><box-body>
+                <label type="p" text="${startedProject.workEffortName || workEffortId} is ${startedProject.statusText}. The new-project steps are for a project in planning; change its team, modules and money on its page."/>
+                <link url="//Projects/Projects/ProjectDetail" text="Open the project" icon="sym_o_open_in_new" link-type="anchor-button"
+                        parameter-map="{workEffortId:workEffortId}"/>
+            </box-body></container-box>
+        </widgets><fail-widgets>
+            <subscreens-panel id="NewProjectWizard" type="wizard" finish-text="Create"/>
+        </fail-widgets></section>
     </widgets>
 </screen>

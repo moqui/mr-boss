@@ -28,7 +28,8 @@ along with this software (see the LICENSE.md file). If not, see
             only answers. isMember: the user holds a current role on it. A client contact (get#VisibleProjectInfo isClient) sees
             its client projects only and neither works in nor manages one (impl-projects.md P10). Closed is read only:
             canUpdate is false, and change requires both a manager and an open project. canManage retains role authority
-            for reopening and late billing; it does not authorize manual project changes by itself.</description>
+            for reopening and late billing; it does not authorize manual project changes by itself. need draft is what the
+            new-project wizard's steps change: a project the user manages that is still In Planning (PR-UI-038).</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
             <parameter name="need" default-value="view"/>
@@ -40,12 +41,15 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="canManage" type="Boolean"/>
             <parameter name="canChange" type="Boolean"><description>A manager may change manual project settings while the project is not Closed.</description></parameter>
             <parameter name="isMember" type="Boolean"/>
+            <parameter name="inPlanning" type="Boolean"><description>The project is In Planning, the new-project wizard's draft</description></parameter>
+            <parameter name="statusText"><description>The project's status, as the user reads it</description></parameter>
             <parameter name="isClient" type="Boolean"><description>A client contact (get#VisibleProjectInfo isClient)</description></parameter>
             <parameter name="sharesHours" type="Boolean"><description>For a client contact, whether the project shares its hours with the
                 client (get#ClientProjectInfo shareHoursProjectIds); true for everyone else</description></parameter>
         </out-parameters>
         <actions><script><![CDATA[
             canView = false; canUpdate = false; canManage = false; canChange = false; isMember = false; project = null; isClient = false; sharesHours = true
+            inPlanning = false; statusText = null
             const row = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).one()
             const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
             if (row != null && row.workEffortTypeEnumId === 'WetProject') {
@@ -68,7 +72,11 @@ along with this software (see the LICENSE.md file). If not, see
                         sharesHours = !ec.message.hasError() && Array.from(client.shareHoursProjectIds || []).includes(workEffortId)
                     } catch (err) { sharesHours = false } finally { ec.message.clearErrors(); ec.message.popErrors() }
                 } else if (isClient) sharesHours = false
-                if (canView) project = row.getMap()
+                if (canView) {
+                    project = row.getMap()
+                    inPlanning = row.statusId === 'WeInPlanning'
+                    statusText = ec.entity.find('moqui.basic.StatusItem').condition('statusId', row.statusId).useCache(true).one()?.description || row.statusId
+                }
                 // and no cost of it (design-projects.md §1.1: clients never see costs)
                 if (project && vis.isClient) for (const field of ['actualCost', 'actualClientCost', 'totalClientCostAllowed', 'costUomId']) delete project[field]
             }
@@ -80,6 +88,11 @@ along with this software (see the LICENSE.md file). If not, see
                 else ec.message.addError(ec.resource.expand('You are not on project ${workEffortId}', '', {workEffortId}))
             } else if (['manage', 'change'].includes(need) && !canManage) ec.message.addError(ec.resource.expand('Only the managers of ${workEffortId} change that', '', {workEffortId}))
             else if (need === 'change') ec.service.sync().name('mantle.work.WorkEffortServices.check#WorkEffortOpen').parameters({workEffortId}).call()
+            else if (need === 'draft') {
+                if (!canManage) ec.message.addError(ec.resource.expand('Only the managers of ${workEffortId} change that', '', {workEffortId}))
+                else if (!inPlanning) ec.message.addError(ec.resource.expand(ec.l10n.localize('PROJECT_NOT_PLANNING: ${name} is ${status}; the new-project steps are for a project in planning, change it from its page'),
+                    '', {name: row.workEffortName || workEffortId, status: ec.l10n.localize(statusText)}))
+            }
         ]]></script></actions>
     </service>
 
@@ -1101,7 +1114,8 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="message"/><parameter name="repositoryId"/><parameter name="wikiSpaceId"/></out-parameters>
         <actions><script><![CDATA[
-            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'change'}).call() || {}
+            // the wizard's step: a project still in planning (PR-UI-038); a project under way changes its modules in its settings
+            const access = ec.service.sync().name('ironstone.projects.ProjectServices.get#ProjectAccess').parameters({workEffortId: workEffortId, need: 'draft'}).call() || {}
             if (ec.message.hasError()) return
             const project = access.project
             ec.service.sync().name('ironstone.projects.ProjectServices.save#ProjectSettingValues').parameters({workEffortId: workEffortId, box: 'modules', modules: modules,

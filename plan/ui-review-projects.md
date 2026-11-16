@@ -1080,6 +1080,14 @@ Each row records a current representative and the branches still open.
 | PR-UI-039 | **P3 / live.** `settings/browser.jsonl`, `settings/time-work-type-changed.png`. | In server-static Settings → Time, change General Office from unoffered to offered and reload. The visible action and count change correctly, but both states leave the conditional style expression as literal CSS class text. The intended muted or emphasized label styling never applies. | Projects Work Types row and the server-static renderer |
 | PR-UI-040 | **P3 / live.** `time-finance/followup.log`. | In Resources → Allocations, open Staff for a requested allocation as the project manager at 1280 × 960. Candidate table headings show “Rate Text” and “Staff Link” where the form authors Cost and an unlabeled action. The rate and staffing permission checks worked. | Projects Staff candidate list title rendering |
 
+#### Corrections after the repeat review
+
+Each correction has a regression that failed before it. The live retest belongs to the next pass.
+
+| ID | Correction | Regression | Live retest owed |
+| --- | --- | --- | --- |
+| PR-UI-038 | The wizard's draft is a project the user manages that is still In Planning (`get#ProjectAccess` `need: 'draft'`, `inPlanning`). For a project past planning the wizard shows its status and Open the project in place of the steps. Each step's write transition refuses it with `PROJECT_NOT_PLANNING`, as does `save#ProjectModules`, which only the wizard calls. | `test/Projects/NewProject` (a project moved to In Progress: the notice and no steps; Modules and Money refused, the estimate unit unchanged). | The bookmarked Start of an active project in the browser and in the terminal. |
+
 #### Verification and cleanup
 
 The repeat used the current release, with one ProjectsHome bootstrap feature. The targeted regression run

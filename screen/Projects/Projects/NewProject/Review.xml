@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
     </actions>
 
     <widgets>
-        <section name="NotStarted" condition="!draftProject"><widgets>
+        <section name="NotStarted" condition="!draftProject &amp;&amp; !startedProject"><widgets>
             <container-box type="warning"><box-body>
                 <label type="p" text="Start the project first: this step works on the project the Start step makes." style="q-mb-xs"/>
                 <link url="../Start" link-type="anchor" text="Back to Start"/>

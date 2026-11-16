@@ -192,3 +192,46 @@ feature("Money saves the billing basis and the budgets and adds a rate; Review l
         String(finished.redirect).includes("ProjectDetail")
     },
 })
+
+// PR-UI-038: a bookmarked step of a project that went on past planning changes nothing; the wizard sends its manager to the
+// project's page, and the steps' transitions refuse it with the same calls that changed it in planning
+feature("a project past planning is not changed by the wizard: its steps send the manager to its page and refuse a change", {
+    when() {
+        sys(() => {
+            const project = ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", "BTBNS").one()
+            project.statusId = "WeInProgress"
+            project.update()
+        })
+        const unitBefore = settingOf("BTBNS", "WstEstimateUnit")
+        const wizard = render("apps/Projects/Projects/NewProject", {workEffortId: "BTBNS", lastStandalone: "2"})
+        const modules = post("Projects/NewProject/Modules/saveModules", {
+            workEffortId: "BTBNS",
+            modules: ["time"],
+            estimateUnit: unitBefore === "points" ? "hours" : "points"
+        })
+        const money = post("Projects/NewProject/Money/saveMoney", {
+            workEffortId: "BTBNS",
+            billingBasis: "TimeAndMaterials",
+            totalTimeAllowed: "1"
+        })
+        return {
+            wizard,
+            modules,
+            money,
+            unitBefore,
+            unitAfter: settingOf("BTBNS", "WstEstimateUnit"),
+            project: one("mantle.work.effort.WorkEffort", {workEffortId: "BTBNS"})
+        }
+    },
+    then({wizard, modules, money, unitBefore, unitAfter, project}) {
+        wizard.status == 200
+        !wizard.broken
+        wizard.output.includes("BOSS_TEST Brand new site is In Progress. The new-project steps are for a project in planning")
+        wizard.output.includes("ProjectDetail")
+        !wizard.output.includes("NewProjectWizard")
+        modules.errors.includes("PROJECT_NOT_PLANNING")
+        unitAfter == unitBefore
+        money.errors.includes("PROJECT_NOT_PLANNING")
+        Number(String(project.totalTimeAllowed)) != 1
+    }
+})

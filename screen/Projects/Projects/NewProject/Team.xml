@@ -23,6 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <transition name="addMember">
         <actions>
+            <!-- a project past planning (a bookmarked step) is changed on its page, not by the wizard (PR-UI-038) -->
+            <if condition="startedProject"><return error="true" message="PROJECT_NOT_PLANNING: ${startedProject.workEffortName || workEffortId} is ${startedProject.statusText}; the new-project steps are for a project in planning, change it from its page"/></if>
             <service-call name="ironstone.projects.ProjectServices.add#ProjectMember" out-map="addOut" in-map="{workEffortId:workEffortId, partyId:partyId, roleTypeId:roleTypeId}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(addOut.message, 'success')</script></if>
             <!-- the member's allocation when hours a week are given -->
@@ -37,6 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="endMember">
         <actions>
+            <!-- a project past planning (a bookmarked step) is changed on its page, not by the wizard (PR-UI-038) -->
+            <if condition="startedProject"><return error="true" message="PROJECT_NOT_PLANNING: ${startedProject.workEffortName || workEffortId} is ${startedProject.statusText}; the new-project steps are for a project in planning, change it from its page"/></if>
             <service-call name="ironstone.projects.ProjectServices.end#ProjectMember" out-map="endOut" in-map="{workEffortId:workEffortId, partyId:partyId, roleTypeId:roleTypeId}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(endOut.message, 'success')</script></if>
         </actions>
@@ -70,7 +74,7 @@ along with this software (see the LICENSE.md file). If not, see
     </actions>
 
     <widgets>
-        <section name="NotStarted" condition="!draftProject"><widgets>
+        <section name="NotStarted" condition="!draftProject &amp;&amp; !startedProject"><widgets>
             <container-box type="warning"><box-body>
                 <label type="p" text="Start the project first: this step works on the project the Start step makes." style="q-mb-xs"/>
                 <link url="../Start" link-type="anchor" text="Back to Start"/>

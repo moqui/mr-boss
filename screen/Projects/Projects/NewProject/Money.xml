@@ -24,6 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <transition name="saveMoney">
         <actions>
+            <!-- a project past planning (a bookmarked step) is changed on its page, not by the wizard (PR-UI-038) -->
+            <if condition="startedProject"><return error="true" message="PROJECT_NOT_PLANNING: ${startedProject.workEffortName || workEffortId} is ${startedProject.statusText}; the new-project steps are for a project in planning, change it from its page"/></if>
             <service-call name="ironstone.projects.ProjectServices.save#ProjectMoney" out-map="saveOut" in-map="{workEffortId:workEffortId, billingBasis:billingBasis,
                     totalTimeAllowed:totalTimeAllowed, totalClientCostAllowed:totalClientCostAllowed}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(saveOut.message, 'success')</script></if>
@@ -33,6 +35,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="addRate">
         <actions>
+            <!-- a project past planning (a bookmarked step) is changed on its page, not by the wizard (PR-UI-038) -->
+            <if condition="startedProject"><return error="true" message="PROJECT_NOT_PLANNING: ${startedProject.workEffortName || workEffortId} is ${startedProject.statusText}; the new-project steps are for a project in planning, change it from its page"/></if>
             <service-call name="ironstone.projects.ProjectServices.add#ProjectRate" out-map="rateOut" in-map="{workEffortId:workEffortId, ratePurposeEnumId:ratePurposeEnumId,
                     partyId:partyId, workTypeEnumId:workTypeEnumId, rateAmount:rateAmount}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(rateOut.message, 'success')</script></if>
@@ -42,6 +46,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="endRate">
         <actions>
+            <!-- a project past planning (a bookmarked step) is changed on its page, not by the wizard (PR-UI-038) -->
+            <if condition="startedProject"><return error="true" message="PROJECT_NOT_PLANNING: ${startedProject.workEffortName || workEffortId} is ${startedProject.statusText}; the new-project steps are for a project in planning, change it from its page"/></if>
             <service-call name="ironstone.projects.ProjectServices.end#ProjectRate" out-map="rateOut" in-map="{workEffortId:workEffortId, rateAmountId:rateAmountId}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(rateOut.message, 'success')</script></if>
         </actions>
@@ -50,6 +56,8 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="linkOrderLine">
         <actions>
+            <!-- a project past planning (a bookmarked step) is changed on its page, not by the wizard (PR-UI-038) -->
+            <if condition="startedProject"><return error="true" message="PROJECT_NOT_PLANNING: ${startedProject.workEffortName || workEffortId} is ${startedProject.statusText}; the new-project steps are for a project in planning, change it from its page"/></if>
             <service-call name="ironstone.projects.BillingServices.link#OrderLine" out-map="linkOut" in-map="{workEffortId:workEffortId, orderLine:orderLine, orderId:orderId,
                     orderItemSeqId:orderItemSeqId, remove:(remove == 'Y')}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(linkOut.message, 'success')</script></if>
@@ -97,7 +105,7 @@ along with this software (see the LICENSE.md file). If not, see
     </actions>
 
     <widgets>
-        <section name="NotStarted" condition="!draftProject"><widgets>
+        <section name="NotStarted" condition="!draftProject &amp;&amp; !startedProject"><widgets>
             <container-box type="warning"><box-body>
                 <label type="p" text="Start the project first: this step works on the project the Start step makes." style="q-mb-xs"/>
                 <link url="../Start" link-type="anchor" text="Back to Start"/>
