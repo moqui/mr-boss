@@ -50,7 +50,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- Confirm: this list (choice=list) or all marketing email of the organization (choice=all), with the reason; with the
         verification email's verifyCode, the confirmation of an unsubscribe that waits for it -->
-    <transition name="unsubscribe" require-session-token="false">
+    <transition name="unsubscribe" method="post" require-session-token="false">
         <actions><script><![CDATA[
             let baseUrl = null
             try { baseUrl = ec.web.getWebappRootUrl() || null } catch (err) { baseUrl = null }
@@ -65,7 +65,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <!-- the lists one by one (listChoices as JSON: [{contactListId, subscribed}]), and Resubscribe, the done page's undo -->
-    <transition name="preferences" require-session-token="false">
+    <transition name="preferences" method="post" require-session-token="false">
         <actions><script><![CDATA[
             let choices = []
             try { choices = JSON.parse(String(listChoices || '[]')) } catch (err) { choices = [] }

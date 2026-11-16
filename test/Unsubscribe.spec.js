@@ -107,15 +107,20 @@ feature("an unknown or ended link reads nothing and changes nothing", {
 
 feature("Unsubscribe from this list with a reason: the list only, the withdrawal from the email link with the reason; Resubscribe undoes it", {
     when() {
+        // a GET (a link scanner's, another site's) changes nothing: the page's own Confirm posts (SEC-BOS-04)
+        const byGet = visit("unsubscribe", NEWS, { choice: "list" }, "get")
+        const afterGet = statusOf(LIST_NEWS, ALEX)
         const done = visit("unsubscribe", NEWS, { choice: "list", reasonText: "I get too many emails" }, "post")
         const afterNews = statusOf(LIST_NEWS, ALEX)
         const afterEvents = statusOf(LIST_EVENTS, ALEX)
         const withdrawal = lastListConsent(LIST_NEWS, ALEX)
         const again = visit("unsubscribe", NEWS, { choice: "list" }, "post")
         const undo = visit("preferences", NEWS, { listChoices: JSON.stringify([{ contactListId: LIST_NEWS, subscribed: true }]) }, "post")
-        return { done, afterNews, afterEvents, withdrawal, again, undo, resubscribed: statusOf(LIST_NEWS, ALEX), grant: lastListConsent(LIST_NEWS, ALEX) }
+        return { byGet, afterGet, done, afterNews, afterEvents, withdrawal, again, undo, resubscribed: statusOf(LIST_NEWS, ALEX), grant: lastListConsent(LIST_NEWS, ALEX) }
     },
-    then({ done, afterNews, afterEvents, withdrawal, again, undo, resubscribed, grant }) {
+    then({ byGet, afterGet, done, afterNews, afterEvents, withdrawal, again, undo, resubscribed, grant }) {
+        byGet.json.statusId == null
+        afterGet == "CLPT_ACCEPTED"
         done.status == 200
         done.json.statusId == "CLPT_UNSUBSCRIBED"
         done.json.changedList.map((change) => change.contactListId) == [LIST_NEWS]

@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
         require-authentication="false" default-menu-include="false" default-menu-title="Shared files" render-modes="vue,qvue,tui" server-static="vue,qvue">
 
     <!-- the password (when the link has one), the opening counted, the grant for the calls below -->
-    <transition name="open" require-session-token="false">
+    <transition name="open" method="post" require-session-token="false">
         <actions><script><![CDATA[
             const out = ec.service.sync().name('org.moqui.resource.FileServices.open#PublicShare').parameters({token: token || '', password: password || null}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {valid: out.valid, passwordOk: out.passwordOk, grant: out.grant ?? null, share: out.share})
@@ -53,7 +53,7 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response type="none"/>
     </transition>
     <!-- the file drop: files into the shared folder (or a folder below it for an edit link), the uploader's name in the version note -->
-    <transition name="upload" require-session-token="false">
+    <transition name="upload" method="post" require-session-token="false">
         <actions><script><![CDATA[
             const out = ec.service.sync().name('org.moqui.resource.FileServices.upload#PublicShare').parameters({token: token || '', grant: grant || null,
                 path: path || null, fileList: contentFile == null ? null : (Array.isArray(contentFile) ? contentFile : [contentFile]),
