@@ -59,6 +59,13 @@ along with this software (see the LICENSE.md file). If not, see
         which clean#DriveTempFiles removes after a day) -->
     <transition name="exportZip" method="get">
         <actions><script><![CDATA[
+            // only those the Export and archive section is shown to: the drive's managers, not of a personal or records drive. The
+            // framework lets a git drive's viewer export what a clone gives them, but the export writes a copy on the server (DC-UI-041)
+            const settings = ec.service.sync().name('ironstone.commons.DriveServices.get#DriveSettings').parameter('driveId', driveId || '').call() || {}
+            const kind = settings.drive?.driveKindEnumId
+            if (!ec.message.hasError() && ((settings.level || 0) < 3 || kind === 'RdkRecords' || kind === 'RdkPersonal'))
+                ec.message.addError(ec.l10n.localize('You may not export this drive'))
+            if (ec.message.hasError()) { ec.web.sendJsonResponse({}); return }
             const out = ec.service.sync().name('org.moqui.resource.FileServices.export#Drive').parameter('driveId', driveId || '').call()
             const access = ec.message.hasError() ? null : ec.service.sync().name('org.moqui.resource.FileServices.get#DriveAccess').parameter('driveId', driveId).call()
             if (!ec.message.hasError() && out?.exportLocation && access?.drive) {
@@ -71,6 +78,13 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- a version-controlled drive: where the bare repository is -->
     <transition name="exportGit">
         <actions><script><![CDATA[
+            // only those the Export and archive section is shown to: the drive's managers, not of a personal or records drive. The
+            // framework lets a git drive's viewer export what a clone gives them, but the export writes a copy on the server (DC-UI-041)
+            const settings = ec.service.sync().name('ironstone.commons.DriveServices.get#DriveSettings').parameter('driveId', driveId || '').call() || {}
+            const kind = settings.drive?.driveKindEnumId
+            if (!ec.message.hasError() && ((settings.level || 0) < 3 || kind === 'RdkRecords' || kind === 'RdkPersonal'))
+                ec.message.addError(ec.l10n.localize('You may not export this drive'))
+            if (ec.message.hasError()) return
             const out = ec.service.sync().name('org.moqui.resource.FileServices.export#Drive').parameter('driveId', driveId || '').call()
             if (!ec.message.hasError() && out.exportPath) ec.message.addMessage(ec.resource.expand('A bare repository to clone is at ${path} on the server', '',
                 {path: out.exportPath}), 'success')

@@ -405,6 +405,30 @@ feature("the drives: a new folder drive with members, its settings, a member add
     },
 })
 
+// DC-UI-041: Export the repository is shown to the drive's managers, and the transition refuses anyone else; joe.developer, who
+// edits the website drive, is refused with the same call that exports it for john.doe, its owner
+feature("a git drive's repository is exported by its manager, not by a member who only edits it", {
+    requires: ["git"],
+    when() {
+        const exportGit = () => render(commons, "Files/DriveSettings/exportGit", {driveId: "BOSS_DEMO_WEB"}, "post")
+        login("joe.developer")
+        const joe = exportGit()
+        const joeZip = ec.screen
+            .makeTest()
+            .rootScreen(commons)
+            .render("Files/DriveSettings/exportZip", {driveId: "BOSS_DEMO_WEB"}, null)
+        ec.message.clearErrors()
+        login("john.doe")
+        const john = exportGit()
+        return {joe, joeZip, john}
+    },
+    then({joe, joeZip, john}) {
+        joe.errors.includes("You may not export this drive")
+        joeZip.errorMessages.join(" ").includes("You may not export this drive")
+        john.errors == ""
+    }
+})
+
 // Commons Home's recent files are on CommonsSettings' render of Home
 feature("the palette finds files", {
     when() {
