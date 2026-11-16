@@ -72,7 +72,8 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col"><label text="Stores" type="h5"/></container>
             <container style="col-auto">
                 <container-dialog id="NewStore" button-text="New store" icon="sym_o_add" type="primary" width="720" title="New store"
-                        condition="canStart">
+                        disable-condition="!canStart"
+                        disable-message="Needs store editing for every store access, which an administrator can grant.">
                     <form-single name="NewStoreForm" transition="createStore" map="newStore">
                         <field name="storeName"><default-field title="Name"><text-line size="40"/></default-field></field>
                         <field name="newOrganizationPartyId">

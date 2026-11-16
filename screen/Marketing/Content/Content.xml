@@ -54,7 +54,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto">
                 <container-dialog id="LinkContentDialog" button-text="Link content" icon="sym_o_add_link" type="primary" width="640"
-                        title="Link content to a campaign" condition="canEdit">
+                        title="Link content to a campaign" disable-condition="!canEdit"
+                        disable-message="Needs content editing access, which an administrator can grant.">
                     <section-include name="LinkContentForm" location="component://mr-boss/template/MarketingContent.xml"/>
                 </container-dialog>
             </container>

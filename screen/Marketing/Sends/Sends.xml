@@ -74,7 +74,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <container style="col"><label text="Sends" type="h5"/></container>
                     <container style="col-auto row items-center q-gutter-xs">
                         <container-dialog id="NewSendDialog" button-text="New send" title="New send" icon="sym_o_add" width="640"
-                                type="primary" condition="canEdit">
+                                type="primary" disable-condition="!canEdit"
+                                disable-message="Needs send editing access, which an administrator can grant.">
                             <section-include name="NewSendForm" location="component://mr-boss/template/MarketingSends.xml"/>
                         </container-dialog>
                         <section-iterate name="SavedFinds" list="savedFinds" entry="saved">

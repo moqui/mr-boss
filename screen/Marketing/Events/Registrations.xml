@@ -81,7 +81,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <link url="${setupPath}" text="Registration setup" icon="sym_o_tune" link-type="anchor-button"
                             parameter-map="{workEffortId:workEffortId}" condition="workEffortId &amp;&amp; setupPath"/>
                     <container-dialog id="StaffRegistrationDialog" button-text="New registration" icon="sym_o_person_add" type="primary" width="640"
-                            title="New registration" condition="canEnter">
+                            title="New registration" disable-condition="!canEnter"
+                            disable-message="Needs event registration access, which an administrator can grant.">
                         <label type="p" text="The same holds as a visitor's: a free place is confirmed, a paid one is held until the buyer pays, and with no place left it joins the waitlist."/>
                         <form-single name="StaffRegistration" transition="enterRegistration" map="entryValues">
                             <field name="workEffortId"><default-field><hidden/></default-field></field>

@@ -56,7 +56,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto">
                 <container-dialog id="NewEventDialog" button-text="New event" icon="sym_o_event" type="primary" width="760"
-                        title="New event" condition="canCreate">
+                        title="New event" disable-condition="!canCreate"
+                        disable-message="Needs event editing access, which an administrator can grant.">
                     <section-include name="NewEventForm" location="component://mr-boss/template/MarketingEvents.xml"/>
                 </container-dialog>
             </container>

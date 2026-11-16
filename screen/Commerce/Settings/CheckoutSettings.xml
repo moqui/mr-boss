@@ -309,7 +309,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <box-header title="Checkout policy"/>
                 <box-toolbar>
                     <container-dialog id="ChangePolicy" button-text="Change policy" icon="sym_o_edit" width="640" title="Change the checkout policy"
-                            condition="canEdit">
+                            disable-condition="!canEdit"
+                            disable-message="Needs store settings access, which an administrator can grant.">
                         <form-single name="CheckoutPolicyForm" transition="savePolicy" map="policyValues">
                             <field name="productStoreId"><default-field><hidden/></default-field></field>
                             <field name="accountMode"><default-field title="Checkout as">
@@ -357,7 +358,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <box-toolbar>
                     <link url="${ownerLinks.carriers}" url-type="plain" text="Carriers in Warehouse" icon="sym_o_open_in_new" link-type="anchor"
                             condition="ownerLinks.carriers"/>
-                    <container-dialog id="AddShipOption" button-text="Add option" icon="sym_o_add" width="560" title="Offer a ship option" condition="canEdit">
+                    <container-dialog id="AddShipOption" button-text="Add option" icon="sym_o_add" width="560" title="Offer a ship option" disable-condition="!canEdit" disable-message="Needs store settings access, which an administrator can grant.">
                         <form-single name="AddShipOptionForm" transition="saveShipOption" map="newShipOptionValues">
                             <field name="productStoreId"><default-field><hidden/></default-field></field>
                             <field name="carrierAndMethod"><default-field title="Carrier and method">
@@ -406,7 +407,7 @@ along with this software (see the LICENSE.md file). If not, see
             <container-box>
                 <box-header title="Shipping gateways"/>
                 <box-toolbar>
-                    <container-dialog id="AddShipGateway" button-text="Set gateway" icon="sym_o_add" width="640" title="Set a carrier's gateway" condition="canEdit">
+                    <container-dialog id="AddShipGateway" button-text="Set gateway" icon="sym_o_add" width="640" title="Set a carrier's gateway" disable-condition="!canEdit" disable-message="Needs store settings access, which an administrator can grant.">
                         <form-single name="AddShipGatewayForm" transition="saveShipGateway" map="newShipGatewayValues">
                             <field name="productStoreId"><default-field><hidden/></default-field></field>
                             <field name="carrierPartyId"><default-field title="Carrier">
@@ -463,7 +464,7 @@ along with this software (see the LICENSE.md file). If not, see
             <container-box>
                 <box-header title="Local rates"/>
                 <box-toolbar>
-                    <container-dialog id="AddRate" button-text="Add rate" icon="sym_o_add" width="720" title="Add a local rate" condition="canEdit">
+                    <container-dialog id="AddRate" button-text="Add rate" icon="sym_o_add" width="720" title="Add a local rate" disable-condition="!canEdit" disable-message="Needs store settings access, which an administrator can grant.">
                         <form-single name="AddRateForm" transition="saveRate" map="newRateValues">
                             <field name="productStoreId"><default-field><hidden/></default-field></field>
                             <field name="geoId"><default-field title="Zone" tooltip="A country, state or zone (a geo group)">
@@ -605,7 +606,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <link url="${ownerLinks.paymentMethods}" url-type="plain" text="Payment methods in Accounting" icon="sym_o_open_in_new"
                             link-type="anchor" condition="ownerLinks.paymentMethods"/>
                     <container-dialog id="AddPaymentGateway" button-text="Set gateway" icon="sym_o_add" width="560" title="Take an instrument's payments"
-                            condition="canEdit">
+                            disable-condition="!canEdit"
+                            disable-message="Needs store settings access, which an administrator can grant.">
                         <form-single name="AddPaymentGatewayForm" transition="savePayment" map="newPaymentValues">
                             <field name="productStoreId"><default-field><hidden/></default-field></field>
                             <field name="paymentInstrumentEnumId"><default-field title="Instrument">
@@ -664,7 +666,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <box-toolbar>
                     <link url="${ownerLinks.taxAuthorities}" url-type="plain" text="Tax authorities in Accounting" icon="sym_o_open_in_new"
                             link-type="anchor" condition="ownerLinks.taxAuthorities"/>
-                    <container-dialog id="ChangeTax" button-text="Change tax" icon="sym_o_edit" width="560" title="Change the store's tax" condition="canEdit">
+                    <container-dialog id="ChangeTax" button-text="Change tax" icon="sym_o_edit" width="560" title="Change the store's tax" disable-condition="!canEdit" disable-message="Needs store settings access, which an administrator can grant.">
                         <form-single name="StoreTaxForm" transition="saveTax" map="taxValues">
                             <field name="productStoreId"><default-field><hidden/></default-field></field>
                             <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
@@ -726,7 +728,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <box-header title="Cart recovery"/>
                 <box-toolbar>
                     <container-dialog id="ChangeRecovery" button-text="Change recovery" icon="sym_o_edit" width="640"
-                            title="Change the cart recovery policy" condition="canEdit">
+                            title="Change the cart recovery policy" disable-condition="!canEdit"
+                            disable-message="Needs store settings access, which an administrator can grant.">
                         <form-single name="RecoveryPolicyForm" transition="saveRecovery" map="recoveryValues">
                             <field name="productStoreId"><default-field><hidden/></default-field></field>
                             <field name="enabled"><default-field title="Recovery">
@@ -775,7 +778,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <box-header title="Subscription offers · ${offers.length}"/>
                 <box-toolbar>
                     <container-dialog id="NewOffer" button-text="New offer" icon="sym_o_add" width="640" title="Offer a subscription"
-                            condition="canEdit &amp;&amp; offerProducts.length">
+                            condition="offerProducts.length"
+                            disable-condition="!canEdit"
+                            disable-message="Needs store settings access, which an administrator can grant.">
                         <form-single name="NewOfferForm" transition="saveOffer" map="newOfferValues">
                             <field name="productStoreId"><default-field><hidden/></default-field></field>
                             <field name="productId"><default-field title="Paid-access product" tooltip="A product of the assortment that grants paid access (Product360's Paid access)">
