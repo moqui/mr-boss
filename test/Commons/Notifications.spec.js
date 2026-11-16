@@ -2,7 +2,8 @@
 // impl-drawers-commons.md M2 as changed Oct 19): john.doe's demo notifications (service/ironstone/commons/DemoServices.xml) in the
 // Notifications inbox with the approval waiting, and in the automatic Updates inbox; the reason chips; opening a row marks it
 // read and answers its record's screen; mark all read leaves the approval waiting; approve and refuse (with the reason the
-// demo topic requires) go through the framework's services to the demo topic's, which note the decision on the record.
+// demo topic requires) go through the framework's services to the demo topic's, which note the decision on the record. An app's
+// empty Approvals (Purchasing's) names the approval waiting in another app and links to the center.
 // Run: ./moq test mr-boss --spec Notifications
 const webroot = "component://webroot/screen/webroot.xml"
 const commons = "component://mr-boss/screen/Commons.xml"
@@ -95,6 +96,24 @@ feature("the center lists both inboxes in its rail, the approvals first, and ren
         updates.errors == ""
         updates.output.includes("added the meeting room calendar")
         !updates.output.includes("Approvals waiting")
+    },
+})
+
+// an app's Approvals (the center mounted with the app's topics) with none of its own while the demo approval waits in Commons says
+// so and links to all approvals (TUI review 2026-11-16: it said only "Nothing waiting on you")
+feature("an app's empty Approvals says an approval waits in other apps and links to the Notifications center", {
+    when() {
+        const str = ec.screen.makeTest().rootScreen(webroot).renderMode("qvt").withStaticData().render("apps/Purchasing/Approvals", { lastStandalone: "true" }, null)
+        const output = String(str.output || "")
+        ec.message.clearErrors()
+        return { status: str.status, errors: str.errorMessages.join(" | "), output }
+    },
+    then({ status, errors, output }) {
+        status == 200
+        errors == ""
+        /Nothing waiting on you here; (one approval waits|[0-9]+ approvals wait) in other apps\./.test(output)
+        output.includes('<m-link href="/apps/Commons/Notifications')
+        output.includes("Open all approvals")
     },
 })
 

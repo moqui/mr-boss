@@ -1,7 +1,8 @@
 // Marketing's reports (impl-marketing P20; design-marketing §11 Reports, CampaignPerformance): CampaignPerformance's one qvt render for
 // the analyst, with all of its checks on that render (the options, the demo running campaign's row, the basis, the CSV and print); the
 // Reports tabs of a report reader and the area refused to an author who reads no report; Marketing's entries in Insights' catalog shown
-// through Marketing's catalogue to a report reader and hidden from a user without the report permission. The rules are Mantle's
+// through Marketing's catalogue to a report reader and hidden from a user without the report permission;
+// the weekly digest's dashboard computing each of its panels. The rules are Mantle's
 // (test/marketing/MarketingReports, Attribution, MarketingRetention); the scenario is the acceptance MarketingReportsScenario.
 // Run: ./moq test mr-boss --spec MarketingReports
 const lib = ec.resource.script("component://mr-boss/test/Marketing/MarketingSpecLib.js")
@@ -238,3 +239,30 @@ feature(
         }
     }
 )
+
+feature("the weekly digest's dashboard computes every panel for the analyst, the memberships by list name among them", {
+    when() {
+        // the digest's dashboards with the digest's own ranges, as its delivery renders them (the terms on contactListName need
+        // the field sortable: without it the memberships panel was an aggregation error, TUI review 2026-11-16)
+        const digest = system(
+            () => invoke("org.moqui.report.ReportServices.get#Definition", {definitionId: "boss-marketing-weekly-digest"}).definition
+        )
+        const panels = {}
+        asUser(users.analyst, () => {
+            for (const spec of digest.body.dashboards) {
+                const dashboard = invoke("org.moqui.report.ReportServices.render#Dashboard", {
+                    definitionId: spec.dashboardRef,
+                    from: spec.from,
+                    thru: spec.thru
+                }).dashboard
+                for (const [id, panel] of Object.entries(dashboard.panels || {})) panels[id] = panel
+            }
+        })
+        return {panels}
+    },
+    then({panels}) {
+        Object.keys(panels).sort() == ["byOrganization", "deliveriesByState", "memberships", "receipts"]
+        Object.entries(panels).filter(([, panel]) => (panel.notices || []).some(notice => notice.level === "error")).map(([id]) => id) == []
+        JSON.stringify(panels.memberships.frames).includes("Garden newsletter")
+    }
+})

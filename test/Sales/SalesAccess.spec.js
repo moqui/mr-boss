@@ -527,10 +527,12 @@ feature(
                     .list()
                 if (launcher.size() !== 1 || launcher.get(0).artifactGroupId !== "BOSS_SALES")
                     problems.push("the launcher's artifact")
+                // the shipped groups that hold it: not ADMIN, nor a group another spec made in the same database
+                // (mr-mantle's SalesWorkspace grants SALES_OWNER_CHANGE to its SWS_ groups and keeps them)
                 const holders = (entity, userPermissionId) =>
                     Array.from(ec.entity.find(entity).condition({userPermissionId}).list())
                         .map(row => row.userGroupId)
-                        .filter(id => id !== "ADMIN")
+                        .filter(id => id.startsWith("BOSS_"))
                         .sort()
                 const importers = holders("moqui.security.CapabilityBundlePermission", "SALES_IMPORT")
                 if (JSON.stringify(importers) !== '["BOSS_SALES_ADMIN","BOSS_SALES_MANAGER"]')

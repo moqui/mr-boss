@@ -4,7 +4,7 @@
 // refused Services' organization and facility and Services' planner refused Retail's with the same parameters, the
 // ironstone.maintenance services refused without the root grant, a shared device's request given no context and refused the
 // Chatter and RecordFiles panels (F74) and a user served only Maintenance's record hosts' panels, Home's one qvt render (its
-// counters not configured) and Settings' one html render (the administrator's; the reader's a refusal), P8's team defaults (the
+// counters, and its counter and team links resolved under the webroot) and Settings' one html render (the administrator's; the reader's a refusal), P8's team defaults (the
 // administrator's; the planner refused, Retail's planner reads no Services team; Teams read by the planner and supervisor alone of
 // Settings, review), a custom group given a Maintenance bundle through Admin's matrix (the planner bundle opens Teams and Requests,
 // the reader bundle neither), and Maintenance's rows in Admin's capability and settings registries (each bundle carrying exactly
@@ -559,9 +559,17 @@ feature("a shared device gets no Maintenance context and no record panel; a user
 
 feature("Home shows the planner their organization and every counter (P14's too); Settings is the administrator's", {
     when() {
-        const plannerHome = asUser(users.planner, () =>
-            page("Home", {organizationPartyId: ids.organizationId, facilityId: ids.facilityId})
-        )
+        // under the webroot, as the shell asks for it, so its links resolve as the shell's do
+        const plannerHome = asUser(users.planner, () => {
+            const out = ec.screen
+                .makeTest()
+                .rootScreen("component://webroot/screen/webroot.xml")
+                .renderMode("qvt")
+                .withStaticData()
+                .render("apps/Maintenance/Home", {lastStandalone: "1", organizationPartyId: ids.organizationId}, null)
+            ec.message.clearErrors()
+            return {output: String(out.output || ""), errors: Array.from(out.errorMessages || [])}
+        })
         const otherHome = asUser(users.planner, () => page("Home", {organizationPartyId: ids.otherOrganizationId}, "html"))
         const settings = asUser(users.admin, () => page("Settings", {}, "html"))
         return {plannerHome, otherHome, settings, readerSettings: screenRefusal(users.reader, "Settings")}
@@ -580,6 +588,10 @@ feature("Home shows the planner their organization and every counter (P14's too)
         plannerHome.output.includes("New work order")
         plannerHome.output.includes("Team work")
         plannerHome.output.includes("Ziziwork Services")
+        // the counter and team links are screen paths, not the plain //Maintenance/... the link wrote as its url (TUI review 2026-11-16)
+        plannerHome.output.includes('m-link href="/apps/Maintenance/WorkOrders/Find?organizationPartyId=' + ids.organizationId + '&amp;savedFind=unassigned"')
+        plannerHome.output.includes('m-link href="/apps/Maintenance/WorkOrders/Find?organizationPartyId=' + ids.organizationId + '&amp;teamPartyId=')
+        !plannerHome.output.includes("//Maintenance/")
         !plannerHome.output.includes("is not available to you")
         // the planner has no Settings shortcut
         !plannerHome.output.includes("Shortcuts")

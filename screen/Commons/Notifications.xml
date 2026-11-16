@@ -260,8 +260,11 @@ along with this software (see the LICENSE.md file). If not, see
                         <section name="NoApprovals" condition="!(approvalList &amp;&amp; approvalList.length)"><widgets>
                             <section name="OtherApprovals" condition="otherApprovalCount"><widgets>
                                 <container style="q-pa-sm">
-                                    <label type="span" style="m-muted"
-                                            text="Nothing waiting on you here; ${otherApprovalCount == 1 ? 'one approval waits' : otherApprovalCount + ' approvals wait'} in other apps. "/>
+                                    <!-- two sentences, the count the only placeholder, so each is one row to translate -->
+                                    <label type="span" style="m-muted" condition="otherApprovalCount == 1"
+                                            text="Nothing waiting on you here; one approval waits in other apps."/>
+                                    <label type="span" style="m-muted" condition="otherApprovalCount != 1"
+                                            text="Nothing waiting on you here; ${otherApprovalCount} approvals wait in other apps."/>
                                     <link url="//Commons/Notifications" link-type="anchor" text="Open all approvals"/>
                                 </container>
                             </widgets><fail-widgets>
