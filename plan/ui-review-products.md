@@ -19,10 +19,9 @@ Keep the current inventory, activities, coverage, findings, decisions and bounde
 records references, design specifies behavior, implementation records construction, and this file records review
 and refinement.
 
-**Status: bounded follow-up completed with three subagents, 2026-11-10 America/Chicago.**
-Observed outcomes and explicit unverified recovery/mode branches are recorded in §6; partial coverage is not a pass. Execution scope, workers, commit cadence, authorized acceptance specs and
-gate timing are recorded in §7. Historical Products implementation results and existing tests are inputs, not
-evidence of this review's outcomes.
+**November 16, 2026 (America/Chicago):** The repeat review follows Accounting's separate review and refinement
+passes. See [current coverage, findings and checks](#november-16-repeat-review). The November 9–10 review and
+its follow-up remain as historical evidence. Current findings await a separate refinement pass.
 
 ### Inputs and reference patterns
 
@@ -63,10 +62,10 @@ inventories.
 | Insights reports/attention, Admin health/settings entries and neighboring app records | Existing entry/return contracts under the owning app's authority; bounded handoff inspection only |
 | Category store context, Product360 Accounting summary | Commerce (`get#CategoryStores` on CategoryDetail) and Accounting (`get#ProductAccounting`, `storeProductGl`); Products checks only that they are absent or refused |
 
-Retest a shared correction through a representative second consumer chosen for the affected behavior. Product360
-has Warehouse, Manufacturing, Purchasing, Customer Service, Commerce and a separate Accounting presentation;
-CategoryDetail/content has Commerce consumers; Supplier360 has operational consumers. Accounting's Product360 uses
-its own template/context, rather than the catalog tab set. Chatter and RecordFiles have many other consumers.
+Review shared behavior through a representative second consumer, then retest it there after any correction.
+Product360 has Warehouse, Manufacturing, Purchasing, Customer Service, Commerce, Sales and Maintenance contexts.
+Accounting uses a separate presentation and Insights uses a dataset-owned record context. CategoryDetail/content
+has Commerce consumers. Supplier360 has operational consumers. Chatter and RecordFiles have many other consumers.
 
 Preserve routes, record keys, saved finds/columns, user preferences, dates, entity/service contracts and authorization.
 Record any unavoidable compatibility change before implementing it. Keep restricted prices, supplier offers, costs,
@@ -233,10 +232,10 @@ Establish positive/negative permission pairs from Wave 1. Cross-wave continuatio
 Record each open continuation in the originating activity's ledger row; a later pass does not automatically complete
 earlier work.
 
-Each later authorized batch follows observe → prioritize → refine → rerun affected activities → compare evidence
-→ verify → update this record. Start with PRD-01/02 to establish measured browser/TUI baselines and fixture ownership.
-Delegated work can then cover bounded sources or independent activities; one coordinator owns shared files, runtime
-lifecycle and integration. Check available identity/tool isolation before assigning live work.
+For the repeat review, start with PRD-01/02 to establish browser and TUI baselines and fixture ownership. Delegate
+independent activities once the coordinator has assigned actors and records. Observe and record through Wave 7,
+then triage findings with the companion review. The November 16 pass updates the review records only. The
+observe/fix/retest cadence below describes the historical batches.
 
 ## 3. Screen and surface inventory
 
@@ -367,10 +366,10 @@ Chatter/files also need their own relevant mode samples; one QVue file does not 
 
 | Design or historical item | Current review disposition |
 | --- | --- |
-| “Only Products context implemented” in shared-screen notes; several neighboring contexts in impl-products §7 | Current context code supports Warehouse, Manufacturing, Purchasing, CustomerService and Commerce; Accounting has a separate Product360 template branch. Use current mounts and reconcile stale documentation when behavior is reviewed |
-| Product360's original tab list | Include the newer digital PaidAccess read-only surface; distinguish physical children from permitted Products tabs |
+| Shared-screen notes list the older context set | The current mounts also include Sales and Maintenance. Accounting has a separate Product360 template and Insights uses the explicit dataset record route |
+| Product360's original tab list | The server now derives the tabs by mounting app, product kind and grants. The terminal has its own row of tab links. PaidAccess remains read-only in Products |
 | Supplier360's original small catalog context | Additional inherited operational children belong to their consuming apps; verify omission/refusal in Products |
-| Import described as steps | Current implementation is a single staged shared screen with durable state, not a multi-route wizard or Commons progress template |
+| Import described as steps | Products/ProductImport keeps its route and runs through generalized Shared/DataImport and its registered Products target. Check target, operation key and results through the Products mount |
 | Historical ProductsShots and full-render results | Use current §5 suites and assertions; do not restore deleted screenshot/sweep regression tests or promote old results to live coverage |
 | Configurations/ConfigurationDetail, ChangeNotices/ChangeNoticeDetail, ProductGeo, merge-product, pivot/graph, general matrix and GS1 company-prefix provider | Deferred/unmounted work stays outside this review; no placeholder implementation to close coverage |
 | Commerce merchandising and Manufacturing execution formerly listed as future | Their current owner apps exist; inspect only a relevant handoff or shared-fix consumer here |
@@ -751,7 +750,7 @@ rules, renders or complete journeys.
 | mr-boss regression `test/Products/` | ProductsMethodFixtures, ProductsCostFixtures | Generated method/standard/PDF setup; check prerequisites and loaded rows, not a review outcome |
 | mr-boss regression `test/Products/` | ProductsDocuments, ProductsTools, ProductsImport, ProductsChecks, ProductsFinish | PRD-10, 16–22; focused content/tools/import/output contracts |
 | mr-boss regression `test/Products/` | ProductsAccess, ProductsSharedContext | PRD-23–24 and permission pairs throughout; not a complete access walk |
-| mr-boss regression `test/client/Products/` | ProductsWalk | Existing single golden path: create/activate draft, identifier and customer item code; reuse it |
+| mr-boss regression `test/client/Products/` | ProductsWalk, ProductsVariantResponses | One golden path for create/activate, identifier and customer item code. Focused mounted checks cover variant request ownership, errors and wrapping |
 | mr-boss acceptance `test/acceptance/Products/` | ProductsScreens, ProductsTaxonomyScreens, ProductsVariantScreens, ProductsPriceScreens | Existing render coverage, including selected custom modes; source/render support, not browser or terminal interaction |
 | mr-boss acceptance `test/acceptance/Products/` | ProductsPriceFixtures, ProductsInventoryFixtures, ProductsToolsFixtures, ProductsImportFixtures | Acceptance setup, not an incidental authorized bootstrap |
 | mr-boss acceptance `test/acceptance/client/Products/` | ProductsTaxonomyWalk, ProductsVariantWalk | PRD-04–06; VariantBuilderTui is opened in a browser, not a live terminal |
@@ -1339,6 +1338,82 @@ changed behavior/files, checks and results, same-state before/after evidence, re
 Keep full-gate status and any explicitly changed cadence visible. Do not append an unbounded transcript or repeat
 entire test logs here.
 
+### November 16 repeat review
+
+This pass used a fresh BOSS/Mantle database on loopback 57942, separate from Commons and PASS moderation.
+The coordinator and Products reviewer used separate browser profiles and named catalog, price, stock,
+supplier, engineering, cost and finance actors. The normal catalog browser regression used its ordinary
+catalog editor. The exact runtime and revision record is in `environment.txt`. Evidence paths below are
+relative to [the ignored review evidence directory](../../../../../plans/ui-refinement-evidence/boss-products/review-2026-11-16/).
+Material measurements include 1920 px desktop, 1280 px and 390 px phone. Terminal checks use an actual
+client and key presses. A partial row records one current representative and names the open branches.
+
+| Activity | Current result and evidence | Remaining branches |
+| --- | --- | --- |
+| PRD-01 | **Exercised / partial.** Home Active SKUs opened the intended find. Name search found the Services sample, and one Back returned from its Identifiers to Summary. Ending soon fit at 390 px. CSV and XLSX had the same 200 rows and distinct IDs. At 201 both returned the named limit error and no partial export. `worker-native.log`, `worker-handoffs.log`, `worker/native/`. | Saved-find editing, exact counter/data equality and all landing modes. |
+| PRD-02 | **Exercised / partial.** Existing ProductsWalk created and activated a draft, then persisted an identifier and customer code as the catalog editor. `client-regression.txt`. | Clone, delete-used refusal and discontinue/recover. |
+| PRD-03 | **Exercised / partial.** Browser Summary and Identifiers showed the same record and code. Actual TUI opened Identifiers with the keyboard and F5 retained the route and record. `worker-handoffs.log`, `worker-tui.log`. | Distinct kit, dimension and equipment row writes and type-specific empty states. |
+| PRD-04 | **Exercised / partial.** Two dated parents showed as distinct edges. Editor opened and canceled Move for one edge, while the reader lacked Move. `worker-handoffs.log`. | Persist a move and refuse a cycle. |
+| PRD-05 | **Exercised / partial.** Features, Feature groups and Interactions navigated correctly. A seeded group appeared. `worker-handoffs.log`. | Rule write, conflict/recovery and keyboard variant. |
+| PRD-06 | **Exercised / failed branch.** An uninterrupted Queue displayed its key. Changing the operation key while a successful queue response was held left no confirmation or new key in the view. The generated operation held four rows and a reader received 403. The terminal twin showed the Asset default. PRD-UI-036. | Run queued batches, revoke a grant mid-confirmation and retry in brokered or offline variants. |
+| PRD-07 | **Exercised / partial.** The exact scheduled switch at 2027-01-01T06:00Z resolved USD 15 before and USD 16 at the effective instant. A bulk preview returned a key and a missing confirmation was refused by name. Negotiated-price write controls led to refusal, PRD-UI-038. `worker-final.log`, `worker-handoffs.log`. | Actual bulk apply, stale correction, notice delivery, and clarify whether future-dated searches should label state relative to the selected instant. |
+| PRD-08 | **Exercised / partial.** A price editor created a draft and fixed product rule. Cancel retained Draft. Confirm published the list and it stayed published on reload. `worker-final.log`. | Conflicting rule, bounds and stale publication token variants. |
+| PRD-09 | **Exercised / partial.** Explain resolved USD 12.50 and identified list selection and rule base. Margin was absent and the catalog-only reader received 403 without a result. `worker-final.log`. | Non-USD policy/default, full trace, exact history output and chart. |
+| PRD-10 | **Exercised / failed branch.** Products returned real HTML and PDF for its generated URLs. Both generated URLs in Sales and Commerce returned 404. The same query on each real mount produced HTML/PDF. PRD-UI-037. | Multi-page layout and PDF startup/failure retry. |
+| PRD-11 | **Exercised / partial.** Supplier price editor saved a USD 6.35 offer for minimum 126. The same offer appeared on Supplier360 and in effective CSV. The Services scope omitted the Retail code. `worker-final.log`, `worker/final/supplier-offer-review.csv`. | Correction/end and other-buyer write refusal. |
+| PRD-12 | **Exercised / partial.** The stock planner opened current Services inventory, with foreign quantity 991 and cost 510.98 omitted. A facility policy change saved minimum 19 and survived reload. The ordinary catalog editor saw the policy without either save. The focused Commerce store-facility scope regression passed. `stock-browser.txt`, `verification.txt`. | Live Commerce store/facility pair, tracking exception, projection and Warehouse operational handoff. |
+| PRD-13 | **Exercised / partial.** Products and Manufacturing TUI Alt+2 and Alt+5 reached Explosion and Where Used. Current routing rendered Line A assembly, Assemble and Test and pack. `worker-tui.log`. | Add an equipment/skill requirement, release a change and check live readback on the same detail. |
+| PRD-14 | **Exercised / partial.** A manufactured estimate named missing labor and overhead rates. The purchased pack control showed a complete USD 80.00 total and USD 8.00 per unit at quantity ten, stable after reload. `worker-tools-corrected.log`. | Saved draft with resized BOM/WIP or outside work, and rate correction. |
+| PRD-15 | **Exercised / partial.** The staged approved estimate rendered Approval PDF. The approver downloaded a 36,969-byte PDF and the catalog reader received 403 with no PDF. `exact-output-and-import.txt`. | Fresh separate approval, revaluation post, reconciliation and replay. |
+| PRD-16 | **Exercised / partial.** The reader downloaded the exact 95-byte managed fixture and opened the catalog datasheet HTML. Missing content and the Retail holder returned named JSON failures without document bytes. `output-pairs.txt`, `stock-browser.txt`. | Managed document concurrent edit, retained version restore and Chatter/file write. |
+| PRD-17 | **Exercised / partial.** Created a disposable English source on a virtual product. Saved Spanish Unicode “Camisa azul — revisión” with Reviewed. A catalog reader reopened and saw both languages and Reviewed without Translate. `worker-tools-corrected.log`. | Stale source, explicit clearing and another target language. |
+| PRD-18 | **Exercised / partial.** At 390 px, Enter resolved BOSS_PACK_12 to 12 each for the Services product. Catalog editor lacked global unit edits, which the system administrator could see. `worker-tools-corrected.log`. | Dated successor write and historical receipts. |
+| PRD-19 | **Exercised / partial.** Reader opened the two exact fixture codes at 390 × 844, rendered a 47,005-byte PDF and opened the HTML layout with its review fingerprint. Another catalog user received a named 500 for the same resources and no PDF. `output-pairs.txt`. | Physical printer, stale selection and the full unrendered/other-actor matrix. |
+| PRD-20 | **Exercised / partial.** Staged and validated one accepted and one missing-name row. Submitted the reviewed Standard form parameters, returned to the same operation and saw one applied on reload. The owning editor's error CSV contained only the failed row. Another reader got no results bytes. `stock-browser.txt`, `exact-output-and-import.txt`. | Correct and resume the failed row, revoke active edit authority and verify selected Admin target isolation. |
+| PRD-21 | **Exercised / partial.** At 390 × 844, the error filter showed three issues and no horizontal overflow. Retry returned one checked product and its two required-field findings. `stock-browser.txt`, `checks-phone.png`. | CSV header/severity, an injected independent failure, and fail-then-correct loop. |
+| PRD-22 | **Exercised / partial.** Catalog admin saved a dated reason, reloaded it, and restored the original required fields. A reader had no edit form. `stock-browser.txt`. | Consecutive native TUI saves, a changed default and its affected consumer. |
+| PRD-23 | **Exercised / partial.** Services catalog reader saw its PaidAccess term without edit. Retail method holder got unavailable and no term. The Commerce operator saw the term. Forged Products mutation was refused by name and the authorized owning route passed in ProductsSharedContext. Other stock/supplier mutation pairs passed in the same spec. `worker-scope.log`, `verification.txt`. | Additional live owning mounts and grant revocation mid-operation. |
+| PRD-24 | **Exercised / partial.** Narrow Sales and Maintenance Product360 had appropriate tabs and Maintenance Spare parts worked at 390 px. Foreign maintenance actor was refused. Explicit InsightsRecord opened without an admitting dataset and offered Dashboards. Both allowed Sales/Maintenance Product360 pages showed a Chatter error on entry, PRD-UI-039. `worker-handoffs.log`, `worker-scope.log`. | An admitted Insights drill and Back, complete Standard variants and shared terminal counterparts. |
+
+#### Earlier findings on the current checkout
+
+| Earlier IDs | Current disposition |
+| --- | --- |
+| PRD-UI-001–003 | Live Home title/phone containment and server-derived browser/TUI tabs retained. The focused VariantResponses cases pass on the current component. The Queue race is a different branch, PRD-UI-036. |
+| PRD-UI-004–005 | Current PriceHistory has scoped direction/currency defaults and ProductsDocuments scope checks passed. Fresh non-USD history and the two-actor locale-picker interaction remain unverified. |
+| PRD-UI-006–007, 015–017 | Live PaidAccess owner/foreign pair and forged Products refusal. Current ProductsSharedContext passed Commerce mutation, inherited stock and supplier owning-context pairs. ProductsInventory reproduced the store-level facility exclusion. |
+| PRD-UI-008–010, 014 | Standard fallback and separate bulk control gates verified in current source. Native find works and supplier CSV has Effective state without action controls. The exact Standard fallback, price-only action visibility and pointer Find Options submit were not repeated. |
+| PRD-UI-011–013 | Phone error filter count and retry agreed. Import error CSV was owner-scoped and denied another reader with a named error. Chatter rich editor naming remains a source disposition in this pass. |
+| PRD-UI-018–020 | Same-product Back worked in Material and TUI retained the record. Original cold cross-app navigation branch is open. Focused variant width regression passed and native TUI showed the Asset default. |
+| PRD-UI-021–023 | Current semantic chips, focus roles and stale-refusal/reload handling were inspected in source. Exact composited contrast and two-editor recovery remain unverified. |
+| PRD-UI-024–027 | Missing/foreign document responses returned named errors. TUI nested tabs and export 200/201 verified live. CatalogChecks export still hides Retry in source. Its exact severity CSV is open. |
+| PRD-UI-028–030 | Current routing names and output guards remain. Label PDF/HTML and foreign refusal were exercised. Equipment/skill readback and simultaneous variant over-limit/refusal remain partial. |
+| PRD-UI-031–035 | Current decimal inputs, revision responses and redirect handling were inspected. Structured variant failures are covered by VariantResponses. Fractional Standard correction and actual consecutive settings/routing saves remain unverified. |
+
+#### Findings awaiting refinement
+
+| ID | Severity and evidence | Reproduction and impact | Likely owner |
+| --- | --- | --- | --- |
+| PRD-UI-036 | **P2 / live.** `worker-native.log`. | As catalog editor, Queue a four-row variant selection. Hold the successful response while editing the operation key. The UI leaves the replacement key in place and never shows the stored batch's key or summary. Loading that generated key directly returns four pending rows. An uninterrupted Queue shows its key. | BOSS VariantBuilder request ownership |
+| PRD-UI-037 | **P2 / live.** `worker-native.log`, `worker/native/`. | Resolve the Services list in Sales → Agreements or Commerce → Merchandising. Both visible output links point under the app's unmounted `Prices` branch and return 404. The same inputs return HTML/PDF in Products and under the actual Sales and Commerce mounts. | BOSS shared PriceListDetail link generation |
+| PRD-UI-038 | **P2 / live.** `worker-handoffs.log`. | Products exposes Schedule, Correct and End on the USD 17.50 Contoso negotiated price. A valid End request returns the instruction to change the price on its agreement and makes no change. A narrow agreement editor can open that agreement in Sales. | BOSS price action availability. The Mantle agreement guard correctly refuses. |
+| PRD-UI-039 | **P2 / live.** `worker-handoffs.log`. | Open a permitted Product360 as a Sales representative or Maintenance planner. Summary mounts Chatter automatically, and the widget's request returns `RECORD_PANEL_UNAVAILABLE`. The page shows an “Internal Server Error” toast during normal read-only navigation. | BOSS Product360 Summary and mounting app panel capabilities |
+| PRD-UI-040 | **P2 / live.** `worker-handoffs.log`. | Sign in as the catalog price reader. The shared pricing tabs offer Standard costs, Cost roll-up and Cost history. Opening Standard costs says separate authority is required and returns no cost data. | BOSS shared pricing navigation |
+
+#### Verification and scope
+
+All six named Products fixture specs passed. The selected BOSS server regressions and both Products client
+regressions passed. See `verification.txt` for counts and the distinction between fixture, regression and
+manual review probes. The combined manual export probe logged both boundaries and then hit the client
+runner's per-spec timing cap, including the creation and cleanup of 201 disposable drafts. Its recorded native
+observations are independent of that runner verdict. Only the named fixture specs were taken from acceptance.
+
+All 201 export drafts were removed. The catalog settings and stock policy values were restored. Other created
+records were confined to the disposable Products database. See `cleanup.txt`. The two review registers were
+triaged together. Start with the two P1s in the companion review, then DC-UI-042 and PRD-UI-036/037, which block
+navigation, batch recovery and outputs. Follow with the remaining access-based controls and shared panel errors.
+Corrections and independent retests belong to the next pass.
+
 ### Completion
 
 An activity passes only after its intended outcome and relevant recovery paths are observed. A blocked/deferred
@@ -1352,6 +1427,10 @@ implementation notes when decided behavior changes, keep Products-specific findi
 into the framework review guide. An accurate, reviewable plan does not close any live activity.
 
 ## 7. Decisions
+
+- **November 16 repeat.** Separate review and refinement. The review updates these two running records, uses the
+  six named Products fixtures, and exercises the current UI and focused regressions. Earlier authorizations refer
+  to the historical batches below.
 
 - **Execution authorization (2026-11-09):** all 24 activities and seven waves, with three workers: catalog/variants
   (PRD-01–06), pricing/content/tools (PRD-07–11, 16–22), and engineering/access (PRD-12–15, 23–24). The coordinator

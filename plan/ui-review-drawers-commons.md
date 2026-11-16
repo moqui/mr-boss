@@ -18,9 +18,9 @@ design specifies behavior, implementation records construction, and UI review re
 refinements and verification. This file remains the active record through the review; append findings and bounded
 batch notes as work happens rather than scattering the results into new status files.
 
-**Execution:** Waves 1–3 (DC-01–10) are complete with the recorded gaps. The continuation authorizes Waves 4–8
-(DC-11–22), up to three delegated workers, correction, independent retest and local commits after each verified batch. The initial inventory was established from source, not browser activity;
-the coverage ledger and batch record below distinguish current observations from untested leads.
+**November 16, 2026 (America/Chicago):** The repeat review follows Accounting's separate review and refinement
+passes. See [current coverage, findings and checks](#november-16-repeat-review). The original waves and their
+review-and-fix batches remain as historical evidence. Current findings await a separate refinement pass.
 
 ### Inputs and reference patterns
 
@@ -171,12 +171,11 @@ roots, and each later wave builds on the surfaces before it. Three steps reach a
 - DC-02's repeat with a live call needs the call fixtures of Wave 6 and runs there. Its ledger row stays partial
   until then.
 - DC-03's Email and Chat message entries, and DC-06's linked mail/chat, use Compose, Mail and Chat as entry and
-  return paths only. Record what they find, but correct and retest it in Waves 5 and 6.
+  return paths only. Waves 5 and 6 own the deeper review of any findings from those steps.
 
-Each batch follows observe → prioritize → refine → rerun affected activities → compare evidence → verify → update
-this record. Once the user has authorized execution and commits, end each batch as the guide does: run the required
-checks (§5), then commit the source changes with their notes in each owning repository. Writing or updating this
-plan does not itself authorize application changes, commits, pushes or acceptance runs.
+For the repeat review, observe and record outcomes in wave order, then triage both review registers together.
+The November 16 pass updates the review records only. The earlier observe/fix/retest cadence describes the
+historical batches. Retest after corrections in the separate refinement pass.
 
 ## 3. Screen and surface inventory
 
@@ -382,10 +381,11 @@ execution and update this table if the implementation has moved. Do not add an i
 
 | Design/history item | Current source finding | Review treatment |
 | --- | --- | --- |
-| People self-service under Commons | No `Commons/People/SelfService` definition or root mount in the inspected tree | Track as unmounted proposal; People implementation/review owns delivery |
-| Comms Delivery/Campaigns, MessageTemplates/MessageTemplateDetail, SendingProfiles, Suppressions | Proposed in the design; no such descendants or explicit mounts in current Comms/BasicComms roots and BOSS extensions | Existing Consent remains in scope; do not invent delivery/template/suppression pages |
+| People self-service under Commons | `Commons/People` mounts SelfService, MyInterview and MyPayslip. The Commons shell registers personal clock, claim and Today entries for the applicable roles | DC-03, DC-04, DC-22 cover entry and return. People owns the full self-service workflows |
+| Maintenance request and booking | Commons mounts `ReportProblem` for the request role. Addressed approval work can open Maintenance Scheduling → Booking requests | DC-03, DC-09, DC-22 cover the requester and approver handoff |
+| Comms delivery and campaign tools | Marketing owns campaign delivery, templates, sending profiles and suppressions. Marketing mounts Comms Consent in its Audiences area | Review Consent and its organization boundary. Marketing owns delivery and campaign activities |
 | Shared survey/form builder | Implemented as `Shared/SurveyForms`, `SurveyFormDetail`, `SurveyResponses` and `SurveyResponseDetail`, mounted from `CustomerService/Settings.xml`; not mounted in Commons | Owned by the Customer Service (and later Marketing) reviews; inspect only a link that reaches it from a Commons/Comms activity |
-| Event registration additions | Crosscut/Marketing design work, not present in the inspected Commons tree | Separate implementation scope; inspect links only if an actual integration appears |
+| Event registration additions | Marketing mounts Commons EventDetail with an app-owned Registration setup link. Commons Calendar also supplies the Marketing calendar widget | Review only the navigation and calendar or record boundary |
 | `Comms/Calls/LiveCall` (design §4 LiveCall) | No such route: the call window is the framework's `js/WebrootCall.js`, shown on any screen during a call | Review it as the Live-call mini-window surface above; do not look for a route |
 | Calls and Assist listed as later in old implementation notes | Calls is mounted from BasicComms and Assist exists in webroot | Review current controls; do not carry historical deferred status forward |
 | Sync and co-editing listed as later in early milestones | Commons Settings/Sync and editor integrations exist | Include settings, save/recovery and two-user activities; distinguish UI from external protocol proof |
@@ -675,7 +675,7 @@ spec names omit `.spec.js`. Inspect current assertions before extending coverage
 | mr-boss regression, `test/Shared/` | Chatter, RecordFiles | DC-06, DC-11; panel rules and access under an app root, not the timeline/files experience across mounts |
 | mr-boss regression, `test/` | PublicShare, PublishedCalendar, Unsubscribe | DC-12, DC-10 and DC-20 in that order; token-route rules, not the anonymous browser walk |
 | mr-boss regression, `test/` | AppOrganizationFilters | DC-22; root groups and organization filters, not the access walk |
-| mr-boss acceptance | AppStructure, ServerStatic, TuiRender | Supporting structure/render coverage; no new duplicate sweep and no usability claim |
+| mr-boss acceptance | AppStructure, ServerStatic, TuiRender, CommonsClientFixtures | Existing render coverage and named disposable data for Commons and Comms, including the optional PASS moderation feature |
 | mr-mantle regression | party/Consent, party/Contacts, party/ContactBooks, party/ContactAddresses, party/InboxThreads, party/InternalMessages, party/InternalLabels, party/RecordNotes, party/RecordVisibility, party/RecordLinks, party/ChatRecords; work/CalendarServices, work/CalendarChanges, work/CommonsToday, work/Dav; forum/Mailboxes | Business rules behind DC-04–10, DC-17, DC-18, DC-20 and DC-22; a rule fix and its test stay in Mantle |
 | basic-comms regression | BasicComms, BasicCommsInbox, BasicCommsComposeRef, BasicCommsFiles, BasicCommsSync, BasicCommsTexts, BasicCommsChat, BasicCommsChatChanges, BasicCommsBridges, BasicCommsEncrypted, BasicCommsCalls; client ShellSync and CryptoFlow | Shared Comms behavior; BOSS mount/extension outcomes require separate review evidence |
 | basic-comms acceptance, `test/acceptance/client/` | CallFlow, CallGuestFlow, EncryptedCallFlow, EncryptedChatFlow | Existing local media/guest/encryption journeys; prerequisites and actual mount must be checked |
@@ -683,9 +683,9 @@ spec names omit `.spec.js`. Inspect current assertions before extending coverage
 | webroot regression, `test/` | QvtConfig | The shell restoring a saved dark/light/automatic choice and a forced or locked appearance policy taking precedence (DC-21 theme) |
 | webroot acceptance, `test/acceptance/client/` | ThemeLayout | Offline measured theme and geometry checks of shared components (`./moq accept` runs it with `--offline`); the place for a reusable contrast/geometry check found here |
 
-No Commons/Comms-specific browser journey files were present under BOSS `test/client/` or `test/acceptance/client/` at
-inventory time. Do not imply a BOSS golden path already exists from the presence of server specs or BasicComms walks.
-Adding a golden-path walk for each app is a remaining item in
+No Commons/Comms-specific browser journey files are present under BOSS `test/client/` or `test/acceptance/client/`.
+The BOSS Commons fixture prepares manual activity data. The BasicComms walks cover the framework mount.
+Adding a BOSS golden-path walk for each app is a remaining item in
 [impl-drawers-commons.md](impl-drawers-commons.md#9-addendum-nov-8-2026-remaining-items), outside this review.
 Resolve coverage gaps when implementing the relevant batch; this documentation change adds no tests.
 
@@ -695,8 +695,8 @@ Resolve coverage gaps when implementing the relevant batch; this documentation c
   Run the affected regression specs with the existing binary unless a rebuild is required, for example
   `./moq test mr-boss --spec QuickCreate --nobuild`, and for client specs `./moq test-client mr-boss --serve --spec
   <name>`. Commands run from the mr-moqui root.
-- During each batch run localized checks for the affected rules, bugs and activities. Run `./moq test-apps` once
-  at the end of the planned review pass; include `./moq test-framework` there when the pass changed framework code.
+- During each refinement batch run localized checks for the affected rules, bugs and activities. Run `./moq test-apps`
+  at the end of the refinement pass, with `./moq test-framework` when that pass changed framework code.
   The completed Waves 1–3 pass used the end of Wave 3; the current Waves 4–8 pass uses the end of Wave 8. This user-directed cadence also applies to future
   review iterations and supersedes the initial per-batch full-suite cadence; earlier runs remain historical results.
   Do not run framework tests or `cargo test` merely for BOSS changes.
@@ -1020,6 +1020,80 @@ For each batch record:
 5. Verification commands/results, local evidence references and any commits made; no secrets or personal fixture data.
 6. Pending/blocked/deferred work, prerequisite and next bounded review choice.
 
+### November 16 repeat review
+
+The coordinator and two subsystem reviewers exercised the current Drawers, Commons and Comms routes, with
+BOSS and Mantle on loopback port 57941 and moderation on a separate BOSS/Mantle/PASS database on 57943.
+Staff used separate browser contexts and named fixture roles. The exact runtime, listener and revision record is
+in `environment.txt`. Evidence below is relative to
+[the ignored review evidence directory](../../../../../plans/ui-refinement-evidence/boss-drawers-commons/review-2026-11-16/).
+Material was measured at 1920 × 1080 and 390 × 844, with 375 px of usable content on the measured phone tray.
+The terminal evidence uses an actual TUI client. Each row is a current representative. Remaining branches
+below stay open independently of the historical ledger.
+
+| Activity | Current result and evidence | Remaining branches |
+| --- | --- | --- |
+| DC-01 | **Exercised / partial.** Joe opened Home with task cards and opened the palette with the keyboard at 1920 × 1080. `drawers/commons-browser-http.jsonl`. | Recent records, count-to-filter equality and saved-find Back. |
+| DC-02 | **Exercised / partial.** App drawer and Today tray coexisted in light and dark. Close tray had an accessible name and the 390 px tray fit the actual 375 px content. Call signaling and mini-window were sampled separately. `drawers/commons-browser-http.jsonl`, `comms/call-mini-tasks-1920.png`. | Assist was absent for ordinary Joe with no usable model configured. Combined Assist and call, cancellation, and successful model work remain unverified. |
+| DC-03 | **Exercised / partial.** Quick Task showed Joe's display label, kept the form open with inline Required on blank submit, and a corrected title persisted at TaskDetail. Other-org staff saw no title. `drawers/commons-browser-http.jsonl`. | Other create kinds, prior modal toast timing, and new People clock/claim and Maintenance request entry. |
+| DC-04 | **Exercised / partial.** Reschedule and Done persisted on a disposable task. The paired outsider request was refused. A notification opened and read back as Read in Material. Standard and terminal failed to open the same notification, DC-UI-042. | Revoke task access and compare stale unread totals with the list. Run the addressed approval refusals and topic preference round trip. |
+| DC-05 | **Exercised / partial.** Completion was visible in the task list. The filtered Board return anchor rendered in TUI, and the foreign task returned unavailable. `drawers/tui-follow.log`. | Click through both filtered Board and Calendar returns, and attempt a stale save. |
+| DC-06 | **Exercised / partial.** Joe opened Chatter and RecordFiles for the same request and the outsider received no record content. Author edit and delete persisted. Bob could read the request but could not edit Joe's entry. `drawers/commons-browser-http.jsonl`. | Current attachment upload/download, mention delivery and a second consumer of both panels. |
+| DC-07 | **Exercised / partial.** Native TUI opened Mary Doe's contact and displayed its address. Joe saw no Mary result. `drawers/tui-015.log`. | Paired Sales edit scope, revoke from shared book and print/vCard. |
+| DC-08 | **Exercised / partial.** Uploaded private CSV, previewed and imported the row, and reached Open My Contacts. Foreign preview omitted the same row. `drawers/commons-browser-http.jsonl`. | Mixed-row correction, background progress, vCard and keeper/merge consequences. |
+| DC-09 | **Exercised / partial.** Invalid range made no event and a valid one saved. Maple booking refused overlap and non-owner cancellation, then owner cancellation removed the active event. Projects New meeting opened a persisted, IRON-linked detail. In TUI two named events opened distinct records. `drawers/tui-calendar-doors.log`, browser/HTTP evidence. | Current recurrence split/restore, RSVP, view-only and People-managed drag refusal, and addressed booking approval. |
+| DC-10 | **Exercised / partial.** Owner saw Family, internal Share and HTTPS feed guidance. Joe lacked Family. Calendar names and export labels were distinct in TUI. Invalid published URL returned 404. Settings still lacks an owner Publish/revoke action. | Valid anonymous publication, password/expiry/revocation and actual DAV device round trip. |
+| DC-11 | **Exercised / partial.** A temporary View grant allowed Bob to produce a bare Git export with two commits, though the button was absent. The outside user and then Bob after grant removal were refused. DC-UI-041. | Folder/archive permissions, editor recovery and co-edit/history variants. |
+| DC-12 | **Exercised / partial.** Wrong password granted nothing. Correct password retrieved exact local bytes, off-scope request had no bytes, and a post-revoke attempt returned 404. `drawers/commons-browser-http.jsonl`. | Upload-only link, expiry and direct GET/no-mutation checks for every share action. |
+| DC-13 | **Exercised / partial.** Travel and distinct space links appeared in native TUI. Owner read the page through HTTP. A restricted space request returned 500 without page content. `drawers/tui-follow.log`. | Current co-editing, review/approval and protected history. |
+| DC-14 | **Exercised / failed branch.** A delayed Markdown fallback save followed by further typing and a note switch lost the later line. The first response also replaced the newly opened note's client save state. Other-org staff received no private text. DC-UI-040. | Rich editor, disconnection, and retry after a failed save. |
+| DC-15 | **Exercised / partial.** Opened current Mail accounts with staged loopback and shared hosted data. The Calls settings copy was current. `comms/mail-settings-list.png`, `comms/settings-qapps-1920.png`. | Current remote sync recovery, OOO persistence, hosted-address grant pair and external OAuth. |
+| DC-16 | **Exercised / partial.** Viewed the seeded shared thread and checked response scope. Joe could reply, Bob could read without reply/send, and the outside user received Not found. `comms/mail-fixture-joe.developer.png`, `comms/mail-fixture-bob.developer.png`. | Fresh captured reply, attachment bytes, Send→Undo and mixed-zone schedule/snooze behavior. |
+| DC-17 | **Exercised / partial.** Verified shared hosted access through the same thread for sender-capable, read-only and outside users. `comms/` and focused InboxMailboxes. | Interactive private mailbox reply, removal followed by new delivery, and task filing round trip. |
+| DC-18 | **Exercised / failed branch.** Joe could find and directly message Bob. Search and direct creation refused the other-organization reviewer. Adding that same account to a private room succeeded and made its earlier message readable. Removal revoked the read. The browser also exposed unrelated business actions to ordinary staff, DC-UI-043/044. | Tray thread continuity, encryption, attachment/forward and disconnected send. |
+| DC-19 | **Exercised / partial.** Two local participants reached ringing and the call entry, and the mini-window stayed beside a task. The index shows current device wording and still omits Call handling. `comms/call-*.png`. | Inbound audio and decoded video were not established. Media, recording, guest and device-cancel recovery remain open. |
+| DC-20 | **Exercised / partial.** Unsubscribe GET returned 405 without changing News. POST changed only News, replay changed zero rows, and preferences restored News. A narrow internal moderator recorded an approval and a refusal and cleared the queue. The 390 px PASS forum showed only the approved title. Nonmoderator and public-only moderator saw no private review subject. `comms/pass-*.png`, `comms/unsubscribe-phone-before.png`. | Full native TUI status set, scoped consent edit/export and new verification flow. |
+| DC-21 | **Exercised / partial.** TUI read the Monday–Friday defaults. The appearance transition sent Material back to `/qapps` and Standard/TUI back to `/apps`; the changed disposable preference was restored. Current Git-only token wording was observed for a restricted staff actor. DC-UI-034 source still whitelists factor summary fields. | Active TOTP summary/enrollment, live multi-day edit, name/photo update and channel preference round trip. |
+| DC-22 | **Exercised / partial.** Paired actor checks covered notes, task, calendar, files, Chatter, mail, chat and moderation. The chat membership result fails the new target policy even though search and direct messaging enforce it. | People and Marketing cross-app scope, individual shell provider revocation/count behavior, broader access walk. |
+
+#### Earlier findings on the current checkout
+
+| Earlier IDs | Current disposition |
+| --- | --- |
+| DC-UI-001–003, 005, 006, 008 | Live samples retained selected names, inline Required, task cards, context-free F6, the named tray close, and phone containment. Task count equality and other named tray actions were sampled only in part. |
+| DC-UI-004, 007 | Current source still defers quick-create success actions until modal hide and has a persisted Assist failure path. The early toast click and Assist with a usable fixture were unverified in this pass. |
+| DC-UI-009, 011–013, 016–017 | Live range, icon/agenda samples, and Projects meeting and popup fit. Current EventDetail regressions pass. Recurrence rebase/consecutive save and same 1280 px popup branch remain open. |
+| DC-UI-010, 014–015, 018 | Terminal contact name, address and destination, two distinct calendar destinations and named calendar settings were verified. Filtered return anchor is present. Post-merge Tasks continuity and narrow terminal clipping were source/partial only. |
+| DC-UI-019–022 | Current source retains share picker reset, Knowledge return and accessible toolbar changes, and a scalar Drives return. The review reached drive settings and distinct wiki links. Exact share/reopen and toolbar cases remain to retest. The Markdown data loss is a new branch, DC-UI-040. |
+| DC-UI-023–028 | Shared-account reply capabilities and outside refusal were exercised. Current Account and Inbox regression checks pass. Successful SMTP/IMAP sync, sender-name parity, saved-zone and OOO cases are still open for live retest. |
+| DC-UI-029–031, 035, 038 | Calls card wording and a civil moderation note date verified live. Device cancel, chat day boundary and all five TUI consent statuses remain source/partial. Schedule/snooze and invitation time values still have mixed clock code paths and need a paired UI readback. |
+| DC-UI-032–034, 036–037, 039 | TUI preference initialization and mode-specific appearance redirects observed. Profile refresh, channel labels, factor filtering and multi-choice behavior remain in source. A fresh enrolled-factor summary is unverified. |
+
+#### Findings awaiting refinement
+
+| ID | Severity and evidence | Reproduction and impact | Likely owner |
+| --- | --- | --- | --- |
+| DC-UI-040 | **P1 / live.** `drawers/commons-browser-http.jsonl`. | In Commons Notes with Markdown fallback, save the first edit while delaying its browser response. Type another line and open a second note before releasing the response. Reopening the original returns only the first edit. The second note's persisted text stays intact but its client saved-state text is set to the first note's text. | BOSS Commons Notes |
+| DC-UI-041 | **P2 / live.** `drawers/commons-browser-http.jsonl`. | In Files → Drives → Drive settings, a viewer can open the Git drive and export the bare repository through the same transition as its manager. Only the manager sees Export the repository. An unrelated user and the viewer after grant removal are refused. | BOSS Files |
+| DC-UI-042 | **P2 / live.** `drawers/tui-follow.log`, browser/HTTP evidence. | Open the same unread notification as its recipient. Material opens RequestDetail and marks it read. TUI Enter says “Nothing to open on this row” and Standard renders the title with no open form. | BOSS notification title markup and terminal/HTML presentation |
+| DC-UI-043 | **P1 / live.** `comms/private-chat-other-org-readable.png`, `comms/observations.txt`. | As ordinary staff, try adding a cross-organization user who is omitted from people search and refused for a direct chat. The private room add returns success for that user. Independently signed in, the user can now read a message sent before they were added. The prior and post-removal requests both returned room not found. The allowed colleague also succeeds as a positive control. | BasicComms and the BOSS chat-target provider boundary. The failing path needs root-cause investigation. |
+| DC-UI-044 | **P2 / live.** `comms/chat-review-menu.png`, `comms/observations.txt`. | On a readable Chat message, ordinary staff see Create lead/RFQ, Create application, and Create a case. The corresponding requests on that message refuse with `SALES_UNAVAILABLE`, `PERMISSION_DENIED` and `CUSTOMER_SERVICE_UNAVAILABLE`. No record is created. | BOSS Comms action visibility and shared action provider |
+| DC-UI-045 | **P3 / live.** `comms/settings-{apps,qapps}-1920.{png,txt}`. | Reading and keys links work in Material. Standard renders the same two labels with no anchors. Current TUI markup also supplies empty link branches. The Calls card is current, but discovering Call handling still requires another route. | BOSS Comms settings and BasicComms index |
+
+#### Verification and scope
+
+The five Commons fixture features passed on the Commons database. The single selected moderation fixture passed
+on the fresh PASS database and again on the served copy. The focused server batch had 178 passing BOSS features
+and one ChatReach setup failure because the example gallery was omitted. With the example component linked in
+the checks runtime, ChatReach passed its one feature. The framework gallery tests the focused reach rule. The
+live BOSS room result in DC-UI-043 is a separate mounted observation. Only the named acceptance fixtures were
+run. See `verification.txt`.
+
+The private-room membership and temporary Git View grant used in reproduction were removed. The public share
+was revoked and the changed appearance preference was restored. Other review records lived in disposable
+databases. See `cleanup.txt` for listener cleanup. Current unresolved findings, source leads and remaining
+branches carry forward to a separate refinement pass.
+
 ### Completion
 
 Close an activity only with an observed completion and relevant recovery outcome, or an explicit blocked/deferred
@@ -1033,6 +1107,9 @@ verification results, selected before/after evidence, compatibility decisions an
 `ui-review-*` files. Feed general patterns back into the framework UI review guide; keep BOSS-specific findings here.
 
 ## 7. Decisions
+
+- **November 16 repeat.** Separate review and refinement. Update the two review records during review, with
+  existing named fixtures and focused regression checks. Defer code, fixture and specification changes to refinement.
 
 Decided for this review; add later decisions here, and put a question still open under an **Open** heading with the
 choice this plan would make.
