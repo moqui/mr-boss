@@ -45,3 +45,23 @@ feature("Forecast with no organization asks a user of several organizations to c
         !rendered.output.includes("This forecast is not available to you.")
     }
 })
+
+feature("Forecast's find keeps the chosen period and person named when they are not among the choices searched", {
+    when() {
+        const choices = "ironstone.sales.ContextServices.get#Choices"
+        const options = (choice, selected) =>
+            asUser(users.rep, () =>
+                lib.invoke(choices, {choice, organizationPartyId: ids.organizationId, term: "no such name", selected}).options || []
+            )
+        return {
+            period: options("salesPeriods", ids.periods.q4),
+            subject: options("forecastSubjects", "BOSS_SAL_REP"),
+            unknown: options("salesPeriods", "NO_SUCH_PERIOD")
+        }
+    },
+    then({period, subject, unknown}) {
+        period.length == 1 && period[0].value == ids.periods.q4 && period[0].label != ids.periods.q4
+        subject.length == 1 && subject[0].value == "BOSS_SAL_REP" && subject[0].label != "BOSS_SAL_REP"
+        unknown.length == 0
+    }
+})

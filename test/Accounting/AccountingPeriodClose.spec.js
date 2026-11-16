@@ -61,6 +61,9 @@ feature("a period run starts from its dialog's service and shows its results; th
     },
     then({list, selected, tui}) {
         list.errors.length == 0 && list.output.includes("Project cost") && list.output.includes("Preview")
+        // the list's find chooses the organization (B19)
+        tui.output.includes('"id":"Runs.organizationPartyId","name":"organizationPartyId","t":"field","title":"Organization"')
+        !tui.output.includes("Choose an organization in Find")
         selected.errors.length == 0 && selected.output.includes("This run has no results")
         selected.output.includes("Start a run")
         tui.errors.length == 0 && tui.output.includes("Project cost")

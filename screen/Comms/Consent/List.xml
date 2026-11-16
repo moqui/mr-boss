@@ -68,15 +68,10 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="exportCsv" read-only="true">
         <actions><script><![CDATA[
             const param = (name) => { const value = ec.web.parameters[name]; return value == null || value === '' ? null : String(value) }
-            let changedFromDate = null
-            let changedThruDate = null
-            if (param('changed_period')) {
-                const range = ec.user.getPeriodRange(param('changed_period'), param('changed_poffset') || '0', param('changed_pdate'))
-                if (range) { changedFromDate = range[0]; changedThruDate = range[1] }
-            } else {
-                if (param('changed_from')) changedFromDate = ec.l10n.parseTimestamp(param('changed_from').substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')
-                if (param('changed_thru')) changedThruDate = new Date(Number(String(ec.l10n.parseTimestamp(param('changed_thru').substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'))) + 86400000)
-            }
+            const findDates = ec.resource.script('component://mr-boss/template/FindDates.js')
+            const changed = findDates.dateRange('changed', ec.l10n.localize('Changed'))
+            const changedFromDate = changed.from
+            const changedThruDate = changed.thru
             const out = ec.service.sync().name('ironstone.comms.ConsentServices.find#Consents').parameters({text: param('text'), contactListId: param('contactListId'),
                 statusId: param('statusId'), purposeEnumId: param('purposeEnumId'), allowSolicitation: param('allowSolicitation'),
                 changedFromDate: changedFromDate, changedThruDate: changedThruDate, exportCsv: true}).call()
@@ -95,15 +90,10 @@ along with this software (see the LICENSE.md file). If not, see
         <script><![CDATA[
             if (!isConsentAdmin) return
             const param = (name) => { const value = ec.web.parameters[name]; return value == null || value === '' ? null : String(value) }
-            let changedFromDate = null
-            let changedThruDate = null
-            if (param('changed_period')) {
-                const range = ec.user.getPeriodRange(param('changed_period'), param('changed_poffset') || '0', param('changed_pdate'))
-                if (range) { changedFromDate = range[0]; changedThruDate = range[1] }
-            } else {
-                if (param('changed_from')) changedFromDate = ec.l10n.parseTimestamp(param('changed_from').substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')
-                if (param('changed_thru')) changedThruDate = new Date(Number(String(ec.l10n.parseTimestamp(param('changed_thru').substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'))) + 86400000)
-            }
+            const findDates = ec.resource.script('component://mr-boss/template/FindDates.js')
+            const changed = findDates.dateRange('changed', ec.l10n.localize('Changed'))
+            const changedFromDate = changed.from
+            const changedThruDate = changed.thru
             const out = ec.service.sync().name('ironstone.comms.ConsentServices.find#Consents').parameters({text: text || null, contactListId: contactListId || null,
                 statusId: statusId || null, purposeEnumId: purposeEnumId || null, allowSolicitation: allowSolicitation || null,
                 changedFromDate: changedFromDate, changedThruDate: changedThruDate, orderByField: orderByField || null,
@@ -126,6 +116,8 @@ along with this software (see the LICENSE.md file). If not, see
             exportParams = {text: text || null, contactListId: contactListId || null, statusId: statusId || null, purposeEnumId: purposeEnumId || null,
                 allowSolicitation: allowSolicitation || null, changed_period: param('changed_period'), changed_poffset: param('changed_poffset'),
                 changed_pdate: param('changed_pdate'), changed_from: param('changed_from'), changed_thru: param('changed_thru')}
+            // last: a service is not run while the request has an error
+            findDates.reportInvalid(changed)
         ]]></script>
     </actions>
     <widgets>

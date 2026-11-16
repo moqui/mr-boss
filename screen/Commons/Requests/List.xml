@@ -77,18 +77,11 @@ along with this software (see the LICENSE.md file). If not, see
                 ['watching', 'Watching', 'sym_o_visibility'], ['closed', 'Closed', 'sym_o_inventory']]
             if (!lists.some((entry) => entry[0] === list)) list = 'all'
             const param = (name) => { const value = ec.web.parameters[name]; return value == null || value === '' ? null : String(value) }
-            let dateFrom = null
-            let dateThru = null
-            if (param('requestDate_period')) {
-                const range = ec.user.getPeriodRange(param('requestDate_period'), param('requestDate_poffset') || '0', param('requestDate_pdate'))
-                if (range) { dateFrom = range[0]; dateThru = range[1] }
-            } else {
-                if (param('requestDate_from')) dateFrom = ec.l10n.parseTimestamp(param('requestDate_from').substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')
-                if (param('requestDate_thru')) dateThru = new Date(Number(String(ec.l10n.parseTimestamp(param('requestDate_thru').substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'))) + 86400000)
-            }
+            const findDates = ec.resource.script('component://mr-boss/template/FindDates.js')
+            const raised = findDates.dateRange('requestDate', L('Raised'))
             const out = ec.service.sync().name('ironstone.commons.RequestServices.find#RequestRows').parameters({list: list, text: text || null,
-                requestTypeEnumId: requestTypeEnumId || null, statusId: statusId || null, priority: priority || null, dateFrom: dateFrom, dateThru: dateThru,
-                orderByField: orderByField || null, pageIndex: Number(pageIndex || 0) || 0, pageSize: 25}).call() || {}
+                requestTypeEnumId: requestTypeEnumId || null, statusId: statusId || null, priority: priority || null, dateFrom: raised.from,
+                dateThru: raised.thru, orderByField: orderByField || null, pageIndex: Number(pageIndex || 0) || 0, pageSize: 25}).call() || {}
             requestRows = Array.from(out.rowList || [])
             requestRowsCount = out.rowCount || 0
             requestRowsPageIndex = out.pageIndex || 0
@@ -108,6 +101,8 @@ along with this software (see the LICENSE.md file). If not, see
             const empty = {all: 'No open requests of yours', raised: 'No open requests raised by you', assigned: 'No open requests assigned to you',
                 watching: 'You are not watching any open request', closed: 'No closed requests'}
             emptyText = filtered ? L('No requests match') : L(empty[list])
+            // last: a service is not run while the request has an error
+            findDates.reportInvalid(raised)
         ]]></script>
     </actions>
 

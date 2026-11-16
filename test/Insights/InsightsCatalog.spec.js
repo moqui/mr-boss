@@ -73,9 +73,13 @@ spec({
 // app (its read permissions alone) is offered none of Accounting's reports, which its root would refuse
 feature("a financial reader without the Accounting app is offered none of its reports", {
     when() {
-        const member = {userGroupId: "BOSS_ACCOUNTING", userId: "BOSS_INS_FINANCE", fromDate: 0}
+        // the demo membership, whatever its fromDate
+        const member = {userGroupId: "BOSS_ACCOUNTING", userId: "BOSS_INS_FINANCE"}
         const setThru = thruDate =>
-            system(() => ec.entity.makeValue("moqui.security.UserGroupMember").setAll(member).set("thruDate", thruDate).update())
+            system(() => {
+                const row = ec.entity.find("moqui.security.UserGroupMember").condition(member).list()[0]
+                row.set("thruDate", thruDate).update()
+            })
         setThru(ec.user.nowTimestamp)
         try {
             return {without: entryIds(users.finance)}

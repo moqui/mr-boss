@@ -47,7 +47,7 @@ along with this software (see the LICENSE.md file). If not, see
         <fields fieldSeqId="03" fieldPath="fromDate"/>
         <fields fieldSeqId="04" fieldPath="thruDate"/>
         <fields fieldSeqId="11" fieldPath="ContactList:ownerPartyId" fieldNameAlias="organizationPartyId"/>
-        <fields fieldSeqId="12" fieldPath="ContactList:contactListName"/>
+        <fields fieldSeqId="12" fieldPath="ContactList:contactListName" sortable="Y"/>
         <fields fieldSeqId="13" fieldPath="ContactList:contactListTypeEnumId"/>
         <conditions conditionSeqId="01" fieldNameAlias="contactListTypeEnumId" operator="not-equals" fieldValue="MAILBOX"/>
     </dataDocuments>

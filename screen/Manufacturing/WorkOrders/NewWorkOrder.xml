@@ -170,8 +170,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <container style="row q-gutter-sm q-mb-sm">
                     <section-iterate name="StepTitles" list="stepTitles" entry="stepTitle">
                         <widgets>
-                            <label text="${stepTitle.text}" type="span"
-                                    style="${stepTitle.key == step ? 'text-weight-bold text-primary' : 'm-muted'}"/>
+                            <!-- the current step is strong, which the terminal shows too (a style is the browser's only) -->
+                            <label text="${stepTitle.text}" type="strong" style="text-primary" condition="stepTitle.key == step"/>
+                            <label text="${stepTitle.text}" type="span" style="m-muted" condition="stepTitle.key != step"/>
                         </widgets>
                     </section-iterate>
                 </container>

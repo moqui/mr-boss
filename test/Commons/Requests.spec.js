@@ -120,8 +120,10 @@ feature("the find narrows a list: text, type, status, priority band", {
     },
 })
 
-feature("the list renders in qvt with the chips and counts, the find, the status chips and New request", {
-    when() { return { shown: render("apps/Commons/Requests", {}), closed: render("apps/Commons/Requests", { list: "closed" }) } },
+feature("the list renders in qvt with the chips and counts, the find, the status chips and New request; a bad find date is named", {
+    // the closed list's find has a Raised day that is not a date: the page names it, as a search form does (B22); the closed
+    // list's rows are the first feature's
+    when() { return { shown: render("apps/Commons/Requests", {}), closed: render("apps/Commons/Requests", { list: "closed", requestDate_from: "zz" }) } },
     then({ shown, closed }) {
         shown.status == 200
         shown.errors == ""
@@ -137,7 +139,7 @@ feature("the list renders in qvt with the chips and counts, the find, the status
         shown.output.includes('id="NewRequestContainer"')
         shown.output.includes("Keep as a draft")
         !shown.output.includes("Reset the guest wifi password")
-        closed.output.includes("Reset the guest wifi password")
+        closed.errors == "Raised: 'zz' is not a valid date"
     },
 })
 

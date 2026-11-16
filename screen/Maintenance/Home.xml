@@ -124,7 +124,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <form-list name="CounterRows" list="counterRows" skip-form="true" paginate="false">
                             <field name="counter">
                                 <default-field title="Counter">
-                                    <link url="${linkUrl || listLink}" url-type="plain" text="${counter}" link-type="anchor" condition="count != null"
+                                    <link url="${linkUrl || listLink}" text="${counter}" link-type="anchor" condition="count != null"
                                             parameter-map="linkParameters || Object.assign({savedFind: saved}, scopeParameters)"/>
                                     <label text="${counter}" type="span" condition="count == null"/>
                                 </default-field>
@@ -173,7 +173,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <form-list name="TeamWork" list="teamWorkList" skip-form="true" paginate="false">
                                     <field name="teamName">
                                         <default-field title="Team">
-                                            <link url="${listLink}" url-type="plain" text="${teamName}" link-type="anchor"
+                                            <link url="${listLink}" text="${teamName}" link-type="anchor"
                                                     parameter-map="{teamPartyId:teamPartyId}"/>
                                         </default-field>
                                     </field>

@@ -113,6 +113,8 @@ along with this software (see the LICENSE.md file). If not, see
             notificationsUnread = counts.NinNotifications || 0
             updatesUnread = counts.NinUpdates || 0
             approvalList = approvals
+            // an app's approvals with none of its own while the header counts some: those wait in other apps
+            otherApprovalCount = topicFilter && !isUpdates && !approvals.length ? (main.approvalCount || 0) : 0
             notificationList = rows
             openRows = approvals.concat(rows).map((row) => ({notificationMessageId: row.notificationMessageId}))
             notificationListCount = main.notificationListCount || 0
@@ -256,7 +258,15 @@ along with this software (see the LICENSE.md file). If not, see
                             </columns>
                         </form-list>
                         <section name="NoApprovals" condition="!(approvalList &amp;&amp; approvalList.length)"><widgets>
-                            <label type="p" text="Nothing waiting on you" style="m-muted q-pa-sm q-mb-none"/>
+                            <section name="OtherApprovals" condition="otherApprovalCount"><widgets>
+                                <container style="q-pa-sm">
+                                    <label type="span" style="m-muted"
+                                            text="Nothing waiting on you here; ${otherApprovalCount == 1 ? 'one approval waits' : otherApprovalCount + ' approvals wait'} in other apps. "/>
+                                    <link url="//Commons/Notifications" link-type="anchor" text="Open all approvals"/>
+                                </container>
+                            </widgets><fail-widgets>
+                                <label type="p" text="Nothing waiting on you" style="m-muted q-pa-sm q-mb-none"/>
+                            </fail-widgets></section>
                         </widgets></section>
                     </box-body-nopad></container-box>
                 </widgets></section>

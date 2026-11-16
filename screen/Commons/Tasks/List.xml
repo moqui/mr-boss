@@ -190,15 +190,10 @@ along with this software (see the LICENSE.md file). If not, see
             if (!lists.some((entry) => entry[0] === list)) list = 'all'
             const param = (name) => { const value = ec.web.parameters[name]; return value == null || value === '' ? null : String(value) }
             // the due period of the find (the date-period field), or its from and thru
-            let dueFrom = null
-            let dueThru = null
-            if (param('due_period')) {
-                const range = ec.user.getPeriodRange(param('due_period'), param('due_poffset') || '0', param('due_pdate'))
-                if (range) { dueFrom = range[0]; dueThru = range[1] }
-            } else {
-                if (param('due_from')) dueFrom = ec.l10n.parseTimestamp(param('due_from').substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')
-                if (param('due_thru')) dueThru = new Date(Number(String(ec.l10n.parseTimestamp(param('due_thru').substring(0, 10) + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'))) + 86400000)
-            }
+            const findDates = ec.resource.script('component://mr-boss/template/FindDates.js')
+            const due = findDates.dateRange('due', L('Due'))
+            let dueFrom = due.from
+            let dueThru = due.thru
             // the calendar's dates (view-calendar range-find): its form request (actions/Tasks) asks for the list's find with the tasks
             // due from and thru (epoch millis, thru inclusive) added and no paging, so it shows every task of the dates it shows
             const millisOf = (text) => text == null ? null : (/^-?\d+$/.test(text) ? Number(text) : (Number.isNaN(Date.parse(text)) ? null : Date.parse(text)))
@@ -242,6 +237,8 @@ along with this software (see the LICENSE.md file). If not, see
             emptyText = filtered ? L('No tasks match') : L(empty[list])
             newTaskHtml = '<q-btn unelevated no-caps dense color="primary" class="q-ml-sm" icon="sym_o_add_task" label="' + sri.encodeHtml(L('New task')) + '"'
                     + ' @click="$root.openQuickCreate({url: \'/qapps/Commons/QuickCreate?kind=task\', label: \'' + sri.encodeHtml(L('New task').replace(/['\\]/g, '')) + '\'})"></q-btn>'
+            // last: a service is not run while the request has an error
+            findDates.reportInvalid(due)
         ]]></script>
     </actions>
 

@@ -49,7 +49,35 @@
               }
             ]
           }
-        ]
+        ],
+        "fieldConfig": {
+          "overrides": [
+            {
+              "match": {
+                "name": "day"
+              },
+              "config": {
+                "displayName": "Day"
+              }
+            },
+            {
+              "match": {
+                "name": "state"
+              },
+              "config": {
+                "displayName": "State"
+              }
+            },
+            {
+              "match": {
+                "name": "deliveries"
+              },
+              "config": {
+                "displayName": "Deliveries"
+              }
+            }
+          ]
+        }
       },
       "receipts": {
         "title": "Receipts",
@@ -85,7 +113,27 @@
               }
             ]
           }
-        ]
+        ],
+        "fieldConfig": {
+          "overrides": [
+            {
+              "match": {
+                "name": "receipt"
+              },
+              "config": {
+                "displayName": "Receipt"
+              }
+            },
+            {
+              "match": {
+                "name": "deliveries"
+              },
+              "config": {
+                "displayName": "Deliveries"
+              }
+            }
+          ]
+        }
       },
       "byOrganization": {
         "title": "Deliveries by organization",
@@ -130,7 +178,35 @@
               }
             ]
           }
-        ]
+        ],
+        "fieldConfig": {
+          "overrides": [
+            {
+              "match": {
+                "name": "organization"
+              },
+              "config": {
+                "displayName": "Organization"
+              }
+            },
+            {
+              "match": {
+                "name": "state"
+              },
+              "config": {
+                "displayName": "State"
+              }
+            },
+            {
+              "match": {
+                "name": "deliveries"
+              },
+              "config": {
+                "displayName": "Deliveries"
+              }
+            }
+          ]
+        }
       },
       "memberships": {
         "title": "List memberships by state",
@@ -159,7 +235,35 @@
               }
             ]
           }
-        ]
+        ],
+        "fieldConfig": {
+          "overrides": [
+            {
+              "match": {
+                "name": "list"
+              },
+              "config": {
+                "displayName": "Contact list"
+              }
+            },
+            {
+              "match": {
+                "name": "state"
+              },
+              "config": {
+                "displayName": "State"
+              }
+            },
+            {
+              "match": {
+                "name": "count"
+              },
+              "config": {
+                "displayName": "Members"
+              }
+            }
+          ]
+        }
       }
     }
   }

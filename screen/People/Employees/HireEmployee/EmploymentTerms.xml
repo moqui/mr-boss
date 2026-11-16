@@ -62,7 +62,7 @@ along with this software (see the LICENSE.md file). If not, see
         <container-box>
             <box-header title="Employment terms"/>
             <box-body>
-                <label type="p" style="m-muted" text="The employment at ${employerName} from its start, and where the person works: department, position, manager and work location. Pay is set by payroll."/>
+                <label type="p" style="m-muted" text="The employment${employerName ? ' at ' + employerName : ''} from its start, and where the person works: department, position, manager and work location. Pay is set by payroll."/>
                 <form-single name="HireTerms" transition="saveTerms" map="terms" focus-field="fromDate">
                     <field name="fromDate"><default-field title="Starts"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
                     <field name="thruDate">

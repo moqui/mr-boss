@@ -276,7 +276,7 @@ along with this software (see the LICENSE.md file). If not, see
         leak with three coil gaskets planned, two issued and one returned (the rows as the services write them; demo rows post nothing),
         the compressor's oil service with its suggested filter planned; and Services' maintenance expense (Repairs and maintenance,
         equipment) for every facility and kind -->
-    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ISSUE" userId="BOSS_MNT_TECH" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ISSUE" userId="BOSS_MNT_TECH" fromDate="2026-01-01 00:00:00"/>
     <mantle.product.Product productId="BOSS_MNT_PART_GASKET" productName="AHU-2 coil gasket" productTypeEnumId="PtAsset"
             assetTypeEnumId="AstTpInventory" ownerPartyId="ORG_ZIZI_SERVICES" amountUomId="OTH_ea"/>
     <mantle.product.asset.Asset assetId="BOSS_MNT_STOCK_FILTER" assetTypeEnumId="AstTpInventory" statusId="AstAvailable" ownerPartyId="ORG_ZIZI_SERVICES"
@@ -422,7 +422,7 @@ along with this software (see the LICENSE.md file). If not, see
         Purchasing's own check (accept#ServiceItem: PURCHASE_ORDER_EDIT or STOCK_RECEIVE), so is in Warehouse's receiving capability
         group, which grants STOCK_RECEIVE alone and opens no Warehouse screen (the lead's decision, Nov 12; as P9's maint.tech in
         BOSS_WAREHOUSE_ISSUE) -->
-    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_RECEIVE" userId="BOSS_MNT_SUPERVISOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_RECEIVE" userId="BOSS_MNT_SUPERVISOR" fromDate="2026-01-01 00:00:00"/>
     <mantle.party.Party partyId="BOSS_MNT_SUP_REWIND" pseudoId="DELTAREWIND" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SERVICES"/>
     <mantle.party.Organization partyId="BOSS_MNT_SUP_REWIND" organizationName="Delta Motor Rewinds"/>
     <mantle.party.PartyRole partyId="BOSS_MNT_SUP_REWIND" roleTypeId="Supplier"/>
