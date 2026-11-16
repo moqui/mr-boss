@@ -333,6 +333,29 @@ feature("Code settings: the repository defaults and conventions saved by a manag
     },
 })
 
+// plans/Security-Review.md SEC-GIT-01: a project's new repository imports from an http(s) URL only, since the import runs
+// with authorization disabled; another repository (git://) or a server directory is refused before anything is made
+feature("a new repository's import is an http(s) URL: another repository or a server path is refused and nothing is made", {
+    when() {
+        const project = sys(() => ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", "IRON").one())
+        const create = (repositoryId, importUrl) => post("Code/Repositories/createRepository",
+            { workEffortId: "IRON", repositoryId, repositoryKind: "db", importUrl })
+        const made = (repositoryId) => sys(() => ec.entity.find("moqui.resource.GitRepository").condition("repositoryId", repositoryId).count())
+        return {
+            project: !!project,
+            other: create("bt-import-other", "git://acme-portal"), otherMade: made("bt-import-other"),
+            path: create("bt-import-path", "/etc"), pathMade: made("bt-import-path"),
+        }
+    },
+    then({ project, other, otherMade, path, pathMade }) {
+        project
+        other.errors.includes("Import from an https URL")
+        otherMade == 0
+        path.errors.includes("Import from an https URL")
+        pathMade == 0
+    },
+})
+
 feature("ProjectCode: IRON's repositories, open merge request, recent commits and tags; the palette's Code group; the raw file", {
     when() {
         const tab = render("apps/Projects/Projects/ProjectDetail/Code", { workEffortId: "IRON" })
