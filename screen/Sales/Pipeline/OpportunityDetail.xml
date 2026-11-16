@@ -183,7 +183,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <form-single name="ReopenOpportunity" transition="reopenOpportunity" map="stageValues">
                                     <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
                                     <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="reason"><default-field title="Why"><text-line size="40" required="true"/></default-field></field>
+                                    <field name="reason"><default-field title="Why" required="true"><text-line size="40"/></default-field></field>
                                     <field name="opportunityStageId">
                                         <default-field title="Stage">
                                             <drop-down allow-empty="true">
@@ -203,7 +203,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     title="Schedule an activity on ${deal.opportunityName}" width="560" condition="detail.canAddActivity">
                                 <form-single name="AddActivity" transition="addActivity" map="activityValues">
                                     <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
-                                    <field name="workEffortName"><default-field title="Activity"><text-line size="40" required="true"/></default-field></field>
+                                    <field name="workEffortName"><default-field title="Activity" required="true"><text-line size="40"/></default-field></field>
                                     <field name="estimatedCompletionDate"><default-field title="Due"><date-time type="date"/></default-field></field>
                                     <field name="assignToPartyId">
                                         <default-field title="For" tooltip="You when empty">
@@ -281,7 +281,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <form-single name="Opportunity" transition="updateOpportunity" map="editValues">
                                         <field name="salesOpportunityId"><default-field><hidden/></default-field></field>
                                         <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                        <field name="opportunityName"><default-field title="Name"><text-line required="true"/></default-field></field>
+                                        <field name="opportunityName"><default-field title="Name" required="true"><text-line/></default-field></field>
                                         <field name="accountPartyId">
                                             <default-field title="Account">
                                                 <drop-down allow-empty="true">

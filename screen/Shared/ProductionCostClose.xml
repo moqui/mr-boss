@@ -334,14 +334,14 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <display/>
                                                 </default-field>
                                             </field>
-                                            <field name="quantity">
+                                            <field name="quantity" align="right">
                                                 <default-field title="Quantity">
-                                                    <display format="#,##0.###" align="right"/>
+                                                    <display format="#,##0.###"/>
                                                 </default-field>
                                             </field>
-                                            <field name="amount">
+                                            <field name="amount" align="right">
                                                 <default-field title="Amount">
-                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="previewed.currencyUomId"/>
                                                 </default-field>
                                             </field>
                                             <columns type="mobile">
@@ -369,9 +369,9 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <display/>
                                                 </default-field>
                                             </field>
-                                            <field name="amount">
+                                            <field name="amount" align="right">
                                                 <default-field title="Amount">
-                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="previewed.currencyUomId"/>
                                                 </default-field>
                                             </field>
                                             <columns type="mobile">
@@ -398,14 +398,14 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <display/>
                                                 </default-field>
                                             </field>
-                                            <field name="quantity">
+                                            <field name="quantity" align="right">
                                                 <default-field title="Quantity">
-                                                    <display format="#,##0.###" align="right"/>
+                                                    <display format="#,##0.###"/>
                                                 </default-field>
                                             </field>
-                                            <field name="amount">
+                                            <field name="amount" align="right">
                                                 <default-field title="Amount">
-                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="previewed.currencyUomId"/>
                                                 </default-field>
                                             </field>
                                             <columns type="mobile">
@@ -434,29 +434,29 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <display text="${productName} · ${roleText}"/>
                                                 </default-field>
                                             </field>
-                                            <field name="quantity">
+                                            <field name="quantity" align="right">
                                                 <default-field title="Quantity">
-                                                    <display format="#,##0.###" align="right"/>
+                                                    <display format="#,##0.###"/>
                                                 </default-field>
                                             </field>
-                                            <field name="sharePercent">
+                                            <field name="sharePercent" align="right">
                                                 <default-field title="Share %">
-                                                    <display align="right"/>
+                                                    <display/>
                                                 </default-field>
                                             </field>
-                                            <field name="share">
+                                            <field name="share" align="right">
                                                 <default-field title="Allocated">
-                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="previewed.currencyUomId"/>
                                                 </default-field>
                                             </field>
-                                            <field name="relieved">
+                                            <field name="relieved" align="right">
                                                 <default-field title="Received at">
-                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="previewed.currencyUomId"/>
                                                 </default-field>
                                             </field>
-                                            <field name="variance">
+                                            <field name="variance" align="right">
                                                 <default-field title="Variance">
-                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="previewed.currencyUomId"/>
                                                 </default-field>
                                             </field>
                                             <columns type="mobile">
@@ -492,14 +492,14 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <display/>
                                                 </default-field>
                                             </field>
-                                            <field name="debit">
+                                            <field name="debit" align="right">
                                                 <default-field title="Debit">
-                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="previewed.currencyUomId"/>
                                                 </default-field>
                                             </field>
-                                            <field name="credit">
+                                            <field name="credit" align="right">
                                                 <default-field title="Credit">
-                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="previewed.currencyUomId"/>
                                                 </default-field>
                                             </field>
                                             <columns type="mobile">
@@ -540,9 +540,9 @@ along with this software (see the LICENSE.md file). If not, see
                                             <display text="${accountingDateText ?? ''}"/>
                                         </default-field>
                                     </field>
-                                    <field name="allocatedAmount" hide="!closeInfo.financialRead">
+                                    <field name="allocatedAmount" align="right" hide="!closeInfo.financialRead">
                                         <default-field title="Amount">
-                                            <display currency-unit-field="amountUomId" align="right"/>
+                                            <display currency-unit-field="amountUomId"/>
                                         </default-field>
                                     </field>
                                     <field name="acctgTransId" hide="!closeInfo.financialRead">

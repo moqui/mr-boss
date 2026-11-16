@@ -291,7 +291,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             </field>
                                             <field name="submit">
                                                 <default-field title="">
-                                                    <submit text="End risk" btn-type="danger"
+                                                    <submit text="End risk" type="danger"
                                                             confirmation="End this risk of ${scorecard.supplierName}?"/>
                                                 </default-field>
                                             </field>

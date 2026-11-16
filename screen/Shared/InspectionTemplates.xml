@@ -116,8 +116,8 @@ along with this software (see the LICENSE.md file). If not, see
                             title="New inspection template" width="760" condition="canEdit">
                         <form-single name="NewTemplate" transition="storeTemplate" map="newTemplateDefaults">
                             <field name="templateName">
-                                <default-field title="Name">
-                                    <text-line required="true"/>
+                                <default-field title="Name" required="true">
+                                    <text-line/>
                                 </default-field>
                             </field>
                             <field name="organizationPartyId">
@@ -336,8 +336,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     </default-field>
                                 </field>
                                 <field name="characteristicName">
-                                    <default-field title="Characteristic">
-                                        <text-line required="true"/>
+                                    <default-field title="Characteristic" required="true">
+                                        <text-line/>
                                     </default-field>
                                 </field>
                                 <field name="readingTypeEnumId">
@@ -417,8 +417,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="templateName">
-                                        <default-field title="Name">
-                                            <text-line required="true"/>
+                                        <default-field title="Name" required="true">
+                                            <text-line/>
                                         </default-field>
                                     </field>
                                     <field name="inspectionContextEnumId">
@@ -614,13 +614,13 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="changeReason">
-                                        <default-field title="Reason">
-                                            <text-line required="true"/>
+                                        <default-field title="Reason" required="true">
+                                            <text-line/>
                                         </default-field>
                                     </field>
                                     <field name="submit">
                                         <default-field title="">
-                                            <submit text="Retire" btn-type="danger"
+                                            <submit text="Retire" type="danger"
                                                     confirmation="Retire ${template.templateName}?"/>
                                         </default-field>
                                     </field>
@@ -679,8 +679,8 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </default-field>
                                             </field>
                                             <field name="characteristicName">
-                                                <default-field title="Characteristic">
-                                                    <text-line required="true"/>
+                                                <default-field title="Characteristic" required="true">
+                                                    <text-line/>
                                                 </default-field>
                                             </field>
                                             <field name="readingTypeEnumId">

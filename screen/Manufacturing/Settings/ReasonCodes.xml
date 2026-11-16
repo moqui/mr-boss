@@ -376,7 +376,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             </field>
                                             <field name="submit">
                                                 <default-field title="">
-                                                    <submit text="Deactivate reason" btn-type="danger"
+                                                    <submit text="Deactivate reason" type="danger"
                                                             confirmation="Deactivate reason ${reasonCode}? Events that name it keep it."/>
                                                 </default-field>
                                             </field>

@@ -89,8 +89,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     </drop-down>
                                 </default-field>
                             </field>
-                            <field name="productId"><default-field title="Product"><text-line size="16" required="true"/></default-field></field>
-                            <field name="quantity"><default-field title="Quantity"><text-line size="8" input-type="number" required="true"/></default-field></field>
+                            <field name="productId"><default-field title="Product" required="true"><text-line size="16"/></default-field></field>
+                            <field name="quantity"><default-field title="Quantity" required="true"><text-line size="8" input-type="number"/></default-field></field>
                             <field name="quantityUomId"><default-field title="Unit" tooltip="The product's stock unit when empty"><text-line size="8"/></default-field></field>
                             <field name="submit"><default-field title=""><submit text="Add"/></default-field></field>
                         </form-single>
@@ -110,9 +110,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <widgets>
                                 <form-list name="ByProductList" list="byproductRows" skip-form="true" paginate="false">
                                     <field name="productName"><default-field title="Product"><display text="${productName} · ${roleText}"/></default-field></field>
-                                    <field name="target"><default-field title="Planned"><display align="right"/></default-field></field>
-                                    <field name="received"><default-field title="Received"><display align="right"/></default-field></field>
-                                    <field name="scrap"><default-field title="Loss"><display align="right"/></default-field></field>
+                                    <field name="target" align="right"><default-field title="Planned"><display/></default-field></field>
+                                    <field name="received" align="right"><default-field title="Received"><display/></default-field></field>
+                                    <field name="scrap" align="right"><default-field title="Loss"><display/></default-field></field>
                                     <field name="stockUomId"><default-field title="Unit"><display/></default-field></field>
                                     <columns type="mobile">
                                         <column><field-ref name="productName"/></column>
@@ -153,9 +153,9 @@ along with this software (see the LICENSE.md file). If not, see
                                                 type="p" style="text-caption"/>
                                         <form-list name="AllocationEstimate" list="allocationRows" skip-form="true" paginate="false">
                                             <field name="productName"><default-field title="Product"><display text="${productName} · ${roleText}"/></default-field></field>
-                                            <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
-                                            <field name="sharePercent"><default-field title="Share %"><display text="${sharePercent || note || ''}" align="right"/></default-field></field>
-                                            <field name="amount"><default-field title="Estimate"><display currency-unit-field="allocation.currencyUomId" align="right"/></default-field></field>
+                                            <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                            <field name="sharePercent" align="right"><default-field title="Share %"><display text="${sharePercent || note || ''}"/></default-field></field>
+                                            <field name="amount" align="right"><default-field title="Estimate"><display currency-unit-field="allocation.currencyUomId"/></default-field></field>
                                         </form-list>
                                     </widgets>
                                 </section>
@@ -176,19 +176,19 @@ along with this software (see the LICENSE.md file). If not, see
                                             <display text="${productName || ''} · ${destinationText}${adjustment ? ' (adjustment)' : ''}"/>
                                         </default-field>
                                     </field>
-                                    <field name="basisQuantity">
+                                    <field name="basisQuantity" align="right">
                                         <default-field title="Quantity">
-                                            <display format="#,##0.###" align="right"/>
+                                            <display format="#,##0.###"/>
                                         </default-field>
                                     </field>
-                                    <field name="sharePercent">
+                                    <field name="sharePercent" align="right">
                                         <default-field title="Share %">
-                                            <display align="right"/>
+                                            <display/>
                                         </default-field>
                                     </field>
-                                    <field name="allocatedAmount" hide="!costClose.financialRead">
+                                    <field name="allocatedAmount" align="right" hide="!costClose.financialRead">
                                         <default-field title="Allocated">
-                                            <display currency-unit-field="amountUomId" align="right"/>
+                                            <display currency-unit-field="amountUomId"/>
                                         </default-field>
                                     </field>
                                     <columns type="mobile">

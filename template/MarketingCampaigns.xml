@@ -153,7 +153,7 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="NewCampaignForm">
             <widgets>
                 <form-single name="NewCampaign" transition="createCampaign" map="newDefaults">
-                    <field name="campaignName"><default-field title="Name"><text-line size="40" required="true"/></default-field></field>
+                    <field name="campaignName"><default-field title="Name" required="true"><text-line size="40"/></default-field></field>
                     <field name="organizationPartyId">
                         <default-field title="Organization">
                             <drop-down allow-empty="false" required-manual-select="false">

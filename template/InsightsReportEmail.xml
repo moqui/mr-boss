@@ -16,10 +16,12 @@ along with this software (see the LICENSE.md file). If not, see
     link to the dashboard in Insights (the report engine's link names Tools' Dashboards, which no Insights user opens), and the
     picture when the format has one. It says whose result it is: the recipient was checked to read the same. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
-    <parameter name="title" default-value="Report"/>
+    <parameter name="title"/>
     <parameter name="reportLink"/>
     <parameter name="reportImageCid"/>
-    <actions><script><![CDATA[
+    <actions>
+        <set field="title" from="title" default-value="Report"/>
+        <script><![CDATA[
         reportLink = reportLink ? String(reportLink).replace('/apps/dashboards/Dashboard', '/qapps/Insights/Dashboard') : ''
         if (reportLink.startsWith('/') && typeof webHostName !== 'undefined' && webHostName)
             reportLink = 'https://' + String(webHostName).replace(/^https?:\/\//, '').replace(/\/$/, '') + reportLink

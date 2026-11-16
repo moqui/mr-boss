@@ -134,8 +134,8 @@ along with this software (see the LICENSE.md file). If not, see
                             </default-field>
                         </field>
                         <field name="changeReason">
-                            <default-field title="Reason">
-                                <text-line required="true"/>
+                            <default-field title="Reason" required="true">
+                                <text-line/>
                             </default-field>
                         </field>
                         <field name="submit">
@@ -202,29 +202,29 @@ along with this software (see the LICENSE.md file). If not, see
                     <display/>
                 </default-field>
             </field>
-            <field name="efficiencyPercent">
+            <field name="efficiencyPercent" align="right">
                 <default-field title="Efficiency %">
-                    <display align="right"/>
+                    <display/>
                 </default-field>
             </field>
-            <field name="operationCount">
+            <field name="operationCount" align="right">
                 <default-field title="Operations">
-                    <display align="right"/>
+                    <display/>
                 </default-field>
             </field>
-            <field name="loadHours">
+            <field name="loadHours" align="right">
                 <default-field title="Load hours">
-                    <display align="right"/>
+                    <display/>
                 </default-field>
             </field>
-            <field name="nominalHours">
+            <field name="nominalHours" align="right">
                 <default-field title="Nominal hours">
-                    <display align="right"/>
+                    <display/>
                 </default-field>
             </field>
-            <field name="availableHours">
+            <field name="availableHours" align="right">
                 <default-field title="Available hours">
-                    <display align="right"/>
+                    <display/>
                 </default-field>
             </field>
             <field name="nextAvailableText">

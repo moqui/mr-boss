@@ -176,7 +176,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
                                             <field name="orderRevision" from="String(preview.orderRevision)"><default-field><hidden/></default-field></field>
                                             <field name="reason">
-                                                <default-field title="Reason for the change"><text-area rows="2" required="true"/></default-field>
+                                                <default-field title="Reason for the change" required="true"><text-area rows="2"/></default-field>
                                             </field>
                                             <field name="submitButton">
                                                 <default-field title="Start the change">
@@ -385,7 +385,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="changesText"><default-field><hidden/></default-field></field>
                                             <field name="operationKey"><default-field><hidden/></default-field></field>
                                             <field name="reason">
-                                                <default-field title="Reason, kept with each change"><text-area rows="2" required="true"/></default-field>
+                                                <default-field title="Reason, kept with each change" required="true"><text-area rows="2"/></default-field>
                                             </field>
                                             <field name="submitButton">
                                                 <default-field title="Apply revision ${preview.proposedRevision}">

@@ -60,7 +60,7 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="m-muted"/>
                 <form-list name="SnapshotCenters" list="laneRows" skip-form="true" paginate="false">
                     <field name="facilityName"><default-field title="Work center"><display/></default-field></field>
-                    <field name="slots"><default-field title="Slots"><display align="right"/></default-field></field>
+                    <field name="slots" align="right"><default-field title="Slots"><display/></default-field></field>
                     <field name="calendarText"><default-field title="Work calendar"><display/></default-field></field>
                     <field name="offlineText"><default-field title="Offline"><display/></default-field></field>
                 </form-list>
@@ -70,10 +70,10 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="workOrder"><default-field title="Work order"><display/></default-field></field>
                     <field name="workOrderName"><default-field title="Work order name"><display/></default-field></field>
                     <field name="product"><default-field title="Product"><display/></default-field></field>
-                    <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                    <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
                     <field name="start"><default-field title="Start"><display/></default-field></field>
                     <field name="end"><default-field title="End"><display/></default-field></field>
-                    <field name="hours"><default-field title="Hours"><display align="right"/></default-field></field>
+                    <field name="hours" align="right"><default-field title="Hours"><display/></default-field></field>
                     <field name="status"><default-field title="Status"><display/></default-field></field>
                     <field name="pinned"><default-field title="Pinned"><display/></default-field></field>
                     <field name="conflicts"><default-field title="Conflicts"><display/></default-field></field>

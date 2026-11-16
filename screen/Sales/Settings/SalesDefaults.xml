@@ -197,45 +197,49 @@ along with this software (see the LICENSE.md file). If not, see
             <field-layout><field-row-big><field-ref name="organizationPartyId"/><field-ref name="submitButton"/></field-row-big></field-layout>
         </form-single>
         <label type="p" style="text-negative" condition="!policyFound" text="Sales' defaults cannot be read for this organization just now."/>
-        <container-row condition="policyFound">
-            <row-col md="6">
-                <container-box>
-                    <box-header title="In effect"/>
-                    <box-body-nopad>
-                        <form-list name="DefaultsInEffect" list="policyRows" skip-form="true" skip-header="true" paginate="false">
-                            <field name="label"><default-field><label text="${label}" type="span" style="m-muted text-no-wrap"/></default-field></field>
-                            <field name="value"><default-field><display/></default-field></field>
-                        </form-list>
-                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!policy"
-                                text="No defaults yet: a new quote's end is left open and unverified inquiries are kept 30 days. Publish the first with Publish new defaults."/>
-                    </box-body-nopad>
-                </container-box>
-            </row-col>
-            <row-col md="6">
-                <container-box>
-                    <box-header title="Commercial revision"/>
-                    <box-toolbar>
-                        <container-dialog id="CommercialRevisionDialog" button-text="${found?.commercialRevisionOnly ? 'Turn off' : 'Turn on'}"
-                                icon="sym_o_toggle_on" type="default" width="520" title="Change the commercial revision" condition="found?.commercialRevisionOwn">
-                            <form-single name="CommercialRevision" transition="setCommercialRevision" map="revisionValues">
-                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
-                                <field name="commercialRevisionOnly"><default-field><hidden/></default-field></field>
-                                <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
-                                <field name="submitButton"><default-field title="${found?.commercialRevisionOnly ? 'Turn off' : 'Turn on'}"><submit/></default-field></field>
-                            </form-single>
-                        </container-dialog>
-                    </box-toolbar>
-                    <box-body>
-                        <label type="p" condition="found?.commercialRevisionOnly"
-                                text="On: a quote's revision moves with its commercial changes only, so storing its PDF, a file or a note leaves an issue and an approval in force."/>
-                        <label type="p" style="text-warning" condition="!found?.commercialRevisionOnly"
-                                text="Off: every change of a quote, a file or a note among them, moves its revision, so a quote cannot be issued."/>
-                        <label type="p" style="text-caption m-muted" condition="!found?.commercialRevisionOwn"
-                                text="Set in ${found?.commercialRevisionOwnerName || 'another organization'}'s accounting preference."/>
-                    </box-body>
-                </container-box>
-            </row-col>
-        </container-row>
+        <section name="PolicySection" condition="policyFound">
+            <widgets>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="In effect"/>
+                            <box-body-nopad>
+                                <form-list name="DefaultsInEffect" list="policyRows" skip-form="true" skip-header="true" paginate="false">
+                                    <field name="label"><default-field><label text="${label}" type="span" style="m-muted text-no-wrap"/></default-field></field>
+                                    <field name="value"><default-field><display/></default-field></field>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!policy"
+                                        text="No defaults yet: a new quote's end is left open and unverified inquiries are kept 30 days. Publish the first with Publish new defaults."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Commercial revision"/>
+                            <box-toolbar>
+                                <container-dialog id="CommercialRevisionDialog" button-text="${found?.commercialRevisionOnly ? 'Turn off' : 'Turn on'}"
+                                        icon="sym_o_toggle_on" type="default" width="520" title="Change the commercial revision" condition="found?.commercialRevisionOwn">
+                                    <form-single name="CommercialRevision" transition="setCommercialRevision" map="revisionValues">
+                                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="commercialRevisionOnly"><default-field><hidden/></default-field></field>
+                                        <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="${found?.commercialRevisionOnly ? 'Turn off' : 'Turn on'}"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <label type="p" condition="found?.commercialRevisionOnly"
+                                        text="On: a quote's revision moves with its commercial changes only, so storing its PDF, a file or a note leaves an issue and an approval in force."/>
+                                <label type="p" style="text-warning" condition="!found?.commercialRevisionOnly"
+                                        text="Off: every change of a quote, a file or a note among them, moves its revision, so a quote cannot be issued."/>
+                                <label type="p" style="text-caption m-muted" condition="!found?.commercialRevisionOwn"
+                                        text="Set in ${found?.commercialRevisionOwnerName || 'another organization'}'s accounting preference."/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
         <container-box condition="policyFound &amp;&amp; versionRows.length">
             <box-header title="Scheduled and earlier · ${versionRows.length}"/>
             <box-body-nopad>

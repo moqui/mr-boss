@@ -123,9 +123,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     <display/>
                                 </default-field>
                             </field>
-                            <field name="amountText">
+                            <field name="amountText" align="right">
                                 <default-field title="Amount">
-                                    <display align="right"/>
+                                    <display/>
                                 </default-field>
                             </field>
                             <field name="nextAction">

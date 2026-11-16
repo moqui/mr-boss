@@ -283,24 +283,24 @@ along with this software (see the LICENSE.md file). If not, see
                                                 ec.l10n.format(taxPercentage, '#,##0.####') + '%' : ''}"/>
                                         </default-field>
                                     </field>
-                                    <field name="taxableAmount">
+                                    <field name="taxableAmount" align="right">
                                         <default-field title="Base">
-                                            <display currency-unit-field="simulation.currencyUomId" align="right"/>
+                                            <display currency-unit-field="simulation.currencyUomId"/>
                                         </default-field>
                                     </field>
-                                    <field name="exactTaxAmount">
+                                    <field name="exactTaxAmount" align="right">
                                         <default-field title="Unrounded">
-                                            <display format="#,##0.00####" align="right"/>
+                                            <display format="#,##0.00####"/>
                                         </default-field>
                                     </field>
-                                    <field name="taxAmount">
+                                    <field name="taxAmount" align="right">
                                         <default-field title="Tax">
-                                            <display currency-unit-field="simulation.currencyUomId" align="right"/>
+                                            <display currency-unit-field="simulation.currencyUomId"/>
                                         </default-field>
                                     </field>
-                                    <field name="taxRoundingAmount">
+                                    <field name="taxRoundingAmount" align="right">
                                         <default-field title="Rounding">
-                                            <display format="#,##0.00####" align="right"/>
+                                            <display format="#,##0.00####"/>
                                         </default-field>
                                     </field>
                                     <field name="exemptReason">

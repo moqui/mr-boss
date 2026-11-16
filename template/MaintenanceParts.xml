@@ -167,8 +167,8 @@ along with this software (see the LICENSE.md file). If not, see
                         title="${newFacilityTitle || 'New facility'}" icon="sym_o_add" width="760" type="${newFacilityType || 'primary'}">
                     <form-single name="NewMaintenanceFacility" transition="createMaintenanceFacility" map="newFacilityDefaults">
                         <field name="facilityName">
-                            <default-field title="Name">
-                                <text-line required="true"/>
+                            <default-field title="Name" required="true">
+                                <text-line/>
                             </default-field>
                         </field>
                         <field name="facilityTypeEnumId">

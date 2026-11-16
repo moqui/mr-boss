@@ -360,7 +360,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </field>
                                                 <field name="submit">
                                                     <default-field title="">
-                                                        <submit text="Reject selected rates" btn-type="danger"/>
+                                                        <submit text="Reject selected rates" type="danger"/>
                                                     </default-field>
                                                 </field>
                                             </form-single>

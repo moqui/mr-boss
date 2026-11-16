@@ -58,9 +58,9 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="product"><default-field title="Product"><display/></default-field></field>
                     <field name="productName"><default-field title="Name"><display/></default-field></field>
                     <field name="method"><default-field title="Method"><display/></default-field></field>
-                    <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                    <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
                     <field name="unit"><default-field title="Unit"><display/></default-field></field>
-                    <field name="remaining"><default-field title="Remaining"><display align="right"/></default-field></field>
+                    <field name="remaining" align="right"><default-field title="Remaining"><display/></default-field></field>
                     <field name="facility"><default-field title="For"><display/></default-field></field>
                     <field name="requiredBy"><default-field title="Required by"><display/></default-field></field>
                     <field name="release"><default-field title="Release"><display/></default-field></field>
@@ -79,7 +79,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <form-list name="PlanSnapshotHeldList" list="heldRows" skip-form="true" paginate="false">
                             <field name="productName"><default-field title="Product"><display/></default-field></field>
                             <field name="facilityName"><default-field title="Facility"><display/></default-field></field>
-                            <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                            <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
                             <field name="dueText"><default-field title="Inspection due"><display/></default-field></field>
                             <field name="nettedText"><default-field title="Netted"><display/></default-field></field>
                             <columns type="mobile">

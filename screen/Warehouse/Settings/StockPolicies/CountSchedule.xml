@@ -284,7 +284,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             </field>
                                             <field name="submit">
                                                 <default-field title="">
-                                                    <submit text="End schedule" btn-type="danger"
+                                                    <submit text="End schedule" type="danger"
                                                             confirmation="End the schedule '${dueText}' now?"/>
                                                 </default-field>
                                             </field>

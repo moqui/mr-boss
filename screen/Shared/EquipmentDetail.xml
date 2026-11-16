@@ -498,8 +498,8 @@ along with this software (see the LICENSE.md file). If not, see
                                             </default-field>
                                         </field>
                                         <field name="changeReason">
-                                            <default-field title="Reason">
-                                                <text-line required="true"/>
+                                            <default-field title="Reason" required="true">
+                                                <text-line/>
                                             </default-field>
                                         </field>
                                         <field name="submit">
@@ -566,8 +566,8 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </default-field>
                                             </field>
                                             <field name="changeReason">
-                                                <default-field title="Reason">
-                                                    <text-line required="true"/>
+                                                <default-field title="Reason" required="true">
+                                                    <text-line/>
                                                 </default-field>
                                             </field>
                                             <field name="submit">
@@ -610,8 +610,8 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </default-field>
                                             </field>
                                             <field name="changeReason">
-                                                <default-field title="Reason">
-                                                    <text-line required="true"/>
+                                                <default-field title="Reason" required="true">
+                                                    <text-line/>
                                                 </default-field>
                                             </field>
                                             <field name="submit">
@@ -841,8 +841,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     </default-field>
                                 </field>
                                 <field name="changeReason" from="''">
-                                    <default-field title="Reason">
-                                        <text-line required="true"/>
+                                    <default-field title="Reason" required="true">
+                                        <text-line/>
                                     </default-field>
                                 </field>
                                 <field name="submit">

@@ -120,8 +120,8 @@ along with this software (see the LICENSE.md file). If not, see
                             </default-field>
                         </field>
                         <field name="referenceNumber">
-                            <default-field title="Supplier's bill number">
-                                <text-line required="true"/>
+                            <default-field title="Supplier's bill number" required="true">
+                                <text-line/>
                             </default-field>
                         </field>
                         <field name="invoiceDate">

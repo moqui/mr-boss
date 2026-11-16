@@ -279,7 +279,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="contactListId"><default-field><hidden/></default-field></field>
                             <field name="memberStatus">
                                 <default-field title="Show">
-                                    <drop-down no-current-selected-key="current" submit-on-change="true">
+                                    <drop-down no-current-selected-key="current" submit-on-select="true">
                                         <option key="current" text="Current"/>
                                         <option key="subscribed" text="Subscribed"/>
                                         <option key="pending" text="Pending"/>

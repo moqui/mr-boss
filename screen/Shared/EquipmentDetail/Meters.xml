@@ -55,8 +55,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     </default-field>
                                 </field>
                                 <field name="meterValue">
-                                    <default-field title="Reading">
-                                        <text-line size="10" required="true"/>
+                                    <default-field title="Reading" required="true">
+                                        <text-line size="10"/>
                                     </default-field>
                                 </field>
                                 <field name="readingDate">

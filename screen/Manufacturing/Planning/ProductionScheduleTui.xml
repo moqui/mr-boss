@@ -188,7 +188,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <field name="runName"><default-field title="Work order"><display/></default-field></field>
                             <field name="whenText"><default-field title="When"><display/></default-field></field>
-                            <field name="hours"><default-field title="Hours"><display align="right"/></default-field></field>
+                            <field name="hours" align="right"><default-field title="Hours"><display/></default-field></field>
                             <field name="stateText"><default-field title="Status"><display/></default-field></field>
                             <field name="conflictText"><default-field title="Conflicts"><display/></default-field></field>
                             <columns type="mobile">

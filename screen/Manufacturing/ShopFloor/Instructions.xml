@@ -131,7 +131,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="operationKey"><default-field><hidden/></default-field></field>
                                             <field name="operationWorkEffortId"><default-field><hidden/></default-field></field>
                                             <field name="stepTypeEnumId"><default-field><hidden/></default-field></field>
-                                            <field name="valueText"><default-field title="${evidence.text}"><text-line required="true"/></default-field></field>
+                                            <field name="valueText"><default-field title="${evidence.text}" required="true"><text-line/></default-field></field>
                                             <field name="comments"><default-field title="Note"><text-line/></default-field></field>
                                             <field name="submit"><default-field title=""><submit text="Record evidence"
                                                     type="default"/></default-field></field>

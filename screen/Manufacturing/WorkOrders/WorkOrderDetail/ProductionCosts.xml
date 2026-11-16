@@ -147,9 +147,9 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <display/>
                                                 </default-field>
                                             </field>
-                                            <field name="amount">
+                                            <field name="amount" align="right">
                                                 <default-field title="Estimate">
-                                                    <display currency-unit-field="estimate.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="estimate.currencyUomId"/>
                                                 </default-field>
                                             </field>
                                         </form-list>
@@ -175,9 +175,9 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <display/>
                                                 </default-field>
                                             </field>
-                                            <field name="amount">
+                                            <field name="amount" align="right">
                                                 <default-field title="Actual">
-                                                    <display currency-unit-field="actuals.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="actuals.currencyUomId"/>
                                                 </default-field>
                                             </field>
                                         </form-list>
@@ -191,19 +191,19 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <display/>
                                                 </default-field>
                                             </field>
-                                            <field name="estimate">
+                                            <field name="estimate" align="right">
                                                 <default-field title="Estimate">
-                                                    <display currency-unit-field="actuals.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="actuals.currencyUomId"/>
                                                 </default-field>
                                             </field>
-                                            <field name="actual">
+                                            <field name="actual" align="right">
                                                 <default-field title="Actual">
-                                                    <display currency-unit-field="actuals.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="actuals.currencyUomId"/>
                                                 </default-field>
                                             </field>
-                                            <field name="difference">
+                                            <field name="difference" align="right">
                                                 <default-field title="Difference">
-                                                    <display currency-unit-field="actuals.currencyUomId" align="right"/>
+                                                    <display currency-unit-field="actuals.currencyUomId"/>
                                                 </default-field>
                                             </field>
                                         </form-list>
@@ -236,9 +236,9 @@ along with this software (see the LICENSE.md file). If not, see
                                             <display text="${productName || productId || ''}"/>
                                         </default-field>
                                     </field>
-                                    <field name="quantity">
+                                    <field name="quantity" align="right">
                                         <default-field title="Quantity">
-                                            <display format="#,##0.###" align="right"/>
+                                            <display format="#,##0.###"/>
                                         </default-field>
                                     </field>
                                     <field name="componentText">
@@ -257,9 +257,9 @@ along with this software (see the LICENSE.md file). If not, see
                                             </render-mode>
                                         </default-field>
                                     </field>
-                                    <field name="amount" hide="!financialRead">
+                                    <field name="amount" align="right" hide="!financialRead">
                                         <default-field title="Amount">
-                                            <display currency-unit-field="amountUomId" align="right"/>
+                                            <display currency-unit-field="amountUomId"/>
                                         </default-field>
                                     </field>
                                     <field name="acctgTransId" hide="!financialRead">

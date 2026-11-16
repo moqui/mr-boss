@@ -38,7 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </drop-down>
                         </default-field>
                     </field>
-                    <field name="workEffortName"><default-field title="Activity"><text-line size="40" required="true"/></default-field></field>
+                    <field name="workEffortName"><default-field title="Activity" required="true"><text-line size="40"/></default-field></field>
                     <field name="estimatedCompletionDate"><default-field title="Due"><date-time type="date"/></default-field></field>
                     <field name="description"><default-field title="Notes"><text-area rows="3" cols="50"/></default-field></field>
                     <field name="submitButton"><default-field title=""><submit text="Schedule"/></default-field></field>

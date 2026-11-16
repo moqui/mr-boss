@@ -411,7 +411,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="customerName"><default-field title="Customer"><display/></default-field></field>
                         <field name="promoCode"><default-field title="Code"><display/></default-field></field>
                         <field name="useCount"><default-field title="Uses"><display format="#,##0"/></default-field></field>
-                        <field name="discount"><default-field title="Discount"><display currency-unit-field="currencyUomId" align="right"/></default-field></field>
+                        <field name="discount" align="right"><default-field title="Discount"><display currency-unit-field="currencyUomId"/></default-field></field>
                         <field name="statusText"><default-field title="Status"><display/></default-field></field>
                         <columns type="mobile">
                             <column><field-ref name="orderName"/><field-ref name="customerName"/></column>

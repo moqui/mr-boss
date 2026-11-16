@@ -187,8 +187,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <form-single name="BulkClose" transition="bulkAction">
                                 <field name="action" from="'close'"><default-field><hidden/></default-field></field>
                                 <field name="reason">
-                                    <default-field title="Reason">
-                                        <text-line required="true"/>
+                                    <default-field title="Reason" required="true">
+                                        <text-line/>
                                     </default-field>
                                 </field>
                                 <field name="submitButton">

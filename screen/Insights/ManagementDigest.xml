@@ -137,7 +137,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <link url="." text="${title}" link-type="anchor" parameter-map="{definitionId:definitionId}"/>
                                 </default-field></field>
                                 <field name="periodText"><default-field title="Period"><display/></default-field></field>
-                                <field name="dashboardCount"><default-field title="Dashboards" align="right"><display/></default-field></field>
+                                <field name="dashboardCount" align="right"><default-field title="Dashboards"><display/></default-field></field>
                                 <field name="sharedText"><default-field title="Sharing"><display text="${own ? 'Yours' : 'Shared with you'} · ${sharedText}"/></default-field></field>
                                 <columns type="mobile">
                                     <column><field-ref name="title"/></column>

@@ -146,7 +146,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <check><option key="true" text="Accept the material not issued as a variance"/></check>
                                         </default-field>
                                     </field>
-                                    <field name="reason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                                    <field name="reason"><default-field title="Reason" required="true"><text-line/></default-field></field>
                                     <field name="submit"><default-field title=""><submit text="Next"/></default-field></field>
                                     <field-layout>
                                         <field-ref name="mode"/>

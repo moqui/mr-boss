@@ -161,7 +161,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="expectedRunRevision"><default-field><hidden/></default-field></field>
                                         <field name="operationKey"><default-field><hidden/></default-field></field>
                                         <field name="moveReason">
-                                            <default-field title="Reason for the override"><text-line required="true"/></default-field>
+                                            <default-field title="Reason for the override" required="true"><text-line/></default-field>
                                         </field>
                                         <field name="submit"><default-field title=""><submit text="Request override"/></default-field></field>
                                     </form-single>
@@ -174,7 +174,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="operationKey"><default-field><hidden/></default-field></field>
                                         <field name="submit">
                                             <default-field title="">
-                                                <submit text="Unschedule" btn-type="danger" confirmation="Take ${movePreview.operationName} off the schedule?"/>
+                                                <submit text="Unschedule" type="danger" confirmation="Take ${movePreview.operationName} off the schedule?"/>
                                             </default-field>
                                         </field>
                                     </form-single>

@@ -90,12 +90,16 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="Home summarizes the employers you read for HR, payroll and People administration; your own work is below."
                         type="p" style="m-muted"/>
                 <!-- P8: a People user who reads no employer (a manager): their decisions waiting and their team -->
-                <dashboard min-width="160" condition="can.requestApprove || missingWeeksText != null">
-                    <number-card title="Decisions waiting" value="${decisionCountText}" icon="sym_o_approval" size="sm"
-                            link="${can.myTeam ? sharedLinks['MyTeam'] : sharedLinks['Approvals']}" condition="can.requestApprove"/>
-                    <number-card title="Weeks not submitted" value="${missingWeeksText}" icon="sym_o_schedule_send" size="sm"
-                            link="${missingWeeksLink}" condition="missingWeeksText != null"/>
-                </dashboard>
+                <section name="ManagerCardsSection" condition="can.requestApprove || missingWeeksText != null">
+                    <widgets>
+                        <dashboard min-width="160">
+                            <number-card title="Decisions waiting" value="${decisionCountText}" icon="sym_o_approval" size="sm"
+                                    link="${can.myTeam ? sharedLinks['MyTeam'] : sharedLinks['Approvals']}" condition="can.requestApprove"/>
+                            <number-card title="Weeks not submitted" value="${missingWeeksText}" icon="sym_o_schedule_send" size="sm"
+                                    link="${missingWeeksLink}" condition="missingWeeksText != null"/>
+                        </dashboard>
+                    </widgets>
+                </section>
                 <link url="${sharedLinks['MyTeam']}" text="My team" link-type="anchor-button" icon="sym_o_diversity_3" condition="can.myTeam"/>
             </widgets>
         </section>
