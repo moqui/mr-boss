@@ -166,6 +166,42 @@ feature("an effective scoped price list prints without its editing controls, and
         !trace.output.includes("ExplainContextControls")
     }
 })
+// PRD-UI-037: Sales mounts the shared price list under Agreements, so its effective list's output link is under that mount, and
+// it answers there (it pointed at Products' Prices path, which Sales does not have)
+feature("an effective price list's output link under Sales is its own mount's and answers", {
+    when() {
+        return as("john.doe", true, () => {
+            const page = ec.screen
+                .makeTest()
+                .rootScreen("component://webroot/screen/webroot.xml")
+                .renderMode("html")
+                .withStaticData()
+                .render(
+                    "apps/Sales/Agreements/PriceLists/PriceListDetail",
+                    {lastStandalone: "true", priceListId: "BOSS_PRICE_LIST", productIds: "BOSS_PRD_OWN", runEffectivePrices: true},
+                    null
+                )
+            const href = (/href="([^"]*effectiveOutput[^"]*)"/.exec(String(page.output)) || [])[1] || ""
+            const url = href.replace(/&amp;/g, "&")
+            const parameters = {}
+            for (const pair of url.substring(url.indexOf("?") + 1).split("&")) {
+                const at = pair.indexOf("=")
+                if (at > 0) parameters[decodeURIComponent(pair.substring(0, at))] = decodeURIComponent(pair.substring(at + 1))
+            }
+            const output = ec.screen
+                .makeTest()
+                .rootScreen("component://webroot/screen/webroot.xml")
+                .render(url.substring(1, url.indexOf("?")), parameters, null)
+            return {href, status: output.status, errors: output.errorMessages.join(" | "), text: String(output.output || "")}
+        })
+    },
+    then({href, status, errors, text}) {
+        href.startsWith("/apps/Sales/Agreements/PriceLists/PriceListDetail/effectiveOutput?priceListId=BOSS_PRICE_LIST")
+        status == 200
+        errors == ""
+        text.includes("BOSS_PRD_OWN")
+    }
+})
 feature("resolved list and explanation output render in #mode", {
     where: [{mode: "tui"}, {mode: "qvt"}],
     when({mode}) {

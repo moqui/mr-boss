@@ -26,7 +26,6 @@ along with this software (see the LICENSE.md file). If not, see
         <script>if(!sharedMountContext.capabilities.read)throw new Error('Catalog read access is required')</script>
         <set field="appRoot" from="sharedMountContext.appRoot"/>
         <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
-        <set field="printBase" from="sharedMountContext.printBase"/>
     </always-actions>
     <transition name="store">
         <actions>
@@ -76,7 +75,9 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.products.PriceListServices.get#PriceListOptions" out-map="context"/>
         <service-call name="ironstone.products.PriceListServices.get#PriceListDetail" in-map="context" out-map="context"/>
         <set field="header" from="Object.assign({},successor,{fromDate:null,expectedLastUpdatedStamp:priceList.lastUpdatedStamp,priority:String(priceList.priority || 0)})"/>
-        <set field="printUrl" from="printBase+'/Prices/PriceLists/PriceListDetail/effectiveOutput?priceListId='+encodeURIComponent(priceListId)+'&amp;asOfDate='+encodeURIComponent(asOfDate || ec.user.nowTimestamp)+'&amp;quantity='+encodeURIComponent(quantity||1)+'&amp;productIds='+encodeURIComponent(productIds||'')+'&amp;quantityUomId='+encodeURIComponent(quantityUomId||'')"/>
+        <!-- the output transition under the mount that renders this (Products' Prices, Sales' Agreements, Commerce's
+            Merchandising), on the server's /apps (PRD-UI-037) -->
+        <set field="printUrl" from="String(sri.buildUrl('effectiveOutput').path).replace(/^\/qapps\//, '/apps/')+'?priceListId='+encodeURIComponent(priceListId)+'&amp;asOfDate='+encodeURIComponent(asOfDate || ec.user.nowTimestamp)+'&amp;quantity='+encodeURIComponent(quantity||1)+'&amp;productIds='+encodeURIComponent(productIds||'')+'&amp;quantityUomId='+encodeURIComponent(quantityUomId||'')"/>
         <set field="effectivePriceRows" from="[]"/>
         <set field="effectiveReport" from="null"/>
         <if condition="runEffectivePrices || ['csv','xlsx'].includes(sri.getRenderMode())">
