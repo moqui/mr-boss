@@ -3008,7 +3008,9 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_DISPLAY" appName="Manufacturing" description="Plant display" scopeDependency="organization, plant" sequenceNum="730"/>
-    <!-- Accounting -->
+    <!-- Accounting. The administrator works in the organizations its holder works for: ACCOUNTING_ADMIN is bound to them, and
+        every internal organization of the instance takes ACCOUNTING_ALL_ORGANIZATIONS, which ADMIN alone holds and no bundle
+        carries (the user's call of Nov 16, 2026, SEC-BOS-02; as People's and Sales' *_ALL_ORGANIZATIONS widen theirs). -->
     <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_ADMIN" appName="Accounting" description="Accounting administrator" scopeDependency="organization" sequenceNum="740"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_GL_POST" capabilityKindEnumId="CpkEdit"/>
