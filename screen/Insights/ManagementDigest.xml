@@ -130,18 +130,22 @@ along with this software (see the LICENSE.md file). If not, see
                             text="${canCompose ? 'No digest yet. Compose one with New digest: choose the dashboards, a period and a few words.' : 'No digest is shared with you yet.'}"/>
                 </box-body>
                 <box-body-nopad>
-                    <form-list name="DigestList" list="digestList" skip-form="true" paginate="false" condition="digestList.length">
-                        <field name="title"><default-field title="Digest">
-                            <link url="." text="${title}" link-type="anchor" parameter-map="{definitionId:definitionId}"/>
-                        </default-field></field>
-                        <field name="periodText"><default-field title="Period"><display/></default-field></field>
-                        <field name="dashboardCount"><default-field title="Dashboards" align="right"><display/></default-field></field>
-                        <field name="sharedText"><default-field title="Sharing"><display text="${own ? 'Yours' : 'Shared with you'} · ${sharedText}"/></default-field></field>
-                        <columns type="mobile">
-                            <column><field-ref name="title"/></column>
-                            <column><field-ref name="periodText"/></column>
-                        </columns>
-                    </form-list>
+                    <section name="DigestListSection" condition="digestList.length">
+                        <widgets>
+                            <form-list name="DigestList" list="digestList" skip-form="true" paginate="false">
+                                <field name="title"><default-field title="Digest">
+                                    <link url="." text="${title}" link-type="anchor" parameter-map="{definitionId:definitionId}"/>
+                                </default-field></field>
+                                <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                                <field name="dashboardCount"><default-field title="Dashboards" align="right"><display/></default-field></field>
+                                <field name="sharedText"><default-field title="Sharing"><display text="${own ? 'Yours' : 'Shared with you'} · ${sharedText}"/></default-field></field>
+                                <columns type="mobile">
+                                    <column><field-ref name="title"/></column>
+                                    <column><field-ref name="periodText"/></column>
+                                </columns>
+                            </form-list>
+                        </widgets>
+                    </section>
                 </box-body-nopad>
             </container-box>
         </widgets></section>

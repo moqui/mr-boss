@@ -139,60 +139,64 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-single>
                 <container-box>
                     <box-body-nopad>
-                        <form-list name="ScheduleList" list="schedules" skip-form="true" paginate="true" select-columns="true" condition="schedules.length">
-                            <field name="scheduleName">
-                                <default-field title="Schedule">
-                                    <link url="${sharedLinks['Time/WorkingScheduleDetail']}" text="${scheduleName}" link-type="anchor"
-                                            parameter-map="{workingScheduleId:workingScheduleId}"/>
-                                </default-field>
-                            </field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="timeZone"><default-field title="Time zone"><display/></default-field></field>
-                            <field name="weeklyHours" align="right"><default-field title="Hours a week"><display format="#,##0.##"/></default-field></field>
-                            <field name="holidayCalendarName"><default-field title="Holiday calendar"><display/></default-field></field>
-                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
-                            <field name="assignedCount" align="right" hide="!showAssigned">
-                                <default-field title="Employees"><display format="#,##0"/></default-field>
-                            </field>
-                            <field name="stateText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                        <section name="ScheduleListSection" condition="schedules.length">
+                            <widgets>
+                                <form-list name="ScheduleList" list="schedules" skip-form="true" paginate="true" select-columns="true">
+                                    <field name="scheduleName">
+                                        <default-field title="Schedule">
+                                            <link url="${sharedLinks['Time/WorkingScheduleDetail']}" text="${scheduleName}" link-type="anchor"
+                                                    parameter-map="{workingScheduleId:workingScheduleId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="timeZone"><default-field title="Time zone"><display/></default-field></field>
+                                    <field name="weeklyHours" align="right"><default-field title="Hours a week"><display format="#,##0.##"/></default-field></field>
+                                    <field name="holidayCalendarName"><default-field title="Holiday calendar"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="assignedCount" align="right" hide="!showAssigned">
+                                        <default-field title="Employees"><display format="#,##0"/></default-field>
+                                    </field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                        <text type="html">${stateText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="actions" hide="!canEdit">
-                                <conditional-field condition="canEdit" title="">
-                                    <container-dialog id="CopySchedule_${workingScheduleId}" button-text="Copy" icon="sym_o_content_copy" type="default"
-                                            width="560" title="Copy ${scheduleName}">
-                                        <label type="p" text="The copy is a new schedule of the same employer, with the working hours ${scheduleName} has on its start. Nobody who follows ${scheduleName} moves to it."/>
-                                        <form-single name="CopySchedule" transition="storeSchedule"
-                                                map="{copyFromScheduleId:workingScheduleId, scheduleName:scheduleName + ' (copy)', timeZone:timeZone}">
-                                            <field name="copyFromScheduleId"><default-field><hidden/></default-field></field>
-                                            <field name="scheduleName"><default-field title="Name"><text-line size="40"/></default-field></field>
-                                            <field name="timeZone">
-                                                <default-field title="Time zone">
-                                                    <drop-down>
-                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                                parameter-map="{choice:'timeZones', selected:timeZone}"/>
-                                                    </drop-down>
-                                                </default-field>
-                                            </field>
-                                            <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Copy schedule"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                </conditional-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="scheduleName"/><field-ref name="organizationName"/></column>
-                                <column><field-ref name="weeklyHours"/><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions" hide="!canEdit">
+                                        <conditional-field condition="canEdit" title="">
+                                            <container-dialog id="CopySchedule_${workingScheduleId}" button-text="Copy" icon="sym_o_content_copy" type="default"
+                                                    width="560" title="Copy ${scheduleName}">
+                                                <label type="p" text="The copy is a new schedule of the same employer, with the working hours ${scheduleName} has on its start. Nobody who follows ${scheduleName} moves to it."/>
+                                                <form-single name="CopySchedule" transition="storeSchedule"
+                                                        map="{copyFromScheduleId:workingScheduleId, scheduleName:scheduleName + ' (copy)', timeZone:timeZone}">
+                                                    <field name="copyFromScheduleId"><default-field><hidden/></default-field></field>
+                                                    <field name="scheduleName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                                    <field name="timeZone">
+                                                        <default-field title="Time zone">
+                                                            <drop-down>
+                                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                        parameter-map="{choice:'timeZones', selected:timeZone}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Copy schedule"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </conditional-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="scheduleName"/><field-ref name="organizationName"/></column>
+                                        <column><field-ref name="weeklyHours"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!schedules.length &amp;&amp; filtered" text="No schedule matches."/>
                         <label type="p" style="q-pa-md m-muted" condition="!schedules.length &amp;&amp; !filtered"
                                 text="No working schedule is defined yet.${canEdit ? ' Start one with New schedule.' : ''}"/>

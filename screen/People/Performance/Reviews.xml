@@ -78,34 +78,38 @@ along with this software (see the LICENSE.md file). If not, see
 
         <container-box>
             <box-body-nopad>
-                <form-list name="ReviewList" list="reviews" skip-form="true" paginate="true" condition="reviews.length">
-                    <field name="personName">
-                        <default-field title="Person">
-                            <link url="../ReviewDetail" text="${personName}" link-type="anchor" parameter-map="{performanceReviewId:performanceReviewId}"/>
-                        </default-field>
-                    </field>
-                    <field name="cycleName"><default-field title="Cycle"><display text="${cycleName} · ${periodText}"/></default-field></field>
-                    <field name="reviewerName"><default-field title="Reviewer"><display/></default-field></field>
-                    <field name="selfStateText"><default-field title="Self"><display/></default-field></field>
-                    <field name="managerStateText"><default-field title="Reviewer's"><display/></default-field></field>
-                    <field name="feedbackText"><default-field title="Feedback"><display/></default-field></field>
-                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
-                    <field name="todoText"><default-field title="To do"><display/></default-field></field>
-                    <field name="statusText">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[statusEnumId] || 'grey-8'}">${
+                <section name="ReviewListSection" condition="reviews.length">
+                    <widgets>
+                        <form-list name="ReviewList" list="reviews" skip-form="true" paginate="true">
+                            <field name="personName">
+                                <default-field title="Person">
+                                    <link url="../ReviewDetail" text="${personName}" link-type="anchor" parameter-map="{performanceReviewId:performanceReviewId}"/>
+                                </default-field>
+                            </field>
+                            <field name="cycleName"><default-field title="Cycle"><display text="${cycleName} · ${periodText}"/></default-field></field>
+                            <field name="reviewerName"><default-field title="Reviewer"><display/></default-field></field>
+                            <field name="selfStateText"><default-field title="Self"><display/></default-field></field>
+                            <field name="managerStateText"><default-field title="Reviewer's"><display/></default-field></field>
+                            <field name="feedbackText"><default-field title="Feedback"><display/></default-field></field>
+                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                            <field name="todoText"><default-field title="To do"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[statusEnumId] || 'grey-8'}">${
                                     WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
-                                <text type="html">${statusText}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="personName"/><field-ref name="cycleName"/><field-ref name="todoText"/></column>
-                        <column><field-ref name="statusText"/><field-ref name="dueText"/></column>
-                    </columns>
-                </form-list>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="cycleName"/><field-ref name="todoText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="dueText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label type="p" style="q-pa-md m-muted" condition="!reviews.length" text="${emptyText}"/>
             </box-body-nopad>
         </container-box>

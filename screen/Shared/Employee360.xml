@@ -503,24 +503,32 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Overview"/>
                     <box-body>
-                        <form-list name="WorkIdentity" list="workRows" skip-form="true" paginate="false" condition="workRows.length">
-                            <field name="label"><default-field title="Work contact"><display/></default-field></field>
-                            <field name="value"><default-field title=""><display/></default-field></field>
-                        </form-list>
+                        <section name="WorkIdentitySection" condition="workRows.length">
+                            <widgets>
+                                <form-list name="WorkIdentity" list="workRows" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Work contact"><display/></default-field></field>
+                                    <field name="value"><default-field title=""><display/></default-field></field>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="No work contact is recorded." type="p" style="m-muted" condition="!workRows.length"/>
-                        <form-list name="Employments" list="employmentRows" skip-form="true" paginate="false" condition="employmentRows.length">
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
-                            <field name="departmentName" hide="!employmentRows.some(row =&gt; row.departmentName)">
-                                <default-field title="Department"><display/></default-field></field>
-                            <field name="fromDateText" hide="!employmentRows.some(row =&gt; row.fromDateText)">
-                                <default-field title="Started"><display/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="organizationName"/><field-ref name="jobTitle"/></column>
-                                <column><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="EmploymentsSection" condition="employmentRows.length">
+                            <widgets>
+                                <form-list name="Employments" list="employmentRows" skip-form="true" paginate="false">
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                                    <field name="departmentName" hide="!employmentRows.some(row =&gt; row.departmentName)">
+                                        <default-field title="Department"><display/></default-field></field>
+                                    <field name="fromDateText" hide="!employmentRows.some(row =&gt; row.fromDateText)">
+                                        <default-field title="Started"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="organizationName"/><field-ref name="jobTitle"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -531,28 +539,32 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Assigned equipment"/>
                             <box-body-nopad>
-                                <form-list name="EquipmentRows" list="equipmentRows" skip-form="true" paginate="false" condition="equipmentRows.length">
-                                    <field name="assetName">
-                                        <default-field title="Equipment">
-                                            <link url="${equipmentDetailLink}" text="${assetName}" link-type="anchor"
-                                                    parameter-map="{assetId:assetId}"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
-                                    <field name="serialNumber"><default-field title="Serial number"><display/></default-field></field>
-                                    <field name="roleText"><default-field title="Held as"><display/></default-field></field>
-                                    <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
-                                    <field name="returnTaskId">
-                                        <default-field title="Return">
-                                            <link url="${sharedLinks['Tasks/WorkItemDetail']}" text="Return task" link-type="anchor"
-                                                    parameter-map="{workEffortId:returnTaskId}" condition="returnTaskId"/>
-                                        </default-field>
-                                    </field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="assetName"/><field-ref name="serialNumber"/></column>
-                                        <column><field-ref name="roleText"/><field-ref name="returnTaskId"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="EquipmentRowsSection" condition="equipmentRows.length">
+                                    <widgets>
+                                        <form-list name="EquipmentRows" list="equipmentRows" skip-form="true" paginate="false">
+                                            <field name="assetName">
+                                                <default-field title="Equipment">
+                                                    <link url="${equipmentDetailLink}" text="${assetName}" link-type="anchor"
+                                                            parameter-map="{assetId:assetId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                            <field name="serialNumber"><default-field title="Serial number"><display/></default-field></field>
+                                            <field name="roleText"><default-field title="Held as"><display/></default-field></field>
+                                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                                            <field name="returnTaskId">
+                                                <default-field title="Return">
+                                                    <link url="${sharedLinks['Tasks/WorkItemDetail']}" text="Return task" link-type="anchor"
+                                                            parameter-map="{workEffortId:returnTaskId}" condition="returnTaskId"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="assetName"/><field-ref name="serialNumber"/></column>
+                                                <column><field-ref name="roleText"/><field-ref name="returnTaskId"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label text="No equipment is held." type="p" style="m-muted q-pa-md" condition="!equipmentRows.length"/>
                             </box-body-nopad>
                         </container-box>
@@ -573,26 +585,34 @@ along with this software (see the LICENSE.md file). If not, see
                                         parameter-map="{term: overview.personName}"/>
                             </box-toolbar>
                             <box-body>
-                                <form-list name="SkillRows" list="skillRows" skip-form="true" paginate="false" condition="skillRows.length">
-                                    <field name="skillName"><default-field title="Skill"><display/></default-field></field>
-                                    <field name="levelText"><default-field title="Level"><display/></default-field></field>
-                                    <field name="sourceText"><default-field title="From"><display/></default-field></field>
-                                    <field name="evaluatedDateText"><default-field title="When"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="skillName"/></column>
-                                        <column><field-ref name="levelText"/><field-ref name="sourceText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="SkillRowsSection" condition="skillRows.length">
+                                    <widgets>
+                                        <form-list name="SkillRows" list="skillRows" skip-form="true" paginate="false">
+                                            <field name="skillName"><default-field title="Skill"><display/></default-field></field>
+                                            <field name="levelText"><default-field title="Level"><display/></default-field></field>
+                                            <field name="sourceText"><default-field title="From"><display/></default-field></field>
+                                            <field name="evaluatedDateText"><default-field title="When"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="skillName"/></column>
+                                                <column><field-ref name="levelText"/><field-ref name="sourceText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label text="No skill is recorded." type="p" style="m-muted" condition="development.showsSkills &amp;&amp; !skillRows.length"/>
-                                <form-list name="QualificationRows" list="qualificationRows" skip-form="true" paginate="false" condition="qualificationRows.length">
-                                    <field name="typeText"><default-field title="Qualification"><display text="${typeText}${title ? ': ' + title : ''}"/></default-field></field>
-                                    <field name="verificationText"><default-field title="State"><display text="${verificationText}${validityText ? ' · ' + validityText : ''}"/></default-field></field>
-                                    <field name="thruDateText"><default-field title="Expires"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="typeText"/></column>
-                                        <column><field-ref name="verificationText"/><field-ref name="thruDateText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="QualificationRowsSection" condition="qualificationRows.length">
+                                    <widgets>
+                                        <form-list name="QualificationRows" list="qualificationRows" skip-form="true" paginate="false">
+                                            <field name="typeText"><default-field title="Qualification"><display text="${typeText}${title ? ': ' + title : ''}"/></default-field></field>
+                                            <field name="verificationText"><default-field title="State"><display text="${verificationText}${validityText ? ' · ' + validityText : ''}"/></default-field></field>
+                                            <field name="thruDateText"><default-field title="Expires"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="typeText"/></column>
+                                                <column><field-ref name="verificationText"/><field-ref name="thruDateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label text="No qualification is recorded." type="p" style="m-muted" condition="!qualificationRows.length"/>
                                 <section name="ResumeLines" condition="development.showsResume">
                                     <widgets>
@@ -616,24 +636,28 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </form-single>
                                             </container-dialog>
                                         </container>
-                                        <form-list name="ResumeRows" list="resumeRows" skip-form="true" paginate="false" condition="resumeRows.length">
-                                            <field name="periodText"><default-field title="When"><display/></default-field></field>
-                                            <field name="title"><default-field title="Role"><display/></default-field></field>
-                                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
-                                            <field name="typeText"><default-field title="Kind"><display/></default-field></field>
-                                            <field name="actions">
-                                                <default-field title="">
-                                                    <link url="storeResumeLine" link-type="hidden-form-link" text="Remove" icon="sym_o_remove" btn-type="danger"
-                                                            condition="development.canEditResume" confirmation="Remove this resume line?"
-                                                            parameter-map="{partyId:partyId, partyRelationshipId:(record.partyRelationshipId || null),
-                                                                partyResumeId:partyResumeId, remove:'true'}"/>
-                                                </default-field>
-                                            </field>
-                                            <columns type="mobile">
-                                                <column><field-ref name="title"/><field-ref name="organizationName"/></column>
-                                                <column><field-ref name="periodText"/><field-ref name="actions"/></column>
-                                            </columns>
-                                        </form-list>
+                                        <section name="ResumeRowsSection" condition="resumeRows.length">
+                                            <widgets>
+                                                <form-list name="ResumeRows" list="resumeRows" skip-form="true" paginate="false">
+                                                    <field name="periodText"><default-field title="When"><display/></default-field></field>
+                                                    <field name="title"><default-field title="Role"><display/></default-field></field>
+                                                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                                                    <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                                                    <field name="actions">
+                                                        <default-field title="">
+                                                            <link url="storeResumeLine" link-type="hidden-form-link" text="Remove" icon="sym_o_remove" btn-type="danger"
+                                                                    condition="development.canEditResume" confirmation="Remove this resume line?"
+                                                                    parameter-map="{partyId:partyId, partyRelationshipId:(record.partyRelationshipId || null),
+                                                                        partyResumeId:partyResumeId, remove:'true'}"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="title"/><field-ref name="organizationName"/></column>
+                                                        <column><field-ref name="periodText"/><field-ref name="actions"/></column>
+                                                    </columns>
+                                                </form-list>
+                                            </widgets>
+                                        </section>
                                         <label text="No resume line yet." type="p" style="m-muted" condition="!resumeRows.length"/>
                                     </widgets>
                                 </section>
@@ -955,37 +979,49 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="label"><default-field title=""><display/></default-field></field>
                                     <field name="value"><default-field title=""><display/></default-field></field>
                                 </form-list>
-                                <form-list name="PayChangesWaiting" list="payChangeRows" skip-form="true" paginate="false" condition="payChangeRows.length">
-                                    <field name="effectiveDateText"><default-field title="Pay change from"><display/></default-field></field>
-                                    <field name="salaryText"><default-field title="Salary"><display/></default-field></field>
-                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="effectiveDateText"/><field-ref name="reason"/></column>
-                                        <column><field-ref name="salaryText"/></column>
-                                    </columns>
-                                </form-list>
-                                <form-list name="SalaryHistory" list="salaryRows" skip-form="true" paginate="false" condition="salaryRows.length">
-                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
-                                    <field name="salaryText"><default-field title="Salary"><display/></default-field></field>
-                                    <field name="payGradeName"><default-field title="Pay grade"><display/></default-field></field>
-                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="fromDateText"/><field-ref name="salaryText"/></column>
-                                        <column><field-ref name="stateText"/></column>
-                                    </columns>
-                                </form-list>
-                                <form-list name="PayAssignmentRows" list="payAssignmentRows" skip-form="true" paginate="false" condition="payAssignmentRows.length">
-                                    <field name="structureName"><default-field title="Pay structure"><display/></default-field></field>
-                                    <field name="groupName"><default-field title="Pay group"><display/></default-field></field>
-                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
-                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="structureName"/><field-ref name="fromDateText"/></column>
-                                        <column><field-ref name="stateText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="PayChangesWaitingSection" condition="payChangeRows.length">
+                                    <widgets>
+                                        <form-list name="PayChangesWaiting" list="payChangeRows" skip-form="true" paginate="false">
+                                            <field name="effectiveDateText"><default-field title="Pay change from"><display/></default-field></field>
+                                            <field name="salaryText"><default-field title="Salary"><display/></default-field></field>
+                                            <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="effectiveDateText"/><field-ref name="reason"/></column>
+                                                <column><field-ref name="salaryText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="SalaryHistorySection" condition="salaryRows.length">
+                                    <widgets>
+                                        <form-list name="SalaryHistory" list="salaryRows" skip-form="true" paginate="false">
+                                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                            <field name="salaryText"><default-field title="Salary"><display/></default-field></field>
+                                            <field name="payGradeName"><default-field title="Pay grade"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="fromDateText"/><field-ref name="salaryText"/></column>
+                                                <column><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="PayAssignmentRowsSection" condition="payAssignmentRows.length">
+                                    <widgets>
+                                        <form-list name="PayAssignmentRows" list="payAssignmentRows" skip-form="true" paginate="false">
+                                            <field name="structureName"><default-field title="Pay structure"><display/></default-field></field>
+                                            <field name="groupName"><default-field title="Pay group"><display/></default-field></field>
+                                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="structureName"/><field-ref name="fromDateText"/></column>
+                                                <column><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                     </widgets>
@@ -996,22 +1032,29 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Personal information"/>
                             <box-body>
-                                <form-list name="PersonalRows" list="personalRows" skip-form="true" paginate="false" condition="personalRows.length">
-                                    <field name="label"><default-field title="Detail"><display/></default-field></field>
-                                    <field name="value"><default-field title=""><display/></default-field></field>
-                                </form-list>
+                                <section name="PersonalRowsSection" condition="personalRows.length">
+                                    <widgets>
+                                        <form-list name="PersonalRows" list="personalRows" skip-form="true" paginate="false">
+                                            <field name="label"><default-field title="Detail"><display/></default-field></field>
+                                            <field name="value"><default-field title=""><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label text="No personal contact is recorded." type="p" style="m-muted" condition="!personalRows.length"/>
-                                <form-list name="Identifications" list="identificationRows" skip-form="true" paginate="false"
-                                        condition="identificationRows.length">
-                                    <field name="typeText"><default-field title="Identification"><display/></default-field></field>
-                                    <field name="valueText"><default-field title="Number"><display/></default-field></field>
-                                    <field name="issuedBy"><default-field title="Issued by"><display/></default-field></field>
-                                    <field name="expireDateText"><default-field title="Expires"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="typeText"/><field-ref name="valueText"/></column>
-                                        <column><field-ref name="expireDateText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="IdentificationsSection" condition="identificationRows.length">
+                                    <widgets>
+                                        <form-list name="Identifications" list="identificationRows" skip-form="true" paginate="false">
+                                            <field name="typeText"><default-field title="Identification"><display/></default-field></field>
+                                            <field name="valueText"><default-field title="Number"><display/></default-field></field>
+                                            <field name="issuedBy"><default-field title="Issued by"><display/></default-field></field>
+                                            <field name="expireDateText"><default-field title="Expires"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="typeText"/><field-ref name="valueText"/></column>
+                                                <column><field-ref name="expireDateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label text="Tax and bank details are kept in payroll setup." type="p" style="text-caption m-muted"
                                         condition="canEditHr"/>
                             </box-body>
@@ -1026,38 +1069,44 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Employment history"/>
                             <box-body>
-                                <form-list name="EmploymentHistoryRows" list="historyRows" skip-form="true" paginate="false"
-                                        condition="historyRows.length">
-                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                                    <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
-                                    <field name="fromDateText"><default-field title="Started"><display/></default-field></field>
-                                    <field name="thruDateText"><default-field title="Ended"><display/></default-field></field>
-                                    <field name="terminationReason"><default-field title="Reason"><display/></default-field></field>
-                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="organizationName"/><field-ref name="fromDateText"/></column>
-                                        <column><field-ref name="stateText"/><field-ref name="thruDateText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="EmploymentHistoryRowsSection" condition="historyRows.length">
+                                    <widgets>
+                                        <form-list name="EmploymentHistoryRows" list="historyRows" skip-form="true" paginate="false">
+                                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                            <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                                            <field name="fromDateText"><default-field title="Started"><display/></default-field></field>
+                                            <field name="thruDateText"><default-field title="Ended"><display/></default-field></field>
+                                            <field name="terminationReason"><default-field title="Reason"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="organizationName"/><field-ref name="fromDateText"/></column>
+                                                <column><field-ref name="stateText"/><field-ref name="thruDateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label text="No employment history is available." type="p" style="m-muted" condition="!historyRows.length"/>
                                 <!-- P6: the dated assignments of the employments: department, position, manager and work location from each
                                     date, and the change that started each -->
-                                <form-list name="AssignmentRows" list="assignmentRows" skip-form="true" paginate="false"
-                                        condition="assignmentRows.length">
-                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
-                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                                    <field name="departmentName"><default-field title="Department"><display/></default-field></field>
-                                    <field name="positionName"><default-field title="Position"><display/></default-field></field>
-                                    <field name="managerName"><default-field title="Manager"><display/></default-field></field>
-                                    <field name="facilityName"><default-field title="Work location"><display/></default-field></field>
-                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                    <field name="changeText"><default-field title="By"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="fromDateText"/><field-ref name="departmentName"/><field-ref name="positionName"/></column>
-                                        <column><field-ref name="changeText"/><field-ref name="managerName"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="AssignmentRowsSection" condition="assignmentRows.length">
+                                    <widgets>
+                                        <form-list name="AssignmentRows" list="assignmentRows" skip-form="true" paginate="false">
+                                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                            <field name="departmentName"><default-field title="Department"><display/></default-field></field>
+                                            <field name="positionName"><default-field title="Position"><display/></default-field></field>
+                                            <field name="managerName"><default-field title="Manager"><display/></default-field></field>
+                                            <field name="facilityName"><default-field title="Work location"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                            <field name="changeText"><default-field title="By"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="fromDateText"/><field-ref name="departmentName"/><field-ref name="positionName"/></column>
+                                                <column><field-ref name="changeText"/><field-ref name="managerName"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                     </widgets>

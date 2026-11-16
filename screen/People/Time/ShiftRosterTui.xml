@@ -192,34 +192,42 @@ along with this software (see the LICENSE.md file). If not, see
                                     <widgets>
                                         <label text="${shiftPreview.personName}: ${shiftPreview.whenText}, ${shiftPreview.hours} h${shiftPreview.localText ? ' (' + shiftPreview.localText + ')' : ''}"
                                                 type="p" style="text-weight-medium"/>
-                                        <form-list name="RosterTuiFindings" list="shiftFindings" skip-form="true" paginate="false" condition="shiftFindings.length">
-                                            <field name="kind">
-                                                <default-field title="">
-                                                    <render-mode>
-                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${color}">${kind}</q-chip>]]></text>
-                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: kind})}]]></text>
-                                                        <text type="html">${kind}</text>
-                                                    </render-mode>
-                                                </default-field>
-                                            </field>
-                                            <field name="message"><default-field title="Finding"><display/></default-field></field>
-                                        </form-list>
+                                        <section name="RosterTuiFindingsSection" condition="shiftFindings.length">
+                                            <widgets>
+                                                <form-list name="RosterTuiFindings" list="shiftFindings" skip-form="true" paginate="false">
+                                                    <field name="kind">
+                                                        <default-field title="">
+                                                            <render-mode>
+                                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${color}">${kind}</q-chip>]]></text>
+                                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: kind})}]]></text>
+                                                                <text type="html">${kind}</text>
+                                                            </render-mode>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="message"><default-field title="Finding"><display/></default-field></field>
+                                                </form-list>
+                                            </widgets>
+                                        </section>
                                         <label text="No conflict." type="p" style="text-positive" condition="!shiftFindings.length"/>
-                                        <form-single name="RosterTuiSave" transition="saveShift" map="saveValues" condition="shiftPreview.canApply">
-                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
-                                            <field name="fromDay"><default-field><hidden default-value="${roster.fromDay}"/></default-field></field>
-                                            <field name="days"><default-field><hidden default-value="${roster.days}"/></default-field></field>
-                                            <field name="shiftAssignmentId"><default-field><hidden/></default-field></field>
-                                            <field name="shiftPartyRelationshipId"><default-field><hidden/></default-field></field>
-                                            <field name="shiftStart"><default-field><hidden/></default-field></field>
-                                            <field name="shiftEnd"><default-field><hidden/></default-field></field>
-                                            <field name="shiftBreak"><default-field><hidden/></default-field></field>
-                                            <field name="shiftFacilityId"><default-field><hidden/></default-field></field>
-                                            <field name="shiftReason"><default-field><hidden/></default-field></field>
-                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                            <field name="operationKey"><default-field><hidden/></default-field></field>
-                                            <field name="submit"><default-field title=""><submit text="Save shift"/></default-field></field>
-                                        </form-single>
+                                        <section name="RosterTuiSaveSection" condition="shiftPreview.canApply">
+                                            <widgets>
+                                                <form-single name="RosterTuiSave" transition="saveShift" map="saveValues">
+                                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                                    <field name="fromDay"><default-field><hidden default-value="${roster.fromDay}"/></default-field></field>
+                                                    <field name="days"><default-field><hidden default-value="${roster.days}"/></default-field></field>
+                                                    <field name="shiftAssignmentId"><default-field><hidden/></default-field></field>
+                                                    <field name="shiftPartyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="shiftStart"><default-field><hidden/></default-field></field>
+                                                    <field name="shiftEnd"><default-field><hidden/></default-field></field>
+                                                    <field name="shiftBreak"><default-field><hidden/></default-field></field>
+                                                    <field name="shiftFacilityId"><default-field><hidden/></default-field></field>
+                                                    <field name="shiftReason"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                    <field name="submit"><default-field title=""><submit text="Save shift"/></default-field></field>
+                                                </form-single>
+                                            </widgets>
+                                        </section>
                                     </widgets>
                                 </section>
                             </box-body>
@@ -230,18 +238,22 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Shifts of these days"/>
                     <box-body-nopad>
-                        <form-list name="RosterTuiShifts" list="shiftRows" skip-form="true" paginate="false" condition="shiftRows.length">
-                            <field name="personName"><default-field title="Person"><display/></default-field></field>
-                            <field name="whenText"><default-field title="When"><display/></default-field></field>
-                            <field name="hoursText" align="right"><default-field title="Hours"><display/></default-field></field>
-                            <field name="statusText"><default-field title="State"><display/></default-field></field>
-                            <field name="facilityName"><default-field title="Work location"><display/></default-field></field>
-                            <field name="conflictText"><default-field title="Conflicts"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/><field-ref name="whenText"/></column>
-                                <column><field-ref name="statusText"/><field-ref name="hoursText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="RosterTuiShiftsSection" condition="shiftRows.length">
+                            <widgets>
+                                <form-list name="RosterTuiShifts" list="shiftRows" skip-form="true" paginate="false">
+                                    <field name="personName"><default-field title="Person"><display/></default-field></field>
+                                    <field name="whenText"><default-field title="When"><display/></default-field></field>
+                                    <field name="hoursText" align="right"><default-field title="Hours"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <field name="facilityName"><default-field title="Work location"><display/></default-field></field>
+                                    <field name="conflictText"><default-field title="Conflicts"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="whenText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="hoursText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="No shift in these days." type="p" style="m-muted q-pa-sm q-mb-none" condition="!shiftRows.length"/>
                     </box-body-nopad>
                 </container-box>

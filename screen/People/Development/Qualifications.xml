@@ -189,104 +189,108 @@ along with this software (see the LICENSE.md file). If not, see
 
         <container-box>
             <box-body-nopad>
-                <form-list name="QualificationList" list="qualifications" skip-form="true" paginate="true" condition="qualifications.length">
-                    <field name="personName">
-                        <conditional-field condition="employee360Url" title="Person">
-                            <link url="${employee360Url}" url-type="plain" text="${personName}" link-type="anchor" parameter-map="{partyId:partyId}"/>
-                        </conditional-field>
-                        <default-field title="Person"><display/></default-field>
-                    </field>
-                    <field name="typeText"><default-field title="Kind"><display text="${typeText}${title ? ': ' + title : ''}"/></default-field></field>
-                    <field name="issuerName"><default-field title="Issued by"><display/></default-field></field>
-                    <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><display/></default-field></field>
-                    <field name="fromDateText"><default-field title="Issued"><display/></default-field></field>
-                    <field name="thruDateText"><default-field title="Expires"><display/></default-field></field>
-                    <field name="verificationText">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${verificationColors[verificationStatusId] || 'grey-8'}">${
+                <section name="QualificationListSection" condition="qualifications.length">
+                    <widgets>
+                        <form-list name="QualificationList" list="qualifications" skip-form="true" paginate="true">
+                            <field name="personName">
+                                <conditional-field condition="employee360Url" title="Person">
+                                    <link url="${employee360Url}" url-type="plain" text="${personName}" link-type="anchor" parameter-map="{partyId:partyId}"/>
+                                </conditional-field>
+                                <default-field title="Person"><display/></default-field>
+                            </field>
+                            <field name="typeText"><default-field title="Kind"><display text="${typeText}${title ? ': ' + title : ''}"/></default-field></field>
+                            <field name="issuerName"><default-field title="Issued by"><display/></default-field></field>
+                            <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Issued"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Expires"><display/></default-field></field>
+                            <field name="verificationText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${verificationColors[verificationStatusId] || 'grey-8'}">${
                                     WebUtilities.encodeHtml(verificationText)}</q-chip>${validity ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-' +
                                     (validityColors[validity] || 'grey-8') + '">' + WebUtilities.encodeHtml(validityText) + '</q-chip>' : ''}]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: verificationText + (validity ? " · " + validityText : "")})}]]></text>
-                                <text type="html">${verificationText}${validity ? ' · ' + validityText : ''}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <field name="actions">
-                        <default-field title="">
-                            <link url="verifyQualification" link-type="hidden-form-link" text="Verify" icon="sym_o_verified" condition="canVerify &amp;&amp; verificationStatusId == 'QlVerPending'"
-                                    confirmation="Verify ${personName}'s ${typeText.toLowerCase()}?"
-                                    parameter-map="{partyQualificationId:partyQualificationId, decision:'verify', expectedRevision:revision}"/>
-                            <container-dialog id="Reject_${partyQualificationId}" button-text="Reject" icon="sym_o_block" type="default" width="520"
-                                    title="Reject ${personName}'s ${typeText.toLowerCase()}" condition="canVerify &amp;&amp; verificationStatusId == 'QlVerPending'">
-                                <form-single name="RejectQualification" transition="verifyQualification"
-                                        map="{partyQualificationId:partyQualificationId, decision:'reject', expectedRevision:revision}">
-                                    <field name="partyQualificationId"><default-field><hidden/></default-field></field>
-                                    <field name="decision"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="reason"><default-field title="Why"><text-area rows="2"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Reject"><submit type="danger"/></default-field></field>
-                                </form-single>
-                            </container-dialog>
-                            <container-dialog id="Revoke_${partyQualificationId}" button-text="Revoke" icon="sym_o_cancel" type="default" width="520"
-                                    title="Revoke ${personName}'s ${typeText.toLowerCase()}" condition="canVerify &amp;&amp; verificationStatusId == 'QlVerVerified'">
-                                <label type="p" text="A revoked qualification meets no requirement; the record and its files are kept."/>
-                                <form-single name="RevokeQualification" transition="verifyQualification"
-                                        map="{partyQualificationId:partyQualificationId, decision:'revoke', expectedRevision:revision}">
-                                    <field name="partyQualificationId"><default-field><hidden/></default-field></field>
-                                    <field name="decision"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="reason"><default-field title="Why"><text-area rows="2"/></default-field></field>
-                                    <field name="submitButton">
-                                        <default-field title="Revoke"><submit type="danger" confirmation="Revoke ${personName}'s ${typeText.toLowerCase()}?"/></default-field>
-                                    </field>
-                                </form-single>
-                            </container-dialog>
-                            <container-dialog id="Change_${partyQualificationId}" button-text="Change" icon="sym_o_edit" type="default" width="720"
-                                    title="Change ${typeText.toLowerCase()}" condition="canChange">
-                                <form-single name="ChangeQualification" transition="storeQualification"
-                                        map="{partyQualificationId:partyQualificationId, expectedRevision:revision, qualificationTypeEnumId:qualificationTypeEnumId,
-                                            title:title, issuerName:issuerName, referenceNumber:referenceNumber, fromDate:fromDateText, thruDate:thruDateText,
-                                            comments:comments}">
-                                    <field name="partyQualificationId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="qualificationTypeEnumId">
-                                        <default-field title="Kind"><drop-down><list-options list="typeOptions" key="${key}" text="${text}"/></drop-down></default-field>
-                                    </field>
-                                    <field name="title"><default-field title="Name"><text-line size="40"/></default-field></field>
-                                    <field name="issuerName"><default-field title="Issued by"><text-line size="40"/></default-field></field>
-                                    <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><text-line size="30"/></default-field></field>
-                                    <field name="fromDate"><default-field title="Issued"><date-time type="date"/></default-field></field>
-                                    <field name="thruDate"><default-field title="Expires"><date-time type="date"/></default-field></field>
-                                    <field name="comments"><default-field title="Comments"><text-area rows="2"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Submit again"><submit/></default-field></field>
-                                </form-single>
-                            </container-dialog>
-                            <container-dialog id="Renew_${partyQualificationId}" button-text="Renew" icon="sym_o_autorenew" type="default" width="720"
-                                    title="Renew ${typeText.toLowerCase()}" condition="canReadFiles &amp;&amp; verificationStatusId == 'QlVerVerified' &amp;&amp; partyId == people?.partyId">
-                                <label type="p" text="The renewal is a new qualification that waits for verification; this one and its files are kept."/>
-                                <form-single name="RenewQualification" transition="storeQualification"
-                                        map="{renewsQualificationId:partyQualificationId, qualificationTypeEnumId:qualificationTypeEnumId, title:title,
-                                            issuerName:issuerName}">
-                                    <field name="renewsQualificationId"><default-field><hidden/></default-field></field>
-                                    <field name="qualificationTypeEnumId"><default-field><hidden/></default-field></field>
-                                    <field name="title"><default-field title="Name"><text-line size="40"/></default-field></field>
-                                    <field name="issuerName"><default-field title="Issued by"><text-line size="40"/></default-field></field>
-                                    <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><text-line size="30"/></default-field></field>
-                                    <field name="fromDate"><default-field title="Issued"><date-time type="date"/></default-field></field>
-                                    <field name="thruDate"><default-field title="Expires"><date-time type="date"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Submit renewal"><submit/></default-field></field>
-                                </form-single>
-                            </container-dialog>
-                            <link url="." text="Files" icon="sym_o_attach_file" link-type="anchor" condition="canReadFiles"
-                                    parameter-map="{partyQualificationId:partyQualificationId, show:showing, state:stateShown}"/>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="personName"/><field-ref name="typeText"/><field-ref name="thruDateText"/></column>
-                        <column><field-ref name="verificationText"/><field-ref name="actions"/></column>
-                    </columns>
-                </form-list>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: verificationText + (validity ? " · " + validityText : "")})}]]></text>
+                                        <text type="html">${verificationText}${validity ? ' · ' + validityText : ''}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="verifyQualification" link-type="hidden-form-link" text="Verify" icon="sym_o_verified" condition="canVerify &amp;&amp; verificationStatusId == 'QlVerPending'"
+                                            confirmation="Verify ${personName}'s ${typeText.toLowerCase()}?"
+                                            parameter-map="{partyQualificationId:partyQualificationId, decision:'verify', expectedRevision:revision}"/>
+                                    <container-dialog id="Reject_${partyQualificationId}" button-text="Reject" icon="sym_o_block" type="default" width="520"
+                                            title="Reject ${personName}'s ${typeText.toLowerCase()}" condition="canVerify &amp;&amp; verificationStatusId == 'QlVerPending'">
+                                        <form-single name="RejectQualification" transition="verifyQualification"
+                                                map="{partyQualificationId:partyQualificationId, decision:'reject', expectedRevision:revision}">
+                                            <field name="partyQualificationId"><default-field><hidden/></default-field></field>
+                                            <field name="decision"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Why"><text-area rows="2"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Reject"><submit type="danger"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="Revoke_${partyQualificationId}" button-text="Revoke" icon="sym_o_cancel" type="default" width="520"
+                                            title="Revoke ${personName}'s ${typeText.toLowerCase()}" condition="canVerify &amp;&amp; verificationStatusId == 'QlVerVerified'">
+                                        <label type="p" text="A revoked qualification meets no requirement; the record and its files are kept."/>
+                                        <form-single name="RevokeQualification" transition="verifyQualification"
+                                                map="{partyQualificationId:partyQualificationId, decision:'revoke', expectedRevision:revision}">
+                                            <field name="partyQualificationId"><default-field><hidden/></default-field></field>
+                                            <field name="decision"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Why"><text-area rows="2"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Revoke"><submit type="danger" confirmation="Revoke ${personName}'s ${typeText.toLowerCase()}?"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="Change_${partyQualificationId}" button-text="Change" icon="sym_o_edit" type="default" width="720"
+                                            title="Change ${typeText.toLowerCase()}" condition="canChange">
+                                        <form-single name="ChangeQualification" transition="storeQualification"
+                                                map="{partyQualificationId:partyQualificationId, expectedRevision:revision, qualificationTypeEnumId:qualificationTypeEnumId,
+                                                    title:title, issuerName:issuerName, referenceNumber:referenceNumber, fromDate:fromDateText, thruDate:thruDateText,
+                                                    comments:comments}">
+                                            <field name="partyQualificationId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="qualificationTypeEnumId">
+                                                <default-field title="Kind"><drop-down><list-options list="typeOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                            </field>
+                                            <field name="title"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="issuerName"><default-field title="Issued by"><text-line size="40"/></default-field></field>
+                                            <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><text-line size="30"/></default-field></field>
+                                            <field name="fromDate"><default-field title="Issued"><date-time type="date"/></default-field></field>
+                                            <field name="thruDate"><default-field title="Expires"><date-time type="date"/></default-field></field>
+                                            <field name="comments"><default-field title="Comments"><text-area rows="2"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Submit again"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="Renew_${partyQualificationId}" button-text="Renew" icon="sym_o_autorenew" type="default" width="720"
+                                            title="Renew ${typeText.toLowerCase()}" condition="canReadFiles &amp;&amp; verificationStatusId == 'QlVerVerified' &amp;&amp; partyId == people?.partyId">
+                                        <label type="p" text="The renewal is a new qualification that waits for verification; this one and its files are kept."/>
+                                        <form-single name="RenewQualification" transition="storeQualification"
+                                                map="{renewsQualificationId:partyQualificationId, qualificationTypeEnumId:qualificationTypeEnumId, title:title,
+                                                    issuerName:issuerName}">
+                                            <field name="renewsQualificationId"><default-field><hidden/></default-field></field>
+                                            <field name="qualificationTypeEnumId"><default-field><hidden/></default-field></field>
+                                            <field name="title"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="issuerName"><default-field title="Issued by"><text-line size="40"/></default-field></field>
+                                            <field name="referenceNumber" ai-opt-out="true"><default-field title="Number"><text-line size="30"/></default-field></field>
+                                            <field name="fromDate"><default-field title="Issued"><date-time type="date"/></default-field></field>
+                                            <field name="thruDate"><default-field title="Expires"><date-time type="date"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Submit renewal"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="." text="Files" icon="sym_o_attach_file" link-type="anchor" condition="canReadFiles"
+                                            parameter-map="{partyQualificationId:partyQualificationId, show:showing, state:stateShown}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="typeText"/><field-ref name="thruDateText"/></column>
+                                <column><field-ref name="verificationText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label type="p" style="q-pa-md m-muted" condition="!qualifications.length &amp;&amp; showing == 'mine'"
                         text="You have no qualification here yet.${canSubmitOwn ? ' Add qualification submits a certificate, licence or document for verification.' : ''}"/>
                 <label type="p" style="q-pa-md m-muted" condition="!qualifications.length &amp;&amp; showing != 'mine'"

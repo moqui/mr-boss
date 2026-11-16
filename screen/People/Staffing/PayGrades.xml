@@ -164,82 +164,86 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-single>
                 <container-box>
                     <box-body-nopad>
-                        <form-list name="Grades" list="gradeRows" skip-form="true" paginate="true" condition="gradeRows.length">
-                            <field name="gradeName">
-                                <conditional-field condition="amountsShown" title="Pay grade">
-                                    <link url="." text="${gradeName}" link-type="anchor" parameter-map="{payGradeId:payGradeId}"/>
-                                </conditional-field>
-                                <default-field title="Pay grade"><display/></default-field>
-                            </field>
-                            <field name="ownerText"><default-field title="Employer"><display/></default-field></field>
-                            <field name="comments"><default-field title="Comments"><display/></default-field></field>
-                            <field name="frequencyText" hide="!amountsShown"><default-field title="Frequency"><display/></default-field></field>
-                            <field name="minAmount" ai-opt-out="true" align="right" hide="!amountsShown">
-                                <default-field title="Minimum"><display currency-unit-field="currencyUomId"/></default-field>
-                            </field>
-                            <field name="amount" ai-opt-out="true" align="right" hide="!amountsShown">
-                                <default-field title="Reference"><display currency-unit-field="currencyUomId"/></default-field>
-                            </field>
-                            <field name="maxAmount" ai-opt-out="true" align="right" hide="!amountsShown">
-                                <default-field title="Maximum"><display currency-unit-field="currencyUomId"/></default-field>
-                            </field>
-                            <field name="bandFromText" hide="!amountsShown"><default-field title="From"><display/></default-field></field>
-                            <field name="actions" hide="!canEdit">
-                                <conditional-field condition="rowCanEdit" title="">
-                                    <container-dialog id="NewBand_${payGradeId}" button-text="New band" icon="sym_o_add" type="default" width="640"
-                                            title="New band of ${gradeName}">
-                                        <label type="p" text="The band starts on the date given and ends the band before it; no employee's salary changes."/>
-                                        <form-single name="NewBand" transition="storePayGrade"
-                                                map="{payGradeId:payGradeId, expectedRevision:revision, currencyUomId:currencyUomId,
-                                                    timePeriodTypeId:timePeriodTypeId, minAmount:minAmount, amount:amount, maxAmount:maxAmount}">
-                                            <field name="payGradeId"><default-field><hidden/></default-field></field>
-                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                            <field name="currencyUomId">
-                                                <default-field title="Currency">
-                                                    <drop-down>
-                                                        <entity-options key="${uomId}" text="${description} (${uomId})">
-                                                            <entity-find entity-name="moqui.basic.Uom" cache="true">
-                                                                <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
-                                                                <order-by field-name="description"/>
-                                                            </entity-find>
-                                                        </entity-options>
-                                                    </drop-down>
-                                                </default-field>
-                                            </field>
-                                            <field name="timePeriodTypeId">
-                                                <default-field title="Pay frequency">
-                                                    <drop-down>
-                                                        <entity-options key="${timePeriodTypeId}" text="${description}">
-                                                            <entity-find entity-name="mantle.party.time.TimePeriodType" cache="true">
-                                                                <econdition field-name="timePeriodTypeId" operator="like" value="Payroll%"/>
-                                                                <order-by field-name="description"/>
-                                                            </entity-find>
-                                                        </entity-options>
-                                                    </drop-down>
-                                                </default-field>
-                                            </field>
-                                            <field name="minAmount" ai-opt-out="true"><default-field title="Minimum"><text-line size="12" input-type="number"/></default-field></field>
-                                            <field name="amount" ai-opt-out="true"><default-field title="Reference"><text-line size="12" input-type="number"/></default-field></field>
-                                            <field name="maxAmount" ai-opt-out="true"><default-field title="Maximum"><text-line size="12" input-type="number"/></default-field></field>
-                                            <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
-                                            <field name="submitButton">
-                                                <default-field title="Set band"><submit confirmation="Set a new band of ${gradeName} from the date given?"/></default-field>
-                                            </field>
-                                            <field-layout>
-                                                <field-row><field-ref name="currencyUomId"/><field-ref name="timePeriodTypeId"/></field-row>
-                                                <field-row><field-ref name="minAmount"/><field-ref name="amount"/></field-row>
-                                                <field-row><field-ref name="maxAmount"/><field-ref name="fromDate"/></field-row>
-                                                <field-ref name="submitButton"/>
-                                            </field-layout>
-                                        </form-single>
-                                    </container-dialog>
-                                </conditional-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="gradeName"/><field-ref name="frequencyText"/></column>
-                                <column><field-ref name="amount"/><field-ref name="actions"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="GradesSection" condition="gradeRows.length">
+                            <widgets>
+                                <form-list name="Grades" list="gradeRows" skip-form="true" paginate="true">
+                                    <field name="gradeName">
+                                        <conditional-field condition="amountsShown" title="Pay grade">
+                                            <link url="." text="${gradeName}" link-type="anchor" parameter-map="{payGradeId:payGradeId}"/>
+                                        </conditional-field>
+                                        <default-field title="Pay grade"><display/></default-field>
+                                    </field>
+                                    <field name="ownerText"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="comments"><default-field title="Comments"><display/></default-field></field>
+                                    <field name="frequencyText" hide="!amountsShown"><default-field title="Frequency"><display/></default-field></field>
+                                    <field name="minAmount" ai-opt-out="true" align="right" hide="!amountsShown">
+                                        <default-field title="Minimum"><display currency-unit-field="currencyUomId"/></default-field>
+                                    </field>
+                                    <field name="amount" ai-opt-out="true" align="right" hide="!amountsShown">
+                                        <default-field title="Reference"><display currency-unit-field="currencyUomId"/></default-field>
+                                    </field>
+                                    <field name="maxAmount" ai-opt-out="true" align="right" hide="!amountsShown">
+                                        <default-field title="Maximum"><display currency-unit-field="currencyUomId"/></default-field>
+                                    </field>
+                                    <field name="bandFromText" hide="!amountsShown"><default-field title="From"><display/></default-field></field>
+                                    <field name="actions" hide="!canEdit">
+                                        <conditional-field condition="rowCanEdit" title="">
+                                            <container-dialog id="NewBand_${payGradeId}" button-text="New band" icon="sym_o_add" type="default" width="640"
+                                                    title="New band of ${gradeName}">
+                                                <label type="p" text="The band starts on the date given and ends the band before it; no employee's salary changes."/>
+                                                <form-single name="NewBand" transition="storePayGrade"
+                                                        map="{payGradeId:payGradeId, expectedRevision:revision, currencyUomId:currencyUomId,
+                                                            timePeriodTypeId:timePeriodTypeId, minAmount:minAmount, amount:amount, maxAmount:maxAmount}">
+                                                    <field name="payGradeId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="currencyUomId">
+                                                        <default-field title="Currency">
+                                                            <drop-down>
+                                                                <entity-options key="${uomId}" text="${description} (${uomId})">
+                                                                    <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                                                        <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                                                        <order-by field-name="description"/>
+                                                                    </entity-find>
+                                                                </entity-options>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="timePeriodTypeId">
+                                                        <default-field title="Pay frequency">
+                                                            <drop-down>
+                                                                <entity-options key="${timePeriodTypeId}" text="${description}">
+                                                                    <entity-find entity-name="mantle.party.time.TimePeriodType" cache="true">
+                                                                        <econdition field-name="timePeriodTypeId" operator="like" value="Payroll%"/>
+                                                                        <order-by field-name="description"/>
+                                                                    </entity-find>
+                                                                </entity-options>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="minAmount" ai-opt-out="true"><default-field title="Minimum"><text-line size="12" input-type="number"/></default-field></field>
+                                                    <field name="amount" ai-opt-out="true"><default-field title="Reference"><text-line size="12" input-type="number"/></default-field></field>
+                                                    <field name="maxAmount" ai-opt-out="true"><default-field title="Maximum"><text-line size="12" input-type="number"/></default-field></field>
+                                                    <field name="fromDate"><default-field title="From" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Set band"><submit confirmation="Set a new band of ${gradeName} from the date given?"/></default-field>
+                                                    </field>
+                                                    <field-layout>
+                                                        <field-row><field-ref name="currencyUomId"/><field-ref name="timePeriodTypeId"/></field-row>
+                                                        <field-row><field-ref name="minAmount"/><field-ref name="amount"/></field-row>
+                                                        <field-row><field-ref name="maxAmount"/><field-ref name="fromDate"/></field-row>
+                                                        <field-ref name="submitButton"/>
+                                                    </field-layout>
+                                                </form-single>
+                                            </container-dialog>
+                                        </conditional-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="gradeName"/><field-ref name="frequencyText"/></column>
+                                        <column><field-ref name="amount"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!gradeRows.length &amp;&amp; term" text="No pay grade matches."/>
                         <label type="p" style="q-pa-md m-muted" condition="!gradeRows.length &amp;&amp; !term"
                                 text="No pay grade is defined yet.${canEdit ? ' Start one with New pay grade.' : ''}"/>
@@ -255,34 +259,38 @@ along with this software (see the LICENSE.md file). If not, see
                                         parameter-map="{payGradeId:''}"/>
                             </box-toolbar>
                             <box-body-nopad>
-                                <form-list name="GradeBands" list="openedBands" skip-form="true" paginate="false" condition="openedBands.length">
-                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
-                                    <field name="frequencyText"><default-field title="Frequency"><display/></default-field></field>
-                                    <field name="minAmount" ai-opt-out="true" align="right">
-                                        <default-field title="Minimum"><display currency-unit-field="currencyUomId"/></default-field>
-                                    </field>
-                                    <field name="amount" ai-opt-out="true" align="right">
-                                        <default-field title="Reference"><display currency-unit-field="currencyUomId"/></default-field>
-                                    </field>
-                                    <field name="maxAmount" ai-opt-out="true" align="right">
-                                        <default-field title="Maximum"><display currency-unit-field="currencyUomId"/></default-field>
-                                    </field>
-                                    <field name="stateText">
-                                        <default-field title="State">
-                                            <render-mode>
-                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                <section name="GradeBandsSection" condition="openedBands.length">
+                                    <widgets>
+                                        <form-list name="GradeBands" list="openedBands" skip-form="true" paginate="false">
+                                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                            <field name="frequencyText"><default-field title="Frequency"><display/></default-field></field>
+                                            <field name="minAmount" ai-opt-out="true" align="right">
+                                                <default-field title="Minimum"><display currency-unit-field="currencyUomId"/></default-field>
+                                            </field>
+                                            <field name="amount" ai-opt-out="true" align="right">
+                                                <default-field title="Reference"><display currency-unit-field="currencyUomId"/></default-field>
+                                            </field>
+                                            <field name="maxAmount" ai-opt-out="true" align="right">
+                                                <default-field title="Maximum"><display currency-unit-field="currencyUomId"/></default-field>
+                                            </field>
+                                            <field name="stateText">
+                                                <default-field title="State">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                                     WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                                <text type="html">${stateText}</text>
-                                            </render-mode>
-                                        </default-field>
-                                    </field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="fromDateText"/><field-ref name="frequencyText"/></column>
-                                        <column><field-ref name="amount"/><field-ref name="stateText"/></column>
-                                    </columns>
-                                </form-list>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                        <text type="html">${stateText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="fromDateText"/><field-ref name="frequencyText"/></column>
+                                                <column><field-ref name="amount"/><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="q-pa-md m-muted" condition="!openedBands.length" text="This grade has no band yet."/>
                             </box-body-nopad>
                         </container-box>

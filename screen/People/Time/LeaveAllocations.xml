@@ -187,26 +187,30 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-dialog>
                             </box-toolbar>
                             <box-body-nopad>
-                                <form-list name="PreviewRows" list="previewRows" skip-form="true" paginate="false" condition="previewRows.length">
-                                    <field name="personName"><default-field title="Employee"><display/></default-field></field>
-                                    <field name="priorBalance" align="right"><default-field title="Balance now"><display format="#,##0.##"/></default-field></field>
-                                    <field name="amount" align="right"><default-field title="Amount"><display format="#,##0.##"/></default-field></field>
-                                    <field name="outcomeText">
-                                        <default-field title="Outcome">
-                                            <render-mode>
-                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${outcomeColors[outcome] || 'grey-8'}">${
+                                <section name="PreviewRowsSection" condition="previewRows.length">
+                                    <widgets>
+                                        <form-list name="PreviewRows" list="previewRows" skip-form="true" paginate="false">
+                                            <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                                            <field name="priorBalance" align="right"><default-field title="Balance now"><display format="#,##0.##"/></default-field></field>
+                                            <field name="amount" align="right"><default-field title="Amount"><display format="#,##0.##"/></default-field></field>
+                                            <field name="outcomeText">
+                                                <default-field title="Outcome">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${outcomeColors[outcome] || 'grey-8'}">${
                                                     WebUtilities.encodeHtml(outcomeText)}</q-chip>]]></text>
-                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: outcomeText})}]]></text>
-                                                <text type="html">${outcomeText}</text>
-                                            </render-mode>
-                                        </default-field>
-                                    </field>
-                                    <field name="message"><default-field title="Why"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="personName"/><field-ref name="message"/></column>
-                                        <column><field-ref name="outcomeText"/><field-ref name="priorBalance"/></column>
-                                    </columns>
-                                </form-list>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: outcomeText})}]]></text>
+                                                        <text type="html">${outcomeText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <field name="message"><default-field title="Why"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="personName"/><field-ref name="message"/></column>
+                                                <column><field-ref name="outcomeText"/><field-ref name="priorBalance"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="q-pa-md m-muted" condition="!previewRows.length" text="Nobody is employed there now."/>
                             </box-body-nopad>
                         </container-box>

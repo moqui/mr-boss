@@ -454,41 +454,48 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Move ${facility.facilityName}"/>
                             <box-body>
                                 <label text="${moveRefusal}" type="p" style="text-negative" condition="moveRefusal"/>
-                                <form-list name="MoveFacilityRows" list="moveRows" skip-form="true" skip-header="true" paginate="false"
-                                        condition="moveRows.length">
-                                    <field name="label">
-                                        <default-field>
-                                            <display style="m-muted"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="value">
-                                        <default-field>
-                                            <display/>
-                                        </default-field>
-                                    </field>
-                                </form-list>
-                                <form-single name="MoveFacility" transition="updateFacility" map="moveValues" condition="moveEffect">
-                                    <field name="facilityId">
-                                        <default-field>
-                                            <hidden/>
-                                        </default-field>
-                                    </field>
-                                    <field name="parentFacilityId">
-                                        <default-field>
-                                            <hidden/>
-                                        </default-field>
-                                    </field>
-                                    <field name="originalParentFacilityId">
-                                        <default-field>
-                                            <hidden/>
-                                        </default-field>
-                                    </field>
-                                    <field name="submitButton">
-                                        <default-field title="">
-                                            <submit text="Move it" confirmation="Move ${facility.facilityName}?"/>
-                                        </default-field>
-                                    </field>
-                                </form-single>
+                                <section name="MoveFacilityRowsSection" condition="moveRows.length">
+                                    <widgets>
+                                        <form-list name="MoveFacilityRows" list="moveRows" skip-form="true" skip-header="true" paginate="false">
+                                            <field name="label">
+                                                <default-field>
+                                                    <display style="m-muted"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="value">
+                                                <default-field>
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="MoveFacilitySection" condition="moveEffect">
+                                    <widgets>
+                                        <form-single name="MoveFacility" transition="updateFacility" map="moveValues">
+                                            <field name="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="parentFacilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="originalParentFacilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="">
+                                                    <submit text="Move it" confirmation="Move ${facility.facilityName}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                     </widgets>

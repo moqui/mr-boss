@@ -146,23 +146,27 @@ along with this software (see the LICENSE.md file). If not, see
                 <box-header title="Distribution"/>
                 <box-body>
                     <label text="No send carries it yet." type="p" style="m-muted" condition="!distribution.length"/>
-                    <form-list name="Distribution" list="distribution" skip-form="true" paginate="false" condition="distribution.length">
-                        <field name="sendName">
-                            <conditional-field title="Send" condition="sendPath">
-                                <link url="${sendPath}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
-                            </conditional-field>
-                            <default-field title="Send"><display/></default-field>
-                        </field>
-                        <field name="topicName"><default-field title="Topic"><display/></default-field></field>
-                        <field name="categoryName"><default-field title="Blog category"><display/></default-field></field>
-                        <field name="statusText"><default-field title="State"><display/></default-field></field>
-                        <field name="scheduledDateText"><default-field title="Schedule"><display/></default-field></field>
-                        <field name="versionText"><default-field title="As prepared"><display/></default-field></field>
-                        <columns type="mobile">
-                            <column><field-ref name="sendName"/><field-ref name="topicName"/></column>
-                            <column><field-ref name="statusText"/><field-ref name="versionText"/></column>
-                        </columns>
-                    </form-list>
+                    <section name="DistributionSection" condition="distribution.length">
+                        <widgets>
+                            <form-list name="Distribution" list="distribution" skip-form="true" paginate="false">
+                                <field name="sendName">
+                                    <conditional-field title="Send" condition="sendPath">
+                                        <link url="${sendPath}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
+                                    </conditional-field>
+                                    <default-field title="Send"><display/></default-field>
+                                </field>
+                                <field name="topicName"><default-field title="Topic"><display/></default-field></field>
+                                <field name="categoryName"><default-field title="Blog category"><display/></default-field></field>
+                                <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                <field name="scheduledDateText"><default-field title="Schedule"><display/></default-field></field>
+                                <field name="versionText"><default-field title="As prepared"><display/></default-field></field>
+                                <columns type="mobile">
+                                    <column><field-ref name="sendName"/><field-ref name="topicName"/></column>
+                                    <column><field-ref name="statusText"/><field-ref name="versionText"/></column>
+                                </columns>
+                            </form-list>
+                        </widgets>
+                    </section>
                 </box-body>
             </container-box>
         </widgets></section>

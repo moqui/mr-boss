@@ -294,16 +294,20 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Approval"/>
                             <box-body>
                                 <label type="p" text="${approval.statusText}${approval.waitingText ? ': ' + approval.waitingText : ''}"/>
-                                <form-list name="ApprovalDecisions" list="approval.decisions" skip-form="true" paginate="false" condition="approval.decisions?.length">
-                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
-                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
-                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
-                                        <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="ApprovalDecisionsSection" condition="approval.decisions?.length">
+                                    <widgets>
+                                        <form-list name="ApprovalDecisions" list="approval.decisions" skip-form="true" paginate="false">
+                                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                            <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
+                                                <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                     </widgets>
@@ -428,21 +432,25 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body-nopad>
                                 <label type="p" style="q-px-md q-pt-sm text-caption m-muted"
                                         text="Only you read these notes: not the person, a later reviewer, development or HR. They are never in the released review, an export or the notes of the record."/>
-                                <form-list name="NoteList" list="noteRows" skip-form="true" paginate="false" condition="noteRows.length">
-                                    <field name="noteDateText"><default-field title="When"><display/></default-field></field>
-                                    <field name="noteText" ai-opt-out="true"><default-field title="Note"><display/></default-field></field>
-                                    <field name="actions">
-                                        <default-field title="">
-                                            <link url="storeNote" link-type="hidden-form" text="Remove" icon="sym_o_delete" btn-type="danger" condition="found.canNote"
-                                                    parameter-map="{performanceReviewId:performanceReviewId, performanceNoteId:performanceNoteId, remove:'true', expectedRevision:revision}"
-                                                    confirmation="Remove this note?"/>
-                                        </default-field>
-                                    </field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="noteText"/><field-ref name="noteDateText"/></column>
-                                        <column><field-ref name="actions"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="NoteListSection" condition="noteRows.length">
+                                    <widgets>
+                                        <form-list name="NoteList" list="noteRows" skip-form="true" paginate="false">
+                                            <field name="noteDateText"><default-field title="When"><display/></default-field></field>
+                                            <field name="noteText" ai-opt-out="true"><default-field title="Note"><display/></default-field></field>
+                                            <field name="actions">
+                                                <default-field title="">
+                                                    <link url="storeNote" link-type="hidden-form" text="Remove" icon="sym_o_delete" btn-type="danger" condition="found.canNote"
+                                                            parameter-map="{performanceReviewId:performanceReviewId, performanceNoteId:performanceNoteId, remove:'true', expectedRevision:revision}"
+                                                            confirmation="Remove this note?"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="noteText"/><field-ref name="noteDateText"/></column>
+                                                <column><field-ref name="actions"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body-nopad>
                         </container-box>
                     </widgets>

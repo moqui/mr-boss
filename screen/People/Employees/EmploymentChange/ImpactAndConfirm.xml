@@ -90,44 +90,59 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="${summaryText}"/>
                     <box-body>
-                        <form-list name="ChangeCompare" list="compareRows" skip-form="true" paginate="false" condition="compareRows.length">
-                            <field name="label"><default-field title=""><display/></default-field></field>
-                            <field name="now"><default-field title="Now"><display/></default-field></field>
-                            <field name="next"><default-field title="From the date"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="label"/><field-ref name="now"/></column>
-                                <column><field-ref name="next"/></column>
-                            </columns>
-                        </form-list>
-                        <form-list name="ChangeImpact" list="impactRows" skip-form="true" paginate="false" condition="impactRows.length">
-                            <field name="impactText"><default-field title="What else moves"><display/></default-field></field>
-                        </form-list>
-                        <form-list name="ChangeRoute" list="routeRows" skip-form="true" paginate="false"
-                                condition="needsApproval &amp;&amp; routeRows.length">
-                            <field name="stepText"><default-field title="Approval"><display/></default-field></field>
-                            <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="explanation"/></column>
-                                <column><field-ref name="stepText"/></column>
-                            </columns>
-                        </form-list>
-                        <form-list name="ChangeFindings" list="findingRows" skip-form="true" paginate="false" condition="findingRows.length">
-                            <field name="severityText">
-                                <default-field title="">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${severityColors[severity] || 'grey-8'}">${
+                        <section name="ChangeCompareSection" condition="compareRows.length">
+                            <widgets>
+                                <form-list name="ChangeCompare" list="compareRows" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title=""><display/></default-field></field>
+                                    <field name="now"><default-field title="Now"><display/></default-field></field>
+                                    <field name="next"><default-field title="From the date"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/><field-ref name="now"/></column>
+                                        <column><field-ref name="next"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="ChangeImpactSection" condition="impactRows.length">
+                            <widgets>
+                                <form-list name="ChangeImpact" list="impactRows" skip-form="true" paginate="false">
+                                    <field name="impactText"><default-field title="What else moves"><display/></default-field></field>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="ChangeRouteSection" condition="needsApproval &amp;&amp; routeRows.length">
+                            <widgets>
+                                <form-list name="ChangeRoute" list="routeRows" skip-form="true" paginate="false">
+                                    <field name="stepText"><default-field title="Approval"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="explanation"/></column>
+                                        <column><field-ref name="stepText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="ChangeFindingsSection" condition="findingRows.length">
+                            <widgets>
+                                <form-list name="ChangeFindings" list="findingRows" skip-form="true" paginate="false">
+                                    <field name="severityText">
+                                        <default-field title="">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${severityColors[severity] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(severityText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: severityText})}]]></text>
-                                        <text type="html">${severityText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="message"><default-field title="Before applying"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="message"/></column>
-                                <column><field-ref name="severityText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: severityText})}]]></text>
+                                                <text type="html">${severityText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="message"><default-field title="Before applying"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="message"/></column>
+                                        <column><field-ref name="severityText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <form-single name="ConfirmChangeForm" transition="applyChange" map="confirm">
                             <field name="expectedRevision"><default-field><hidden/></default-field></field>
                             <field name="partyRelationshipId"><default-field><hidden/></default-field></field>

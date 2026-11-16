@@ -279,86 +279,90 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="${placesTitle}"/>
                     <box-body-nopad>
-                        <form-list name="EnrollmentList" list="enrollmentRows" skip-form="true" paginate="false" condition="enrollmentRows.length">
-                            <field name="personName"><default-field title="Person"><display/></default-field></field>
-                            <field name="statusText">
-                                <default-field title="Place">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${placeColors[statusEnumId] || 'grey-8'}">${
+                        <section name="EnrollmentListSection" condition="enrollmentRows.length">
+                            <widgets>
+                                <form-list name="EnrollmentList" list="enrollmentRows" skip-form="true" paginate="false">
+                                    <field name="personName"><default-field title="Person"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="Place">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${placeColors[statusEnumId] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
-                                        <text type="html">${statusText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="waitingText"><default-field title="Approval"><display text="${waitingText || decisionReason}"/></default-field></field>
-                            <field name="attendanceText">
-                                <default-field title="Attendance">
-                                    <display text="${attendanceText}${attendedHours != null ? ' (' + attendedHours + ' h)' : ''}"/>
-                                </default-field>
-                            </field>
-                            <field name="resultText">
-                                <default-field title="Result"><display text="${resultText}${attemptCount > 1 ? ' (' + attemptCount + ' attempts)' : ''}"/></default-field>
-                            </field>
-                            <field name="qualificationText"><default-field title="Qualification"><display/></default-field></field>
-                            <field name="actions">
-                                <default-field title="">
-                                    <container-dialog id="Approve_${personTrainingId}" button-text="Approve" icon="sym_o_check" width="480"
-                                            title="Approve ${personName}'s place" condition="canDecide">
-                                        <form-single name="ApprovePlace" transition="decide"
-                                                map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, peopleApprovalId:peopleApprovalId, sourceRevision:sourceRevision}">
-                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
-                                            <field name="personTrainingId"><default-field><hidden/></default-field></field>
-                                            <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
-                                            <field name="sourceRevision"><default-field><hidden/></default-field></field>
-                                            <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <container-dialog id="Refuse_${personTrainingId}" button-text="Refuse" icon="sym_o_block" width="480"
-                                            title="Refuse ${personName}'s place" condition="canDecide">
-                                        <form-single name="RefusePlace" transition="decide"
-                                                map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, peopleApprovalId:peopleApprovalId, sourceRevision:sourceRevision}">
-                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
-                                            <field name="personTrainingId"><default-field><hidden/></default-field></field>
-                                            <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
-                                            <field name="sourceRevision"><default-field><hidden/></default-field></field>
-                                            <field name="decision"><default-field><hidden default-value="refuse"/></default-field></field>
-                                            <field name="reason"><default-field title="Why" tooltip="The person reads it"><text-area rows="2"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <container-dialog id="Attendance_${personTrainingId}" button-text="Attendance" icon="sym_o_fact_check" width="480"
-                                            title="${personName}'s attendance" condition="canMarkAttendance">
-                                        <form-single name="MarkAttendance" transition="markAttendance"
-                                                map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, expectedRevision:revision,
-                                                    attended:(attendedFlag || 'Y'), attendedHours:attendedHours}">
-                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
-                                            <field name="personTrainingId"><default-field><hidden/></default-field></field>
-                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                            <field name="attended">
-                                                <default-field title="Attended"><radio><option key="Y" text="Attended"/><option key="N" text="Absent"/></radio></default-field>
-                                            </field>
-                                            <field name="attendedHours"><default-field title="Hours" tooltip="The whole session when empty"><text-line size="5"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Save attendance"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <link url="." text="Assess" icon="sym_o_grading" link-type="anchor" condition="canAssess"
-                                            parameter-map="{workEffortId:training.workEffortId, assessId:personTrainingId}"/>
-                                    <link url="${certificateUrl}" url-type="plain" text="Certificate" icon="sym_o_workspace_premium" target-window="_blank"
-                                            condition="hasCertificate" parameter-map="{personTrainingId:personTrainingId, renderMode:'html-print', lastStandalone:'true'}"/>
-                                    <link url="certificatePdf" text="PDF" icon="sym_o_picture_as_pdf" target-window="_blank" condition="hasCertificate"
-                                            parameter-map="{personTrainingId:personTrainingId, workEffortId:training.workEffortId}"/>
-                                    <link url="decide" text="Withdraw" icon="sym_o_undo" link-type="hidden-form" condition="canWithdraw"
-                                            parameter-map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, decision:'withdraw'}"
-                                            confirmation="Withdraw ${personName}'s place in ${training.title}?"/>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/><field-ref name="attendanceText"/><field-ref name="resultText"/></column>
-                                <column><field-ref name="statusText"/><field-ref name="actions"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="waitingText"><default-field title="Approval"><display text="${waitingText || decisionReason}"/></default-field></field>
+                                    <field name="attendanceText">
+                                        <default-field title="Attendance">
+                                            <display text="${attendanceText}${attendedHours != null ? ' (' + attendedHours + ' h)' : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="resultText">
+                                        <default-field title="Result"><display text="${resultText}${attemptCount > 1 ? ' (' + attemptCount + ' attempts)' : ''}"/></default-field>
+                                    </field>
+                                    <field name="qualificationText"><default-field title="Qualification"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="Approve_${personTrainingId}" button-text="Approve" icon="sym_o_check" width="480"
+                                                    title="Approve ${personName}'s place" condition="canDecide">
+                                                <form-single name="ApprovePlace" transition="decide"
+                                                        map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, peopleApprovalId:peopleApprovalId, sourceRevision:sourceRevision}">
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="personTrainingId"><default-field><hidden/></default-field></field>
+                                                    <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                                    <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="Refuse_${personTrainingId}" button-text="Refuse" icon="sym_o_block" width="480"
+                                                    title="Refuse ${personName}'s place" condition="canDecide">
+                                                <form-single name="RefusePlace" transition="decide"
+                                                        map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, peopleApprovalId:peopleApprovalId, sourceRevision:sourceRevision}">
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="personTrainingId"><default-field><hidden/></default-field></field>
+                                                    <field name="peopleApprovalId"><default-field><hidden/></default-field></field>
+                                                    <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="decision"><default-field><hidden default-value="refuse"/></default-field></field>
+                                                    <field name="reason"><default-field title="Why" tooltip="The person reads it"><text-area rows="2"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="Attendance_${personTrainingId}" button-text="Attendance" icon="sym_o_fact_check" width="480"
+                                                    title="${personName}'s attendance" condition="canMarkAttendance">
+                                                <form-single name="MarkAttendance" transition="markAttendance"
+                                                        map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, expectedRevision:revision,
+                                                            attended:(attendedFlag || 'Y'), attendedHours:attendedHours}">
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="personTrainingId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="attended">
+                                                        <default-field title="Attended"><radio><option key="Y" text="Attended"/><option key="N" text="Absent"/></radio></default-field>
+                                                    </field>
+                                                    <field name="attendedHours"><default-field title="Hours" tooltip="The whole session when empty"><text-line size="5"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Save attendance"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="." text="Assess" icon="sym_o_grading" link-type="anchor" condition="canAssess"
+                                                    parameter-map="{workEffortId:training.workEffortId, assessId:personTrainingId}"/>
+                                            <link url="${certificateUrl}" url-type="plain" text="Certificate" icon="sym_o_workspace_premium" target-window="_blank"
+                                                    condition="hasCertificate" parameter-map="{personTrainingId:personTrainingId, renderMode:'html-print', lastStandalone:'true'}"/>
+                                            <link url="certificatePdf" text="PDF" icon="sym_o_picture_as_pdf" target-window="_blank" condition="hasCertificate"
+                                                    parameter-map="{personTrainingId:personTrainingId, workEffortId:training.workEffortId}"/>
+                                            <link url="decide" text="Withdraw" icon="sym_o_undo" link-type="hidden-form" condition="canWithdraw"
+                                                    parameter-map="{workEffortId:training.workEffortId, personTrainingId:personTrainingId, decision:'withdraw'}"
+                                                    confirmation="Withdraw ${personName}'s place in ${training.title}?"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="attendanceText"/><field-ref name="resultText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!enrollmentRows.length"
                                 text="${found.isDevelop || found.isTrainer ? 'No one holds a place yet.' : 'You hold no place in this session.'}"/>
                     </box-body-nopad>

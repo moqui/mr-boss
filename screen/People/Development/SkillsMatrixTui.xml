@@ -178,18 +178,22 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Available"/>
                             <box-body-nopad>
                                 <label text="${availableError}" type="p" style="text-negative q-pa-sm" condition="availableError"/>
-                                <form-list name="SkillsTuiAvailableList" list="availableRows" skip-form="true" paginate="false" condition="availableRows.length">
-                                    <field name="name"><default-field title="Person"><display/></default-field></field>
-                                    <field name="fits"><default-field title="Free"><display text="${fits ? 'Yes' : shortWeeks + ' weeks short'}"/></default-field></field>
-                                    <field name="freeText"><default-field title="Hours"><display/></default-field></field>
-                                    <field name="skillText"><default-field title="Skill"><display/></default-field></field>
-                                    <field name="rateText"><default-field title="Cost rate"><display/></default-field></field>
-                                    <field name="projectsText"><default-field title="Projects"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="name"/><field-ref name="skillText"/></column>
-                                        <column><field-ref name="fits"/><field-ref name="freeText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="SkillsTuiAvailableListSection" condition="availableRows.length">
+                                    <widgets>
+                                        <form-list name="SkillsTuiAvailableList" list="availableRows" skip-form="true" paginate="false">
+                                            <field name="name"><default-field title="Person"><display/></default-field></field>
+                                            <field name="fits"><default-field title="Free"><display text="${fits ? 'Yes' : shortWeeks + ' weeks short'}"/></default-field></field>
+                                            <field name="freeText"><default-field title="Hours"><display/></default-field></field>
+                                            <field name="skillText"><default-field title="Skill"><display/></default-field></field>
+                                            <field name="rateText"><default-field title="Cost rate"><display/></default-field></field>
+                                            <field name="projectsText"><default-field title="Projects"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="name"/><field-ref name="skillText"/></column>
+                                                <column><field-ref name="fits"/><field-ref name="freeText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body-nopad>
                         </container-box>
                     </widgets>
@@ -203,17 +207,21 @@ along with this software (see the LICENSE.md file). If not, see
                                 parameter-map="Object.assign({}, findValues, {pageIndex: pageShown})"/>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="SkillsTuiRows" list="skillRows" skip-form="true" paginate="false" condition="skillRows.length">
-                            <field name="personName"><default-field title="Person"><display/></default-field></field>
-                            <field name="skillName"><default-field title="Skill"><display/></default-field></field>
-                            <field name="levelText"><default-field title="Level"><display/></default-field></field>
-                            <field name="requirementText"><default-field title="Requirement"><display/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/><field-ref name="skillName"/></column>
-                                <column><field-ref name="levelText"/><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="SkillsTuiRowsSection" condition="skillRows.length">
+                            <widgets>
+                                <form-list name="SkillsTuiRows" list="skillRows" skip-form="true" paginate="false">
+                                    <field name="personName"><default-field title="Person"><display/></default-field></field>
+                                    <field name="skillName"><default-field title="Skill"><display/></default-field></field>
+                                    <field name="levelText"><default-field title="Level"><display/></default-field></field>
+                                    <field name="requirementText"><default-field title="Requirement"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="skillName"/></column>
+                                        <column><field-ref name="levelText"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="No one matches, or no skill is required or recorded for them." type="p" style="m-muted q-pa-sm q-mb-none"
                                 condition="!skillRows.length"/>
                     </box-body-nopad>

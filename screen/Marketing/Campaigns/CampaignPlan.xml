@@ -59,41 +59,53 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-list>
                 <label text="Costs" type="h6"/>
                 <label text="No costs recorded by then." type="p" condition="!costList.length"/>
-                <form-list name="PlanCosts" list="costList" skip-form="true" paginate="false" condition="costList.length">
-                    <field name="costDateText"><default-field title="Date"><display/></default-field></field>
-                    <field name="sourceText"><default-field title="Source"><display/></default-field></field>
-                    <field name="description"><default-field title="Description"><display/></default-field></field>
-                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
-                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="description"/></column>
-                        <column><field-ref name="amountText"/></column>
-                    </columns>
-                </form-list>
+                <section name="PlanCostsSection" condition="costList.length">
+                    <widgets>
+                        <form-list name="PlanCosts" list="costList" skip-form="true" paginate="false">
+                            <field name="costDateText"><default-field title="Date"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="description"><default-field title="Description"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/></column>
+                                <column><field-ref name="amountText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label text="Links" type="h6" condition="associationList.length"/>
-                <form-list name="PlanLinks" list="associationList" skip-form="true" paginate="false" condition="associationList.length">
-                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                    <field name="label"><default-field title="Name"><display/></default-field></field>
-                    <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="label"/></column>
-                        <column><field-ref name="kindText"/></column>
-                    </columns>
-                </form-list>
+                <section name="PlanLinksSection" condition="associationList.length">
+                    <widgets>
+                        <form-list name="PlanLinks" list="associationList" skip-form="true" paginate="false">
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="label"><default-field title="Name"><display/></default-field></field>
+                            <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/></column>
+                                <column><field-ref name="kindText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label text="Approval history" type="h6"/>
                 <label text="No approval asked by then." type="p" condition="!decisionList.length"/>
-                <form-list name="PlanDecisions" list="decisionList" skip-form="true" paginate="false" condition="decisionList.length">
-                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
-                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                    <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
-                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
-                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
-                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
-                        <column><field-ref name="decisionDateText"/></column>
-                    </columns>
-                </form-list>
+                <section name="PlanDecisionsSection" condition="decisionList.length">
+                    <widgets>
+                        <form-list name="PlanDecisions" list="decisionList" skip-form="true" paginate="false">
+                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                            <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
+                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                                <column><field-ref name="decisionDateText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
             </widgets>
         </section>
     </widgets>

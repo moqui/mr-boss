@@ -437,14 +437,17 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body>
                         <label type="p" style="m-muted" condition="!done &amp;&amp; !batch.canExecute"
                                 text="Reconciled with no difference and a ready row, the exchange is done here."/>
-                        <form-single name="Commit" transition="executeBatch" map="{payrollExchangeBatchId:batch.payrollExchangeBatchId}"
-                                condition="!done &amp;&amp; batch.canExecute">
-                            <field name="payrollExchangeBatchId"><default-field><hidden/></default-field></field>
-                            <field name="submitButton">
-                                <default-field title="${commitText}">
-                                    <submit type="primary" icon="sym_o_done_all" confirmation="${commitText}?"/></default-field>
-                            </field>
-                        </form-single>
+                        <section name="CommitSection" condition="!done &amp;&amp; batch.canExecute">
+                            <widgets>
+                                <form-single name="Commit" transition="executeBatch" map="{payrollExchangeBatchId:batch.payrollExchangeBatchId}">
+                                    <field name="payrollExchangeBatchId"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="${commitText}">
+                                            <submit type="primary" icon="sym_o_done_all" confirmation="${commitText}?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
                         <label type="p" condition="done &amp;&amp; batch.exchangeKindEnumId == 'PxkExport'"
                                 text="Exported: the file and its manifest are stored here, and Admin's Exports lists the export."/>
                         <label type="p" condition="done &amp;&amp; batch.exchangeKindEnumId == 'PxkHistory'"

@@ -390,35 +390,39 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-toolbar>
                     <box-body>
                         <label text="No steps yet: add a send, a wait or a condition (at most ${automation.maxSteps})." type="p" style="m-muted" condition="!stepList.length"/>
-                        <form-list name="AutomationSteps" list="stepList" skip-form="true" paginate="false" condition="stepList.length">
-                            <field name="position" align="right"><default-field title="#"><display/></default-field></field>
-                            <field name="stepKindText"><default-field title="Step"><display/></default-field></field>
-                            <field name="stepName"><default-field title="Name"><display/></default-field></field>
-                            <field name="detail"><default-field title="What it does"><display/></default-field></field>
-                            <field name="rowActions" align="right">
-                                <default-field title="">
-                                    <container-dialog id="ChangeStep_${position}" button-text="Change" icon="sym_o_swap_vert"
-                                            title="Move or remove step ${position}" width="480" condition="can.canEdit">
-                                        <form-single name="ChangeStep" transition="changeSteps"
-                                                map="{marketingAutomationId:marketingAutomationId, expectedRevision:automation.revision, position:position, stepAction:'up'}">
-                                            <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
-                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                            <field name="position"><default-field><hidden/></default-field></field>
-                                            <field name="stepAction">
-                                                <default-field title="Change">
-                                                    <radio><option key="up" text="Move up"/><option key="down" text="Move down"/><option key="remove" text="Remove"/></radio>
-                                                </default-field>
-                                            </field>
-                                            <field name="submitButton"><default-field title=""><submit text="Change" confirmation="Change step ${position}? Its approval ends."/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="stepKindText"/><field-ref name="detail"/></column>
-                                <column><field-ref name="position"/><field-ref name="rowActions"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="AutomationStepsSection" condition="stepList.length">
+                            <widgets>
+                                <form-list name="AutomationSteps" list="stepList" skip-form="true" paginate="false">
+                                    <field name="position" align="right"><default-field title="#"><display/></default-field></field>
+                                    <field name="stepKindText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="stepName"><default-field title="Name"><display/></default-field></field>
+                                    <field name="detail"><default-field title="What it does"><display/></default-field></field>
+                                    <field name="rowActions" align="right">
+                                        <default-field title="">
+                                            <container-dialog id="ChangeStep_${position}" button-text="Change" icon="sym_o_swap_vert"
+                                                    title="Move or remove step ${position}" width="480" condition="can.canEdit">
+                                                <form-single name="ChangeStep" transition="changeSteps"
+                                                        map="{marketingAutomationId:marketingAutomationId, expectedRevision:automation.revision, position:position, stepAction:'up'}">
+                                                    <field name="marketingAutomationId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="position"><default-field><hidden/></default-field></field>
+                                                    <field name="stepAction">
+                                                        <default-field title="Change">
+                                                            <radio><option key="up" text="Move up"/><option key="down" text="Move down"/><option key="remove" text="Remove"/></radio>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submitButton"><default-field title=""><submit text="Change" confirmation="Change step ${position}? Its approval ends."/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepKindText"/><field-ref name="detail"/></column>
+                                        <column><field-ref name="position"/><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -440,19 +444,27 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <field name="submitButton"><default-field title=""><submit text="Simulate"/></default-field></field>
                         </form-single>
-                        <form-list name="AutomationFindings" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
-                            <field name="text"><default-field title="To know"><display/></default-field></field>
-                        </form-list>
-                        <form-list name="AutomationSimulation" list="simulationList" skip-form="true" paginate="false" condition="simulationList.length">
-                            <field name="position" align="right"><default-field title="#"><display/></default-field></field>
-                            <field name="stepKindText"><default-field title="Step"><display/></default-field></field>
-                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
-                            <field name="action"><default-field title="Predicted action"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="stepKindText"/><field-ref name="action"/></column>
-                                <column><field-ref name="dueText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="AutomationFindingsSection" condition="findingList.length">
+                            <widgets>
+                                <form-list name="AutomationFindings" list="findingList" skip-form="true" paginate="false">
+                                    <field name="text"><default-field title="To know"><display/></default-field></field>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="AutomationSimulationSection" condition="simulationList.length">
+                            <widgets>
+                                <form-list name="AutomationSimulation" list="simulationList" skip-form="true" paginate="false">
+                                    <field name="position" align="right"><default-field title="#"><display/></default-field></field>
+                                    <field name="stepKindText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                    <field name="action"><default-field title="Predicted action"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepKindText"/><field-ref name="action"/></column>
+                                        <column><field-ref name="dueText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -494,18 +506,22 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Decisions"/>
                     <box-body>
                         <label text="No approval asked yet." type="p" style="m-muted" condition="!decisionList.length"/>
-                        <form-list name="AutomationDecisions" list="decisionList" skip-form="true" paginate="false" condition="decisionList.length">
-                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
-                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                            <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
-                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
-                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
-                                <column><field-ref name="decisionDateText"/><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="AutomationDecisionsSection" condition="decisionList.length">
+                            <widgets>
+                                <form-list name="AutomationDecisions" list="decisionList" skip-form="true" paginate="false">
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
+                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                                        <column><field-ref name="decisionDateText"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
             </widgets>

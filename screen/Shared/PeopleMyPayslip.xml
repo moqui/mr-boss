@@ -109,16 +109,20 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Your pay"/>
                             <box-body-nopad>
-                                <form-list name="MySlipLines" list="itemRows" skip-form="true" paginate="false" condition="itemRows.length">
-                                    <field name="groupText"><default-field title="Group"><display/></default-field></field>
-                                    <field name="itemName"><default-field title="Line"><display/></default-field></field>
-                                    <field name="amountText" align="right"><default-field title="${correction ? 'Change' : 'Amount'}"><display/></default-field></field>
-                                    <field name="explanation"><default-field title="How"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="itemName"/><field-ref name="groupText"/></column>
-                                        <column><field-ref name="amountText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="MySlipLinesSection" condition="itemRows.length">
+                                    <widgets>
+                                        <form-list name="MySlipLines" list="itemRows" skip-form="true" paginate="false">
+                                            <field name="groupText"><default-field title="Group"><display/></default-field></field>
+                                            <field name="itemName"><default-field title="Line"><display/></default-field></field>
+                                            <field name="amountText" align="right"><default-field title="${correction ? 'Change' : 'Amount'}"><display/></default-field></field>
+                                            <field name="explanation"><default-field title="How"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="itemName"/><field-ref name="groupText"/></column>
+                                                <column><field-ref name="amountText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="q-px-md q-pt-sm text-caption" condition="!historical"
                                         text="Gross ${totalsText.gross} · deductions ${totalsText.deductions} · localization ${totalsText.localEmployee} · net ${totalsText.net} · cost to your employer ${totalsText.employerCost}"/>
                                 <label type="p" style="q-px-md q-pt-sm text-caption" condition="historical"
@@ -134,10 +138,14 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Year to date"/>
                             <box-body-nopad>
                                 <label type="p" style="q-px-md q-pt-sm text-caption" text="${yearToDate.basisText}. Gross ${yearToDate.grossText}, net ${yearToDate.netText}."/>
-                                <form-list name="MyYearToDateLines" list="ytdRows" skip-form="true" paginate="false" condition="ytdRows.length">
-                                    <field name="itemName"><default-field title="Line"><display/></default-field></field>
-                                    <field name="yearToDateText" align="right"><default-field title="Year to date"><display/></default-field></field>
-                                </form-list>
+                                <section name="MyYearToDateLinesSection" condition="ytdRows.length">
+                                    <widgets>
+                                        <form-list name="MyYearToDateLines" list="ytdRows" skip-form="true" paginate="false">
+                                            <field name="itemName"><default-field title="Line"><display/></default-field></field>
+                                            <field name="yearToDateText" align="right"><default-field title="Year to date"><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body-nopad>
                         </container-box>
                     </widgets>

@@ -472,32 +472,36 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="Over budget" type="p" style="text-negative" condition="costSummary.overBudget"/>
                         <label text="Expected spend ${campaign.estimatedText}" type="p" style="text-caption m-muted" condition="campaign.estimatedText"/>
                         <label text="No costs recorded yet." type="p" style="m-muted" condition="!costList.length"/>
-                        <form-list name="CostEntries" list="costList" skip-form="true" paginate="false" condition="costList.length">
-                            <field name="costDateText"><default-field title="Date"><display/></default-field></field>
-                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
-                            <field name="description"><default-field title="Description"><display/></default-field></field>
-                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                            <field name="rowActions" align="right">
-                                <default-field title="">
-                                    <container-dialog id="ReverseCost_${campaignCostId}" button-text="Reverse" icon="sym_o_undo"
-                                            title="Reverse cost ${campaignCostId}" width="440" condition="can.canAddCost &amp;&amp; !reversal &amp;&amp; !reversed">
-                                        <form-single name="ReverseCost" transition="storeCost" map="{marketingCampaignId:marketingCampaignId, reversalOfCostId:campaignCostId}">
-                                            <field name="marketingCampaignId"><default-field><hidden/></default-field></field>
-                                            <field name="reversalOfCostId"><default-field><hidden/></default-field></field>
-                                            <field name="description"><default-field title="Why"><text-line size="40"/></default-field></field>
-                                            <field name="submitButton">
-                                                <default-field title=""><submit text="Reverse" type="danger" confirmation="Reverse cost ${campaignCostId} (${amountText})?"/></default-field>
-                                            </field>
-                                        </form-single>
-                                    </container-dialog>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="description"/><field-ref name="sourceText"/></column>
-                                <column><field-ref name="amountText"/><field-ref name="rowActions"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="CostEntriesSection" condition="costList.length">
+                            <widgets>
+                                <form-list name="CostEntries" list="costList" skip-form="true" paginate="false">
+                                    <field name="costDateText"><default-field title="Date"><display/></default-field></field>
+                                    <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                                    <field name="description"><default-field title="Description"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="rowActions" align="right">
+                                        <default-field title="">
+                                            <container-dialog id="ReverseCost_${campaignCostId}" button-text="Reverse" icon="sym_o_undo"
+                                                    title="Reverse cost ${campaignCostId}" width="440" condition="can.canAddCost &amp;&amp; !reversal &amp;&amp; !reversed">
+                                                <form-single name="ReverseCost" transition="storeCost" map="{marketingCampaignId:marketingCampaignId, reversalOfCostId:campaignCostId}">
+                                                    <field name="marketingCampaignId"><default-field><hidden/></default-field></field>
+                                                    <field name="reversalOfCostId"><default-field><hidden/></default-field></field>
+                                                    <field name="description"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title=""><submit text="Reverse" type="danger" confirmation="Reverse cost ${campaignCostId} (${amountText})?"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/><field-ref name="sourceText"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -536,32 +540,36 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-toolbar>
                     <box-body>
                         <label text="No lists or segments linked yet." type="p" style="m-muted" condition="!associationList.length"/>
-                        <form-list name="RelatedWork" list="associationList" skip-form="true" paginate="false" condition="associationList.length">
-                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                            <field name="label"><default-field title="Name"><display/></default-field></field>
-                            <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
-                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
-                            <field name="rowActions" align="right">
-                                <default-field title="">
-                                    <container-dialog id="EndLink_${campaignAssociationId}" button-text="End" icon="sym_o_link_off"
-                                            title="End the link to ${label}" width="440" condition="can.canEdit">
-                                        <form-single name="EndLink" transition="storeAssociation"
-                                                map="{marketingCampaignId:marketingCampaignId, campaignAssociationId:campaignAssociationId}">
-                                            <field name="marketingCampaignId"><default-field><hidden/></default-field></field>
-                                            <field name="campaignAssociationId"><default-field><hidden/></default-field></field>
-                                            <field name="action" from="'end'"><default-field><hidden/></default-field></field>
-                                            <field name="submitButton">
-                                                <default-field title=""><submit text="End link" type="danger" confirmation="End the link to ${label}?"/></default-field>
-                                            </field>
-                                        </form-single>
-                                    </container-dialog>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="label"/><field-ref name="kindText"/></column>
-                                <column><field-ref name="fromDateText"/><field-ref name="rowActions"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="RelatedWorkSection" condition="associationList.length">
+                            <widgets>
+                                <form-list name="RelatedWork" list="associationList" skip-form="true" paginate="false">
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="label"><default-field title="Name"><display/></default-field></field>
+                                    <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                                    <field name="rowActions" align="right">
+                                        <default-field title="">
+                                            <container-dialog id="EndLink_${campaignAssociationId}" button-text="End" icon="sym_o_link_off"
+                                                    title="End the link to ${label}" width="440" condition="can.canEdit">
+                                                <form-single name="EndLink" transition="storeAssociation"
+                                                        map="{marketingCampaignId:marketingCampaignId, campaignAssociationId:campaignAssociationId}">
+                                                    <field name="marketingCampaignId"><default-field><hidden/></default-field></field>
+                                                    <field name="campaignAssociationId"><default-field><hidden/></default-field></field>
+                                                    <field name="action" from="'end'"><default-field><hidden/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title=""><submit text="End link" type="danger" confirmation="End the link to ${label}?"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/><field-ref name="kindText"/></column>
+                                        <column><field-ref name="fromDateText"/><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -577,22 +585,26 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-toolbar>
                     <box-body>
                         <label text="No sends yet." type="p" style="m-muted" condition="!campaignSendList.length"/>
-                        <form-list name="CampaignSends" list="campaignSendList" skip-form="true" paginate="false" condition="campaignSendList.length">
-                            <field name="sendName">
-                                <conditional-field title="Send" condition="sendDetailPath">
-                                    <link url="${sendDetailPath}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
-                                </conditional-field>
-                                <default-field title="Send"><display/></default-field>
-                            </field>
-                            <field name="statusText"><default-field title="State"><display/></default-field></field>
-                            <field name="subject"><default-field title="Subject"><display/></default-field></field>
-                            <field name="scheduledText"><default-field title="Schedule"><display/></default-field></field>
-                            <field name="eligibleText" align="right"><default-field title="Eligible"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="sendName"/><field-ref name="subject"/></column>
-                                <column><field-ref name="statusText"/><field-ref name="eligibleText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="CampaignSendsSection" condition="campaignSendList.length">
+                            <widgets>
+                                <form-list name="CampaignSends" list="campaignSendList" skip-form="true" paginate="false">
+                                    <field name="sendName">
+                                        <conditional-field title="Send" condition="sendDetailPath">
+                                            <link url="${sendDetailPath}" text="${sendName}" link-type="anchor" parameter-map="{campaignSendId:campaignSendId}"/>
+                                        </conditional-field>
+                                        <default-field title="Send"><display/></default-field>
+                                    </field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <field name="subject"><default-field title="Subject"><display/></default-field></field>
+                                    <field name="scheduledText"><default-field title="Schedule"><display/></default-field></field>
+                                    <field name="eligibleText" align="right"><default-field title="Eligible"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="sendName"/><field-ref name="subject"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="eligibleText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -607,22 +619,26 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-toolbar>
                     <box-body>
                         <label text="No automations yet." type="p" style="m-muted" condition="!campaignAutomationList.length"/>
-                        <form-list name="CampaignAutomations" list="campaignAutomationList" skip-form="true" paginate="false" condition="campaignAutomationList.length">
-                            <field name="automationName">
-                                <conditional-field title="Automation" condition="automationDetailPath">
-                                    <link url="${automationDetailPath}" text="${automationName}" link-type="anchor" parameter-map="{marketingAutomationId:marketingAutomationId}"/>
-                                </conditional-field>
-                                <default-field title="Automation"><display/></default-field>
-                            </field>
-                            <field name="statusText"><default-field title="State"><display/></default-field></field>
-                            <field name="triggerText"><default-field title="Trigger"><display/></default-field></field>
-                            <field name="activeCount" align="right"><default-field title="Active"><display format="#,##0"/></default-field></field>
-                            <field name="completedCount" align="right"><default-field title="Completed"><display format="#,##0"/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="automationName"/><field-ref name="triggerText"/></column>
-                                <column><field-ref name="statusText"/><field-ref name="activeCount"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="CampaignAutomationsSection" condition="campaignAutomationList.length">
+                            <widgets>
+                                <form-list name="CampaignAutomations" list="campaignAutomationList" skip-form="true" paginate="false">
+                                    <field name="automationName">
+                                        <conditional-field title="Automation" condition="automationDetailPath">
+                                            <link url="${automationDetailPath}" text="${automationName}" link-type="anchor" parameter-map="{marketingAutomationId:marketingAutomationId}"/>
+                                        </conditional-field>
+                                        <default-field title="Automation"><display/></default-field>
+                                    </field>
+                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                    <field name="triggerText"><default-field title="Trigger"><display/></default-field></field>
+                                    <field name="activeCount" align="right"><default-field title="Active"><display format="#,##0"/></default-field></field>
+                                    <field name="completedCount" align="right"><default-field title="Completed"><display format="#,##0"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="automationName"/><field-ref name="triggerText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="activeCount"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -659,21 +675,25 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-toolbar>
                     <box-body>
                         <label text="No content planned yet." type="p" style="m-muted" condition="!campaignContentList.length"/>
-                        <form-list name="CampaignContentList" list="campaignContentList" skip-form="true" paginate="false" condition="campaignContentList.length">
-                            <field name="title">
-                                <default-field title="Content">
-                                    <link url="${contentDetailPath}" text="${title}" link-type="anchor" parameter-map="{campaignContentId:campaignContentId}"/>
-                                </default-field>
-                            </field>
-                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                            <field name="useText"><default-field title="Use"><display/></default-field></field>
-                            <field name="intendedDateText"><default-field title="Intended"><display/></default-field></field>
-                            <field name="stateText"><default-field title="Publication"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/><field-ref name="kindText"/></column>
-                                <column><field-ref name="stateText"/><field-ref name="intendedDateText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="CampaignContentListSection" condition="campaignContentList.length">
+                            <widgets>
+                                <form-list name="CampaignContentList" list="campaignContentList" skip-form="true" paginate="false">
+                                    <field name="title">
+                                        <default-field title="Content">
+                                            <link url="${contentDetailPath}" text="${title}" link-type="anchor" parameter-map="{campaignContentId:campaignContentId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="useText"><default-field title="Use"><display/></default-field></field>
+                                    <field name="intendedDateText"><default-field title="Intended"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="Publication"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="kindText"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="intendedDateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -688,21 +708,25 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-toolbar>
                     <box-body>
                         <label text="No tracking link yet." type="p" style="m-muted" condition="!campaignLinkList.length"/>
-                        <form-list name="CampaignLinkList" list="campaignLinkList" skip-form="true" paginate="false" condition="campaignLinkList.length">
-                            <field name="label">
-                                <default-field title="Link">
-                                    <link url="${linkDetailPath}" text="${label}" link-type="anchor" parameter-map="{trackingCodeId:trackingCodeId}"/>
-                                </default-field>
-                            </field>
-                            <field name="destinationText"><default-field title="Destination"><display/></default-field></field>
-                            <field name="utmText"><default-field title="Source / medium"><display/></default-field></field>
-                            <field name="clickCount" align="right"><default-field title="Clicks"><display format="#,##0"/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="label"/><field-ref name="destinationText"/></column>
-                                <column><field-ref name="stateText"/><field-ref name="clickCount"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="CampaignLinkListSection" condition="campaignLinkList.length">
+                            <widgets>
+                                <form-list name="CampaignLinkList" list="campaignLinkList" skip-form="true" paginate="false">
+                                    <field name="label">
+                                        <default-field title="Link">
+                                            <link url="${linkDetailPath}" text="${label}" link-type="anchor" parameter-map="{trackingCodeId:trackingCodeId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="destinationText"><default-field title="Destination"><display/></default-field></field>
+                                    <field name="utmText"><default-field title="Source / medium"><display/></default-field></field>
+                                    <field name="clickCount" align="right"><default-field title="Clicks"><display format="#,##0"/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/><field-ref name="destinationText"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="clickCount"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
                 <!-- P19: the campaign's store promotions; linked by the campaign's editor who also holds Commerce's promotion permission
@@ -734,22 +758,25 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-toolbar>
                     <box-body>
                         <label text="No promotion linked yet." type="p" style="m-muted" condition="!campaignPromotionList.length"/>
-                        <form-list name="CampaignPromotionList" list="campaignPromotionList" skip-form="true" paginate="false"
-                                condition="campaignPromotionList.length">
-                            <field name="label">
-                                <default-field title="Promotion">
-                                    <link url="${promotionPath}" text="${label}" link-type="anchor" parameter-map="{storePromotionId:sourceId}"
-                                            condition="promotionPath"/>
-                                    <label text="${label}" type="span" condition="!promotionPath"/>
-                                </default-field>
-                            </field>
-                            <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
-                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="label"/><field-ref name="purpose"/></column>
-                                <column><field-ref name="fromDateText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="CampaignPromotionListSection" condition="campaignPromotionList.length">
+                            <widgets>
+                                <form-list name="CampaignPromotionList" list="campaignPromotionList" skip-form="true" paginate="false">
+                                    <field name="label">
+                                        <default-field title="Promotion">
+                                            <link url="${promotionPath}" text="${label}" link-type="anchor" parameter-map="{storePromotionId:sourceId}"
+                                                    condition="promotionPath"/>
+                                            <label text="${label}" type="span" condition="!promotionPath"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="purpose"><default-field title="Purpose"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/><field-ref name="purpose"/></column>
+                                        <column><field-ref name="fromDateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
                 <!-- P16: the campaign's events -->
@@ -783,20 +810,24 @@ along with this software (see the LICENSE.md file). If not, see
                     </box-toolbar>
                     <box-body>
                         <label text="No event yet." type="p" style="m-muted" condition="!campaignEventList.length"/>
-                        <form-list name="CampaignEventList" list="campaignEventList" skip-form="true" paginate="false" condition="campaignEventList.length">
-                            <field name="eventName">
-                                <default-field title="Event">
-                                    <link url="${eventPath}" text="${eventName}" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
-                                </default-field>
-                            </field>
-                            <field name="whenText"><default-field title="When"><display/></default-field></field>
-                            <field name="capacityText" align="right"><default-field title="Places"><display/></default-field></field>
-                            <field name="stateText"><default-field title="Registration"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="eventName"/><field-ref name="whenText"/></column>
-                                <column><field-ref name="stateText"/><field-ref name="capacityText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="CampaignEventListSection" condition="campaignEventList.length">
+                            <widgets>
+                                <form-list name="CampaignEventList" list="campaignEventList" skip-form="true" paginate="false">
+                                    <field name="eventName">
+                                        <default-field title="Event">
+                                            <link url="${eventPath}" text="${eventName}" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="whenText"><default-field title="When"><display/></default-field></field>
+                                    <field name="capacityText" align="right"><default-field title="Places"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="Registration"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="eventName"/><field-ref name="whenText"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="capacityText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -804,18 +835,22 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Decisions"/>
                     <box-body>
                         <label text="No approval asked yet." type="p" style="m-muted" condition="!decisionList.length"/>
-                        <form-list name="Decisions" list="decisionList" skip-form="true" paginate="false" condition="decisionList.length">
-                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
-                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                            <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
-                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
-                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
-                                <column><field-ref name="decisionDateText"/><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="DecisionsSection" condition="decisionList.length">
+                            <widgets>
+                                <form-list name="Decisions" list="decisionList" skip-form="true" paginate="false">
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
+                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                                        <column><field-ref name="decisionDateText"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 

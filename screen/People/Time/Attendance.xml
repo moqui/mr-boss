@@ -295,39 +295,47 @@ along with this software (see the LICENSE.md file). If not, see
                             <number-card title="State" value="${day.statusText}" icon="sym_o_fact_check" size="sm"/>
                         </dashboard>
                         <label type="p" style="text-warning" text="${day.flagsText}" condition="day.flagsText"/>
-                        <form-list name="DayPunches" list="punches" skip-form="true" paginate="false" condition="punches.length">
-                            <field name="directionText"><default-field title="Punch"><display/></default-field></field>
-                            <field name="timeText"><default-field title="Time"><display/></default-field></field>
-                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
-                            <field name="sourceSystem"><default-field title="Device or system"><display/></default-field></field>
-                            <field name="externalKey"><default-field title="Event id"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="directionText"/><field-ref name="sourceText"/></column>
-                                <column><field-ref name="timeText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="DayPunchesSection" condition="punches.length">
+                            <widgets>
+                                <form-list name="DayPunches" list="punches" skip-form="true" paginate="false">
+                                    <field name="directionText"><default-field title="Punch"><display/></default-field></field>
+                                    <field name="timeText"><default-field title="Time"><display/></default-field></field>
+                                    <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                                    <field name="sourceSystem"><default-field title="Device or system"><display/></default-field></field>
+                                    <field name="externalKey"><default-field title="Event id"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="directionText"/><field-ref name="sourceText"/></column>
+                                        <column><field-ref name="timeText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="m-muted" condition="!punches.length" text="No punch was recorded this day."/>
-                        <form-list name="DayCorrections" list="corrections" skip-form="true" paginate="false" condition="corrections.length">
-                            <field name="intervalsText"><default-field title="Corrected to"><display/></default-field></field>
-                            <field name="workedText" align="right"><default-field title="Worked"><display/></default-field></field>
-                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
-                            <field name="requestedByName"><default-field title="Asked by"><display/></default-field></field>
-                            <field name="statusText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${correctionColors[statusEnumId] || 'grey-8'}">${
+                        <section name="DayCorrectionsSection" condition="corrections.length">
+                            <widgets>
+                                <form-list name="DayCorrections" list="corrections" skip-form="true" paginate="false">
+                                    <field name="intervalsText"><default-field title="Corrected to"><display/></default-field></field>
+                                    <field name="workedText" align="right"><default-field title="Worked"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="requestedByName"><default-field title="Asked by"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${correctionColors[statusEnumId] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
-                                        <text type="html">${statusText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="waitingText"><default-field title="Waiting for"><display text="${approval?.waitingText || ''}"/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="intervalsText"/><field-ref name="reason"/></column>
-                                <column><field-ref name="statusText"/><field-ref name="workedText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="waitingText"><default-field title="Waiting for"><display text="${approval?.waitingText || ''}"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="intervalsText"/><field-ref name="reason"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="workedText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
             </widgets>
@@ -365,40 +373,44 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <container-box>
                     <box-body-nopad>
-                        <form-list name="AttendanceDays" list="days" skip-form="true" paginate="true" show-csv-button="true" condition="days.length">
-                            <row-selection id-field="attendanceDayId" parameter="selectedIds" list-mode="true" condition="showing == 'decide'">
-                                <action><form-single name="ApproveSelected" transition="approveSelected">
-                                    <field name="submitButton"><default-field title="Approve selected"><submit icon="sym_o_done_all"
-                                            confirmation="Approve the corrections of the selected days?"/></default-field></field>
-                                </form-single></action>
-                            </row-selection>
-                            <field name="personName">
-                                <default-field title="Person">
-                                    <link url="." text="${personName}" link-type="anchor" parameter-map="{attendanceDayId:attendanceDayId}"/>
-                                </default-field>
-                            </field>
-                            <field name="attendanceDate"><default-field title="Day"><display text="${weekdayText} ${attendanceDate}"/></default-field></field>
-                            <field name="firstInText"><default-field title="First in"><display/></default-field></field>
-                            <field name="lastOutText"><default-field title="Last out"><display/></default-field></field>
-                            <field name="workedText" align="right"><default-field title="Worked"><display/></default-field></field>
-                            <field name="flagsText"><default-field title="Missing"><display/></default-field></field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="statusText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColors[statusEnumId] || 'grey-8'}">${
+                        <section name="AttendanceDaysSection" condition="days.length">
+                            <widgets>
+                                <form-list name="AttendanceDays" list="days" skip-form="true" paginate="true" show-csv-button="true">
+                                    <row-selection id-field="attendanceDayId" parameter="selectedIds" list-mode="true" condition="showing == 'decide'">
+                                        <action><form-single name="ApproveSelected" transition="approveSelected">
+                                            <field name="submitButton"><default-field title="Approve selected"><submit icon="sym_o_done_all"
+                                                    confirmation="Approve the corrections of the selected days?"/></default-field></field>
+                                        </form-single></action>
+                                    </row-selection>
+                                    <field name="personName">
+                                        <default-field title="Person">
+                                            <link url="." text="${personName}" link-type="anchor" parameter-map="{attendanceDayId:attendanceDayId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="attendanceDate"><default-field title="Day"><display text="${weekdayText} ${attendanceDate}"/></default-field></field>
+                                    <field name="firstInText"><default-field title="First in"><display/></default-field></field>
+                                    <field name="lastOutText"><default-field title="Last out"><display/></default-field></field>
+                                    <field name="workedText" align="right"><default-field title="Worked"><display/></default-field></field>
+                                    <field name="flagsText"><default-field title="Missing"><display/></default-field></field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColors[statusEnumId] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(statusText)}</q-chip>${toDecide ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-primary">' +
                                             WebUtilities.encodeHtml(ec.l10n.localize('To decide')) + '</q-chip>' : ''}]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText + (toDecide ? " · to decide" : "")})}]]></text>
-                                        <text type="html">${statusText}${toDecide ? ' · to decide' : ''}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/><field-ref name="attendanceDate"/></column>
-                                <column><field-ref name="statusText"/><field-ref name="flagsText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText + (toDecide ? " · to decide" : "")})}]]></text>
+                                                <text type="html">${statusText}${toDecide ? ' · to decide' : ''}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="attendanceDate"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="flagsText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!days.length &amp;&amp; showing == 'decide'" text="No correction waits for your decision."/>
                         <label type="p" style="q-pa-md m-muted" condition="!days.length &amp;&amp; showing != 'decide'"
                                 text="No attendance yet: days show here once people clock in or a time file is imported."/>
@@ -465,45 +477,49 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="." text="Back to days" icon="sym_o_arrow_back" link-type="anchor" parameter-map="{show:null}"/>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="ClockingRows" list="clockingRows" skip-form="true" paginate="true" condition="clockingRows.length">
-                            <field name="personName"><default-field title="Person"><display/></default-field></field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="settingText"><default-field title="Clocking"><display/></default-field></field>
-                            <field name="stateText"><default-field title="Now"><display/></default-field></field>
-                            <field name="actions">
-                                <default-field title="">
-                                    <container-dialog id="ClockingOff_${partyRelationshipId}" button-text="Turn off" icon="sym_o_timer_off" type="default"
-                                            width="520" title="Turn clocking off for ${personName}" condition="canChange &amp;&amp; clockingEnabled">
-                                        <label type="p" text="Their punches are kept; their self-service no longer offers the clock."/>
-                                        <form-single name="ClockingOff" transition="storeClocking"
-                                                map="{partyRelationshipId:partyRelationshipId, clockingEnabled:'N'}">
-                                            <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
-                                            <field name="clockingEnabled"><default-field><hidden/></default-field></field>
-                                            <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
-                                            <field name="submitButton">
-                                                <default-field title="Turn off"><submit type="danger" confirmation="Turn clocking off for ${personName}?"/></default-field>
-                                            </field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <container-dialog id="ClockingFollow_${partyRelationshipId}" button-text="Follow the employer" icon="sym_o_undo"
-                                            type="default" width="520" title="Clocking of ${personName} as the employer's default"
-                                            condition="canChange &amp;&amp; clockingSetting">
-                                        <label type="p" text="Their clocking follows the employer's default again: ${employerDefault ? 'they clock' : 'they do not clock'}."/>
-                                        <form-single name="ClockingFollow" transition="storeClocking"
-                                                map="{partyRelationshipId:partyRelationshipId, clockingEnabled:'E'}">
-                                            <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
-                                            <field name="clockingEnabled"><default-field><hidden/></default-field></field>
-                                            <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Follow the employer"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/><field-ref name="organizationName"/></column>
-                                <column><field-ref name="settingText"/><field-ref name="stateText"/><field-ref name="actions"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="ClockingRowsSection" condition="clockingRows.length">
+                            <widgets>
+                                <form-list name="ClockingRows" list="clockingRows" skip-form="true" paginate="true">
+                                    <field name="personName"><default-field title="Person"><display/></default-field></field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="settingText"><default-field title="Clocking"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="Now"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="ClockingOff_${partyRelationshipId}" button-text="Turn off" icon="sym_o_timer_off" type="default"
+                                                    width="520" title="Turn clocking off for ${personName}" condition="canChange &amp;&amp; clockingEnabled">
+                                                <label type="p" text="Their punches are kept; their self-service no longer offers the clock."/>
+                                                <form-single name="ClockingOff" transition="storeClocking"
+                                                        map="{partyRelationshipId:partyRelationshipId, clockingEnabled:'N'}">
+                                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="clockingEnabled"><default-field><hidden/></default-field></field>
+                                                    <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Turn off"><submit type="danger" confirmation="Turn clocking off for ${personName}?"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="ClockingFollow_${partyRelationshipId}" button-text="Follow the employer" icon="sym_o_undo"
+                                                    type="default" width="520" title="Clocking of ${personName} as the employer's default"
+                                                    condition="canChange &amp;&amp; clockingSetting">
+                                                <label type="p" text="Their clocking follows the employer's default again: ${employerDefault ? 'they clock' : 'they do not clock'}."/>
+                                                <form-single name="ClockingFollow" transition="storeClocking"
+                                                        map="{partyRelationshipId:partyRelationshipId, clockingEnabled:'E'}">
+                                                    <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                    <field name="clockingEnabled"><default-field><hidden/></default-field></field>
+                                                    <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Follow the employer"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="organizationName"/></column>
+                                        <column><field-ref name="settingText"/><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!clockingRows.length"
                                 text="Nobody clocks yet: Turn clocking on offers an employee the clock in their self-service."/>
                     </box-body-nopad>

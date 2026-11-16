@@ -160,14 +160,17 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="${batch.fileName}: ${batch.organizationName}, ${batch.sourceSystem}"/>
                     <box-toolbar>
-                        <form-single name="ImportRecords" transition="importRecords" map="{attendanceImportId:batch.attendanceImportId}"
-                                condition="batch.canImport">
-                            <field name="attendanceImportId"><default-field><hidden/></default-field></field>
-                            <field name="submitButton">
-                                <default-field title="Import">
-                                    <submit icon="sym_o_upload" confirmation="Record ${batch.readyCount} new events as attendance?"/></default-field>
-                            </field>
-                        </form-single>
+                        <section name="ImportRecordsSection" condition="batch.canImport">
+                            <widgets>
+                                <form-single name="ImportRecords" transition="importRecords" map="{attendanceImportId:batch.attendanceImportId}">
+                                    <field name="attendanceImportId"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Import">
+                                            <submit icon="sym_o_upload" confirmation="Record ${batch.readyCount} new events as attendance?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
                         <link url="." text="Another file" icon="sym_o_add" link-type="anchor" parameter-map="{attendanceImportId:null, outcome:null}"/>
                     </box-toolbar>
                     <box-body>
@@ -184,28 +187,32 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="." text="All rows" link-type="anchor" parameter-map="{attendanceImportId:batch.attendanceImportId, outcome:null}"/>
                             <link url="." text="Problems only" link-type="anchor" parameter-map="{attendanceImportId:batch.attendanceImportId, outcome:'problems'}"/>
                         </container>
-                        <form-list name="ImportRows" list="resultRows" skip-form="true" paginate="false" show-csv-button="true" condition="resultRows.length">
-                            <field name="lineNumber" align="right"><default-field title="Line"><display/></default-field></field>
-                            <field name="workerText"><default-field title="Worker"><display text="${personName || workerText}"/></default-field></field>
-                            <field name="timeText"><default-field title="Time"><display/></default-field></field>
-                            <field name="directionText"><default-field title="In or out"><display/></default-field></field>
-                            <field name="externalKey"><default-field title="Event id"><display/></default-field></field>
-                            <field name="outcomeText">
-                                <default-field title="Outcome">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${outcomeColors[outcome] || 'grey-8'}">${
+                        <section name="ImportRowsSection" condition="resultRows.length">
+                            <widgets>
+                                <form-list name="ImportRows" list="resultRows" skip-form="true" paginate="false" show-csv-button="true">
+                                    <field name="lineNumber" align="right"><default-field title="Line"><display/></default-field></field>
+                                    <field name="workerText"><default-field title="Worker"><display text="${personName || workerText}"/></default-field></field>
+                                    <field name="timeText"><default-field title="Time"><display/></default-field></field>
+                                    <field name="directionText"><default-field title="In or out"><display/></default-field></field>
+                                    <field name="externalKey"><default-field title="Event id"><display/></default-field></field>
+                                    <field name="outcomeText">
+                                        <default-field title="Outcome">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${outcomeColors[outcome] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(outcomeText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: outcomeText})}]]></text>
-                                        <text type="html">${outcomeText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="message"><default-field title="Why"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="workerText"/><field-ref name="timeText"/></column>
-                                <column><field-ref name="outcomeText"/><field-ref name="message"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: outcomeText})}]]></text>
+                                                <text type="html">${outcomeText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="message"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="workerText"/><field-ref name="timeText"/></column>
+                                        <column><field-ref name="outcomeText"/><field-ref name="message"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="m-muted" condition="!resultRows.length" text="No row of this kind."/>
                     </box-body>
                 </container-box>

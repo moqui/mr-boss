@@ -60,19 +60,23 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="text-caption m-muted"/>
                 <container-box>
                     <box-body-nopad>
-                        <form-list name="Employers" list="employerRows" skip-form="true" paginate="false" condition="employerRows.length">
-                            <field name="organizationName">
-                                <default-field title="Employer">
-                                    <link url="." text="${organizationName}" link-type="anchor" parameter-map="{organizationPartyId:organizationPartyId}"/>
-                                </default-field>
-                            </field>
-                            <field name="componentText"><default-field title="Recovery deduction"><display text="${componentText || 'Not set'}"/></default-field></field>
-                            <field name="capText"><default-field title="Most a period"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="organizationName"/><field-ref name="capText"/></column>
-                                <column><field-ref name="componentText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="EmployersSection" condition="employerRows.length">
+                            <widgets>
+                                <form-list name="Employers" list="employerRows" skip-form="true" paginate="false">
+                                    <field name="organizationName">
+                                        <default-field title="Employer">
+                                            <link url="." text="${organizationName}" link-type="anchor" parameter-map="{organizationPartyId:organizationPartyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="componentText"><default-field title="Recovery deduction"><display text="${componentText || 'Not set'}"/></default-field></field>
+                                    <field name="capText"><default-field title="Most a period"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="organizationName"/><field-ref name="capText"/></column>
+                                        <column><field-ref name="componentText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!employerRows.length" text="No employer is in your payroll scope."/>
                     </box-body-nopad>
                 </container-box>
@@ -83,32 +87,36 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body>
                                 <label type="p" condition="!canEdit" style="m-muted"
                                         text="Recovery deduction: ${opened.componentText || 'Not set'}. Most a period: ${opened.capText}."/>
-                                <form-single name="EditSettings" transition="storeSettings" map="settingsValues" condition="canEdit">
-                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="payrollComponentId">
-                                        <default-field title="Recovery deduction"
-                                                tooltip="One of the employer's deductions: its liability account is where a recovered amount posts">
-                                            <drop-down allow-empty="true"><list-options list="deductionOptions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="capPercent">
-                                        <default-field title="Most a period: percentage of net pay"
-                                                tooltip="Of the employee's net pay on their latest finalized regular run, above 0 and at most 100. Before their first, the amount below applies, or with none the recovery waits a period. Empty with no amount: no cap, the whole rest">
-                                            <text-line size="6" input-type="number"/></default-field>
-                                    </field>
-                                    <field name="capAmount">
-                                        <default-field title="Most a period: amount"
-                                                tooltip="In the pay group's currency. With a percentage, the most it takes and what is taken before the employee's first net pay; alone, the cap">
-                                            <text-line size="10" input-type="number"/></default-field>
-                                    </field>
-                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                    <field-layout>
-                                        <field-ref name="payrollComponentId"/>
-                                        <field-row><field-ref name="capPercent"/><field-ref name="capAmount"/></field-row>
-                                        <field-ref name="submitButton"/>
-                                    </field-layout>
-                                </form-single>
+                                <section name="EditSettingsSection" condition="canEdit">
+                                    <widgets>
+                                        <form-single name="EditSettings" transition="storeSettings" map="settingsValues">
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="payrollComponentId">
+                                                <default-field title="Recovery deduction"
+                                                        tooltip="One of the employer's deductions: its liability account is where a recovered amount posts">
+                                                    <drop-down allow-empty="true"><list-options list="deductionOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="capPercent">
+                                                <default-field title="Most a period: percentage of net pay"
+                                                        tooltip="Of the employee's net pay on their latest finalized regular run, above 0 and at most 100. Before their first, the amount below applies, or with none the recovery waits a period. Empty with no amount: no cap, the whole rest">
+                                                    <text-line size="6" input-type="number"/></default-field>
+                                            </field>
+                                            <field name="capAmount">
+                                                <default-field title="Most a period: amount"
+                                                        tooltip="In the pay group's currency. With a percentage, the most it takes and what is taken before the employee's first net pay; alone, the cap">
+                                                    <text-line size="10" input-type="number"/></default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                            <field-layout>
+                                                <field-ref name="payrollComponentId"/>
+                                                <field-row><field-ref name="capPercent"/><field-ref name="capAmount"/></field-row>
+                                                <field-ref name="submitButton"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                     </widgets>

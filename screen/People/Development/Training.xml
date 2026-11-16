@@ -182,47 +182,51 @@ along with this software (see the LICENSE.md file). If not, see
 
         <container-box>
             <box-body-nopad>
-                <form-list name="SessionList" list="sessions" skip-form="true" paginate="true" condition="sessions.length">
-                    <field name="title">
-                        <default-field title="Course">
-                            <link url="../TrainingDetail" text="${title}" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
-                        </default-field>
-                    </field>
-                    <field name="whenText"><default-field title="When"><display/></default-field></field>
-                    <field name="location"><default-field title="Place"><display/></default-field></field>
-                    <field name="trainerName"><default-field title="Trainer"><display/></default-field></field>
-                    <field name="seatsText"><default-field title="Seats"><display/></default-field></field>
-                    <field name="qualificationText"><default-field title="Grants"><display/></default-field></field>
-                    <field name="stateText">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                <section name="SessionListSection" condition="sessions.length">
+                    <widgets>
+                        <form-list name="SessionList" list="sessions" skip-form="true" paginate="true">
+                            <field name="title">
+                                <default-field title="Course">
+                                    <link url="../TrainingDetail" text="${title}" link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                                </default-field>
+                            </field>
+                            <field name="whenText"><default-field title="When"><display/></default-field></field>
+                            <field name="location"><default-field title="Place"><display/></default-field></field>
+                            <field name="trainerName"><default-field title="Trainer"><display/></default-field></field>
+                            <field name="seatsText"><default-field title="Seats"><display/></default-field></field>
+                            <field name="qualificationText"><default-field title="Grants"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                     WebUtilities.encodeHtml(stateText)}</q-chip>${myStatusText ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-' +
                                     (myStatusEnumId == 'PtsEnrolled' || myStatusEnumId == 'PtsCompleted' ? 'positive' : 'grey-8') + '">' +
                                     WebUtilities.encodeHtml('You: ' + myStatusText) + '</q-chip>' : ''}${isTrainer ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-primary">You train</q-chip>' : ''}]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText + (myStatusText ? " · You: " + myStatusText : "") + (isTrainer ? " · You train" : "")})}]]></text>
-                                <text type="html">${stateText}${myStatusText ? ' · You: ' + myStatusText : ''}${isTrainer ? ' · You train' : ''}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <field name="actions">
-                        <default-field title="">
-                            <container-dialog id="RequestPlace_${workEffortId}" button-text="Ask for a place" icon="sym_o_how_to_reg" type="default" width="520"
-                                    title="Ask for a place in ${title}, ${startText}" condition="canRequest">
-                                <label type="p" text="Your place waits for your manager's approval."/>
-                                <form-single name="RequestPlace" transition="requestPlace" map="{workEffortId:workEffortId}">
-                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
-                                    <field name="reason"><default-field title="Why" tooltip="Your approver reads it"><text-area rows="2"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Ask for a place"><submit/></default-field></field>
-                                </form-single>
-                            </container-dialog>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="title"/><field-ref name="whenText"/><field-ref name="location"/></column>
-                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
-                    </columns>
-                </form-list>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText + (myStatusText ? " · You: " + myStatusText : "") + (isTrainer ? " · You train" : "")})}]]></text>
+                                        <text type="html">${stateText}${myStatusText ? ' · You: ' + myStatusText : ''}${isTrainer ? ' · You train' : ''}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="RequestPlace_${workEffortId}" button-text="Ask for a place" icon="sym_o_how_to_reg" type="default" width="520"
+                                            title="Ask for a place in ${title}, ${startText}" condition="canRequest">
+                                        <label type="p" text="Your place waits for your manager's approval."/>
+                                        <form-single name="RequestPlace" transition="requestPlace" map="{workEffortId:workEffortId}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Why" tooltip="Your approver reads it"><text-area rows="2"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Ask for a place"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="whenText"/><field-ref name="location"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label type="p" style="q-pa-md m-muted" condition="!sessions.length" text="${emptyText}"/>
             </box-body-nopad>
         </container-box>
@@ -281,50 +285,54 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="CourseList" list="courses" skip-form="true" paginate="false" condition="courses.length">
-                            <field name="title"><default-field title="Course"><display/></default-field></field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="typeText"><default-field title="Kind"><display/></default-field></field>
-                            <field name="qualificationText"><default-field title="Passing grants"><display/></default-field></field>
-                            <field name="assessmentText"><default-field title="Assessment"><display text="${assessmentRequired ? 'Needed' : 'Optional'}"/></default-field></field>
-                            <field name="actions">
-                                <default-field title="">
-                                    <container-dialog id="ChangeCourse_${trainingClassId}" button-text="Change" icon="sym_o_edit" width="720" title="Change ${title}">
-                                        <form-single name="ChangeCourse" transition="storeTrainingClass"
-                                                map="{trainingClassId:trainingClassId, expectedRevision:revision, title:title, trainingClassTypeEnumId:trainingClassTypeEnumId,
-                                                    qualificationTypeEnumId:qualificationTypeEnumId, validityMonths:validityMonths, assessmentRequired:(assessmentRequired ? 'Y' : 'N'),
-                                                    description:description}">
-                                            <field name="trainingClassId"><default-field><hidden/></default-field></field>
-                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                            <field name="title"><default-field title="Title"><text-line size="50"/></default-field></field>
-                                            <field name="trainingClassTypeEnumId">
-                                                <default-field title="Kind"><drop-down allow-empty="true"><list-options list="kindOptions" key="${key}" text="${text}"/></drop-down></default-field>
-                                            </field>
-                                            <field name="qualificationTypeEnumId">
-                                                <default-field title="Passing grants">
-                                                    <drop-down allow-empty="true">
-                                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'qualificationTypes'}"/>
-                                                    </drop-down>
-                                                </default-field>
-                                            </field>
-                                            <field name="validityMonths"><default-field title="Valid for (months)"><text-line size="5" input-type="number"/></default-field></field>
-                                            <field name="assessmentRequired">
-                                                <default-field title="Needs an assessment"><check><option key="Y" text=" "/></check></default-field>
-                                            </field>
-                                            <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Save course"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <link url="storeTrainingClass" link-type="hidden-form" text="End" icon="sym_o_event_busy" btn-type="danger"
-                                            parameter-map="{trainingClassId:trainingClassId, end:'true', expectedRevision:revision}"
-                                            confirmation="End the course ${title}? It takes no new session; its sessions and places are kept."/>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/><field-ref name="qualificationText"/></column>
-                                <column><field-ref name="assessmentText"/><field-ref name="actions"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="CourseListSection" condition="courses.length">
+                            <widgets>
+                                <form-list name="CourseList" list="courses" skip-form="true" paginate="false">
+                                    <field name="title"><default-field title="Course"><display/></default-field></field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="qualificationText"><default-field title="Passing grants"><display/></default-field></field>
+                                    <field name="assessmentText"><default-field title="Assessment"><display text="${assessmentRequired ? 'Needed' : 'Optional'}"/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="ChangeCourse_${trainingClassId}" button-text="Change" icon="sym_o_edit" width="720" title="Change ${title}">
+                                                <form-single name="ChangeCourse" transition="storeTrainingClass"
+                                                        map="{trainingClassId:trainingClassId, expectedRevision:revision, title:title, trainingClassTypeEnumId:trainingClassTypeEnumId,
+                                                            qualificationTypeEnumId:qualificationTypeEnumId, validityMonths:validityMonths, assessmentRequired:(assessmentRequired ? 'Y' : 'N'),
+                                                            description:description}">
+                                                    <field name="trainingClassId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="title"><default-field title="Title"><text-line size="50"/></default-field></field>
+                                                    <field name="trainingClassTypeEnumId">
+                                                        <default-field title="Kind"><drop-down allow-empty="true"><list-options list="kindOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                                    </field>
+                                                    <field name="qualificationTypeEnumId">
+                                                        <default-field title="Passing grants">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'qualificationTypes'}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="validityMonths"><default-field title="Valid for (months)"><text-line size="5" input-type="number"/></default-field></field>
+                                                    <field name="assessmentRequired">
+                                                        <default-field title="Needs an assessment"><check><option key="Y" text=" "/></check></default-field>
+                                                    </field>
+                                                    <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Save course"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="storeTrainingClass" link-type="hidden-form" text="End" icon="sym_o_event_busy" btn-type="danger"
+                                                    parameter-map="{trainingClassId:trainingClassId, end:'true', expectedRevision:revision}"
+                                                    confirmation="End the course ${title}? It takes no new session; its sessions and places are kept."/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="qualificationText"/></column>
+                                        <column><field-ref name="assessmentText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!courses.length"
                                 text="No course yet. New course adds one: what it teaches, and what passing it grants."/>
                     </box-body-nopad>

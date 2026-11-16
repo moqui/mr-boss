@@ -242,44 +242,48 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body>
                         <label text="No organization of yours has a messaging number yet: add the number to the organization's contact information, and give it a messaging bridge in System, Voice, Numbers."
                                 type="p" style="m-muted" condition="!numberOptions.length &amp;&amp; !isSms"/>
-                        <form-single name="SmsSendingProfile" transition="storeSmsProfile" map="smsValues" condition="numberOptions.length || isSms">
-                            <field name="sendingProfileId"><default-field><hidden/></default-field></field>
-                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                            <field name="profileName"><default-field title="Name"><text-line size="40"/></default-field></field>
-                            <field name="organizationPartyId">
-                                <conditional-field title="Organization" condition="isSms"><display text="${profile?.organizationName}"/></conditional-field>
-                                <default-field title="Organization">
-                                    <drop-down><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
-                                </default-field>
-                            </field>
-                            <field name="fromPhoneNumber">
-                                <default-field title="Messaging number" tooltip="One of the organization's numbers with a messaging bridge">
-                                    <drop-down><list-options list="numberOptions" key="${value}" text="${label}"/></drop-down>
-                                </default-field>
-                            </field>
-                            <field name="purposeEnumId">
-                                <default-field title="Purpose">
-                                    <drop-down allow-empty="true">
-                                        <option key="MtpPromotional" text="Promotional"/>
-                                        <option key="MtpTransactional" text="Transactional"/>
-                                    </drop-down>
-                                </default-field>
-                            </field>
-                            <field name="throttlePerHour"><default-field title="At most an hour" tooltip="Empty: no throttle"><text-line size="8"/></default-field></field>
-                            <field name="quietFrom"><default-field title="Quiet from" tooltip="HH:mm"><text-line size="6"/></default-field></field>
-                            <field name="quietThru"><default-field title="Quiet until" tooltip="HH:mm"><text-line size="6"/></default-field></field>
-                            <field name="timeZone"><default-field title="Time zone" tooltip="As America/Chicago"><text-line size="20"/></default-field></field>
-                            <field name="segmentCost"><default-field title="Cost a segment" tooltip="The provider's price of one segment, for the estimate shown before approval"><text-line size="10"/></default-field></field>
-                            <field name="segmentCostUomId"><default-field title="Currency"><text-line size="4"/></default-field></field>
-                            <field name="submitButton"><default-field title=""><submit text="Save profile"/></default-field></field>
-                            <field-layout>
-                                <field-row><field-ref name="profileName"/><field-ref name="organizationPartyId"/></field-row>
-                                <field-row><field-ref name="fromPhoneNumber"/><field-ref name="purposeEnumId"/></field-row>
-                                <field-row><field-ref name="throttlePerHour"/><field-ref name="timeZone"/></field-row>
-                                <field-row><field-ref name="quietFrom"/><field-ref name="quietThru"/></field-row>
-                                <field-row><field-ref name="segmentCost"/><field-ref name="segmentCostUomId"/><field-ref name="submitButton"/></field-row>
-                            </field-layout>
-                        </form-single>
+                        <section name="SmsSendingProfileSection" condition="numberOptions.length || isSms">
+                            <widgets>
+                                <form-single name="SmsSendingProfile" transition="storeSmsProfile" map="smsValues">
+                                    <field name="sendingProfileId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="profileName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="organizationPartyId">
+                                        <conditional-field title="Organization" condition="isSms"><display text="${profile?.organizationName}"/></conditional-field>
+                                        <default-field title="Organization">
+                                            <drop-down><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromPhoneNumber">
+                                        <default-field title="Messaging number" tooltip="One of the organization's numbers with a messaging bridge">
+                                            <drop-down><list-options list="numberOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="purposeEnumId">
+                                        <default-field title="Purpose">
+                                            <drop-down allow-empty="true">
+                                                <option key="MtpPromotional" text="Promotional"/>
+                                                <option key="MtpTransactional" text="Transactional"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="throttlePerHour"><default-field title="At most an hour" tooltip="Empty: no throttle"><text-line size="8"/></default-field></field>
+                                    <field name="quietFrom"><default-field title="Quiet from" tooltip="HH:mm"><text-line size="6"/></default-field></field>
+                                    <field name="quietThru"><default-field title="Quiet until" tooltip="HH:mm"><text-line size="6"/></default-field></field>
+                                    <field name="timeZone"><default-field title="Time zone" tooltip="As America/Chicago"><text-line size="20"/></default-field></field>
+                                    <field name="segmentCost"><default-field title="Cost a segment" tooltip="The provider's price of one segment, for the estimate shown before approval"><text-line size="10"/></default-field></field>
+                                    <field name="segmentCostUomId"><default-field title="Currency"><text-line size="4"/></default-field></field>
+                                    <field name="submitButton"><default-field title=""><submit text="Save profile"/></default-field></field>
+                                    <field-layout>
+                                        <field-row><field-ref name="profileName"/><field-ref name="organizationPartyId"/></field-row>
+                                        <field-row><field-ref name="fromPhoneNumber"/><field-ref name="purposeEnumId"/></field-row>
+                                        <field-row><field-ref name="throttlePerHour"/><field-ref name="timeZone"/></field-row>
+                                        <field-row><field-ref name="quietFrom"/><field-ref name="quietThru"/></field-row>
+                                        <field-row><field-ref name="segmentCost"/><field-ref name="segmentCostUomId"/><field-ref name="submitButton"/></field-row>
+                                    </field-layout>
+                                </form-single>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
             </widgets>

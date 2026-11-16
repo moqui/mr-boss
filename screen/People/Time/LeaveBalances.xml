@@ -132,33 +132,37 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-single>
                 <container-box>
                     <box-body-nopad>
-                        <form-list name="BalanceList" list="balances" skip-form="true" paginate="true" select-columns="true" condition="balances.length">
-                            <field name="personName">
-                                <conditional-field condition="canSeeLedger" title="Employee">
-                                    <link url="." text="${personName}" link-type="anchor"
-                                            parameter-map="{partyRelationshipId:partyRelationshipId, leaveTypeEnumId:leaveTypeEnumId, asOfDate:(asOfDate || null)}"/>
-                                </conditional-field>
-                                <default-field title="Employee"><display/></default-field>
-                            </field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
-                            <field name="policyName"><default-field title="Policy"><display/></default-field></field>
-                            <field name="opening" align="right"><default-field title="Opening"><display format="#,##0.##"/></default-field></field>
-                            <field name="granted" align="right"><default-field title="Granted"><display format="#,##0.##"/></default-field></field>
-                            <field name="accrued" align="right"><default-field title="Accrued"><display format="#,##0.##"/></default-field></field>
-                            <field name="consumed" align="right"><default-field title="Taken"><display format="#,##0.##"/></default-field></field>
-                            <field name="expired" align="right"><default-field title="Expired"><display format="#,##0.##"/></default-field></field>
-                            <field name="adjusted" align="right"><default-field title="Adjusted"><display format="#,##0.##"/></default-field></field>
-                            <field name="balance" align="right"><default-field title="Balance"><display format="#,##0.##"/></default-field></field>
-                            <field name="pending" align="right"><default-field title="Pending"><display format="#,##0.##"/></default-field></field>
-                            <field name="available" align="right">
-                                <default-field title="Available"><display text="${available} ${unitText.toLowerCase()}"/></default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/><field-ref name="leaveTypeText"/></column>
-                                <column><field-ref name="available"/><field-ref name="policyName"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="BalanceListSection" condition="balances.length">
+                            <widgets>
+                                <form-list name="BalanceList" list="balances" skip-form="true" paginate="true" select-columns="true">
+                                    <field name="personName">
+                                        <conditional-field condition="canSeeLedger" title="Employee">
+                                            <link url="." text="${personName}" link-type="anchor"
+                                                    parameter-map="{partyRelationshipId:partyRelationshipId, leaveTypeEnumId:leaveTypeEnumId, asOfDate:(asOfDate || null)}"/>
+                                        </conditional-field>
+                                        <default-field title="Employee"><display/></default-field>
+                                    </field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
+                                    <field name="policyName"><default-field title="Policy"><display/></default-field></field>
+                                    <field name="opening" align="right"><default-field title="Opening"><display format="#,##0.##"/></default-field></field>
+                                    <field name="granted" align="right"><default-field title="Granted"><display format="#,##0.##"/></default-field></field>
+                                    <field name="accrued" align="right"><default-field title="Accrued"><display format="#,##0.##"/></default-field></field>
+                                    <field name="consumed" align="right"><default-field title="Taken"><display format="#,##0.##"/></default-field></field>
+                                    <field name="expired" align="right"><default-field title="Expired"><display format="#,##0.##"/></default-field></field>
+                                    <field name="adjusted" align="right"><default-field title="Adjusted"><display format="#,##0.##"/></default-field></field>
+                                    <field name="balance" align="right"><default-field title="Balance"><display format="#,##0.##"/></default-field></field>
+                                    <field name="pending" align="right"><default-field title="Pending"><display format="#,##0.##"/></default-field></field>
+                                    <field name="available" align="right">
+                                        <default-field title="Available"><display text="${available} ${unitText.toLowerCase()}"/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="leaveTypeText"/></column>
+                                        <column><field-ref name="available"/><field-ref name="policyName"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!balances.length &amp;&amp; filtered" text="No balance matches."/>
                         <label type="p" style="q-pa-md m-muted" condition="!balances.length &amp;&amp; !filtered"
                                 text="No balance yet: balances start when a leave policy is assigned or leave is allocated."/>
@@ -172,30 +176,33 @@ along with this software (see the LICENSE.md file). If not, see
                                 <link url="." text="All balances" icon="sym_o_close" link-type="anchor" parameter-map="{asOfDate:(asOfDate || null)}"/>
                             </box-toolbar>
                             <box-body-nopad>
-                                <form-list name="Movements" list="entries" skip-form="true" paginate="true" show-csv-button="true"
-                                        condition="entries.length">
-                                    <field name="effectiveDateText"><default-field title="Date"><display/></default-field></field>
-                                    <field name="entryTypeText">
-                                        <default-field title="Movement">
-                                            <render-mode>
-                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${entryColors[entryTypeEnumId] || 'grey-8'}">${
+                                <section name="MovementsSection" condition="entries.length">
+                                    <widgets>
+                                        <form-list name="Movements" list="entries" skip-form="true" paginate="true" show-csv-button="true">
+                                            <field name="effectiveDateText"><default-field title="Date"><display/></default-field></field>
+                                            <field name="entryTypeText">
+                                                <default-field title="Movement">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${entryColors[entryTypeEnumId] || 'grey-8'}">${
                                                     WebUtilities.encodeHtml(entryTypeText)}</q-chip>]]></text>
-                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: entryTypeText})}]]></text>
-                                                <text type="html">${entryTypeText}</text>
-                                            </render-mode>
-                                        </default-field>
-                                    </field>
-                                    <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
-                                    <field name="amount" align="right"><default-field title="Amount"><display format="#,##0.##"/></default-field></field>
-                                    <field name="balanceAfter" align="right"><default-field title="Balance after"><display format="#,##0.##"/></default-field></field>
-                                    <field name="unitText"><default-field title="Unit"><display/></default-field></field>
-                                    <field name="sourceText"><default-field title="From"><display/></default-field></field>
-                                    <field name="postedDateText"><default-field title="Posted"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="effectiveDateText"/><field-ref name="sourceText"/></column>
-                                        <column><field-ref name="amount"/><field-ref name="entryTypeText"/></column>
-                                    </columns>
-                                </form-list>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: entryTypeText})}]]></text>
+                                                        <text type="html">${entryTypeText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
+                                            <field name="amount" align="right"><default-field title="Amount"><display format="#,##0.##"/></default-field></field>
+                                            <field name="balanceAfter" align="right"><default-field title="Balance after"><display format="#,##0.##"/></default-field></field>
+                                            <field name="unitText"><default-field title="Unit"><display/></default-field></field>
+                                            <field name="sourceText"><default-field title="From"><display/></default-field></field>
+                                            <field name="postedDateText"><default-field title="Posted"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="effectiveDateText"/><field-ref name="sourceText"/></column>
+                                                <column><field-ref name="amount"/><field-ref name="entryTypeText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="q-pa-md m-muted" condition="!entries.length" text="No movement by this date."/>
                             </box-body-nopad>
                         </container-box>

@@ -64,33 +64,41 @@ along with this software (see the LICENSE.md file). If not, see
                                 type="primary" condition="canEdit">
                             <label text="Publish a lead form from Surveys first; each lead form takes one rule." type="p" style="m-muted"
                                     condition="!publicationOptions.length"/>
-                            <form-single name="NewLeadRule" transition="newLeadRule" condition="publicationOptions.length">
-                                <field name="publicationId">
-                                    <default-field title="Lead form">
-                                        <drop-down allow-empty="false">
-                                            <list-options list="publicationOptions" key="${value}" text="${label}"/>
-                                        </drop-down>
-                                    </default-field>
-                                </field>
-                                <field name="submitButton"><default-field title=""><submit text="Route its answers"/></default-field></field>
-                            </form-single>
+                            <section name="NewLeadRuleSection" condition="publicationOptions.length">
+                                <widgets>
+                                    <form-single name="NewLeadRule" transition="newLeadRule">
+                                        <field name="publicationId">
+                                            <default-field title="Lead form">
+                                                <drop-down allow-empty="false">
+                                                    <list-options list="publicationOptions" key="${value}" text="${label}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title=""><submit text="Route its answers"/></default-field></field>
+                                    </form-single>
+                                </widgets>
+                            </section>
                             <label text="Or route an event's attendees" type="p" style="text-weight-medium q-mt-md" condition="offerOptions.length"/>
-                            <form-single name="NewEventLeadRule" transition="newEventLeadRule" condition="offerOptions.length">
-                                <field name="registrationPolicyId">
-                                    <default-field title="Event">
-                                        <drop-down allow-empty="false"><list-options list="offerOptions" key="${value}" text="${label}"/></drop-down>
-                                    </default-field>
-                                </field>
-                                <field name="triggerEnumId">
-                                    <default-field title="When">
-                                        <radio no-current-selected-key="MltRegistered">
-                                            <option key="MltRegistered" text="They register"/>
-                                            <option key="MltAttended" text="They attend"/>
-                                        </radio>
-                                    </default-field>
-                                </field>
-                                <field name="submitButton"><default-field title=""><submit text="Route its attendees"/></default-field></field>
-                            </form-single>
+                            <section name="NewEventLeadRuleSection" condition="offerOptions.length">
+                                <widgets>
+                                    <form-single name="NewEventLeadRule" transition="newEventLeadRule">
+                                        <field name="registrationPolicyId">
+                                            <default-field title="Event">
+                                                <drop-down allow-empty="false"><list-options list="offerOptions" key="${value}" text="${label}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="triggerEnumId">
+                                            <default-field title="When">
+                                                <radio no-current-selected-key="MltRegistered">
+                                                    <option key="MltRegistered" text="They register"/>
+                                                    <option key="MltAttended" text="They attend"/>
+                                                </radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title=""><submit text="Route its attendees"/></default-field></field>
+                                    </form-single>
+                                </widgets>
+                            </section>
                         </container-dialog>
                         <link url="." text="Ended too" link-type="anchor-button" icon="sym_o_history" parameter-map="{includeEnded:'Y'}"/>
                     </container>

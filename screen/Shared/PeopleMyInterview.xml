@@ -116,20 +116,24 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Shared with the panel"/>
                             <box-body-nopad>
-                                <form-list name="SharedFiles" list="fileRows" skip-form="true" paginate="false" condition="fileRows.length">
-                                    <field name="description">
-                                        <default-field title="File">
-                                            <link url="sharedFile" text="${description}" link-type="anchor" target-window="_blank"
-                                                    parameter-map="{applicationContentId:applicationContentId, workEffortId:workEffortId}"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="typeText"><default-field title="Kind"><display/></default-field></field>
-                                    <field name="contentDateText"><default-field title="Added"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="description"/></column>
-                                        <column><field-ref name="typeText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="SharedFilesSection" condition="fileRows.length">
+                                    <widgets>
+                                        <form-list name="SharedFiles" list="fileRows" skip-form="true" paginate="false">
+                                            <field name="description">
+                                                <default-field title="File">
+                                                    <link url="sharedFile" text="${description}" link-type="anchor" target-window="_blank"
+                                                            parameter-map="{applicationContentId:applicationContentId, workEffortId:workEffortId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                                            <field name="contentDateText"><default-field title="Added"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="description"/></column>
+                                                <column><field-ref name="typeText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="m-muted q-pa-md" condition="!fileRows.length"
                                         text="The recruiter shared no material with the panel. You see the applicant's name and the opening only."/>
                             </box-body-nopad>

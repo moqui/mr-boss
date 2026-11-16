@@ -141,28 +141,35 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body>
                         <label text="Upcoming could not be read just now." type="p" style="text-negative" condition="!upcomingFound?.sources"/>
                         <label text="Nothing planned yet." type="p" style="m-muted" condition="upcomingFound?.sources &amp;&amp; !upcomingRows.length"/>
-                        <form-list name="Upcoming" list="upcomingRows" skip-form="true" paginate="false" condition="upcomingRows.length">
-                            <field name="kind"><default-field title="Kind"><display/></default-field></field>
-                            <field name="title">
-                                <conditional-field title="Title" condition="rowUrl"><link url="${rowUrl}" text="${title}" link-type="anchor"/></conditional-field>
-                                <default-field title="Title"><display/></default-field>
-                            </field>
-                            <field name="date"><default-field title="Date"><display format="yyyy-MM-dd HH:mm"/></default-field></field>
-                            <field name="state"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/><field-ref name="kind"/></column>
-                                <column><field-ref name="date"/><field-ref name="state"/></column>
-                            </columns>
-                        </form-list>
-                        <form-list name="UpcomingSources" list="upcomingSources" skip-form="true" paginate="false"
-                                condition="upcomingSources.length">
-                            <field name="title"><default-field title="Source"><display/></default-field></field>
-                            <field name="shown"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/></column>
-                                <column><field-ref name="shown"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="UpcomingSection" condition="upcomingRows.length">
+                            <widgets>
+                                <form-list name="Upcoming" list="upcomingRows" skip-form="true" paginate="false">
+                                    <field name="kind"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="title">
+                                        <conditional-field title="Title" condition="rowUrl"><link url="${rowUrl}" text="${title}" link-type="anchor"/></conditional-field>
+                                        <default-field title="Title"><display/></default-field>
+                                    </field>
+                                    <field name="date"><default-field title="Date"><display format="yyyy-MM-dd HH:mm"/></default-field></field>
+                                    <field name="state"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="kind"/></column>
+                                        <column><field-ref name="date"/><field-ref name="state"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="UpcomingSourcesSection" condition="upcomingSources.length">
+                            <widgets>
+                                <form-list name="UpcomingSources" list="upcomingSources" skip-form="true" paginate="false">
+                                    <field name="title"><default-field title="Source"><display/></default-field></field>
+                                    <field name="shown"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/></column>
+                                        <column><field-ref name="shown"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
                 <container-box condition="!organizationRefused">
@@ -170,28 +177,35 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body>
                         <label text="Attention could not be read just now." type="p" style="text-negative" condition="!attentionFound?.sources"/>
                         <label text="Nothing needs attention." type="p" style="m-muted" condition="attentionFound?.sources &amp;&amp; !attentionRows.length"/>
-                        <form-list name="Attention" list="attentionRows" skip-form="true" paginate="false" condition="attentionRows.length">
-                            <field name="record"><default-field title="Record"><display/></default-field></field>
-                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
-                            <field name="action">
-                                <default-field title="Action">
-                                    <link url="${actionUrl}" text="${action}" link-type="anchor" condition="actionUrl"/>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="record"/><field-ref name="reason"/></column>
-                                <column><field-ref name="action"/></column>
-                            </columns>
-                        </form-list>
-                        <form-list name="AttentionSources" list="attentionSources" skip-form="true" paginate="false"
-                                condition="attentionSources.length">
-                            <field name="title"><default-field title="Source"><display/></default-field></field>
-                            <field name="shown"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/></column>
-                                <column><field-ref name="shown"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="AttentionSection" condition="attentionRows.length">
+                            <widgets>
+                                <form-list name="Attention" list="attentionRows" skip-form="true" paginate="false">
+                                    <field name="record"><default-field title="Record"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="action">
+                                        <default-field title="Action">
+                                            <link url="${actionUrl}" text="${action}" link-type="anchor" condition="actionUrl"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="record"/><field-ref name="reason"/></column>
+                                        <column><field-ref name="action"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="AttentionSourcesSection" condition="attentionSources.length">
+                            <widgets>
+                                <form-list name="AttentionSources" list="attentionSources" skip-form="true" paginate="false">
+                                    <field name="title"><default-field title="Source"><display/></default-field></field>
+                                    <field name="shown"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/></column>
+                                        <column><field-ref name="shown"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
             </widgets>

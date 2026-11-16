@@ -188,34 +188,38 @@ along with this software (see the LICENSE.md file). If not, see
         </form-single>
         <container-box>
             <box-body-nopad>
-                <form-list name="ClaimList" list="claims" skip-form="true" paginate="true" condition="claims.length">
-                    <field name="invoiceId">
-                        <default-field title="Claim">
-                            <link url="../ExpenseClaimDetail" text="${invoiceId}${purpose ? ' · ' + purpose : ''}" link-type="anchor"
-                                    parameter-map="{invoiceId:invoiceId}"/>
-                        </default-field>
-                    </field>
-                    <field name="personName"><default-field title="Person"><display/></default-field></field>
-                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                    <field name="projectName"><default-field title="Project"><display/></default-field></field>
-                    <field name="invoiceDateText"><default-field title="Dated"><display/></default-field></field>
-                    <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
-                    <field name="stageText">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stageColor}">${
+                <section name="ClaimListSection" condition="claims.length">
+                    <widgets>
+                        <form-list name="ClaimList" list="claims" skip-form="true" paginate="true">
+                            <field name="invoiceId">
+                                <default-field title="Claim">
+                                    <link url="../ExpenseClaimDetail" text="${invoiceId}${purpose ? ' · ' + purpose : ''}" link-type="anchor"
+                                            parameter-map="{invoiceId:invoiceId}"/>
+                                </default-field>
+                            </field>
+                            <field name="personName"><default-field title="Person"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="projectName"><default-field title="Project"><display/></default-field></field>
+                            <field name="invoiceDateText"><default-field title="Dated"><display/></default-field></field>
+                            <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                            <field name="stageText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stageColor}">${
                                     WebUtilities.encodeHtml(stageText)}</q-chip>${toDecide ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-primary">' +
                                     WebUtilities.encodeHtml(ec.l10n.localize('To decide')) + '</q-chip>' : ''}]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stageText + (toDecide ? " · to decide" : "")})}]]></text>
-                                <text type="html">${stageText}${toDecide ? ' · to decide' : ''}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="invoiceId"/><field-ref name="personName"/></column>
-                        <column><field-ref name="totalText"/><field-ref name="stageText"/></column>
-                    </columns>
-                </form-list>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stageText + (toDecide ? " · to decide" : "")})}]]></text>
+                                        <text type="html">${stageText}${toDecide ? ' · to decide' : ''}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="invoiceId"/><field-ref name="personName"/></column>
+                                <column><field-ref name="totalText"/><field-ref name="stageText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label type="p" style="q-pa-md m-muted" condition="!claims.length &amp;&amp; showing == 'decide'" text="No claim waits for your decision."/>
                 <label type="p" style="q-pa-md m-muted" condition="!claims.length &amp;&amp; showing != 'decide'"
                         text="No expense claim yet: New claim starts one, then add each expense with its receipt."/>

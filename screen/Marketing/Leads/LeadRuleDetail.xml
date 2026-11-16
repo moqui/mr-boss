@@ -166,88 +166,92 @@ along with this software (see the LICENSE.md file). If not, see
                                         condition="!rule &amp;&amp; !offer"/>
                                 <label text="This event hands no attendee to Sales yet: choose the sales team. Each lead takes the attendee's own name and address and the event in its notes."
                                         type="p" style="m-muted" condition="!rule &amp;&amp; offer"/>
-                                <form-single name="LeadRule" transition="storeLeadRule" map="ruleValues" condition="canEdit">
-                                    <field name="leadRuleId"><default-field><hidden/></default-field></field>
-                                    <field name="publicationId"><default-field><hidden/></default-field></field>
-                                    <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
-                                    <field name="triggerEnumId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <!-- the team is a sales manager's choice (SALES_TEAM_MANAGE; the user's call of Nov 14, 2026): shown, not chosen,
-                                        for anyone else, whose rule keeps its team or takes Sales' default -->
-                                    <field name="teamPartyId">
-                                        <conditional-field title="Sales team" condition="!choices.canChooseTeam"
-                                                tooltip="A sales manager chooses the team; otherwise the rule keeps its team or takes Sales' default team">
-                                            <display text="${choices.teamText || ''}"/>
-                                        </conditional-field>
-                                        <default-field title="Sales team" tooltip="Each lead goes to this team's queue">
-                                            <drop-down allow-empty="false"><list-options list="choices.teamOptions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="dataSourceId">
-                                        <default-field title="Source" tooltip="The lead's source unless the organization's UTM map names another">
-                                            <drop-down allow-empty="true"><list-options list="choices.sourceOptions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="nameFieldName">
-                                        <conditional-field condition="offer"><ignored/></conditional-field>
-                                        <default-field title="Name from">
-                                            <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="organizationFieldName">
-                                        <conditional-field condition="offer"><ignored/></conditional-field>
-                                        <default-field title="Organization from">
-                                            <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="emailFieldName">
-                                        <conditional-field condition="offer"><ignored/></conditional-field>
-                                        <default-field title="Email from">
-                                            <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="phoneFieldName">
-                                        <conditional-field condition="offer"><ignored/></conditional-field>
-                                        <default-field title="Phone from">
-                                            <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="noteFieldNames">
-                                        <conditional-field condition="offer"><ignored/></conditional-field>
-                                        <default-field title="Notes from" tooltip="Only these answers go in the lead's notes; no other answer reaches Sales">
-                                            <drop-down allow-empty="true" allow-multiple="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="conditionFieldName">
-                                        <conditional-field condition="offer"><ignored/></conditional-field>
-                                        <default-field title="Only when" tooltip="Hand an answer off only when this question has the answer below">
-                                            <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="conditionValue">
-                                        <conditional-field condition="offer"><ignored/></conditional-field>
-                                        <default-field title="Is" tooltip="The answer, as its option's value"><text-line size="20"/></default-field>
-                                    </field>
-                                    <field name="noticeText">
-                                        <conditional-field condition="offer"><ignored/></conditional-field>
-                                        <default-field title="Notice on the page" tooltip="What the visitor reads about the follow-up"><text-area rows="2" cols="50"/></default-field>
-                                    </field>
-                                    <field name="ruleName"><default-field title="Name"><text-line size="40"/></default-field></field>
-                                    <field name="submitButton">
-                                        <conditional-field title="" condition="rule"><submit text="Save" confirmation="Save the changed rule? It applies to answers from now on."/></conditional-field>
-                                        <default-field title=""><submit text="Create lead rule"/></default-field>
-                                    </field>
-                                    <field-layout>
-                                        <field-row><field-ref name="teamPartyId"/><field-ref name="dataSourceId"/></field-row>
-                                        <field-row><field-ref name="nameFieldName"/><field-ref name="organizationFieldName"/></field-row>
-                                        <field-row><field-ref name="emailFieldName"/><field-ref name="phoneFieldName"/></field-row>
-                                        <field-ref name="noteFieldNames"/>
-                                        <field-row><field-ref name="conditionFieldName"/><field-ref name="conditionValue"/></field-row>
-                                        <field-ref name="noticeText"/>
-                                        <field-ref name="ruleName"/>
-                                        <field-ref name="submitButton"/>
-                                    </field-layout>
-                                </form-single>
+                                <section name="LeadRuleSection" condition="canEdit">
+                                    <widgets>
+                                        <form-single name="LeadRule" transition="storeLeadRule" map="ruleValues">
+                                            <field name="leadRuleId"><default-field><hidden/></default-field></field>
+                                            <field name="publicationId"><default-field><hidden/></default-field></field>
+                                            <field name="registrationPolicyId"><default-field><hidden/></default-field></field>
+                                            <field name="triggerEnumId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <!-- the team is a sales manager's choice (SALES_TEAM_MANAGE; the user's call of Nov 14, 2026): shown, not chosen,
+                                                for anyone else, whose rule keeps its team or takes Sales' default -->
+                                            <field name="teamPartyId">
+                                                <conditional-field title="Sales team" condition="!choices.canChooseTeam"
+                                                        tooltip="A sales manager chooses the team; otherwise the rule keeps its team or takes Sales' default team">
+                                                    <display text="${choices.teamText || ''}"/>
+                                                </conditional-field>
+                                                <default-field title="Sales team" tooltip="Each lead goes to this team's queue">
+                                                    <drop-down allow-empty="false"><list-options list="choices.teamOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="dataSourceId">
+                                                <default-field title="Source" tooltip="The lead's source unless the organization's UTM map names another">
+                                                    <drop-down allow-empty="true"><list-options list="choices.sourceOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="nameFieldName">
+                                                <conditional-field condition="offer"><ignored/></conditional-field>
+                                                <default-field title="Name from">
+                                                    <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="organizationFieldName">
+                                                <conditional-field condition="offer"><ignored/></conditional-field>
+                                                <default-field title="Organization from">
+                                                    <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="emailFieldName">
+                                                <conditional-field condition="offer"><ignored/></conditional-field>
+                                                <default-field title="Email from">
+                                                    <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="phoneFieldName">
+                                                <conditional-field condition="offer"><ignored/></conditional-field>
+                                                <default-field title="Phone from">
+                                                    <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="noteFieldNames">
+                                                <conditional-field condition="offer"><ignored/></conditional-field>
+                                                <default-field title="Notes from" tooltip="Only these answers go in the lead's notes; no other answer reaches Sales">
+                                                    <drop-down allow-empty="true" allow-multiple="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="conditionFieldName">
+                                                <conditional-field condition="offer"><ignored/></conditional-field>
+                                                <default-field title="Only when" tooltip="Hand an answer off only when this question has the answer below">
+                                                    <drop-down allow-empty="true"><list-options list="choices.fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="conditionValue">
+                                                <conditional-field condition="offer"><ignored/></conditional-field>
+                                                <default-field title="Is" tooltip="The answer, as its option's value"><text-line size="20"/></default-field>
+                                            </field>
+                                            <field name="noticeText">
+                                                <conditional-field condition="offer"><ignored/></conditional-field>
+                                                <default-field title="Notice on the page" tooltip="What the visitor reads about the follow-up"><text-area rows="2" cols="50"/></default-field>
+                                            </field>
+                                            <field name="ruleName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="submitButton">
+                                                <conditional-field title="" condition="rule"><submit text="Save" confirmation="Save the changed rule? It applies to answers from now on."/></conditional-field>
+                                                <default-field title=""><submit text="Create lead rule"/></default-field>
+                                            </field>
+                                            <field-layout>
+                                                <field-row><field-ref name="teamPartyId"/><field-ref name="dataSourceId"/></field-row>
+                                                <field-row><field-ref name="nameFieldName"/><field-ref name="organizationFieldName"/></field-row>
+                                                <field-row><field-ref name="emailFieldName"/><field-ref name="phoneFieldName"/></field-row>
+                                                <field-ref name="noteFieldNames"/>
+                                                <field-row><field-ref name="conditionFieldName"/><field-ref name="conditionValue"/></field-row>
+                                                <field-ref name="noticeText"/>
+                                                <field-ref name="ruleName"/>
+                                                <field-ref name="submitButton"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </widgets>
+                                </section>
                                 <section name="RuleRead" condition="!canEdit &amp;&amp; rule">
                                     <widgets>
                                         <label text="Team: ${rule?.teamName} · source: ${rule?.sourceText || 'the UTM map, else none'}" type="p"/>
@@ -289,41 +293,45 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="${handoffs.handedOff || 0} handed to Sales (${handoffs.newLeads || 0} new leads, ${handoffs.joined || 0} joined open leads) · ${handoffs.failed || 0} failed · ${handoffs.pending || 0} waiting · ${handoffs.skipped || 0} not handed off"
                                 type="p" condition="rule"/>
                         <label text="No answer has been handed off yet." type="p" style="m-muted" condition="!captureList.length"/>
-                        <form-list name="CaptureList" list="captureList" skip-form="true" paginate="false" condition="captureList.length">
-                            <row-selection id-field="leadCaptureId" parameter="selectedKeys" list-mode="true" condition="canEdit &amp;&amp; retryCount">
-                                <action>
-                                    <dialog button-text="Try again" button-icon="sym_o_replay" title="Try the chosen handoffs again"/>
-                                    <form-single name="ReprocessCapture" transition="processLeadCaptures">
-                                        <field name="reason"><default-field title="Why now"><text-line size="50" required="true"/></default-field></field>
-                                        <field name="submitButton">
-                                            <default-field title="Try again">
-                                                <submit icon="sym_o_replay" confirmation="Hand the chosen answers to Sales again? Each keeps its own key, so an answer Sales already took makes no second lead."/>
-                                            </default-field>
-                                        </field>
-                                    </form-single>
-                                </action>
-                            </row-selection>
-                            <field name="leadCaptureId"><default-field title="Handoff"><display/></default-field></field>
-                            <field name="capturedText"><default-field title="Answered"><display/></default-field></field>
-                            <field name="status">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
-                                        <text type="html">${statusText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
-                            <field name="salesOpportunityId"><default-field title="Lead"><display/></default-field></field>
-                            <field name="attemptCount" align="right"><default-field title="Attempts"><display format="#,##0"/></default-field></field>
-                            <field name="errorText"><default-field title="Why"><display/></default-field></field>
-                            <field name="nextAttemptText"><default-field title="Next try"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="capturedText"/><field-ref name="outcomeText"/></column>
-                                <column><field-ref name="status"/><field-ref name="errorText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="CaptureListSection" condition="captureList.length">
+                            <widgets>
+                                <form-list name="CaptureList" list="captureList" skip-form="true" paginate="false">
+                                    <row-selection id-field="leadCaptureId" parameter="selectedKeys" list-mode="true" condition="canEdit &amp;&amp; retryCount">
+                                        <action>
+                                            <dialog button-text="Try again" button-icon="sym_o_replay" title="Try the chosen handoffs again"/>
+                                            <form-single name="ReprocessCapture" transition="processLeadCaptures">
+                                                <field name="reason"><default-field title="Why now"><text-line size="50" required="true"/></default-field></field>
+                                                <field name="submitButton">
+                                                    <default-field title="Try again">
+                                                        <submit icon="sym_o_replay" confirmation="Hand the chosen answers to Sales again? Each keeps its own key, so an answer Sales already took makes no second lead."/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </action>
+                                    </row-selection>
+                                    <field name="leadCaptureId"><default-field title="Handoff"><display/></default-field></field>
+                                    <field name="capturedText"><default-field title="Answered"><display/></default-field></field>
+                                    <field name="status">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: String(statusText ?? "")})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
+                                    <field name="salesOpportunityId"><default-field title="Lead"><display/></default-field></field>
+                                    <field name="attemptCount" align="right"><default-field title="Attempts"><display format="#,##0"/></default-field></field>
+                                    <field name="errorText"><default-field title="Why"><display/></default-field></field>
+                                    <field name="nextAttemptText"><default-field title="Next try"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="capturedText"/><field-ref name="outcomeText"/></column>
+                                        <column><field-ref name="status"/><field-ref name="errorText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
             </widgets>

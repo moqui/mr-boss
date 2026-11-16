@@ -169,32 +169,36 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body>
                                 <label text="Nothing is due." type="p" condition="!dueRows.length"/>
                                 <!-- P8: find#DueWork, paged: the employees with no manager and the open lifecycle tasks -->
-                                <form-list name="DueWorkRows" list="dueRows" skip-form="true" condition="dueRows.length">
-                                    <field name="personName">
-                                        <default-field title="Employee">
-                                            <link url="${sharedLinks['Employees/Employee360']}" text="${personName}" link-type="anchor"
-                                                    parameter-map="{partyId:partyId}"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="title">
-                                        <conditional-field condition="workEffortId" title="Work">
-                                            <link url="${sharedLinks['Tasks/WorkItemDetail']}" text="${title}" link-type="anchor"
-                                                    parameter-map="{workEffortId:workEffortId}"/>
-                                        </conditional-field>
-                                        <default-field title="Work"><display/></default-field>
-                                    </field>
-                                    <field name="dueText"><default-field title="Kind"><display/></default-field></field>
-                                    <field name="whenText">
-                                        <conditional-field condition="overdue" title="Due"><label text="${whenText}" style="text-warning text-no-wrap"/></conditional-field>
-                                        <default-field title="Due"><label text="${whenText}" style="text-no-wrap"/></default-field>
-                                    </field>
-                                    <field name="assigneeText"><default-field title="Assigned to"><display/></default-field></field>
-                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="personName"/><field-ref name="title"/></column>
-                                        <column><field-ref name="whenText"/><field-ref name="dueText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="DueWorkRowsSection" condition="dueRows.length">
+                                    <widgets>
+                                        <form-list name="DueWorkRows" list="dueRows" skip-form="true">
+                                            <field name="personName">
+                                                <default-field title="Employee">
+                                                    <link url="${sharedLinks['Employees/Employee360']}" text="${personName}" link-type="anchor"
+                                                            parameter-map="{partyId:partyId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="title">
+                                                <conditional-field condition="workEffortId" title="Work">
+                                                    <link url="${sharedLinks['Tasks/WorkItemDetail']}" text="${title}" link-type="anchor"
+                                                            parameter-map="{workEffortId:workEffortId}"/>
+                                                </conditional-field>
+                                                <default-field title="Work"><display/></default-field>
+                                            </field>
+                                            <field name="dueText"><default-field title="Kind"><display/></default-field></field>
+                                            <field name="whenText">
+                                                <conditional-field condition="overdue" title="Due"><label text="${whenText}" style="text-warning text-no-wrap"/></conditional-field>
+                                                <default-field title="Due"><label text="${whenText}" style="text-no-wrap"/></default-field>
+                                            </field>
+                                            <field name="assigneeText"><default-field title="Assigned to"><display/></default-field></field>
+                                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="personName"/><field-ref name="title"/></column>
+                                                <column><field-ref name="whenText"/><field-ref name="dueText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                     </widgets>

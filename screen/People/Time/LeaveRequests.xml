@@ -219,36 +219,52 @@ along with this software (see the LICENSE.md file). If not, see
                                         <column><field-ref name="charged"/><field-ref name="partText"/></column>
                                     </columns>
                                 </form-list>
-                                <form-list name="PreviewApprovers" list="previewSteps" skip-form="true" paginate="false" condition="previewSteps.length">
-                                    <field name="stepText"><default-field title="Approval"><display/></default-field></field>
-                                    <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
-                                </form-list>
-                                <form-list name="PreviewProblems" list="previewProblems" skip-form="true" paginate="false" condition="previewProblems.length">
-                                    <field name="message"><default-field title="Not possible"><label text="${message}" style="text-negative"/></default-field></field>
-                                </form-list>
-                                <form-list name="PreviewWarnings" list="previewWarnings" skip-form="true" paginate="false" condition="previewWarnings.length">
-                                    <field name="message"><default-field title="Note"><label text="${message}" style="text-warning"/></default-field></field>
-                                </form-list>
+                                <section name="PreviewApproversSection" condition="previewSteps.length">
+                                    <widgets>
+                                        <form-list name="PreviewApprovers" list="previewSteps" skip-form="true" paginate="false">
+                                            <field name="stepText"><default-field title="Approval"><display/></default-field></field>
+                                            <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="PreviewProblemsSection" condition="previewProblems.length">
+                                    <widgets>
+                                        <form-list name="PreviewProblems" list="previewProblems" skip-form="true" paginate="false">
+                                            <field name="message"><default-field title="Not possible"><label text="${message}" style="text-negative"/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="PreviewWarningsSection" condition="previewWarnings.length">
+                                    <widgets>
+                                        <form-list name="PreviewWarnings" list="previewWarnings" skip-form="true" paginate="false">
+                                            <field name="message"><default-field title="Note"><label text="${message}" style="text-warning"/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
-                        <form-single name="RequestLeave" transition="requestLeave" map="confirmValues" condition="preview.canSubmit">
-                            <field name="rqOrganizationPartyId"><default-field><hidden/></default-field></field>
-                            <field name="rqEmploymentId"><default-field><hidden/></default-field></field>
-                            <field name="rqTypeEnumId"><default-field><hidden/></default-field></field>
-                            <field name="rqFromDate"><default-field><hidden/></default-field></field>
-                            <field name="rqThruDate"><default-field><hidden/></default-field></field>
-                            <field name="rqPartEnumId"><default-field><hidden/></default-field></field>
-                            <field name="operationKey"><default-field><hidden/></default-field></field>
-                            <!-- the person's reason: read on the request by them, their approvers and HR alone, and opted out of AI -->
-                            <field name="reason" ai-opt-out="true">
-                                <default-field title="Reason" tooltip="Optional: read by your approvers and HR only">
-                                    <text-area rows="2"/></default-field>
-                            </field>
-                            <field name="submitButton">
-                                <default-field title="Request leave">
-                                    <submit confirmation="Request ${preview.chargedAmount} ${unitWord} of ${preview.leaveTypeText}?"/></default-field>
-                            </field>
-                        </form-single>
+                        <section name="RequestLeaveSection" condition="preview.canSubmit">
+                            <widgets>
+                                <form-single name="RequestLeave" transition="requestLeave" map="confirmValues">
+                                    <field name="rqOrganizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="rqEmploymentId"><default-field><hidden/></default-field></field>
+                                    <field name="rqTypeEnumId"><default-field><hidden/></default-field></field>
+                                    <field name="rqFromDate"><default-field><hidden/></default-field></field>
+                                    <field name="rqThruDate"><default-field><hidden/></default-field></field>
+                                    <field name="rqPartEnumId"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <!-- the person's reason: read on the request by them, their approvers and HR alone, and opted out of AI -->
+                                    <field name="reason" ai-opt-out="true">
+                                        <default-field title="Reason" tooltip="Optional: read by your approvers and HR only">
+                                            <text-area rows="2"/></default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="Request leave">
+                                            <submit confirmation="Request ${preview.chargedAmount} ${unitWord} of ${preview.leaveTypeText}?"/></default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
                     </widgets>
                 </section>
             </widgets>
@@ -297,35 +313,39 @@ along with this software (see the LICENSE.md file). If not, see
         </form-single>
         <container-box>
             <box-body-nopad>
-                <form-list name="RequestList" list="requests" skip-form="true" paginate="true" condition="requests.length">
-                    <field name="personName">
-                        <default-field title="Person">
-                            <link url="../LeaveRequestDetail" text="${personName}" link-type="anchor" parameter-map="{leaveRequestId:leaveRequestId}"/>
-                        </default-field>
-                    </field>
-                    <field name="datesText">
-                        <default-field title="Days"><display text="${datesText}${partText ? ' (' + partText.toLowerCase() + ')' : ''}"/></default-field>
-                    </field>
-                    <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
-                    <field name="chargedText" align="right"><default-field title="Charged"><display/></default-field></field>
-                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                    <field name="statusText">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColors[statusEnumId] || 'grey-8'}">${
+                <section name="RequestListSection" condition="requests.length">
+                    <widgets>
+                        <form-list name="RequestList" list="requests" skip-form="true" paginate="true">
+                            <field name="personName">
+                                <default-field title="Person">
+                                    <link url="../LeaveRequestDetail" text="${personName}" link-type="anchor" parameter-map="{leaveRequestId:leaveRequestId}"/>
+                                </default-field>
+                            </field>
+                            <field name="datesText">
+                                <default-field title="Days"><display text="${datesText}${partText ? ' (' + partText.toLowerCase() + ')' : ''}"/></default-field>
+                            </field>
+                            <field name="leaveTypeText"><default-field title="Leave type"><display/></default-field></field>
+                            <field name="chargedText" align="right"><default-field title="Charged"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColors[statusEnumId] || 'grey-8'}">${
                                     WebUtilities.encodeHtml(statusText)}</q-chip>${toDecide ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-primary">' +
                                     WebUtilities.encodeHtml(ec.l10n.localize('To decide')) + '</q-chip>' : ''}]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText + (toDecide ? " · to decide" : "")})}]]></text>
-                                <text type="html">${statusText}${toDecide ? ' · to decide' : ''}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <field name="requestedDateText"><default-field title="Asked"><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="personName"/><field-ref name="datesText"/></column>
-                        <column><field-ref name="statusText"/><field-ref name="chargedText"/></column>
-                    </columns>
-                </form-list>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText + (toDecide ? " · to decide" : "")})}]]></text>
+                                        <text type="html">${statusText}${toDecide ? ' · to decide' : ''}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="requestedDateText"><default-field title="Asked"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="personName"/><field-ref name="datesText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="chargedText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label type="p" style="q-pa-md m-muted" condition="!requests.length &amp;&amp; showing == 'decide'" text="No leave waits for your decision."/>
                 <label type="p" style="q-pa-md m-muted" condition="!requests.length &amp;&amp; showing != 'decide'"
                         text="No leave request yet: Request leave asks for time off."/>

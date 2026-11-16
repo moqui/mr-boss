@@ -145,61 +145,65 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Templates"/>
                     <box-body-nopad>
-                        <form-list name="Templates" list="checklistRows" skip-form="true" paginate="false" condition="checklistRows.length">
-                            <field name="workEffortName">
-                                <default-field title="Checklist">
-                                    <link url="." text="${workEffortName}" link-type="anchor"
-                                            parameter-map="{workEffortId:workEffortId, organizationPartyId:organizationPartyId, includeEnded:includeEnded}"/>
-                                </default-field>
-                            </field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="kindText"><default-field title="Starts with"><display/></default-field></field>
-                            <field name="stepCount"><default-field title="Steps"><display format="#,##0"/></default-field></field>
-                            <field name="stateText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[active]}">${
+                        <section name="TemplatesSection" condition="checklistRows.length">
+                            <widgets>
+                                <form-list name="Templates" list="checklistRows" skip-form="true" paginate="false">
+                                    <field name="workEffortName">
+                                        <default-field title="Checklist">
+                                            <link url="." text="${workEffortName}" link-type="anchor"
+                                                    parameter-map="{workEffortId:workEffortId, organizationPartyId:organizationPartyId, includeEnded:includeEnded}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="kindText"><default-field title="Starts with"><display/></default-field></field>
+                                    <field name="stepCount"><default-field title="Steps"><display format="#,##0"/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[active]}">${
                                             WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                        <text type="html">${stateText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="actions">
-                                <default-field title="">
-                                    <container-dialog id="RenameChecklist_${workEffortId}" button-text="Rename" icon="sym_o_edit" width="560"
-                                            title="Rename ${workEffortName}" condition="canEditChecklists &amp;&amp; active">
-                                        <form-single name="RenameChecklist" transition="storeChecklist"
-                                                map="{workEffortId:workEffortId, expectedRevision:revision, workEffortName:workEffortName,
-                                                    description:description}">
-                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
-                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                            <field name="workEffortName"><default-field title="Name"><text-line size="40"/></default-field></field>
-                                            <field name="description"><default-field title="Description"><text-area rows="3" cols="50"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <container-dialog id="EndChecklist_${workEffortId}" button-text="End" icon="sym_o_event_busy" width="520"
-                                            title="End ${workEffortName}" condition="canEditChecklists &amp;&amp; active">
-                                        <label type="p" text="${workEffortName} starts in no new ${kindText.toLowerCase()} from now; the checklists it started stay."/>
-                                        <form-single name="EndChecklist" transition="storeChecklist"
-                                                map="{workEffortId:workEffortId, expectedRevision:revision, endTemplate:'Y'}">
-                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
-                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                            <field name="endTemplate"><default-field><hidden/></default-field></field>
-                                            <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
-                                            <field name="submitButton">
-                                                <default-field title="End checklist"><submit type="danger" confirmation="End the checklist ${workEffortName}?"/></default-field>
-                                            </field>
-                                        </form-single>
-                                    </container-dialog>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="workEffortName"/><field-ref name="kindText"/></column>
-                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="RenameChecklist_${workEffortId}" button-text="Rename" icon="sym_o_edit" width="560"
+                                                    title="Rename ${workEffortName}" condition="canEditChecklists &amp;&amp; active">
+                                                <form-single name="RenameChecklist" transition="storeChecklist"
+                                                        map="{workEffortId:workEffortId, expectedRevision:revision, workEffortName:workEffortName,
+                                                            description:description}">
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="workEffortName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                                    <field name="description"><default-field title="Description"><text-area rows="3" cols="50"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="EndChecklist_${workEffortId}" button-text="End" icon="sym_o_event_busy" width="520"
+                                                    title="End ${workEffortName}" condition="canEditChecklists &amp;&amp; active">
+                                                <label type="p" text="${workEffortName} starts in no new ${kindText.toLowerCase()} from now; the checklists it started stay."/>
+                                                <form-single name="EndChecklist" transition="storeChecklist"
+                                                        map="{workEffortId:workEffortId, expectedRevision:revision, endTemplate:'Y'}">
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="endTemplate"><default-field><hidden/></default-field></field>
+                                                    <field name="reason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                                    <field name="submitButton">
+                                                        <default-field title="End checklist"><submit type="danger" confirmation="End the checklist ${workEffortName}?"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="workEffortName"/><field-ref name="kindText"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="checklistsFound &amp;&amp; !checklistRows.length"
                                 text="No checklist yet. Start one with New checklist: the tasks of a hire, a transfer or a separation."/>
                         <label type="p" style="q-pa-md text-negative" condition="!checklistsFound"
@@ -274,98 +278,102 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-dialog>
                             </box-toolbar>
                             <box-body-nopad>
-                                <form-list name="ChecklistTasks" list="stepRows" skip-form="true" paginate="false" condition="stepRows.length">
-                                    <field name="workEffortName"><default-field title="Task"><display/></default-field></field>
-                                    <field name="whoText"><default-field title="Who does it"><display/></default-field></field>
-                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
-                                    <field name="factsText"><default-field title="Details"><display/></default-field></field>
-                                    <field name="actions">
-                                        <default-field title="">
-                                            <container-dialog id="EditStep_${workEffortId}" button-text="Edit" icon="sym_o_edit" width="720"
-                                                    title="Edit ${workEffortName}" condition="canEditChecklists &amp;&amp; !ended">
-                                                <form-single name="EditStep" transition="storeChecklistStep"
-                                                        map="{templateWorkEffortId:templateWorkEffortId, stepWorkEffortId:workEffortId, workEffortName:workEffortName,
-                                                            description:description, roleTypeId:roleTypeId, assigneePartyId:assigneePartyId,
-                                                            dueOffsetDays:dueOffsetDays, isRequired:isRequired, sourceLinkEnumId:sourceLinkEnumId,
-                                                            visibilityEnumId:visibilityEnumId, isProtected:isProtected, sequenceNum:sequenceNum}">
-                                                    <field name="templateWorkEffortId"><default-field><hidden/></default-field></field>
-                                                    <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
-                                                    <field name="workEffortName"><default-field title="Task"><text-line size="40"/></default-field></field>
-                                                    <field name="description"><default-field title="What to do"><text-area rows="3" cols="50"/></default-field></field>
-                                                    <field name="roleTypeId">
-                                                        <default-field title="Who does it">
-                                                            <drop-down>
-                                                                <option key="Employee" text="The employee"/>
-                                                                <option key="Manager" text="Their manager"/>
-                                                                <option key="HumanResourcesManager" text="The HR officer"/>
-                                                                <option key="SysAdmin" text="IT (a named person)"/>
-                                                                <option key="Assignee" text="A named person"/>
-                                                            </drop-down>
-                                                        </default-field>
-                                                    </field>
-                                                    <field name="assigneePartyId">
-                                                        <default-field title="Named person">
-                                                            <drop-down allow-empty="true">
-                                                                <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                                        parameter-map="{choice:'employees', choiceOrganizationPartyId:organizationPartyId, selected:assigneePartyId}"/>
-                                                            </drop-down>
-                                                        </default-field>
-                                                    </field>
-                                                    <field name="dueOffsetDays"><default-field title="Due (days after)"><text-line size="5" input-type="number"/></default-field></field>
-                                                    <field name="isRequired">
-                                                        <default-field title="Required"><drop-down><option key="Y" text="Required"/><option key="N" text="Optional"/></drop-down></default-field>
-                                                    </field>
-                                                    <field name="sourceLinkEnumId">
-                                                        <default-field title="Links to">
-                                                            <drop-down allow-empty="true">
-                                                                <option key="ClsItAccess" text="IT access (the account request)"/>
-                                                                <option key="ClsEquipmentReturn" text="Equipment return"/>
-                                                                <option key="ClsExitInterview" text="Exit interview"/>
-                                                            </drop-down>
-                                                        </default-field>
-                                                    </field>
-                                                    <field name="visibilityEnumId">
-                                                        <default-field title="Who sees it">
-                                                            <drop-down><option key="ChvStaff" text="Staff only"/><option key="ChvEmployee" text="The employee too"/></drop-down>
-                                                        </default-field>
-                                                    </field>
-                                                    <field name="isProtected">
-                                                        <default-field title=" "><check><option key="Y" text="Protected: kept off phones"/></check></default-field>
-                                                    </field>
-                                                    <field name="sequenceNum"><default-field title="Order"><text-line size="5" input-type="number"/></default-field></field>
-                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                                    <field-layout>
-                                                        <field-ref name="workEffortName"/>
-                                                        <field-ref name="description"/>
-                                                        <field-row><field-ref name="roleTypeId"/><field-ref name="assigneePartyId"/></field-row>
-                                                        <field-row><field-ref name="dueOffsetDays"/><field-ref name="isRequired"/></field-row>
-                                                        <field-row><field-ref name="sourceLinkEnumId"/><field-ref name="visibilityEnumId"/></field-row>
-                                                        <field-row><field-ref name="isProtected"/><field-ref name="sequenceNum"/></field-row>
-                                                        <field-ref name="submitButton"/>
-                                                    </field-layout>
-                                                </form-single>
-                                            </container-dialog>
-                                            <container-dialog id="EndStep_${workEffortId}" button-text="End" icon="sym_o_event_busy" width="520"
-                                                    title="End ${workEffortName}" condition="canEditChecklists &amp;&amp; !ended">
-                                                <label type="p" text="${workEffortName} is left out of new checklists from now; the tasks already made stay."/>
-                                                <form-single name="EndStep" transition="storeChecklistStep"
-                                                        map="{templateWorkEffortId:templateWorkEffortId, stepWorkEffortId:workEffortId, endStep:'Y'}">
-                                                    <field name="templateWorkEffortId"><default-field><hidden/></default-field></field>
-                                                    <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
-                                                    <field name="endStep"><default-field><hidden/></default-field></field>
-                                                    <field name="submitButton">
-                                                        <default-field title="End step"><submit type="danger" confirmation="End the step ${workEffortName}?"/></default-field>
-                                                    </field>
-                                                </form-single>
-                                            </container-dialog>
-                                            <label text="Ended" type="span" style="m-muted" condition="ended"/>
-                                        </default-field>
-                                    </field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="workEffortName"/><field-ref name="whoText"/></column>
-                                        <column><field-ref name="dueText"/><field-ref name="actions"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="ChecklistTasksSection" condition="stepRows.length">
+                                    <widgets>
+                                        <form-list name="ChecklistTasks" list="stepRows" skip-form="true" paginate="false">
+                                            <field name="workEffortName"><default-field title="Task"><display/></default-field></field>
+                                            <field name="whoText"><default-field title="Who does it"><display/></default-field></field>
+                                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                            <field name="factsText"><default-field title="Details"><display/></default-field></field>
+                                            <field name="actions">
+                                                <default-field title="">
+                                                    <container-dialog id="EditStep_${workEffortId}" button-text="Edit" icon="sym_o_edit" width="720"
+                                                            title="Edit ${workEffortName}" condition="canEditChecklists &amp;&amp; !ended">
+                                                        <form-single name="EditStep" transition="storeChecklistStep"
+                                                                map="{templateWorkEffortId:templateWorkEffortId, stepWorkEffortId:workEffortId, workEffortName:workEffortName,
+                                                                    description:description, roleTypeId:roleTypeId, assigneePartyId:assigneePartyId,
+                                                                    dueOffsetDays:dueOffsetDays, isRequired:isRequired, sourceLinkEnumId:sourceLinkEnumId,
+                                                                    visibilityEnumId:visibilityEnumId, isProtected:isProtected, sequenceNum:sequenceNum}">
+                                                            <field name="templateWorkEffortId"><default-field><hidden/></default-field></field>
+                                                            <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                                            <field name="workEffortName"><default-field title="Task"><text-line size="40"/></default-field></field>
+                                                            <field name="description"><default-field title="What to do"><text-area rows="3" cols="50"/></default-field></field>
+                                                            <field name="roleTypeId">
+                                                                <default-field title="Who does it">
+                                                                    <drop-down>
+                                                                        <option key="Employee" text="The employee"/>
+                                                                        <option key="Manager" text="Their manager"/>
+                                                                        <option key="HumanResourcesManager" text="The HR officer"/>
+                                                                        <option key="SysAdmin" text="IT (a named person)"/>
+                                                                        <option key="Assignee" text="A named person"/>
+                                                                    </drop-down>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="assigneePartyId">
+                                                                <default-field title="Named person">
+                                                                    <drop-down allow-empty="true">
+                                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                                parameter-map="{choice:'employees', choiceOrganizationPartyId:organizationPartyId, selected:assigneePartyId}"/>
+                                                                    </drop-down>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="dueOffsetDays"><default-field title="Due (days after)"><text-line size="5" input-type="number"/></default-field></field>
+                                                            <field name="isRequired">
+                                                                <default-field title="Required"><drop-down><option key="Y" text="Required"/><option key="N" text="Optional"/></drop-down></default-field>
+                                                            </field>
+                                                            <field name="sourceLinkEnumId">
+                                                                <default-field title="Links to">
+                                                                    <drop-down allow-empty="true">
+                                                                        <option key="ClsItAccess" text="IT access (the account request)"/>
+                                                                        <option key="ClsEquipmentReturn" text="Equipment return"/>
+                                                                        <option key="ClsExitInterview" text="Exit interview"/>
+                                                                    </drop-down>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="visibilityEnumId">
+                                                                <default-field title="Who sees it">
+                                                                    <drop-down><option key="ChvStaff" text="Staff only"/><option key="ChvEmployee" text="The employee too"/></drop-down>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="isProtected">
+                                                                <default-field title=" "><check><option key="Y" text="Protected: kept off phones"/></check></default-field>
+                                                            </field>
+                                                            <field name="sequenceNum"><default-field title="Order"><text-line size="5" input-type="number"/></default-field></field>
+                                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                            <field-layout>
+                                                                <field-ref name="workEffortName"/>
+                                                                <field-ref name="description"/>
+                                                                <field-row><field-ref name="roleTypeId"/><field-ref name="assigneePartyId"/></field-row>
+                                                                <field-row><field-ref name="dueOffsetDays"/><field-ref name="isRequired"/></field-row>
+                                                                <field-row><field-ref name="sourceLinkEnumId"/><field-ref name="visibilityEnumId"/></field-row>
+                                                                <field-row><field-ref name="isProtected"/><field-ref name="sequenceNum"/></field-row>
+                                                                <field-ref name="submitButton"/>
+                                                            </field-layout>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                    <container-dialog id="EndStep_${workEffortId}" button-text="End" icon="sym_o_event_busy" width="520"
+                                                            title="End ${workEffortName}" condition="canEditChecklists &amp;&amp; !ended">
+                                                        <label type="p" text="${workEffortName} is left out of new checklists from now; the tasks already made stay."/>
+                                                        <form-single name="EndStep" transition="storeChecklistStep"
+                                                                map="{templateWorkEffortId:templateWorkEffortId, stepWorkEffortId:workEffortId, endStep:'Y'}">
+                                                            <field name="templateWorkEffortId"><default-field><hidden/></default-field></field>
+                                                            <field name="stepWorkEffortId"><default-field><hidden/></default-field></field>
+                                                            <field name="endStep"><default-field><hidden/></default-field></field>
+                                                            <field name="submitButton">
+                                                                <default-field title="End step"><submit type="danger" confirmation="End the step ${workEffortName}?"/></default-field>
+                                                            </field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                    <label text="Ended" type="span" style="m-muted" condition="ended"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="workEffortName"/><field-ref name="whoText"/></column>
+                                                <column><field-ref name="dueText"/><field-ref name="actions"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="q-pa-md m-muted" condition="!stepRows.length"
                                         text="No step yet. Add the first with Add step."/>
                             </box-body-nopad>

@@ -204,52 +204,56 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="Requirements" list="skills" skip-form="true" paginate="false" condition="skills.length">
-                            <field name="skillName"><default-field title="Skill"><display/></default-field></field>
-                            <field name="minimumLevelText"><default-field title="At least"><display/></default-field></field>
-                            <field name="qualificationTypeName"><default-field title="Proved by"><display/></default-field></field>
-                            <field name="requiredText"><default-field title=""><display/></default-field></field>
-                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-                            <field name="actions">
-                                <default-field title="">
-                                    <container-dialog id="ChangeRequirement_${skillTypeEnumId}" button-text="Change" icon="sym_o_edit" type="default"
-                                            width="520" title="Change ${skillName} for ${jobClass.title}" condition="canEdit">
-                                        <form-single name="ChangeRequirement" transition="storeRequirement"
-                                                map="{emplPositionClassId:jobClass.emplPositionClassId, skillTypeEnumId:skillTypeEnumId, change:'true',
-                                                    expectedRevision:revision, minimumLevel:(minimumLevel == null ? '' : String(minimumLevel)),
-                                                    qualificationTypeEnumId:(qualificationTypeEnumId || ''), requiredFlag:requiredFlag}">
-                                            <field name="emplPositionClassId"><default-field><hidden/></default-field></field>
-                                            <field name="skillTypeEnumId"><default-field><hidden/></default-field></field>
-                                            <field name="change"><default-field><hidden/></default-field></field>
-                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                            <field name="minimumLevel">
-                                                <default-field title="At least" tooltip="Empty: any level">
-                                                    <drop-down allow-empty="true"><list-options list="levelOptions" key="${key}" text="${text}"/></drop-down>
-                                                </default-field>
-                                            </field>
-                                            <field name="qualificationTypeEnumId">
-                                                <default-field title="Proved by">
-                                                    <drop-down allow-empty="true"><list-options list="qualificationTypeOptions" key="${key}" text="${text}"/></drop-down>
-                                                </default-field>
-                                            </field>
-                                            <field name="requiredFlag">
-                                                <default-field title="">
-                                                    <radio><option key="Y" text="Required"/><option key="N" text="Desired"/></radio>
-                                                </default-field>
-                                            </field>
-                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <link url="storeRequirement" link-type="hidden-form-link" text="Remove" icon="sym_o_remove" btn-type="danger"
-                                            condition="canEdit" confirmation="Remove ${skillName} from ${jobClass.title}? The requirement is ended and kept."
-                                            parameter-map="{emplPositionClassId:jobClass.emplPositionClassId, skillTypeEnumId:skillTypeEnumId, remove:'true'}"/>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="skillName"/><field-ref name="minimumLevelText"/></column>
-                                <column><field-ref name="requiredText"/><field-ref name="actions"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="RequirementsSection" condition="skills.length">
+                            <widgets>
+                                <form-list name="Requirements" list="skills" skip-form="true" paginate="false">
+                                    <field name="skillName"><default-field title="Skill"><display/></default-field></field>
+                                    <field name="minimumLevelText"><default-field title="At least"><display/></default-field></field>
+                                    <field name="qualificationTypeName"><default-field title="Proved by"><display/></default-field></field>
+                                    <field name="requiredText"><default-field title=""><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="ChangeRequirement_${skillTypeEnumId}" button-text="Change" icon="sym_o_edit" type="default"
+                                                    width="520" title="Change ${skillName} for ${jobClass.title}" condition="canEdit">
+                                                <form-single name="ChangeRequirement" transition="storeRequirement"
+                                                        map="{emplPositionClassId:jobClass.emplPositionClassId, skillTypeEnumId:skillTypeEnumId, change:'true',
+                                                            expectedRevision:revision, minimumLevel:(minimumLevel == null ? '' : String(minimumLevel)),
+                                                            qualificationTypeEnumId:(qualificationTypeEnumId || ''), requiredFlag:requiredFlag}">
+                                                    <field name="emplPositionClassId"><default-field><hidden/></default-field></field>
+                                                    <field name="skillTypeEnumId"><default-field><hidden/></default-field></field>
+                                                    <field name="change"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="minimumLevel">
+                                                        <default-field title="At least" tooltip="Empty: any level">
+                                                            <drop-down allow-empty="true"><list-options list="levelOptions" key="${key}" text="${text}"/></drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="qualificationTypeEnumId">
+                                                        <default-field title="Proved by">
+                                                            <drop-down allow-empty="true"><list-options list="qualificationTypeOptions" key="${key}" text="${text}"/></drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="requiredFlag">
+                                                        <default-field title="">
+                                                            <radio><option key="Y" text="Required"/><option key="N" text="Desired"/></radio>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="storeRequirement" link-type="hidden-form-link" text="Remove" icon="sym_o_remove" btn-type="danger"
+                                                    condition="canEdit" confirmation="Remove ${skillName} from ${jobClass.title}? The requirement is ended and kept."
+                                                    parameter-map="{emplPositionClassId:jobClass.emplPositionClassId, skillTypeEnumId:skillTypeEnumId, remove:'true'}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="skillName"/><field-ref name="minimumLevelText"/></column>
+                                        <column><field-ref name="requiredText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!skills.length"
                                 text="No skill is required yet.${canEdit ? ' Add the skills the work needs.' : ''}"/>
                     </box-body-nopad>

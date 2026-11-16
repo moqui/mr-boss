@@ -113,34 +113,41 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="label"><default-field title="Hire"><display/></default-field></field>
                             <field name="value"><default-field title=""><display/></default-field></field>
                         </form-list>
-                        <form-list name="HireRelationships" list="relationshipRows" skip-form="true" paginate="false"
-                                condition="relationshipRows.length">
-                            <field name="typeText"><default-field title="Relationship with the employer"><display/></default-field></field>
-                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="typeText"/><field-ref name="fromDateText"/></column>
-                                <column><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
-                        <form-list name="HireFindings" list="findingRows" skip-form="true" paginate="false" condition="findingRows.length">
-                            <field name="severityText">
-                                <default-field title="">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${severityColors[severity] || 'grey-8'}">${
+                        <section name="HireRelationshipsSection" condition="relationshipRows.length">
+                            <widgets>
+                                <form-list name="HireRelationships" list="relationshipRows" skip-form="true" paginate="false">
+                                    <field name="typeText"><default-field title="Relationship with the employer"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="typeText"/><field-ref name="fromDateText"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="HireFindingsSection" condition="findingRows.length">
+                            <widgets>
+                                <form-list name="HireFindings" list="findingRows" skip-form="true" paginate="false">
+                                    <field name="severityText">
+                                        <default-field title="">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${severityColors[severity] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(severityText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: severityText})}]]></text>
-                                        <text type="html">${severityText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="message"><default-field title="Before hiring"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="message"/></column>
-                                <column><field-ref name="severityText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: severityText})}]]></text>
+                                                <text type="html">${severityText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="message"><default-field title="Before hiring"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="message"/></column>
+                                        <column><field-ref name="severityText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <form-single name="ConfirmHireForm" transition="hireEmployee">
                             <field name="reason">
                                 <default-field title="Note" tooltip="Kept on the hire's record"><text-line size="50"/></default-field>

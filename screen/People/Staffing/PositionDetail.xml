@@ -301,30 +301,42 @@ along with this software (see the LICENSE.md file). If not, see
                                     </render-mode>
                                     <label text="${approval.waitingText}" type="span" style="m-muted" condition="approval.waitingText"/>
                                 </container>
-                                <form-list name="ApprovalFacts" list="approvalFacts" skip-form="true" paginate="false" condition="approvalFacts.length">
-                                    <field name="label"><default-field title="Request"><display/></default-field></field>
-                                    <field name="value"><default-field title=""><display/></default-field></field>
-                                </form-list>
-                                <form-list name="ApprovalSteps" list="approvalSteps" skip-form="true" paginate="false" condition="approval.waiting">
-                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
-                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                    <field name="explanation"><default-field title="Who decides, and why"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
-                                        <column><field-ref name="stateText"/></column>
-                                    </columns>
-                                </form-list>
-                                <form-list name="ApprovalDecisions" list="approvalDecisions" skip-form="true" paginate="false" condition="approvalDecisions.length">
-                                    <field name="decidedByName"><default-field title="Decided by"><display/></default-field></field>
-                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
-                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
-                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="decidedByName"/><field-ref name="decisionDateText"/></column>
-                                        <column><field-ref name="decisionText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="ApprovalFactsSection" condition="approvalFacts.length">
+                                    <widgets>
+                                        <form-list name="ApprovalFacts" list="approvalFacts" skip-form="true" paginate="false">
+                                            <field name="label"><default-field title="Request"><display/></default-field></field>
+                                            <field name="value"><default-field title=""><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="ApprovalStepsSection" condition="approval.waiting">
+                                    <widgets>
+                                        <form-list name="ApprovalSteps" list="approvalSteps" skip-form="true" paginate="false">
+                                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                            <field name="explanation"><default-field title="Who decides, and why"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
+                                                <column><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="ApprovalDecisionsSection" condition="approvalDecisions.length">
+                                    <widgets>
+                                        <form-list name="ApprovalDecisions" list="approvalDecisions" skip-form="true" paginate="false">
+                                            <field name="decidedByName"><default-field title="Decided by"><display/></default-field></field>
+                                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="decidedByName"/><field-ref name="decisionDateText"/></column>
+                                                <column><field-ref name="decisionText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                     </widgets>
@@ -333,30 +345,34 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Holders"/>
                     <box-body-nopad>
-                        <form-list name="Holders" list="holders" skip-form="true" paginate="false" condition="holders.length">
-                            <field name="personName">
-                                <default-field title="Person">
-                                    <link url="${sharedLinks['Employees/Employee360']}" text="${personName}" link-type="anchor"
-                                            parameter-map="{partyId:partyId, partyRelationshipId:(partyRelationshipId || null)}"/>
-                                </default-field>
-                            </field>
-                            <field name="periodText"><default-field title="Period"><display/></default-field></field>
-                            <field name="stateText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                        <section name="HoldersSection" condition="holders.length">
+                            <widgets>
+                                <form-list name="Holders" list="holders" skip-form="true" paginate="false">
+                                    <field name="personName">
+                                        <default-field title="Person">
+                                            <link url="${sharedLinks['Employees/Employee360']}" text="${personName}" link-type="anchor"
+                                                    parameter-map="{partyId:partyId, partyRelationshipId:(partyRelationshipId || null)}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                        <text type="html">${stateText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="sourceText"><default-field title="Recorded as"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/><field-ref name="periodText"/></column>
-                                <column><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="sourceText"><default-field title="Recorded as"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="periodText"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!holders.length"
                                 text="No one holds this position. It is filled by hiring into it."/>
                     </box-body-nopad>

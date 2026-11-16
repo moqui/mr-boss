@@ -336,55 +336,59 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="LaborCostingRateRows" list="laborRows" skip-form="true" paginate="false" condition="laborRows.length">
-                            <field name="organizationText"><default-field title="Organization"><display/></default-field></field>
-                            <field name="positionText"><default-field title="Position class"><display/></default-field></field>
-                            <field name="workTypeText"><default-field title="Work type"><display/></default-field></field>
-                            <field name="rateTypeText"><default-field title="Rate type"><display/></default-field></field>
-                            <field name="amountText" align="right"><default-field title="Cost an hour"><display/></default-field></field>
-                            <field name="fromText"><default-field title="From"><display/></default-field></field>
-                            <field name="thruText"><default-field title="Thru"><display/></default-field></field>
-                            <field name="stateText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${ended ? 'grey-8' : coming ? 'info' : 'positive'}">${
+                        <section name="LaborCostingRateRowsSection" condition="laborRows.length">
+                            <widgets>
+                                <form-list name="LaborCostingRateRows" list="laborRows" skip-form="true" paginate="false">
+                                    <field name="organizationText"><default-field title="Organization"><display/></default-field></field>
+                                    <field name="positionText"><default-field title="Position class"><display/></default-field></field>
+                                    <field name="workTypeText"><default-field title="Work type"><display/></default-field></field>
+                                    <field name="rateTypeText"><default-field title="Rate type"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Cost an hour"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Thru"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${ended ? 'grey-8' : coming ? 'info' : 'positive'}">${
                                             WebUtilities.encodeHtml(stateText ?? '')}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText ?? ""})}]]></text>
-                                        <text type="html">${stateText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="actions" align="right">
-                                <default-field title="">
-                                    <container style="row items-center justify-end no-wrap q-gutter-xs">
-                                        <container-dialog id="ChangeLaborRate_${rateAmountId}" button-text="Change" icon="sym_o_edit"
-                                                title="Change the labor costing rate" width="480" condition="canChange &amp;&amp; !coming">
-                                            <form-single name="ChangeLaborRate" transition="saveCostingRate">
-                                                <field name="rateOrganizationPartyId" from="rateOrgId"><default-field><hidden/></default-field></field>
-                                                <field name="emplPositionClassId"><default-field><hidden/></default-field></field>
-                                                <field name="workTypeEnumId"><default-field><hidden/></default-field></field>
-                                                <field name="rateTypeEnumId"><default-field><hidden/></default-field></field>
-                                                <field name="rateCurrencyUomId"><default-field><hidden/></default-field></field>
-                                                <field name="expectedRateAmountId" from="rateAmountId"><default-field><hidden/></default-field></field>
-                                                <field name="scopeText"><default-field title="Applies to">
-                                                    <label text="${organizationText} · ${positionText} · ${workTypeText}" type="span"/></default-field></field>
-                                                <field name="rateAmount" from="null"><default-field title="New cost an hour"><text-line size="10"/></default-field></field>
-                                                <field name="fromDate" from="null"><default-field title="From" tooltip="Now when empty"><date-time type="timestamp"/></default-field></field>
-                                                <field name="submit"><default-field title=""><submit text="Start the new rate"
-                                                        confirmation="End the rate in effect and start the new one?"/></default-field></field>
-                                            </form-single>
-                                        </container-dialog>
-                                        <link url="endCostingRate" link-type="hidden-form-link" text="End" icon="sym_o_event_busy" btn-type="danger"
-                                                confirmation="End this labor costing rate now? Labor from now on finds another rate, or is unpriced."
-                                                parameter-map="{rateAmountId:rateAmountId}" condition="canChange"/>
-                                    </container>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="positionText"/><field-ref name="workTypeText"/><field-ref name="organizationText"/></column>
-                                <column><field-ref name="amountText"/><field-ref name="stateText"/><field-ref name="actions"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText ?? ""})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions" align="right">
+                                        <default-field title="">
+                                            <container style="row items-center justify-end no-wrap q-gutter-xs">
+                                                <container-dialog id="ChangeLaborRate_${rateAmountId}" button-text="Change" icon="sym_o_edit"
+                                                        title="Change the labor costing rate" width="480" condition="canChange &amp;&amp; !coming">
+                                                    <form-single name="ChangeLaborRate" transition="saveCostingRate">
+                                                        <field name="rateOrganizationPartyId" from="rateOrgId"><default-field><hidden/></default-field></field>
+                                                        <field name="emplPositionClassId"><default-field><hidden/></default-field></field>
+                                                        <field name="workTypeEnumId"><default-field><hidden/></default-field></field>
+                                                        <field name="rateTypeEnumId"><default-field><hidden/></default-field></field>
+                                                        <field name="rateCurrencyUomId"><default-field><hidden/></default-field></field>
+                                                        <field name="expectedRateAmountId" from="rateAmountId"><default-field><hidden/></default-field></field>
+                                                        <field name="scopeText"><default-field title="Applies to">
+                                                            <label text="${organizationText} · ${positionText} · ${workTypeText}" type="span"/></default-field></field>
+                                                        <field name="rateAmount" from="null"><default-field title="New cost an hour"><text-line size="10"/></default-field></field>
+                                                        <field name="fromDate" from="null"><default-field title="From" tooltip="Now when empty"><date-time type="timestamp"/></default-field></field>
+                                                        <field name="submit"><default-field title=""><submit text="Start the new rate"
+                                                                confirmation="End the rate in effect and start the new one?"/></default-field></field>
+                                                    </form-single>
+                                                </container-dialog>
+                                                <link url="endCostingRate" link-type="hidden-form-link" text="End" icon="sym_o_event_busy" btn-type="danger"
+                                                        confirmation="End this labor costing rate now? Labor from now on finds another rate, or is unpriced."
+                                                        parameter-map="{rateAmountId:rateAmountId}" condition="canChange"/>
+                                            </container>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="positionText"/><field-ref name="workTypeText"/><field-ref name="organizationText"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="The shared rates are every organization's: change them with no organization chosen." type="p"
                                 style="m-muted q-px-md q-pt-sm text-caption" condition="laborSharedNote"/>
                         <label text="No labor costing rates: labor hours are unpriced in production, maintenance and cost reports until a rate covers them."

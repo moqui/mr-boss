@@ -341,62 +341,66 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body-nopad>
                         <label type="p" style="q-px-md q-pt-sm text-warning" condition="found.linesToReview"
                                 text="${found.linesToReview} expenses from mail or chat wait for your review: open each, check it and save it."/>
-                        <form-list name="ClaimLines" list="lineRows" skip-form="true" paginate="false" condition="lineRows.length">
-                            <field name="itemDateText"><default-field title="Day"><display/></default-field></field>
-                            <field name="description">
-                                <default-field title="Expense">
-                                    <display text="${itemTypeText}: ${description}${merchantName ? ' · ' + merchantName : ''}${reviewNeeded ? ' (to review)' : ''}"/>
-                                </default-field>
-                            </field>
-                            <field name="taxText" align="right"><default-field title="Tax"><display/></default-field></field>
-                            <field name="lineTotalText" align="right"><default-field title="Amount"><display/></default-field></field>
-                            <field name="receiptName">
-                                <default-field title="Receipt">
-                                    <link url="receipt" text="${receiptName}" link-type="anchor" target-window="_blank" condition="receiptContentId"
-                                            parameter-map="{invoiceId:claim.invoiceId, invoiceContentId:receiptContentId}"/>
-                                    <label text="None" style="m-muted" condition="!receiptContentId"/>
-                                </default-field>
-                            </field>
-                            <field name="actions">
-                                <conditional-field condition="canEdit" title="">
-                                    <container-dialog id="EditLine_${invoiceItemSeqId}" button-text="Edit" icon="sym_o_edit" width="640"
-                                            title="Edit the expense">
-                                        <form-single name="EditLine_${invoiceItemSeqId}" transition="saveLine">
-                                            <field name="invoiceId" from="claim.invoiceId"><default-field><hidden/></default-field></field>
-                                            <field name="invoiceItemSeqId" from="invoiceItemSeqId"><default-field><hidden/></default-field></field>
-                                            <field name="itemTypeEnumId" from="eItemTypeEnumId">
-                                                <default-field title="Type"><drop-down><list-options list="typeOptions" key="${key}" text="${text}"/></drop-down></default-field>
-                                            </field>
-                                            <field name="itemDate" from="eItemDate"><default-field title="Day"><date-time type="date"/></default-field></field>
-                                            <field name="description" from="eDescription"><default-field title="Description"><text-line size="40"/></default-field></field>
-                                            <field name="merchantName" from="eMerchant"><default-field title="Merchant"><text-line size="30"/></default-field></field>
-                                            <field name="amount" from="eAmount"><default-field title="Amount"><text-line size="12" input-type="number"/></default-field></field>
-                                            <field name="taxAmount" from="eTax"><default-field title="Tax included"><text-line size="12" input-type="number"/></default-field></field>
-                                            <field name="receiptFile"><default-field title="Receipt" tooltip="A new file replaces the line's receipt"><file accept="image/*,application/pdf,text/plain"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <container-dialog id="ReadReceipt_${invoiceItemSeqId}" button-text="Read receipt" icon="sym_o_document_scanner"
-                                            width="560" title="Read the receipt">
-                                        <label type="p" text="The receipt's text (a PDF's or a text file's, or what you type here) proposes the expense's values, for you to check before you save."/>
-                                        <form-single name="ReadReceipt_${invoiceItemSeqId}" transition="readReceipt">
-                                            <field name="invoiceId" from="claim.invoiceId"><default-field><hidden/></default-field></field>
-                                            <field name="invoiceItemSeqId" from="invoiceItemSeqId"><default-field><hidden/></default-field></field>
-                                            <field name="receiptText"><default-field title="Receipt text" tooltip="Empty: the receipt file's text"><text-area rows="5"/></default-field></field>
-                                            <field name="submitButton"><default-field title="Read receipt"><submit/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                    <link url="removeLine" text="Remove" icon="sym_o_delete" link-type="hidden-form" btn-type="danger"
-                                            parameter-map="{invoiceId:claim.invoiceId, invoiceItemSeqId:invoiceItemSeqId}"
-                                            confirmation="Remove ${description}?"/>
-                                </conditional-field>
-                                <default-field title=""><display text=""/></default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="description"/><field-ref name="itemDateText"/></column>
-                                <column><field-ref name="lineTotalText"/><field-ref name="actions"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="ClaimLinesSection" condition="lineRows.length">
+                            <widgets>
+                                <form-list name="ClaimLines" list="lineRows" skip-form="true" paginate="false">
+                                    <field name="itemDateText"><default-field title="Day"><display/></default-field></field>
+                                    <field name="description">
+                                        <default-field title="Expense">
+                                            <display text="${itemTypeText}: ${description}${merchantName ? ' · ' + merchantName : ''}${reviewNeeded ? ' (to review)' : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="taxText" align="right"><default-field title="Tax"><display/></default-field></field>
+                                    <field name="lineTotalText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="receiptName">
+                                        <default-field title="Receipt">
+                                            <link url="receipt" text="${receiptName}" link-type="anchor" target-window="_blank" condition="receiptContentId"
+                                                    parameter-map="{invoiceId:claim.invoiceId, invoiceContentId:receiptContentId}"/>
+                                            <label text="None" style="m-muted" condition="!receiptContentId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <conditional-field condition="canEdit" title="">
+                                            <container-dialog id="EditLine_${invoiceItemSeqId}" button-text="Edit" icon="sym_o_edit" width="640"
+                                                    title="Edit the expense">
+                                                <form-single name="EditLine_${invoiceItemSeqId}" transition="saveLine">
+                                                    <field name="invoiceId" from="claim.invoiceId"><default-field><hidden/></default-field></field>
+                                                    <field name="invoiceItemSeqId" from="invoiceItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="itemTypeEnumId" from="eItemTypeEnumId">
+                                                        <default-field title="Type"><drop-down><list-options list="typeOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                                    </field>
+                                                    <field name="itemDate" from="eItemDate"><default-field title="Day"><date-time type="date"/></default-field></field>
+                                                    <field name="description" from="eDescription"><default-field title="Description"><text-line size="40"/></default-field></field>
+                                                    <field name="merchantName" from="eMerchant"><default-field title="Merchant"><text-line size="30"/></default-field></field>
+                                                    <field name="amount" from="eAmount"><default-field title="Amount"><text-line size="12" input-type="number"/></default-field></field>
+                                                    <field name="taxAmount" from="eTax"><default-field title="Tax included"><text-line size="12" input-type="number"/></default-field></field>
+                                                    <field name="receiptFile"><default-field title="Receipt" tooltip="A new file replaces the line's receipt"><file accept="image/*,application/pdf,text/plain"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="ReadReceipt_${invoiceItemSeqId}" button-text="Read receipt" icon="sym_o_document_scanner"
+                                                    width="560" title="Read the receipt">
+                                                <label type="p" text="The receipt's text (a PDF's or a text file's, or what you type here) proposes the expense's values, for you to check before you save."/>
+                                                <form-single name="ReadReceipt_${invoiceItemSeqId}" transition="readReceipt">
+                                                    <field name="invoiceId" from="claim.invoiceId"><default-field><hidden/></default-field></field>
+                                                    <field name="invoiceItemSeqId" from="invoiceItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="receiptText"><default-field title="Receipt text" tooltip="Empty: the receipt file's text"><text-area rows="5"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Read receipt"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="removeLine" text="Remove" icon="sym_o_delete" link-type="hidden-form" btn-type="danger"
+                                                    parameter-map="{invoiceId:claim.invoiceId, invoiceItemSeqId:invoiceItemSeqId}"
+                                                    confirmation="Remove ${description}?"/>
+                                        </conditional-field>
+                                        <default-field title=""><display text=""/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/><field-ref name="itemDateText"/></column>
+                                        <column><field-ref name="lineTotalText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!lineRows.length"
                                 text="No expense yet: Add expense, with a photo of its receipt."/>
                         <label type="p" style="q-px-md q-pb-sm text-caption m-muted" condition="lineRows.length &amp;&amp; found.receiptsMissing"
@@ -424,19 +428,27 @@ along with this software (see the LICENSE.md file). If not, see
                                 </dashboard>
                             </container>
                         </container>
-                        <form-list name="ClaimPayments" list="paymentRows" skip-form="true" paginate="false" condition="paymentRows.length">
-                            <field name="kindText"><default-field title="Applied"><display/></default-field></field>
-                            <field name="appliedDateText"><default-field title="Day"><display/></default-field></field>
-                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="kindText"/><field-ref name="appliedDateText"/></column>
-                                <column><field-ref name="amountText"/></column>
-                            </columns>
-                        </form-list>
-                        <form-list name="OpenAdvances" list="advanceRows" skip-form="true" paginate="false" condition="advanceRows.length">
-                            <field name="employeeAdvanceId"><default-field title="Advance outstanding"><display/></default-field></field>
-                            <field name="outstandingText" align="right"><default-field title="Outstanding"><display/></default-field></field>
-                        </form-list>
+                        <section name="ClaimPaymentsSection" condition="paymentRows.length">
+                            <widgets>
+                                <form-list name="ClaimPayments" list="paymentRows" skip-form="true" paginate="false">
+                                    <field name="kindText"><default-field title="Applied"><display/></default-field></field>
+                                    <field name="appliedDateText"><default-field title="Day"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="kindText"/><field-ref name="appliedDateText"/></column>
+                                        <column><field-ref name="amountText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="OpenAdvancesSection" condition="advanceRows.length">
+                            <widgets>
+                                <form-list name="OpenAdvances" list="advanceRows" skip-form="true" paginate="false">
+                                    <field name="employeeAdvanceId"><default-field title="Advance outstanding"><display/></default-field></field>
+                                    <field name="outstandingText" align="right"><default-field title="Outstanding"><display/></default-field></field>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -444,25 +456,33 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Approval"/>
                     <box-body-nopad>
                         <label type="p" style="q-px-md q-pt-sm" text="${approval.waitingText}" condition="approval?.waitingText"/>
-                        <form-list name="ApprovalSteps" list="stepRows" skip-form="true" paginate="false" condition="stepRows.length">
-                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
-                            <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
-                                <column><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
-                        <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
-                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
-                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
-                            <field name="reason"><default-field title="Why"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
-                                <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="ApprovalStepsSection" condition="stepRows.length">
+                            <widgets>
+                                <form-list name="ApprovalSteps" list="stepRows" skip-form="true" paginate="false">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="ApprovalDecisionsSection" condition="decisionRows.length">
+                            <widgets>
+                                <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false">
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
+                                        <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!approval" text="Not submitted for approval yet."/>
                     </box-body-nopad>
                 </container-box>

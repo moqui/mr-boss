@@ -150,34 +150,38 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-single>
                 <container-box>
                     <box-body-nopad>
-                        <form-list name="Components" list="componentRows" skip-form="true" paginate="true" condition="componentRows.length">
-                            <field name="componentCode">
-                                <default-field title="Code">
-                                    <link url="../PayComponentDetail" text="${componentCode}" link-type="anchor"
-                                            parameter-map="{payrollComponentId:payrollComponentId}"/>
-                                </default-field>
-                            </field>
-                            <field name="componentName"><default-field title="Name"><display/></default-field></field>
-                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="calculationText"><default-field title="Calculation"><display/></default-field></field>
-                            <field name="unitText"><default-field title="Currency or unit"><display/></default-field></field>
-                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-                            <field name="stateText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                        <section name="ComponentsSection" condition="componentRows.length">
+                            <widgets>
+                                <form-list name="Components" list="componentRows" skip-form="true" paginate="true">
+                                    <field name="componentCode">
+                                        <default-field title="Code">
+                                            <link url="../PayComponentDetail" text="${componentCode}" link-type="anchor"
+                                                    parameter-map="{payrollComponentId:payrollComponentId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="componentName"><default-field title="Name"><display/></default-field></field>
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="calculationText"><default-field title="Calculation"><display/></default-field></field>
+                                    <field name="unitText"><default-field title="Currency or unit"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(stateText + (hasDraft && state !== 'draft' ? ' · draft' : ''))}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText + (hasDraft && state !== 'draft' ? ' · draft' : '')})}]]></text>
-                                        <text type="html">${stateText}${hasDraft &amp;&amp; state != 'draft' ? ' · draft' : ''}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="componentCode"/><field-ref name="componentName"/></column>
-                                <column><field-ref name="kindText"/><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText + (hasDraft && state !== 'draft' ? ' · draft' : '')})}]]></text>
+                                                <text type="html">${stateText}${hasDraft &amp;&amp; state != 'draft' ? ' · draft' : ''}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="componentCode"/><field-ref name="componentName"/></column>
+                                        <column><field-ref name="kindText"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!componentRows.length &amp;&amp; filtered" text="No pay component matches."/>
                         <label type="p" style="q-pa-md m-muted" condition="!componentRows.length &amp;&amp; !filtered"
                                 text="No pay component is defined yet.${canEdit ? ' Start one with New component.' : ''}"/>

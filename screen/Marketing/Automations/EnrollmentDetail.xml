@@ -108,19 +108,23 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Step history"/>
                     <box-body>
                         <label text="No step has run yet." type="p" style="m-muted" condition="!historyList.length"/>
-                        <form-list name="StepHistory" list="historyList" skip-form="true" paginate="false" condition="historyList.length">
-                            <field name="sequenceNum" align="right"><default-field title="Step"><display/></default-field></field>
-                            <field name="stepText"><default-field title="What"><display/></default-field></field>
-                            <field name="executedDateText"><default-field title="When"><display/></default-field></field>
-                            <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
-                            <field name="reasonText"><default-field title="Why"><display/></default-field></field>
-                            <field name="dueText"><default-field title="Wait ends"><display/></default-field></field>
-                            <field name="deliveryText"><default-field title="Delivery"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="stepText"/><field-ref name="executedDateText"/></column>
-                                <column><field-ref name="outcomeText"/><field-ref name="reasonText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="StepHistorySection" condition="historyList.length">
+                            <widgets>
+                                <form-list name="StepHistory" list="historyList" skip-form="true" paginate="false">
+                                    <field name="sequenceNum" align="right"><default-field title="Step"><display/></default-field></field>
+                                    <field name="stepText"><default-field title="What"><display/></default-field></field>
+                                    <field name="executedDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
+                                    <field name="reasonText"><default-field title="Why"><display/></default-field></field>
+                                    <field name="dueText"><default-field title="Wait ends"><display/></default-field></field>
+                                    <field name="deliveryText"><default-field title="Delivery"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepText"/><field-ref name="executedDateText"/></column>
+                                        <column><field-ref name="outcomeText"/><field-ref name="reasonText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
             </widgets>

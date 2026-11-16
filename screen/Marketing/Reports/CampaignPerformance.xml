@@ -85,32 +85,36 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="${report.fromText} – ${report.thruText}, as of ${report.asOfText}. ${report.basis}" type="p" style="text-caption m-muted"/>
                 <label text="Campaign summaries last computed ${report.aggregation.lastRunText}." type="p" style="text-caption m-muted" condition="report.aggregation"/>
                 <label text="No campaign of this organization runs in the period." type="p" style="m-muted" condition="!campaignRows.length"/>
-                <form-list name="Performance" list="campaignRows" skip-form="true" paginate="false" show-csv-button="true" condition="campaignRows.length">
-                    <field name="campaignName">
-                        <conditional-field title="Campaign" condition="campaignPath">
-                            <link url="${campaignPath}" url-type="plain" text="${campaignName}" link-type="anchor" parameter-map="{marketingCampaignId:marketingCampaignId}"/>
-                        </conditional-field>
-                        <default-field title="Campaign"><display/></default-field>
-                    </field>
-                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
-                    <field name="budgetedText" align="right"><default-field title="Budget"><display/></default-field></field>
-                    <field name="actualText" align="right"><default-field title="Actual cost"><display/></default-field></field>
-                    <field name="acceptedCount" align="right"><default-field title="Accepted sends" tooltip="Promotional messages the transport accepted in the period"><display/></default-field></field>
-                    <field name="reachCount" align="right"><default-field title="Reach" tooltip="The people of those messages, each once"><display/></default-field></field>
-                    <field name="visitCount" align="right"><default-field title="Visits"><display/></default-field></field>
-                    <field name="leadCount" align="right"><default-field title="Leads"><display/></default-field></field>
-                    <field name="qualifiedLeadCount" align="right"><default-field title="Qualified"><display/></default-field></field>
-                    <field name="registrationCount" align="right"><default-field title="Registrations"><display/></default-field></field>
-                    <field name="orderCount" align="right"><default-field title="Orders" tooltip="Sales.Orders, by their primary campaign"><display/></default-field></field>
-                    <field name="orderValueText" align="right"><default-field title="Order value" tooltip="Sales.OrderValue, by currency"><display/></default-field></field>
-                    <field name="netText" align="right"><default-field title="Invoiced net" tooltip="Accounting.InvoicedRevenue less returns, by currency"><display/></default-field></field>
-                    <field name="roiText" align="right"><default-field title="ROI"><display/></default-field></field>
-                    <field name="numSentText" align="right"><default-field title="Sent (summary)"><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="campaignName"/><field-ref name="statusText"/></column>
-                        <column><field-ref name="acceptedCount"/><field-ref name="orderValueText"/></column>
-                    </columns>
-                </form-list>
+                <section name="PerformanceSection" condition="campaignRows.length">
+                    <widgets>
+                        <form-list name="Performance" list="campaignRows" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="campaignName">
+                                <conditional-field title="Campaign" condition="campaignPath">
+                                    <link url="${campaignPath}" url-type="plain" text="${campaignName}" link-type="anchor" parameter-map="{marketingCampaignId:marketingCampaignId}"/>
+                                </conditional-field>
+                                <default-field title="Campaign"><display/></default-field>
+                            </field>
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="budgetedText" align="right"><default-field title="Budget"><display/></default-field></field>
+                            <field name="actualText" align="right"><default-field title="Actual cost"><display/></default-field></field>
+                            <field name="acceptedCount" align="right"><default-field title="Accepted sends" tooltip="Promotional messages the transport accepted in the period"><display/></default-field></field>
+                            <field name="reachCount" align="right"><default-field title="Reach" tooltip="The people of those messages, each once"><display/></default-field></field>
+                            <field name="visitCount" align="right"><default-field title="Visits"><display/></default-field></field>
+                            <field name="leadCount" align="right"><default-field title="Leads"><display/></default-field></field>
+                            <field name="qualifiedLeadCount" align="right"><default-field title="Qualified"><display/></default-field></field>
+                            <field name="registrationCount" align="right"><default-field title="Registrations"><display/></default-field></field>
+                            <field name="orderCount" align="right"><default-field title="Orders" tooltip="Sales.Orders, by their primary campaign"><display/></default-field></field>
+                            <field name="orderValueText" align="right"><default-field title="Order value" tooltip="Sales.OrderValue, by currency"><display/></default-field></field>
+                            <field name="netText" align="right"><default-field title="Invoiced net" tooltip="Accounting.InvoicedRevenue less returns, by currency"><display/></default-field></field>
+                            <field name="roiText" align="right"><default-field title="ROI"><display/></default-field></field>
+                            <field name="numSentText" align="right"><default-field title="Sent (summary)"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="campaignName"/><field-ref name="statusText"/></column>
+                                <column><field-ref name="acceptedCount"/><field-ref name="orderValueText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
             </widgets>
         </section>
     </widgets>

@@ -167,44 +167,47 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body-nopad>
                                 <label type="p" style="q-pa-sm m-muted" condition="!lineValues.length"
                                         text="Nothing on order ${orderId} is left to return: what was shipped and invoiced is on other returns already."/>
-                                <form-list name="ReturnableLines" list="lineValues" transition="previewLines" multi="true"
-                                        condition="lineValues.length">
-                                    <hidden-parameters parameter-map="{customerPartyId:source.customerPartyId, orderId:orderId,
-                                            requestId:requestId || ''}"/>
-                                    <field name="orderItemSeqId"><default-field title="#"><display also-hidden="true"/></default-field></field>
-                                    <field name="productText">
-                                        <default-field title="Product">
-                                            <label text="${productText}" type="div"/>
-                                            <label text="Shipped ${shippedQuantity} · invoiced ${invoicedQuantity} · on other returns ${returnedQuantity}"
-                                                    type="div" style="text-caption m-muted"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="eligibleQuantity" align="right">
-                                        <default-field title="Left to return"><display/></default-field>
-                                    </field>
-                                    <field name="quantity"><default-field title="Returning"><text-line size="6"/></default-field></field>
-                                    <field name="returnReasonEnumId">
-                                        <default-field title="Reason">
-                                            <drop-down>
-                                                <dynamic-options transition="choices" server-search="false" min-length="0"
-                                                        parameter-map="{choice:'returnReasons'}"/>
-                                            </drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="returnResponseEnumId">
-                                        <default-field title="Asked for">
-                                            <drop-down>
-                                                <dynamic-options transition="choices" server-search="false" min-length="0"
-                                                        parameter-map="{choice:'returnResponses'}"/>
-                                            </drop-down>
-                                        </default-field>
-                                    </field>
-                                    <field name="submitButton"><default-field title=""><submit text="Preview the return"/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="productText"/><field-ref name="eligibleQuantity"/></column>
-                                        <column><field-ref name="quantity"/><field-ref name="returnReasonEnumId"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="ReturnableLinesSection" condition="lineValues.length">
+                                    <widgets>
+                                        <form-list name="ReturnableLines" list="lineValues" transition="previewLines" multi="true">
+                                            <hidden-parameters parameter-map="{customerPartyId:source.customerPartyId, orderId:orderId,
+                                                    requestId:requestId || ''}"/>
+                                            <field name="orderItemSeqId"><default-field title="#"><display also-hidden="true"/></default-field></field>
+                                            <field name="productText">
+                                                <default-field title="Product">
+                                                    <label text="${productText}" type="div"/>
+                                                    <label text="Shipped ${shippedQuantity} · invoiced ${invoicedQuantity} · on other returns ${returnedQuantity}"
+                                                            type="div" style="text-caption m-muted"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="eligibleQuantity" align="right">
+                                                <default-field title="Left to return"><display/></default-field>
+                                            </field>
+                                            <field name="quantity"><default-field title="Returning"><text-line size="6"/></default-field></field>
+                                            <field name="returnReasonEnumId">
+                                                <default-field title="Reason">
+                                                    <drop-down>
+                                                        <dynamic-options transition="choices" server-search="false" min-length="0"
+                                                                parameter-map="{choice:'returnReasons'}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="returnResponseEnumId">
+                                                <default-field title="Asked for">
+                                                    <drop-down>
+                                                        <dynamic-options transition="choices" server-search="false" min-length="0"
+                                                                parameter-map="{choice:'returnResponses'}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title=""><submit text="Preview the return"/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="productText"/><field-ref name="eligibleQuantity"/></column>
+                                                <column><field-ref name="quantity"/><field-ref name="returnReasonEnumId"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="q-pa-sm text-caption m-muted" condition="closedLines.length"
                                         text="${closedLines.length} more line(s) of the order have nothing left to return."/>
                             </box-body-nopad>

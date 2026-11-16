@@ -186,56 +186,60 @@ along with this software (see the LICENSE.md file). If not, see
         </form-single>
         <container-box>
             <box-body-nopad>
-                <form-list name="AdvanceList" list="advances" skip-form="true" paginate="true" condition="advances.length">
-                    <field name="employeeAdvanceId">
-                        <default-field title="Advance"><display text="${employeeAdvanceId}${purpose ? ' · ' + purpose : ''}"/></default-field>
-                    </field>
-                    <field name="personName"><default-field title="Person"><display/></default-field></field>
-                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                    <field name="amountText" align="right"><default-field title="Asked"><display/></default-field></field>
-                    <field name="deliveredText" align="right"><default-field title="Delivered"><display/></default-field></field>
-                    <field name="appliedText" align="right"><default-field title="Applied"><display/></default-field></field>
-                    <field name="outstandingText" align="right"><default-field title="Outstanding"><display/></default-field></field>
-                    <field name="stageText">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stageColors[stage] || 'grey-8'}">${
+                <section name="AdvanceListSection" condition="advances.length">
+                    <widgets>
+                        <form-list name="AdvanceList" list="advances" skip-form="true" paginate="true">
+                            <field name="employeeAdvanceId">
+                                <default-field title="Advance"><display text="${employeeAdvanceId}${purpose ? ' · ' + purpose : ''}"/></default-field>
+                            </field>
+                            <field name="personName"><default-field title="Person"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Asked"><display/></default-field></field>
+                            <field name="deliveredText" align="right"><default-field title="Delivered"><display/></default-field></field>
+                            <field name="appliedText" align="right"><default-field title="Applied"><display/></default-field></field>
+                            <field name="outstandingText" align="right"><default-field title="Outstanding"><display/></default-field></field>
+                            <field name="stageText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stageColors[stage] || 'grey-8'}">${
                                     WebUtilities.encodeHtml(stageText)}</q-chip>]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stageText + (toDecide ? " · to decide" : "")})}]]></text>
-                                <text type="html">${stageText}${toDecide ? ' · to decide' : ''}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <field name="actions">
-                        <default-field title="">
-                            <container-dialog id="ApproveAdvance_${employeeAdvanceId}" button-text="Approve" icon="sym_o_check" width="480"
-                                    title="Approve ${personName}'s advance" condition="toDecide">
-                                <label type="p" text="${amountText} for ${purpose}. Finance then pays it."/>
-                                <form-single name="ApproveAdvance_${employeeAdvanceId}" transition="decide">
-                                    <field name="employeeAdvanceId" from="employeeAdvanceId"><default-field><hidden/></default-field></field>
-                                    <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
-                                </form-single>
-                            </container-dialog>
-                            <container-dialog id="RefuseAdvance_${employeeAdvanceId}" button-text="Refuse" icon="sym_o_block" width="480"
-                                    title="Refuse ${personName}'s advance" condition="toDecide">
-                                <form-single name="RefuseAdvance_${employeeAdvanceId}" transition="decide">
-                                    <field name="employeeAdvanceId" from="employeeAdvanceId"><default-field><hidden/></default-field></field>
-                                    <field name="decision"><default-field><hidden default-value="refuse"/></default-field></field>
-                                    <field name="reason"><default-field title="Why"><text-area rows="2"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
-                                </form-single>
-                            </container-dialog>
-                            <link url="decide" text="Withdraw" icon="sym_o_undo" link-type="hidden-form" condition="canWithdraw"
-                                    parameter-map="{employeeAdvanceId:employeeAdvanceId, decision:'withdraw'}"
-                                    confirmation="Withdraw advance ${employeeAdvanceId}?"/>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="employeeAdvanceId"/><field-ref name="personName"/></column>
-                        <column><field-ref name="outstandingText"/><field-ref name="stageText"/><field-ref name="actions"/></column>
-                    </columns>
-                </form-list>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stageText + (toDecide ? " · to decide" : "")})}]]></text>
+                                        <text type="html">${stageText}${toDecide ? ' · to decide' : ''}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ApproveAdvance_${employeeAdvanceId}" button-text="Approve" icon="sym_o_check" width="480"
+                                            title="Approve ${personName}'s advance" condition="toDecide">
+                                        <label type="p" text="${amountText} for ${purpose}. Finance then pays it."/>
+                                        <form-single name="ApproveAdvance_${employeeAdvanceId}" transition="decide">
+                                            <field name="employeeAdvanceId" from="employeeAdvanceId"><default-field><hidden/></default-field></field>
+                                            <field name="decision"><default-field><hidden default-value="approve"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Approve"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="RefuseAdvance_${employeeAdvanceId}" button-text="Refuse" icon="sym_o_block" width="480"
+                                            title="Refuse ${personName}'s advance" condition="toDecide">
+                                        <form-single name="RefuseAdvance_${employeeAdvanceId}" transition="decide">
+                                            <field name="employeeAdvanceId" from="employeeAdvanceId"><default-field><hidden/></default-field></field>
+                                            <field name="decision"><default-field><hidden default-value="refuse"/></default-field></field>
+                                            <field name="reason"><default-field title="Why"><text-area rows="2"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Refuse"><submit type="danger"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="decide" text="Withdraw" icon="sym_o_undo" link-type="hidden-form" condition="canWithdraw"
+                                            parameter-map="{employeeAdvanceId:employeeAdvanceId, decision:'withdraw'}"
+                                            confirmation="Withdraw advance ${employeeAdvanceId}?"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="employeeAdvanceId"/><field-ref name="personName"/></column>
+                                <column><field-ref name="outstandingText"/><field-ref name="stageText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label type="p" style="q-pa-md m-muted" condition="!advances.length &amp;&amp; showing == 'decide'" text="No advance waits for your decision."/>
                 <label type="p" style="q-pa-md m-muted" condition="!advances.length &amp;&amp; showing != 'decide'"
                         text="No advance yet: Request advance asks for cash ahead of your expenses."/>

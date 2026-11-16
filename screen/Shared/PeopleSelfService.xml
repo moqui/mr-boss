@@ -261,28 +261,32 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="My employment"/>
                     <box-body-nopad>
-                        <form-list name="MyEmployments" list="employmentRows" skip-form="true" paginate="false" condition="employmentRows.length">
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
-                            <field name="departmentName"><default-field title="Department"><display/></default-field></field>
-                            <field name="managerName"><default-field title="Manager"><display/></default-field></field>
-                            <field name="workLocation"><default-field title="Work location"><display/></default-field></field>
-                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
-                            <field name="stateText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                        <section name="MyEmploymentsSection" condition="employmentRows.length">
+                            <widgets>
+                                <form-list name="MyEmployments" list="employmentRows" skip-form="true" paginate="false">
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                                    <field name="departmentName"><default-field title="Department"><display/></default-field></field>
+                                    <field name="managerName"><default-field title="Manager"><display/></default-field></field>
+                                    <field name="workLocation"><default-field title="Work location"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(onLeave ? 'On leave' : stateText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: onLeave ? "On leave" : stateText})}]]></text>
-                                        <text type="html">${onLeave ? 'On leave' : stateText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="organizationName"/><field-ref name="jobTitle"/></column>
-                                <column><field-ref name="stateText"/><field-ref name="managerName"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: onLeave ? "On leave" : stateText})}]]></text>
+                                                <text type="html">${onLeave ? 'On leave' : stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="organizationName"/><field-ref name="jobTitle"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="managerName"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="You have no current employment." type="p" style="m-muted q-pa-md" condition="!employmentRows.length"/>
                     </box-body-nopad>
                 </container-box>
@@ -319,23 +323,27 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="My People tasks"/>
                     <box-body-nopad>
-                        <form-list name="MyTasks" list="taskRows" skip-form="true" paginate="false" condition="taskRows.length">
-                            <field name="title">
-                                <default-field title="Task">
-                                    <link url="/qapps/Commons/Tasks/TaskDetail" url-type="plain" text="${title}" link-type="anchor"
-                                            parameter-map="{workEffortId:workEffortId}"/>
-                                </default-field>
-                            </field>
-                            <field name="personName"><default-field title="For"><display/></default-field></field>
-                            <field name="whenText">
-                                <conditional-field condition="overdue" title="Due"><label text="${whenText}" style="text-warning text-no-wrap"/></conditional-field>
-                                <default-field title="Due"><label text="${whenText}" style="text-no-wrap"/></default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/><field-ref name="personName"/></column>
-                                <column><field-ref name="whenText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="MyTasksSection" condition="taskRows.length">
+                            <widgets>
+                                <form-list name="MyTasks" list="taskRows" skip-form="true" paginate="false">
+                                    <field name="title">
+                                        <default-field title="Task">
+                                            <link url="/qapps/Commons/Tasks/TaskDetail" url-type="plain" text="${title}" link-type="anchor"
+                                                    parameter-map="{workEffortId:workEffortId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="personName"><default-field title="For"><display/></default-field></field>
+                                    <field name="whenText">
+                                        <conditional-field condition="overdue" title="Due"><label text="${whenText}" style="text-warning text-no-wrap"/></conditional-field>
+                                        <default-field title="Due"><label text="${whenText}" style="text-no-wrap"/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="personName"/></column>
+                                        <column><field-ref name="whenText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="No People task is yours to do." type="p" style="m-muted q-pa-md" condition="!taskRows.length"/>
                     </box-body-nopad>
                 </container-box>
@@ -344,27 +352,31 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="My requests"/>
                     <box-body-nopad>
-                        <form-list name="MyRequests" list="requestRows" skip-form="true" paginate="false" condition="requestRows.length">
-                            <field name="summary"><default-field title="Request"><display/></default-field></field>
-                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                            <field name="requestedDateText"><default-field title="Asked"><display/></default-field></field>
-                            <field name="statusText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${requestColors[statusId] || 'grey-8'}">${
+                        <section name="MyRequestsSection" condition="requestRows.length">
+                            <widgets>
+                                <form-list name="MyRequests" list="requestRows" skip-form="true" paginate="false">
+                                    <field name="summary"><default-field title="Request"><display/></default-field></field>
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="requestedDateText"><default-field title="Asked"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${requestColors[statusId] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
-                                        <text type="html">${statusText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="nextApproverText"><default-field title="Waiting for"><display/></default-field></field>
-                            <field name="returnReason"><default-field title="Reason"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="summary"/><field-ref name="requestedDateText"/></column>
-                                <column><field-ref name="statusText"/><field-ref name="nextApproverText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="nextApproverText"><default-field title="Waiting for"><display/></default-field></field>
+                                    <field name="returnReason"><default-field title="Reason"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="summary"/><field-ref name="requestedDateText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="nextApproverText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="${requestMoreText}" type="p" style="text-caption m-muted q-px-md" condition="requestMoreText"/>
                         <label text="Requests you make in People show here with their state." type="p" style="m-muted q-pa-md"
                                 condition="!requestRows.length"/>
@@ -375,22 +387,26 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="My leave balances"/>
                     <box-body-nopad>
-                        <form-list name="MyLeaveBalances" list="leaveRows" skip-form="true" paginate="false" condition="leaveRows.length">
-                            <field name="leaveTypeText"><default-field title="Leave"><display/></default-field></field>
-                            <field name="organizationName" hide="leaveEmployers &lt; 2"><default-field title="Employer"><display/></default-field></field>
-                            <field name="available" align="right">
-                                <default-field title="Available"><display text="${available} ${unitText.toLowerCase()}"/></default-field>
-                            </field>
-                            <field name="balance" align="right">
-                                <default-field title="Balance" tooltip="Granted, accrued and adjusted, less what was taken and what expired">
-                                    <display text="${balance} ${unitText.toLowerCase()}"/></default-field>
-                            </field>
-                            <field name="policyName"><default-field title="Policy"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="leaveTypeText"/><field-ref name="policyName"/></column>
-                                <column><field-ref name="available"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="MyLeaveBalancesSection" condition="leaveRows.length">
+                            <widgets>
+                                <form-list name="MyLeaveBalances" list="leaveRows" skip-form="true" paginate="false">
+                                    <field name="leaveTypeText"><default-field title="Leave"><display/></default-field></field>
+                                    <field name="organizationName" hide="leaveEmployers &lt; 2"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="available" align="right">
+                                        <default-field title="Available"><display text="${available} ${unitText.toLowerCase()}"/></default-field>
+                                    </field>
+                                    <field name="balance" align="right">
+                                        <default-field title="Balance" tooltip="Granted, accrued and adjusted, less what was taken and what expired">
+                                            <display text="${balance} ${unitText.toLowerCase()}"/></default-field>
+                                    </field>
+                                    <field name="policyName"><default-field title="Policy"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="leaveTypeText"/><field-ref name="policyName"/></column>
+                                        <column><field-ref name="available"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="No leave policy applies to you yet: HR assigns one with your entitlement." type="p" style="m-muted q-pa-md"
                                 condition="!leaveRows.length"/>
                     </box-body-nopad>
@@ -404,31 +420,35 @@ along with this software (see the LICENSE.md file). If not, see
                                 condition="links?.leaveRequestsUrl"/>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="MyLeaveRequests" list="leaveRequestRows" skip-form="true" paginate="false" condition="leaveRequestRows.length">
-                            <field name="datesText">
-                                <conditional-field condition="links?.leaveRequestsUrl" title="Days">
-                                    <link url="/qapps/People/Time/LeaveRequestDetail" url-type="plain" link-type="anchor"
-                                            text="${datesText}${partText ? ' (' + partText.toLowerCase() + ')' : ''}" parameter-map="{leaveRequestId:leaveRequestId}"/>
-                                </conditional-field>
-                                <default-field title="Days"><display text="${datesText}${partText ? ' (' + partText.toLowerCase() + ')' : ''}"/></default-field>
-                            </field>
-                            <field name="leaveTypeText"><default-field title="Leave"><display/></default-field></field>
-                            <field name="chargedText" align="right"><default-field title="Charged"><display/></default-field></field>
-                            <field name="statusText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${leaveRequestColors[statusEnumId] || 'grey-8'}">${
+                        <section name="MyLeaveRequestsSection" condition="leaveRequestRows.length">
+                            <widgets>
+                                <form-list name="MyLeaveRequests" list="leaveRequestRows" skip-form="true" paginate="false">
+                                    <field name="datesText">
+                                        <conditional-field condition="links?.leaveRequestsUrl" title="Days">
+                                            <link url="/qapps/People/Time/LeaveRequestDetail" url-type="plain" link-type="anchor"
+                                                    text="${datesText}${partText ? ' (' + partText.toLowerCase() + ')' : ''}" parameter-map="{leaveRequestId:leaveRequestId}"/>
+                                        </conditional-field>
+                                        <default-field title="Days"><display text="${datesText}${partText ? ' (' + partText.toLowerCase() + ')' : ''}"/></default-field>
+                                    </field>
+                                    <field name="leaveTypeText"><default-field title="Leave"><display/></default-field></field>
+                                    <field name="chargedText" align="right"><default-field title="Charged"><display/></default-field></field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${leaveRequestColors[statusEnumId] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
-                                        <text type="html">${statusText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="datesText"/><field-ref name="leaveTypeText"/></column>
-                                <column><field-ref name="statusText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="datesText"/><field-ref name="leaveTypeText"/></column>
+                                        <column><field-ref name="statusText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="No leave asked for yet." type="p" style="m-muted q-pa-md" condition="!leaveRequestRows.length"/>
                     </box-body-nopad>
                 </container-box>

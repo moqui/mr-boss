@@ -122,39 +122,43 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body-nopad>
                         <label text="${report.hiddenCount} orders you may not open in Sales or Commerce are counted above and not listed." type="p"
                                 style="text-caption m-muted q-pa-sm" condition="report.hiddenCount"/>
-                        <form-list name="OutcomeRows" list="outcomeRows" skip-form="true" paginate="false" show-csv-button="true" condition="outcomeRows.length">
-                            <field name="orderId"><default-field title="Order"><display/></default-field></field>
-                            <field name="placedText"><default-field title="Placed"><display/></default-field></field>
-                            <field name="campaignName"><default-field title="Primary campaign"><display/></default-field></field>
-                            <field name="basisText"><default-field title="Basis"><display/></default-field></field>
-                            <field name="evidenceText"><default-field title="Evidence time"><display/></default-field></field>
-                            <field name="orderValueText" align="right"><default-field title="Value"><display/></default-field></field>
-                            <field name="netText" align="right"><default-field title="Invoiced net"><display/></default-field></field>
-                            <field name="correct">
-                                <conditional-field title="" condition="canCorrect">
-                                    <container-dialog id="CorrectAttribution_${orderId}" button-text="Correct" title="Correct the attribution of order ${orderId}" icon="sym_o_edit">
-                                        <form-single name="CorrectAttributionForm" transition="correctAttribution"
-                                                map="{orderId:orderId, expectedOutcomeLinkId:outcomeLinkId, correctCampaignId:marketingCampaignId}">
-                                            <field name="orderId"><default-field><hidden/></default-field></field>
-                                            <field name="expectedOutcomeLinkId"><default-field><hidden/></default-field></field>
-                                            <field name="correctCampaignId">
-                                                <default-field title="Primary campaign" tooltip="Empty: unattributed"><drop-down allow-empty="true">
-                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                            parameter-map="{choice:'reportCampaigns', organizationPartyId:organizationPartyId, selected:marketingCampaignId}"/>
-                                                </drop-down></default-field>
-                                            </field>
-                                            <field name="reason"><default-field title="Reason"><text-area rows="2"/></default-field></field>
-                                            <field name="submitButton"><default-field title=""><submit text="Save the correction" type="primary"/></default-field></field>
-                                        </form-single>
-                                    </container-dialog>
-                                </conditional-field>
-                                <default-field title=""><display text=""/></default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="orderId"/><field-ref name="campaignName"/></column>
-                                <column><field-ref name="orderValueText"/><field-ref name="correct"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="OutcomeRowsSection" condition="outcomeRows.length">
+                            <widgets>
+                                <form-list name="OutcomeRows" list="outcomeRows" skip-form="true" paginate="false" show-csv-button="true">
+                                    <field name="orderId"><default-field title="Order"><display/></default-field></field>
+                                    <field name="placedText"><default-field title="Placed"><display/></default-field></field>
+                                    <field name="campaignName"><default-field title="Primary campaign"><display/></default-field></field>
+                                    <field name="basisText"><default-field title="Basis"><display/></default-field></field>
+                                    <field name="evidenceText"><default-field title="Evidence time"><display/></default-field></field>
+                                    <field name="orderValueText" align="right"><default-field title="Value"><display/></default-field></field>
+                                    <field name="netText" align="right"><default-field title="Invoiced net"><display/></default-field></field>
+                                    <field name="correct">
+                                        <conditional-field title="" condition="canCorrect">
+                                            <container-dialog id="CorrectAttribution_${orderId}" button-text="Correct" title="Correct the attribution of order ${orderId}" icon="sym_o_edit">
+                                                <form-single name="CorrectAttributionForm" transition="correctAttribution"
+                                                        map="{orderId:orderId, expectedOutcomeLinkId:outcomeLinkId, correctCampaignId:marketingCampaignId}">
+                                                    <field name="orderId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedOutcomeLinkId"><default-field><hidden/></default-field></field>
+                                                    <field name="correctCampaignId">
+                                                        <default-field title="Primary campaign" tooltip="Empty: unattributed"><drop-down allow-empty="true">
+                                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                    parameter-map="{choice:'reportCampaigns', organizationPartyId:organizationPartyId, selected:marketingCampaignId}"/>
+                                                        </drop-down></default-field>
+                                                    </field>
+                                                    <field name="reason"><default-field title="Reason"><text-area rows="2"/></default-field></field>
+                                                    <field name="submitButton"><default-field title=""><submit text="Save the correction" type="primary"/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </conditional-field>
+                                        <default-field title=""><display text=""/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="orderId"/><field-ref name="campaignName"/></column>
+                                        <column><field-ref name="orderValueText"/><field-ref name="correct"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body-nopad>
                 </container-box>
             </widgets>

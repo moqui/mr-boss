@@ -226,12 +226,16 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="eventDateText"><default-field title="When"><display/></default-field></field>
                                 </form-list>
                                 <label type="p" style="q-pa-md m-muted" condition="!ediDocuments.length" text="No rejected EDI documents."/>
-                                <form-list name="EdiInterchanges" list="ediInterchanges" skip-form="true" condition="ediInterchanges.length">
-                                    <field name="ediInterchangeId"><default-field title="Quarantined interchange"><display/></default-field></field>
-                                    <field name="controlNumber"><default-field title="Control"><display/></default-field></field>
-                                    <field name="safeError"><default-field title="Reason"><display/></default-field></field>
-                                    <field name="interchangeDateText"><default-field title="When"><display/></default-field></field>
-                                </form-list>
+                                <section name="EdiInterchangesSection" condition="ediInterchanges.length">
+                                    <widgets>
+                                        <form-list name="EdiInterchanges" list="ediInterchanges" skip-form="true">
+                                            <field name="ediInterchangeId"><default-field title="Quarantined interchange"><display/></default-field></field>
+                                            <field name="controlNumber"><default-field title="Control"><display/></default-field></field>
+                                            <field name="safeError"><default-field title="Reason"><display/></default-field></field>
+                                            <field name="interchangeDateText"><default-field title="When"><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <section name="RetryEdiDocumentsShown" condition="retryableDocuments.length"><widgets>
                                     <form-single name="RetryEdiDocuments" transition="retryMessages" map="retryValues">
                                         <field name="systemMessageRemoteId"><default-field><hidden/></default-field></field>
@@ -350,37 +354,57 @@ along with this software (see the LICENSE.md file). If not, see
                                             text="Channel order ${detail.summary?.externalId}${detail.summary?.placedDateText ? ', placed ' + detail.summary.placedDateText : ''} · ${detail.summary?.lineCount} lines${detail.summary?.shippingText ? ' · shipping ' + detail.summary.shippingText : ''}${detail.summary?.taxText ? ' · tax ' + detail.summary.taxText : ''}"/>
                                 </box-body>
                                 <box-body-nopad>
-                                    <form-list name="MessageLines" list="detailLines" skip-form="true" condition="detailLines.length">
-                                        <field name="lineId"><default-field title="Line"><display/></default-field></field>
-                                        <field name="productName"><default-field title="Product"><display/></default-field></field>
-                                        <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
-                                        <field name="unitAmountText" align="right"><default-field title="Price"><display/></default-field></field>
-                                    </form-list>
-                                    <form-list name="MessageFindings" list="detailFindings" skip-form="true" condition="detailFindings.length">
-                                        <field name="code"><default-field title="Mapping finding"><display/></default-field></field>
-                                        <field name="message"><default-field title=" "><display/></default-field></field>
-                                    </form-list>
-                                    <form-list name="MessageOrders" list="detailChildren" skip-form="true" condition="detailChildren.length">
-                                        <field name="systemMessageId">
-                                            <default-field title="Order message">
-                                                <link url="." text="${systemMessageId}" link-type="anchor" style="text-mono"
-                                                        parameter-map="{systemMessageRemoteId:systemMessageRemoteId, systemMessageId:systemMessageId}"/>
-                                            </default-field>
-                                        </field>
-                                        <field name="externalId"><default-field title="External ID"><display/></default-field></field>
-                                        <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                        <field name="safeError"><default-field title="Error"><display/></default-field></field>
-                                    </form-list>
-                                    <form-list name="MessageDocuments" list="detailDocuments" skip-form="true" condition="detailDocuments.length">
-                                        <field name="ediDocumentId"><default-field title="EDI document"><display/></default-field></field>
-                                        <field name="transactionSetId"><default-field title="Set"><display/></default-field></field>
-                                        <field name="statusText"><default-field title="State"><display/></default-field></field>
-                                        <field name="safeError"><default-field title="Reason"><display/></default-field></field>
-                                    </form-list>
-                                    <form-list name="MessageErrors" list="detailErrors" skip-form="true" condition="detailErrors.length">
-                                        <field name="errorDateText"><default-field title="Error at"><display/></default-field></field>
-                                        <field name="text"><default-field title="Error"><display/></default-field></field>
-                                    </form-list>
+                                    <section name="MessageLinesSection" condition="detailLines.length">
+                                        <widgets>
+                                            <form-list name="MessageLines" list="detailLines" skip-form="true">
+                                                <field name="lineId"><default-field title="Line"><display/></default-field></field>
+                                                <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                                <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                                <field name="unitAmountText" align="right"><default-field title="Price"><display/></default-field></field>
+                                            </form-list>
+                                        </widgets>
+                                    </section>
+                                    <section name="MessageFindingsSection" condition="detailFindings.length">
+                                        <widgets>
+                                            <form-list name="MessageFindings" list="detailFindings" skip-form="true">
+                                                <field name="code"><default-field title="Mapping finding"><display/></default-field></field>
+                                                <field name="message"><default-field title=" "><display/></default-field></field>
+                                            </form-list>
+                                        </widgets>
+                                    </section>
+                                    <section name="MessageOrdersSection" condition="detailChildren.length">
+                                        <widgets>
+                                            <form-list name="MessageOrders" list="detailChildren" skip-form="true">
+                                                <field name="systemMessageId">
+                                                    <default-field title="Order message">
+                                                        <link url="." text="${systemMessageId}" link-type="anchor" style="text-mono"
+                                                                parameter-map="{systemMessageRemoteId:systemMessageRemoteId, systemMessageId:systemMessageId}"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="externalId"><default-field title="External ID"><display/></default-field></field>
+                                                <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                                <field name="safeError"><default-field title="Error"><display/></default-field></field>
+                                            </form-list>
+                                        </widgets>
+                                    </section>
+                                    <section name="MessageDocumentsSection" condition="detailDocuments.length">
+                                        <widgets>
+                                            <form-list name="MessageDocuments" list="detailDocuments" skip-form="true">
+                                                <field name="ediDocumentId"><default-field title="EDI document"><display/></default-field></field>
+                                                <field name="transactionSetId"><default-field title="Set"><display/></default-field></field>
+                                                <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                                <field name="safeError"><default-field title="Reason"><display/></default-field></field>
+                                            </form-list>
+                                        </widgets>
+                                    </section>
+                                    <section name="MessageErrorsSection" condition="detailErrors.length">
+                                        <widgets>
+                                            <form-list name="MessageErrors" list="detailErrors" skip-form="true">
+                                                <field name="errorDateText"><default-field title="Error at"><display/></default-field></field>
+                                                <field name="text"><default-field title="Error"><display/></default-field></field>
+                                            </form-list>
+                                        </widgets>
+                                    </section>
                                 </box-body-nopad>
                             </container-box>
                         </widgets></section>

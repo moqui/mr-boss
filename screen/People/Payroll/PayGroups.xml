@@ -225,32 +225,36 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="text-caption m-muted"/>
                 <container-box>
                     <box-body-nopad>
-                        <form-list name="Groups" list="groupRows" skip-form="true" paginate="true" condition="groupRows.length">
-                            <field name="groupName">
-                                <default-field title="Pay group">
-                                    <link url="." text="${groupName}" link-type="anchor" parameter-map="{payrollGroupId:payrollGroupId}"/>
-                                </default-field>
-                            </field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
-                            <field name="frequencyText"><default-field title="Frequency"><display/></default-field></field>
-                            <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
-                            <field name="localizationName"><default-field title="Localization"><display/></default-field></field>
-                            <field name="readinessText">
-                                <default-field title="Readiness">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${readinessColors[readinessState] || 'grey-8'}">${
+                        <section name="GroupsSection" condition="groupRows.length">
+                            <widgets>
+                                <form-list name="Groups" list="groupRows" skip-form="true" paginate="true">
+                                    <field name="groupName">
+                                        <default-field title="Pay group">
+                                            <link url="." text="${groupName}" link-type="anchor" parameter-map="{payrollGroupId:payrollGroupId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                                    <field name="frequencyText"><default-field title="Frequency"><display/></default-field></field>
+                                    <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
+                                    <field name="localizationName"><default-field title="Localization"><display/></default-field></field>
+                                    <field name="readinessText">
+                                        <default-field title="Readiness">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${readinessColors[readinessState] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(readinessText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: readinessText})}]]></text>
-                                        <text type="html">${readinessText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="groupName"/><field-ref name="frequencyText"/></column>
-                                <column><field-ref name="currencyUomId"/><field-ref name="readinessText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: readinessText})}]]></text>
+                                                <text type="html">${readinessText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="groupName"/><field-ref name="frequencyText"/></column>
+                                        <column><field-ref name="currencyUomId"/><field-ref name="readinessText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!groupRows.length"
                                 text="No pay group is set up yet.${canEdit ? ' Start one with New pay group.' : ''}"/>
                     </box-body-nopad>
@@ -391,16 +395,20 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-dialog>
                             </box-toolbar>
                             <box-body-nopad>
-                                <form-list name="Periods" list="periods" skip-form="true" paginate="false" condition="periods.length">
-                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
-                                    <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
-                                    <field name="stateText"><default-field title="Processing"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="fromDateText"/><field-ref name="thruDateText"/></column>
-                                        <column><field-ref name="payDateText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="PeriodsSection" condition="periods.length">
+                                    <widgets>
+                                        <form-list name="Periods" list="periods" skip-form="true" paginate="false">
+                                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                            <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="Processing"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="fromDateText"/><field-ref name="thruDateText"/></column>
+                                                <column><field-ref name="payDateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="q-pa-md m-muted" condition="!periods.length"
                                         text="No period is prepared yet.${group.canEdit ? ' Prepare them with Prepare periods.' : ''}"/>
                                 <section name="NextPeriods" condition="nextPeriods.length">

@@ -108,31 +108,35 @@ along with this software (see the LICENSE.md file). If not, see
 
         <container-box>
             <box-body-nopad>
-                <form-list name="CaseList" list="cases" skip-form="true" paginate="true" condition="cases.length">
-                    <field name="referenceText">
-                        <default-field title="Case">
-                            <link url="../RequestDetail" text="${referenceText}" link-type="anchor" parameter-map="{requestId:requestId}"/>
-                        </default-field>
-                    </field>
-                    <field name="subject" ai-opt-out="true"><default-field title="About"><display/></default-field></field>
-                    <field name="roleText"><default-field title="Yours"><display/></default-field></field>
-                    <field name="handlersText"><default-field title="Handled by"><display/></default-field></field>
-                    <field name="filedByText"><default-field title="Filed by"><display/></default-field></field>
-                    <field name="submittedDateText"><default-field title="Filed"><display/></default-field></field>
-                    <field name="stateText">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                <text type="html">${stateText}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="referenceText"/><field-ref name="subject"/></column>
-                        <column><field-ref name="stateText"/><field-ref name="submittedDateText"/></column>
-                    </columns>
-                </form-list>
+                <section name="CaseListSection" condition="cases.length">
+                    <widgets>
+                        <form-list name="CaseList" list="cases" skip-form="true" paginate="true">
+                            <field name="referenceText">
+                                <default-field title="Case">
+                                    <link url="../RequestDetail" text="${referenceText}" link-type="anchor" parameter-map="{requestId:requestId}"/>
+                                </default-field>
+                            </field>
+                            <field name="subject" ai-opt-out="true"><default-field title="About"><display/></default-field></field>
+                            <field name="roleText"><default-field title="Yours"><display/></default-field></field>
+                            <field name="handlersText"><default-field title="Handled by"><display/></default-field></field>
+                            <field name="filedByText"><default-field title="Filed by"><display/></default-field></field>
+                            <field name="submittedDateText"><default-field title="Filed"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="referenceText"/><field-ref name="subject"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="submittedDateText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label type="p" style="q-pa-md m-muted" condition="!cases.length &amp;&amp; showing == 'open'"
                         text="You have no open case.${canFile ? ' Raise a concern files one, in confidence, with the case handlers of your employer.' : ''}"/>
                 <label type="p" style="q-pa-md m-muted" condition="!cases.length &amp;&amp; showing != 'open'" text="No case here."/>

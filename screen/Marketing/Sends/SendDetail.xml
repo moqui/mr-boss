@@ -343,9 +343,13 @@ along with this software (see the LICENSE.md file). If not, see
                             </widgets>
                         </section>
                         <label text="${preview?.renderedText}" type="p" condition="isSms"/>
-                        <form-list name="ContentFindings" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
-                            <field name="text"><default-field title="To check"><display/></default-field></field>
-                        </form-list>
+                        <section name="ContentFindingsSection" condition="findingList.length">
+                            <widgets>
+                                <form-list name="ContentFindings" list="findingList" skip-form="true" paginate="false">
+                                    <field name="text"><default-field title="To check"><display/></default-field></field>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -400,14 +404,18 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body>
                         <label text="Finds: ${sourcesText} · leaves out: ${exclusionsText}" type="p"/>
                         <label text="Counted when it is prepared: the topic's members, each in one bucket." type="p" style="m-muted" condition="!bucketList.length"/>
-                        <form-list name="SendBuckets" list="bucketList" skip-form="true" paginate="false" condition="bucketList.length">
-                            <field name="label"><default-field title="Bucket"><display/></default-field></field>
-                            <field name="count" align="right"><default-field title="People"><display format="#,##0"/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="label"/></column>
-                                <column><field-ref name="count"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="SendBucketsSection" condition="bucketList.length">
+                            <widgets>
+                                <form-list name="SendBuckets" list="bucketList" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Bucket"><display/></default-field></field>
+                                    <field name="count" align="right"><default-field title="People"><display format="#,##0"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/></column>
+                                        <column><field-ref name="count"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -459,15 +467,19 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="None: the send goes to its whole audience with one content." type="p" style="m-muted" condition="!experiment.exists"/>
                         <label text="${experiment.stateText} · ${experiment.samplePercent}% sample split equally, the rest held for the winner · ${experiment.measureText}, observed ${experiment.observationHours} h${experiment.sampleCount != null ? ' · prepared: ' + experiment.sampleCount + ' in the samples, ' + experiment.remainderCount + ' held' : ''}${experiment.winnerText ? ' · winner: ' + experiment.winnerText : ''}"
                                 type="p" condition="experiment.exists"/>
-                        <form-list name="SendExperimentVariants" list="experimentVariantList" skip-form="true" paginate="false" condition="experiment.exists">
-                            <field name="labelText"><default-field title="Variant"><display/></default-field></field>
-                            <field name="subject"><default-field title="Subject"><display/></default-field></field>
-                            <field name="changedText"><default-field title="Its own parts"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="labelText"/></column>
-                                <column><field-ref name="subject"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="SendExperimentVariantsSection" condition="experiment.exists">
+                            <widgets>
+                                <form-list name="SendExperimentVariants" list="experimentVariantList" skip-form="true" paginate="false">
+                                    <field name="labelText"><default-field title="Variant"><display/></default-field></field>
+                                    <field name="subject"><default-field title="Subject"><display/></default-field></field>
+                                    <field name="changedText"><default-field title="Its own parts"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="labelText"/></column>
+                                        <column><field-ref name="subject"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -475,18 +487,22 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Decisions"/>
                     <box-body>
                         <label text="No approval asked yet." type="p" style="m-muted" condition="!decisionList.length"/>
-                        <form-list name="SendDecisions" list="decisionList" skip-form="true" paginate="false" condition="decisionList.length">
-                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
-                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                            <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
-                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
-                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
-                                <column><field-ref name="decisionDateText"/><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="SendDecisionsSection" condition="decisionList.length">
+                            <widgets>
+                                <form-list name="SendDecisions" list="decisionList" skip-form="true" paginate="false">
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="targetRevision" align="right"><default-field title="Revision"><display/></default-field></field>
+                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                                        <column><field-ref name="decisionDateText"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 

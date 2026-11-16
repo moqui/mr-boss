@@ -195,15 +195,19 @@ along with this software (see the LICENSE.md file). If not, see
                                 <column><field-ref name="charged"/><field-ref name="partText"/></column>
                             </columns>
                         </form-list>
-                        <form-list name="BlockedDays" list="blockRows" skip-form="true" paginate="false" condition="blockRows.length">
-                            <field name="fromDay"><default-field title="Blocked from"><display/></default-field></field>
-                            <field name="thruDay"><default-field title="Through"><display/></default-field></field>
-                            <field name="reason"><default-field title="Why"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="fromDay"/><field-ref name="reason"/></column>
-                                <column><field-ref name="thruDay"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="BlockedDaysSection" condition="blockRows.length">
+                            <widgets>
+                                <form-list name="BlockedDays" list="blockRows" skip-form="true" paginate="false">
+                                    <field name="fromDay"><default-field title="Blocked from"><display/></default-field></field>
+                                    <field name="thruDay"><default-field title="Through"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fromDay"/><field-ref name="reason"/></column>
+                                        <column><field-ref name="thruDay"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 
@@ -227,25 +231,33 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Approval"/>
                     <box-body-nopad>
                         <label type="p" style="q-px-md q-pt-sm" text="${approval.waitingText}" condition="approval?.waitingText"/>
-                        <form-list name="ApprovalSteps" list="stepRows" skip-form="true" paginate="false" condition="stepRows.length">
-                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
-                            <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
-                            <field name="stateText"><default-field title="State"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
-                                <column><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
-                        <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
-                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
-                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
-                            <field name="reason"><default-field title="Why"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
-                                <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="ApprovalStepsSection" condition="stepRows.length">
+                            <widgets>
+                                <form-list name="ApprovalSteps" list="stepRows" skip-form="true" paginate="false">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="ApprovalDecisionsSection" condition="decisionRows.length">
+                            <widgets>
+                                <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false">
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
+                                        <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!approval" text="No approval was asked for."/>
                     </box-body-nopad>
                 </container-box>

@@ -322,25 +322,33 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Approval"/>
                             <box-body>
                                 <label type="p" text="${approvalText}"/>
-                                <form-list name="ApprovalSteps" list="approval.steps" skip-form="true" paginate="false" condition="approval.waiting">
-                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
-                                    <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
-                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
-                                        <column><field-ref name="stateText"/></column>
-                                    </columns>
-                                </form-list>
-                                <form-list name="ApprovalDecisions" list="approval.decisions" skip-form="true" paginate="false" condition="approval.decisions?.length">
-                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
-                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
-                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
-                                        <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="ApprovalStepsSection" condition="approval.waiting">
+                                    <widgets>
+                                        <form-list name="ApprovalSteps" list="approval.steps" skip-form="true" paginate="false">
+                                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                            <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
+                                                <column><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="ApprovalDecisionsSection" condition="approval.decisions?.length">
+                                    <widgets>
+                                        <form-list name="ApprovalDecisions" list="approval.decisions" skip-form="true" paginate="false">
+                                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                            <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="decidedByName"/><field-ref name="reason"/></column>
+                                                <column><field-ref name="decisionText"/><field-ref name="decisionDateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                     </widgets>
@@ -462,14 +470,18 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="TermFacts" list="termRows" skip-form="true" paginate="false" condition="termRows.length">
-                            <field name="term"><default-field title="Term"><display/></default-field></field>
-                            <field name="value"><default-field title="Value"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="term"/></column>
-                                <column><field-ref name="value"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="TermFactsSection" condition="termRows.length">
+                            <widgets>
+                                <form-list name="TermFacts" list="termRows" skip-form="true" paginate="false">
+                                    <field name="term"><default-field title="Term"><display/></default-field></field>
+                                    <field name="value"><default-field title="Value"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="term"/></column>
+                                        <column><field-ref name="value"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!termRows.length"
                                 text="This component has no calculation yet.${canEdit ? ' Set one with Set calculation.' : ''}"/>
                     </box-body-nopad>
@@ -500,62 +512,66 @@ along with this software (see the LICENSE.md file). If not, see
                             </box-toolbar>
                             <box-body-nopad>
                                 <label type="p" style="q-pa-sm text-caption m-muted" text="${preview?.totalsText || ''}"/>
-                                <form-list name="Examples" list="exampleRows" skip-form="true" paginate="false" condition="exampleRows.length">
-                                    <field name="exampleName"><default-field title="Example"><display/></default-field></field>
-                                    <field name="inputValuesText"><default-field title="Values"><display/></default-field></field>
-                                    <field name="expectedAmount" align="right"><default-field title="Expected"><display/></default-field></field>
-                                    <field name="actualAmount" align="right"><default-field title="Gives"><display/></default-field></field>
-                                    <field name="stateText">
-                                        <default-field title="Check">
-                                            <render-mode>
-                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                <section name="ExamplesSection2" condition="exampleRows.length">
+                                    <widgets>
+                                        <form-list name="Examples" list="exampleRows" skip-form="true" paginate="false">
+                                            <field name="exampleName"><default-field title="Example"><display/></default-field></field>
+                                            <field name="inputValuesText"><default-field title="Values"><display/></default-field></field>
+                                            <field name="expectedAmount" align="right"><default-field title="Expected"><display/></default-field></field>
+                                            <field name="actualAmount" align="right"><default-field title="Gives"><display/></default-field></field>
+                                            <field name="stateText">
+                                                <default-field title="Check">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                                     WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                                <text type="html">${stateText}</text>
-                                            </render-mode>
-                                        </default-field>
-                                    </field>
-                                    <field name="explanation"><default-field title="Explanation"><display/></default-field></field>
-                                    <field name="actions" hide="!(canEdit &amp;&amp; isDraft)">
-                                        <default-field title="">
-                                            <container-dialog id="EditExample_${payrollComponentExampleId}" button-text="Edit" icon="sym_o_edit" width="640"
-                                                    title="Edit ${exampleName}">
-                                                <form-single name="EditExample" transition="storeExample"
-                                                        map="{payrollComponentId:component.payrollComponentId, expectedRevision:component.revision,
-                                                            payrollComponentTermId:openTerm.payrollComponentTermId, payrollComponentExampleId:payrollComponentExampleId,
-                                                            exampleName:exampleName, inputValues:inputValuesText, expectedAmount:expectedAmount}">
-                                                    <field name="payrollComponentId"><default-field><hidden/></default-field></field>
-                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                                    <field name="payrollComponentTermId"><default-field><hidden/></default-field></field>
-                                                    <field name="payrollComponentExampleId"><default-field><hidden/></default-field></field>
-                                                    <field name="exampleName"><default-field title="Name"><text-line size="30"/></default-field></field>
-                                                    <field name="inputValues"><default-field title="Values"><text-area rows="2" cols="60"/></default-field></field>
-                                                    <field name="expectedAmount"><default-field title="Expected amount"><text-line size="14" input-type="number"/></default-field></field>
-                                                    <field name="submitButton"><default-field title="Save example"><submit/></default-field></field>
-                                                </form-single>
-                                            </container-dialog>
-                                            <container-dialog id="RemoveExample_${payrollComponentExampleId}" button-text="Remove" icon="sym_o_delete"
-                                                    width="480" title="Remove ${exampleName}">
-                                                <form-single name="RemoveExample" transition="storeExample"
-                                                        map="{payrollComponentId:component.payrollComponentId, expectedRevision:component.revision,
-                                                            payrollComponentTermId:openTerm.payrollComponentTermId, payrollComponentExampleId:payrollComponentExampleId, remove:'true'}">
-                                                    <field name="payrollComponentId"><default-field><hidden/></default-field></field>
-                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                                    <field name="payrollComponentTermId"><default-field><hidden/></default-field></field>
-                                                    <field name="payrollComponentExampleId"><default-field><hidden/></default-field></field>
-                                                    <field name="remove"><default-field><hidden/></default-field></field>
-                                                    <field name="submitButton">
-                                                        <default-field title="Remove example"><submit type="danger" confirmation="Remove the example ${exampleName}?"/></default-field>
-                                                    </field>
-                                                </form-single>
-                                            </container-dialog>
-                                        </default-field>
-                                    </field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="exampleName"/><field-ref name="inputValuesText"/></column>
-                                        <column><field-ref name="actualAmount"/><field-ref name="stateText"/></column>
-                                    </columns>
-                                </form-list>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                        <text type="html">${stateText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <field name="explanation"><default-field title="Explanation"><display/></default-field></field>
+                                            <field name="actions" hide="!(canEdit &amp;&amp; isDraft)">
+                                                <default-field title="">
+                                                    <container-dialog id="EditExample_${payrollComponentExampleId}" button-text="Edit" icon="sym_o_edit" width="640"
+                                                            title="Edit ${exampleName}">
+                                                        <form-single name="EditExample" transition="storeExample"
+                                                                map="{payrollComponentId:component.payrollComponentId, expectedRevision:component.revision,
+                                                                    payrollComponentTermId:openTerm.payrollComponentTermId, payrollComponentExampleId:payrollComponentExampleId,
+                                                                    exampleName:exampleName, inputValues:inputValuesText, expectedAmount:expectedAmount}">
+                                                            <field name="payrollComponentId"><default-field><hidden/></default-field></field>
+                                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                            <field name="payrollComponentTermId"><default-field><hidden/></default-field></field>
+                                                            <field name="payrollComponentExampleId"><default-field><hidden/></default-field></field>
+                                                            <field name="exampleName"><default-field title="Name"><text-line size="30"/></default-field></field>
+                                                            <field name="inputValues"><default-field title="Values"><text-area rows="2" cols="60"/></default-field></field>
+                                                            <field name="expectedAmount"><default-field title="Expected amount"><text-line size="14" input-type="number"/></default-field></field>
+                                                            <field name="submitButton"><default-field title="Save example"><submit/></default-field></field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                    <container-dialog id="RemoveExample_${payrollComponentExampleId}" button-text="Remove" icon="sym_o_delete"
+                                                            width="480" title="Remove ${exampleName}">
+                                                        <form-single name="RemoveExample" transition="storeExample"
+                                                                map="{payrollComponentId:component.payrollComponentId, expectedRevision:component.revision,
+                                                                    payrollComponentTermId:openTerm.payrollComponentTermId, payrollComponentExampleId:payrollComponentExampleId, remove:'true'}">
+                                                            <field name="payrollComponentId"><default-field><hidden/></default-field></field>
+                                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                            <field name="payrollComponentTermId"><default-field><hidden/></default-field></field>
+                                                            <field name="payrollComponentExampleId"><default-field><hidden/></default-field></field>
+                                                            <field name="remove"><default-field><hidden/></default-field></field>
+                                                            <field name="submitButton">
+                                                                <default-field title="Remove example"><submit type="danger" confirmation="Remove the example ${exampleName}?"/></default-field>
+                                                            </field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="exampleName"/><field-ref name="inputValuesText"/></column>
+                                                <column><field-ref name="actualAmount"/><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="q-pa-md m-muted" condition="!exampleRows.length"
                                         text="No example yet.${canEdit &amp;&amp; isDraft ? ' Add one: publishing needs an example that gives its amount.' : ''}"/>
                             </box-body-nopad>
@@ -585,32 +601,36 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="All terms"/>
                     <box-body-nopad>
-                        <form-list name="AllTerms" list="terms" skip-form="true" paginate="false" condition="terms.length">
-                            <field name="fromDateText">
-                                <default-field title="From">
-                                    <link url="." text="${fromDateText}" link-type="anchor"
-                                            parameter-map="{payrollComponentId:component.payrollComponentId, payrollComponentTermId:payrollComponentTermId}"/>
-                                </default-field>
-                            </field>
-                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
-                            <field name="calculationText"><default-field title="Calculation"><display/></default-field></field>
-                            <field name="unitText"><default-field title="Currency or unit"><display/></default-field></field>
-                            <field name="exampleCount" align="right"><default-field title="Examples"><display/></default-field></field>
-                            <field name="stateText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                        <section name="AllTermsSection" condition="terms.length">
+                            <widgets>
+                                <form-list name="AllTerms" list="terms" skip-form="true" paginate="false">
+                                    <field name="fromDateText">
+                                        <default-field title="From">
+                                            <link url="." text="${fromDateText}" link-type="anchor"
+                                                    parameter-map="{payrollComponentId:component.payrollComponentId, payrollComponentTermId:payrollComponentTermId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                                    <field name="calculationText"><default-field title="Calculation"><display/></default-field></field>
+                                    <field name="unitText"><default-field title="Currency or unit"><display/></default-field></field>
+                                    <field name="exampleCount" align="right"><default-field title="Examples"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                        <text type="html">${stateText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="fromDateText"/><field-ref name="calculationText"/></column>
-                                <column><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fromDateText"/><field-ref name="calculationText"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!terms.length" text="No terms yet."/>
                     </box-body-nopad>
                 </container-box>

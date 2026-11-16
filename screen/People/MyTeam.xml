@@ -111,49 +111,53 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Team"/>
                     <box-body-nopad>
-                        <form-list name="TeamRows" list="teamRows" skip-form="true" paginate="false" condition="teamRows.length">
-                            <!-- P10: Remind missing time on the selected people whose week is not submitted -->
-                            <row-selection id-field="partyId" parameter="selectedIds" list-mode="true">
-                                <action><form-single name="RemindMissing" transition="remindMissing">
-                                    <field name="submitButton"><default-field title="Remind missing time"><submit icon="sym_o_notifications"
-                                            confirmation="Remind the selected people to submit last week's time?"/></default-field></field>
-                                </form-single></action>
-                            </row-selection>
-                            <field name="personName">
-                                <default-field title="Person">
-                                    <link url="${sharedLinks['Employees/Employee360']}" text="${preferredName ? personName + ' (' + preferredName + ')' : personName}"
-                                            link-type="anchor" parameter-map="{partyId:partyId}"/>
-                                </default-field>
-                            </field>
-                            <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
-                            <field name="departmentName"><default-field title="Department"><display/></default-field></field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="workLocation"><default-field title="Work location"><display/></default-field></field>
-                            <field name="availabilityText">
-                                <default-field title="Now">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${availabilityColors[availability] || 'grey-8'}">${
+                        <section name="TeamRowsSection" condition="teamRows.length">
+                            <widgets>
+                                <form-list name="TeamRows" list="teamRows" skip-form="true" paginate="false">
+                                    <!-- P10: Remind missing time on the selected people whose week is not submitted -->
+                                    <row-selection id-field="partyId" parameter="selectedIds" list-mode="true">
+                                        <action><form-single name="RemindMissing" transition="remindMissing">
+                                            <field name="submitButton"><default-field title="Remind missing time"><submit icon="sym_o_notifications"
+                                                    confirmation="Remind the selected people to submit last week's time?"/></default-field></field>
+                                        </form-single></action>
+                                    </row-selection>
+                                    <field name="personName">
+                                        <default-field title="Person">
+                                            <link url="${sharedLinks['Employees/Employee360']}" text="${preferredName ? personName + ' (' + preferredName + ')' : personName}"
+                                                    link-type="anchor" parameter-map="{partyId:partyId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="jobTitle"><default-field title="Job title"><display/></default-field></field>
+                                    <field name="departmentName"><default-field title="Department"><display/></default-field></field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="workLocation"><default-field title="Work location"><display/></default-field></field>
+                                    <field name="availabilityText">
+                                        <default-field title="Now">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${availabilityColors[availability] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(availabilityText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: availabilityText})}]]></text>
-                                        <text type="html">${availabilityText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="scheduleName"><default-field title="Working schedule"><display/></default-field></field>
-                            <field name="workPhone"><default-field title="Work phone"><display/></default-field></field>
-                            <!-- P10: last week's time, a missing week opening it in My time -->
-                            <field name="weekText">
-                                <default-field title="Last week">
-                                    <link url="${sharedLinks['Time/MyTime']}" text="Not submitted" link-type="anchor" style="text-warning"
-                                            parameter-map="{partyId:partyId, weekDate:weekStart}" condition="weekMissing"/>
-                                    <label text="Submitted" type="span" style="m-muted" condition="keepsTime &amp;&amp; !weekMissing"/>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/><field-ref name="jobTitle"/></column>
-                                <column><field-ref name="availabilityText"/><field-ref name="weekText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: availabilityText})}]]></text>
+                                                <text type="html">${availabilityText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="scheduleName"><default-field title="Working schedule"><display/></default-field></field>
+                                    <field name="workPhone"><default-field title="Work phone"><display/></default-field></field>
+                                    <!-- P10: last week's time, a missing week opening it in My time -->
+                                    <field name="weekText">
+                                        <default-field title="Last week">
+                                            <link url="${sharedLinks['Time/MyTime']}" text="Not submitted" link-type="anchor" style="text-warning"
+                                                    parameter-map="{partyId:partyId, weekDate:weekStart}" condition="weekMissing"/>
+                                            <label text="Submitted" type="span" style="m-muted" condition="keepsTime &amp;&amp; !weekMissing"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="jobTitle"/></column>
+                                        <column><field-ref name="availabilityText"/><field-ref name="weekText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="No one reports to you now." type="p" style="m-muted q-pa-md" condition="!teamRows.length"/>
                     </box-body-nopad>
                 </container-box>
@@ -168,16 +172,20 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="${sharedLinks['Time/TeamCalendar']}" text="Team calendar" icon="sym_o_calendar_month" link-type="anchor"/>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="OutRows" list="outRows" skip-form="true" paginate="false" condition="outRows.length">
-                            <field name="title">
-                                <conditional-field condition="leaveRequestId" title="Who">
-                                    <link url="${sharedLinks['Time/LeaveRequestDetail']}" text="${title}" link-type="anchor"
-                                            parameter-map="{leaveRequestId:leaveRequestId}"/>
-                                </conditional-field>
-                                <default-field title="Who"><display/></default-field>
-                            </field>
-                            <field name="whenText"><default-field title="When"><display/></default-field></field>
-                        </form-list>
+                        <section name="OutRowsSection" condition="outRows.length">
+                            <widgets>
+                                <form-list name="OutRows" list="outRows" skip-form="true" paginate="false">
+                                    <field name="title">
+                                        <conditional-field condition="leaveRequestId" title="Who">
+                                            <link url="${sharedLinks['Time/LeaveRequestDetail']}" text="${title}" link-type="anchor"
+                                                    parameter-map="{leaveRequestId:leaveRequestId}"/>
+                                        </conditional-field>
+                                        <default-field title="Who"><display/></default-field>
+                                    </field>
+                                    <field name="whenText"><default-field title="When"><display/></default-field></field>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="No one on your team is out in the next two weeks." type="p" style="m-muted q-pa-md" condition="!outRows.length"/>
                     </box-body-nopad>
                 </container-box>
@@ -192,21 +200,25 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="${sharedLinks['Performance/Reviews']}" link-type="anchor" text="All reviews" parameter-map="{show:'team'}"/>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="ReviewRows" list="reviewRows" skip-form="true" paginate="false" condition="reviewRows.length">
-                            <field name="personName">
-                                <default-field title="Person">
-                                    <link url="${sharedLinks['Performance/ReviewDetail']}" text="${personName}" link-type="anchor"
-                                            parameter-map="{performanceReviewId:performanceReviewId}"/>
-                                </default-field>
-                            </field>
-                            <field name="cycleName"><default-field title="Cycle"><display/></default-field></field>
-                            <field name="waitsText"><default-field title="Waiting"><display/></default-field></field>
-                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/><field-ref name="cycleName"/></column>
-                                <column><field-ref name="waitsText"/><field-ref name="dueText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="ReviewRowsSection" condition="reviewRows.length">
+                            <widgets>
+                                <form-list name="ReviewRows" list="reviewRows" skip-form="true" paginate="false">
+                                    <field name="personName">
+                                        <default-field title="Person">
+                                            <link url="${sharedLinks['Performance/ReviewDetail']}" text="${personName}" link-type="anchor"
+                                                    parameter-map="{performanceReviewId:performanceReviewId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="cycleName"><default-field title="Cycle"><display/></default-field></field>
+                                    <field name="waitsText"><default-field title="Waiting"><display/></default-field></field>
+                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="cycleName"/></column>
+                                        <column><field-ref name="waitsText"/><field-ref name="dueText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="No review you give is open." type="p" style="m-muted q-pa-md" condition="!reviewRows.length"/>
                     </box-body-nopad>
                 </container-box>
@@ -220,21 +232,25 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="${sharedLinks['Approvals']}" link-type="anchor" text="All approvals"/>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="DecisionRows" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
-                            <field name="title">
-                                <default-field title="Decision">
-                                    <link url="${openPath}" text="${title}" link-type="anchor" parameter-map="openParameters"/>
-                                </default-field>
-                            </field>
-                            <field name="dueText"><default-field title="Kind"><display/></default-field></field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="assigneeText"><default-field title="Step"><display/></default-field></field>
-                            <field name="whenText"><default-field title="Asked"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="title"/><field-ref name="organizationName"/></column>
-                                <column><field-ref name="whenText"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="DecisionRowsSection" condition="decisionRows.length">
+                            <widgets>
+                                <form-list name="DecisionRows" list="decisionRows" skip-form="true" paginate="false">
+                                    <field name="title">
+                                        <default-field title="Decision">
+                                            <link url="${openPath}" text="${title}" link-type="anchor" parameter-map="openParameters"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="dueText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="assigneeText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="whenText"><default-field title="Asked"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="organizationName"/></column>
+                                        <column><field-ref name="whenText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label text="${decisionsMoreText}" type="p" style="text-caption m-muted q-px-md" condition="decisionsMoreText"/>
                         <label text="No decision waits on you." type="p" style="m-muted q-pa-md" condition="!decisionRows.length"/>
                     </box-body-nopad>

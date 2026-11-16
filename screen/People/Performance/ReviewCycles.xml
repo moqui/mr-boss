@@ -180,15 +180,19 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="." text="Close" icon="sym_o_close" link-type="anchor" parameter-map="{previewCycleId:''}"/>
                     </box-toolbar>
                     <box-body-nopad>
-                        <form-list name="ParticipantList" list="participants" skip-form="true" paginate="false" condition="participants.length">
-                            <field name="personName"><default-field title="Person"><display/></default-field></field>
-                            <field name="managerName"><default-field title="Reviewer"><display/></default-field></field>
-                            <field name="problem"><default-field title="Left out"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/></column>
-                                <column><field-ref name="managerName"/><field-ref name="problem"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="ParticipantListSection" condition="participants.length">
+                            <widgets>
+                                <form-list name="ParticipantList" list="participants" skip-form="true" paginate="false">
+                                    <field name="personName"><default-field title="Person"><display/></default-field></field>
+                                    <field name="managerName"><default-field title="Reviewer"><display/></default-field></field>
+                                    <field name="problem"><default-field title="Left out"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/></column>
+                                        <column><field-ref name="managerName"/><field-ref name="problem"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!participants.length"
                                 text="Everyone in this cycle's scope has a review already."/>
                     </box-body-nopad>
@@ -198,73 +202,77 @@ along with this software (see the LICENSE.md file). If not, see
 
         <container-box>
             <box-body-nopad>
-                <form-list name="CycleList" list="cycles" skip-form="true" paginate="true" condition="cycles.length">
-                    <field name="cycleName">
-                        <default-field title="Cycle">
-                            <link url="${reviewsUrl}" url-type="plain" text="${cycleName}" link-type="anchor"
-                                    parameter-map="{reviewCycleId:reviewCycleId, show:'all'}"/>
-                        </default-field>
-                    </field>
-                    <field name="scopeText"><default-field title="Who"><display/></default-field></field>
-                    <field name="templateName"><default-field title="Template"><display/></default-field></field>
-                    <field name="periodText"><default-field title="Period"><display/></default-field></field>
-                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
-                    <field name="progressText"><default-field title="Progress"><display/></default-field></field>
-                    <field name="statusText">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[statusEnumId] || 'grey-8'}">${
+                <section name="CycleListSection" condition="cycles.length">
+                    <widgets>
+                        <form-list name="CycleList" list="cycles" skip-form="true" paginate="true">
+                            <field name="cycleName">
+                                <default-field title="Cycle">
+                                    <link url="${reviewsUrl}" url-type="plain" text="${cycleName}" link-type="anchor"
+                                            parameter-map="{reviewCycleId:reviewCycleId, show:'all'}"/>
+                                </default-field>
+                            </field>
+                            <field name="scopeText"><default-field title="Who"><display/></default-field></field>
+                            <field name="templateName"><default-field title="Template"><display/></default-field></field>
+                            <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                            <field name="progressText"><default-field title="Progress"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[statusEnumId] || 'grey-8'}">${
                                     WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
-                                <text type="html">${statusText}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <field name="actions">
-                        <default-field title="">
-                            <link url="." text="Preview" icon="sym_o_groups" link-type="anchor" condition="canStart"
-                                    parameter-map="{previewCycleId:reviewCycleId}"/>
-                            <container-dialog id="ChangeCycle_${reviewCycleId}" button-text="Change" icon="sym_o_edit" width="720" title="Change ${cycleName}"
-                                    condition="canChange">
-                                <form-single name="ChangeCycle" transition="storeCycle"
-                                        map="{reviewCycleId:reviewCycleId, expectedRevision:revision, cycleName:cycleName, reviewTemplateId:reviewTemplateId,
-                                            periodFromDate:periodFromDate, periodThruDate:periodThruDate, selfDueDate:selfDueDate, managerDueDate:managerDueDate}">
-                                    <field name="reviewCycleId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="cycleName"><default-field title="Name"><text-line size="40"/></default-field></field>
-                                    <field name="reviewTemplateId">
-                                        <default-field title="Template"><drop-down><list-options list="templateOptions" key="${key}" text="${text}"/></drop-down></default-field>
-                                    </field>
-                                    <field name="periodFromDate"><default-field title="Period from"><date-time type="date"/></default-field></field>
-                                    <field name="periodThruDate"><default-field title="Period to"><date-time type="date"/></default-field></field>
-                                    <field name="selfDueDate"><default-field title="Self assessment due"><date-time type="date"/></default-field></field>
-                                    <field name="managerDueDate"><default-field title="Reviewer's assessment due"><date-time type="date"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Save cycle"><submit/></default-field></field>
-                                </form-single>
-                            </container-dialog>
-                            <container-dialog id="CloseCycle_${reviewCycleId}" button-text="Close" icon="sym_o_lock" width="560" title="Close ${cycleName}"
-                                    condition="canClose">
-                                <label type="p" text="${openCount ? openCount + ' reviews are not released yet; closing excludes them, with your reason.' : 'Every review is released or excluded.'}"/>
-                                <form-single name="CloseCycle" transition="storeCycle" map="{reviewCycleId:reviewCycleId, expectedRevision:revision, close:'true'}">
-                                    <field name="reviewCycleId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="close"><default-field><hidden/></default-field></field>
-                                    <field name="excludeOpen" hide="!openCount">
-                                        <default-field title="Exclude the open reviews"><check><option key="Y" text=" "/></check></default-field>
-                                    </field>
-                                    <field name="reason"><default-field title="Why"><text-line size="50"/></default-field></field>
-                                    <field name="submitButton">
-                                        <default-field title="Close cycle"><submit type="danger" confirmation="Close ${cycleName}? It starts no review after."/></default-field>
-                                    </field>
-                                </form-single>
-                            </container-dialog>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="cycleName"/><field-ref name="scopeText"/><field-ref name="periodText"/></column>
-                        <column><field-ref name="statusText"/><field-ref name="progressText"/><field-ref name="actions"/></column>
-                    </columns>
-                </form-list>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="." text="Preview" icon="sym_o_groups" link-type="anchor" condition="canStart"
+                                            parameter-map="{previewCycleId:reviewCycleId}"/>
+                                    <container-dialog id="ChangeCycle_${reviewCycleId}" button-text="Change" icon="sym_o_edit" width="720" title="Change ${cycleName}"
+                                            condition="canChange">
+                                        <form-single name="ChangeCycle" transition="storeCycle"
+                                                map="{reviewCycleId:reviewCycleId, expectedRevision:revision, cycleName:cycleName, reviewTemplateId:reviewTemplateId,
+                                                    periodFromDate:periodFromDate, periodThruDate:periodThruDate, selfDueDate:selfDueDate, managerDueDate:managerDueDate}">
+                                            <field name="reviewCycleId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="cycleName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="reviewTemplateId">
+                                                <default-field title="Template"><drop-down><list-options list="templateOptions" key="${key}" text="${text}"/></drop-down></default-field>
+                                            </field>
+                                            <field name="periodFromDate"><default-field title="Period from"><date-time type="date"/></default-field></field>
+                                            <field name="periodThruDate"><default-field title="Period to"><date-time type="date"/></default-field></field>
+                                            <field name="selfDueDate"><default-field title="Self assessment due"><date-time type="date"/></default-field></field>
+                                            <field name="managerDueDate"><default-field title="Reviewer's assessment due"><date-time type="date"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save cycle"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="CloseCycle_${reviewCycleId}" button-text="Close" icon="sym_o_lock" width="560" title="Close ${cycleName}"
+                                            condition="canClose">
+                                        <label type="p" text="${openCount ? openCount + ' reviews are not released yet; closing excludes them, with your reason.' : 'Every review is released or excluded.'}"/>
+                                        <form-single name="CloseCycle" transition="storeCycle" map="{reviewCycleId:reviewCycleId, expectedRevision:revision, close:'true'}">
+                                            <field name="reviewCycleId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="close"><default-field><hidden/></default-field></field>
+                                            <field name="excludeOpen" hide="!openCount">
+                                                <default-field title="Exclude the open reviews"><check><option key="Y" text=" "/></check></default-field>
+                                            </field>
+                                            <field name="reason"><default-field title="Why"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Close cycle"><submit type="danger" confirmation="Close ${cycleName}? It starts no review after."/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="cycleName"/><field-ref name="scopeText"/><field-ref name="periodText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="progressText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label type="p" style="q-pa-md m-muted" condition="!cycles.length" text="${emptyText}"/>
             </box-body-nopad>
         </container-box>
@@ -337,46 +345,50 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-dialog>
             </box-toolbar>
             <box-body-nopad>
-                <form-list name="TemplateList" list="templates" skip-form="true" paginate="false" condition="templates.length">
-                    <field name="templateName"><default-field title="Template"><display/></default-field></field>
-                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                    <field name="stepsText"><default-field title="Steps"><display/></default-field></field>
-                    <field name="releaseText"><default-field title="Release"><display/></default-field></field>
-                    <field name="formsText"><default-field title="Forms"><display/></default-field></field>
-                    <field name="actions">
-                        <default-field title="">
-                            <container-dialog id="ChangeTemplate_${reviewTemplateId}" button-text="Change" icon="sym_o_edit" width="560"
-                                    title="Change ${templateName}" condition="canSetUp">
-                                <label type="p" text="A template a started cycle uses is not changed: end it and add another."/>
-                                <form-single name="ChangeTemplate" transition="storeTemplate"
-                                        map="{reviewTemplateId:reviewTemplateId, expectedRevision:revision, templateName:templateName, description:description,
-                                            selfAssessment:(selfAssessment ? 'Y' : 'N'), feedbackAllowed:(feedbackAllowed ? 'Y' : 'N'),
-                                            feedbackReleased:(feedbackReleased ? 'Y' : 'N'), approvalRequired:(approvalRequired ? 'Y' : 'N'),
-                                            selfFormId:selfFormId, managerFormId:managerFormId, feedbackFormId:feedbackFormId}">
-                                    <field name="reviewTemplateId"><default-field><hidden/></default-field></field>
-                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                    <field name="selfFormId"><default-field><hidden/></default-field></field>
-                                    <field name="managerFormId"><default-field><hidden/></default-field></field>
-                                    <field name="feedbackFormId"><default-field><hidden/></default-field></field>
-                                    <field name="templateName"><default-field title="Name"><text-line size="40"/></default-field></field>
-                                    <field name="selfAssessment"><default-field title="Self assessment"><check><option key="Y" text=" "/></check></default-field></field>
-                                    <field name="feedbackAllowed"><default-field title="Feedback"><check><option key="Y" text=" "/></check></default-field></field>
-                                    <field name="feedbackReleased"><default-field title="Share feedback"><check><option key="Y" text=" "/></check></default-field></field>
-                                    <field name="approvalRequired"><default-field title="Approve before release"><check><option key="Y" text=" "/></check></default-field></field>
-                                    <field name="description"><default-field title="Description"><text-area rows="2"/></default-field></field>
-                                    <field name="submitButton"><default-field title="Save template"><submit/></default-field></field>
-                                </form-single>
-                            </container-dialog>
-                            <link url="storeTemplate" link-type="hidden-form" text="End" icon="sym_o_event_busy" btn-type="danger" condition="canSetUp &amp;&amp; !ended"
-                                    parameter-map="{reviewTemplateId:reviewTemplateId, end:'true', expectedRevision:revision}"
-                                    confirmation="End the template ${templateName}? It starts no new cycle; its cycles and reviews are kept."/>
-                        </default-field>
-                    </field>
-                    <columns type="mobile">
-                        <column><field-ref name="templateName"/><field-ref name="stepsText"/></column>
-                        <column><field-ref name="releaseText"/><field-ref name="actions"/></column>
-                    </columns>
-                </form-list>
+                <section name="TemplateListSection" condition="templates.length">
+                    <widgets>
+                        <form-list name="TemplateList" list="templates" skip-form="true" paginate="false">
+                            <field name="templateName"><default-field title="Template"><display/></default-field></field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <field name="stepsText"><default-field title="Steps"><display/></default-field></field>
+                            <field name="releaseText"><default-field title="Release"><display/></default-field></field>
+                            <field name="formsText"><default-field title="Forms"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ChangeTemplate_${reviewTemplateId}" button-text="Change" icon="sym_o_edit" width="560"
+                                            title="Change ${templateName}" condition="canSetUp">
+                                        <label type="p" text="A template a started cycle uses is not changed: end it and add another."/>
+                                        <form-single name="ChangeTemplate" transition="storeTemplate"
+                                                map="{reviewTemplateId:reviewTemplateId, expectedRevision:revision, templateName:templateName, description:description,
+                                                    selfAssessment:(selfAssessment ? 'Y' : 'N'), feedbackAllowed:(feedbackAllowed ? 'Y' : 'N'),
+                                                    feedbackReleased:(feedbackReleased ? 'Y' : 'N'), approvalRequired:(approvalRequired ? 'Y' : 'N'),
+                                                    selfFormId:selfFormId, managerFormId:managerFormId, feedbackFormId:feedbackFormId}">
+                                            <field name="reviewTemplateId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="selfFormId"><default-field><hidden/></default-field></field>
+                                            <field name="managerFormId"><default-field><hidden/></default-field></field>
+                                            <field name="feedbackFormId"><default-field><hidden/></default-field></field>
+                                            <field name="templateName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="selfAssessment"><default-field title="Self assessment"><check><option key="Y" text=" "/></check></default-field></field>
+                                            <field name="feedbackAllowed"><default-field title="Feedback"><check><option key="Y" text=" "/></check></default-field></field>
+                                            <field name="feedbackReleased"><default-field title="Share feedback"><check><option key="Y" text=" "/></check></default-field></field>
+                                            <field name="approvalRequired"><default-field title="Approve before release"><check><option key="Y" text=" "/></check></default-field></field>
+                                            <field name="description"><default-field title="Description"><text-area rows="2"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save template"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="storeTemplate" link-type="hidden-form" text="End" icon="sym_o_event_busy" btn-type="danger" condition="canSetUp &amp;&amp; !ended"
+                                            parameter-map="{reviewTemplateId:reviewTemplateId, end:'true', expectedRevision:revision}"
+                                            confirmation="End the template ${templateName}? It starts no new cycle; its cycles and reviews are kept."/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="templateName"/><field-ref name="stepsText"/></column>
+                                <column><field-ref name="releaseText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label type="p" style="q-pa-md m-muted" condition="!templates.length"
                         text="No template yet. New template says which steps a review asks, which review forms they answer and how it is released."/>
             </box-body-nopad>

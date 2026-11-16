@@ -97,32 +97,36 @@ along with this software (see the LICENSE.md file). If not, see
         <label text="This organization is not available to you." type="p" style="text-negative" condition="organizationPartyId &amp;&amp; !found"/>
         <label text="Nothing offered yet. Offer a UTM source, medium or content value, or a list or tracking code type." type="p" style="m-muted"
                 condition="found &amp;&amp; !vocabularyList.length"/>
-        <form-list name="Vocabulary" list="vocabularyList" skip-form="true" paginate="false" condition="vocabularyList.length">
-            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-            <field name="value"><default-field title="Value"><display/></default-field></field>
-            <field name="label"><default-field title="Label"><display/></default-field></field>
-            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
-            <field name="rowActions" align="right">
-                <default-field title="">
-                    <container-dialog id="EndValue_${marketingVocabularyId}" button-text="End" icon="sym_o_block" title="End ${label}"
-                            width="440" condition="current">
-                        <form-single name="EndValue" transition="storeVocabulary"
-                                map="{organizationPartyId:organizationPartyId, marketingVocabularyId:marketingVocabularyId}">
-                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
-                            <field name="marketingVocabularyId"><default-field><hidden/></default-field></field>
-                            <field name="action" from="'end'"><default-field><hidden/></default-field></field>
-                            <field name="submitButton">
-                                <default-field title=""><submit text="End" type="danger" confirmation="Stop offering ${label}? Its history stays."/></default-field>
-                            </field>
-                        </form-single>
-                    </container-dialog>
-                </default-field>
-            </field>
-            <columns type="mobile">
-                <column><field-ref name="label"/><field-ref name="kindText"/></column>
-                <column><field-ref name="value"/><field-ref name="rowActions"/></column>
-            </columns>
-        </form-list>
+        <section name="VocabularySection" condition="vocabularyList.length">
+            <widgets>
+                <form-list name="Vocabulary" list="vocabularyList" skip-form="true" paginate="false">
+                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                    <field name="value"><default-field title="Value"><display/></default-field></field>
+                    <field name="label"><default-field title="Label"><display/></default-field></field>
+                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                    <field name="rowActions" align="right">
+                        <default-field title="">
+                            <container-dialog id="EndValue_${marketingVocabularyId}" button-text="End" icon="sym_o_block" title="End ${label}"
+                                    width="440" condition="current">
+                                <form-single name="EndValue" transition="storeVocabulary"
+                                        map="{organizationPartyId:organizationPartyId, marketingVocabularyId:marketingVocabularyId}">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="marketingVocabularyId"><default-field><hidden/></default-field></field>
+                                    <field name="action" from="'end'"><default-field><hidden/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="End" type="danger" confirmation="Stop offering ${label}? Its history stays."/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="label"/><field-ref name="kindText"/></column>
+                        <column><field-ref name="value"/><field-ref name="rowActions"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
     </widgets>
 </screen>

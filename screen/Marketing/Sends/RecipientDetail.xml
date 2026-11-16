@@ -137,17 +137,21 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Attempts"/>
                     <box-body>
                         <label text="No attempt yet." type="p" style="m-muted" condition="!attemptList.length"/>
-                        <form-list name="Attempts" list="attemptList" skip-form="true" paginate="false" condition="attemptList.length">
-                            <field name="attemptSeqId"><default-field title="Attempt"><display/></default-field></field>
-                            <field name="attemptDateText"><default-field title="When"><display/></default-field></field>
-                            <field name="outcome"><default-field title="Outcome"><display/></default-field></field>
-                            <field name="providerMessageId"><default-field title="Message"><display/></default-field></field>
-                            <field name="error"><default-field title="Error"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="attemptSeqId"/><field-ref name="attemptDateText"/></column>
-                                <column><field-ref name="outcome"/><field-ref name="error"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="AttemptsSection" condition="attemptList.length">
+                            <widgets>
+                                <form-list name="Attempts" list="attemptList" skip-form="true" paginate="false">
+                                    <field name="attemptSeqId"><default-field title="Attempt"><display/></default-field></field>
+                                    <field name="attemptDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="outcome"><default-field title="Outcome"><display/></default-field></field>
+                                    <field name="providerMessageId"><default-field title="Message"><display/></default-field></field>
+                                    <field name="error"><default-field title="Error"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="attemptSeqId"/><field-ref name="attemptDateText"/></column>
+                                        <column><field-ref name="outcome"/><field-ref name="error"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
 

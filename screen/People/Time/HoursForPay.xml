@@ -197,39 +197,43 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="text-caption m-muted"/>
                 <container-box>
                     <box-body-nopad>
-                        <form-list name="ReconciliationList" list="employmentRows" skip-form="true" paginate="true" condition="employmentRows.length">
-                            <field name="personName">
-                                <default-field title="Employee">
-                                    <link url="." text="${personName}" link-type="anchor"
-                                            parameter-map="{payrollGroupId:payrollGroupId, timePeriodId:timePeriodId, partyRelationshipId:partyRelationshipId}"/>
-                                </default-field>
-                            </field>
-                            <field name="scheduledText" align="right"><default-field title="Scheduled"><display/></default-field></field>
-                            <field name="presentText" align="right"><default-field title="Present"><display/></default-field></field>
-                            <field name="submittedText" align="right"><default-field title="Submitted"><display/></default-field></field>
-                            <field name="approvedText" align="right"><default-field title="Approved"><display/></default-field></field>
-                            <field name="payableText" align="right"><default-field title="Payable"><display/></default-field></field>
-                            <field name="paidLeaveText" align="right"><default-field title="Paid leave"><display/></default-field></field>
-                            <field name="unpaidLeaveText" align="right"><default-field title="Unpaid leave"><display/></default-field></field>
-                            <field name="piecesText" align="right"><default-field title="Pieces"><display/></default-field></field>
-                            <field name="claimCount" align="right"><default-field title="Claims"><display/></default-field></field>
-                            <field name="differenceText"><default-field title="Other stream"><display/></default-field></field>
-                            <field name="stateText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                        <section name="ReconciliationListSection" condition="employmentRows.length">
+                            <widgets>
+                                <form-list name="ReconciliationList" list="employmentRows" skip-form="true" paginate="true">
+                                    <field name="personName">
+                                        <default-field title="Employee">
+                                            <link url="." text="${personName}" link-type="anchor"
+                                                    parameter-map="{payrollGroupId:payrollGroupId, timePeriodId:timePeriodId, partyRelationshipId:partyRelationshipId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="scheduledText" align="right"><default-field title="Scheduled"><display/></default-field></field>
+                                    <field name="presentText" align="right"><default-field title="Present"><display/></default-field></field>
+                                    <field name="submittedText" align="right"><default-field title="Submitted"><display/></default-field></field>
+                                    <field name="approvedText" align="right"><default-field title="Approved"><display/></default-field></field>
+                                    <field name="payableText" align="right"><default-field title="Payable"><display/></default-field></field>
+                                    <field name="paidLeaveText" align="right"><default-field title="Paid leave"><display/></default-field></field>
+                                    <field name="unpaidLeaveText" align="right"><default-field title="Unpaid leave"><display/></default-field></field>
+                                    <field name="piecesText" align="right"><default-field title="Pieces"><display/></default-field></field>
+                                    <field name="claimCount" align="right"><default-field title="Claims"><display/></default-field></field>
+                                    <field name="differenceText"><default-field title="Other stream"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                        <text type="html">${stateText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <field name="problemsText"><default-field title="What stops it"><display/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="personName"/><field-ref name="payableText"/></column>
-                                <column><field-ref name="stateText"/><field-ref name="problemsText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="problemsText"><default-field title="What stops it"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="personName"/><field-ref name="payableText"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="problemsText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!employmentRows.length"
                                 text="No employee of this group matches. Employees join a pay group through their pay assignment."/>
                     </box-body-nopad>
@@ -277,50 +281,66 @@ along with this software (see the LICENSE.md file). If not, see
                             </box-toolbar>
                             <box-body>
                                 <label text="${employmentProblems.join('; ')}" type="p" style="text-warning" condition="employmentProblems.length"/>
-                                <form-list name="DayRows" list="dayRows" skip-form="true" paginate="false" condition="dayRows.length">
-                                    <field name="day"><default-field title="Day"><display/></default-field></field>
-                                    <field name="approvedText" align="right"><default-field title="Approved time"><display/></default-field></field>
-                                    <field name="presentText" align="right"><default-field title="Attendance"><display/></default-field></field>
-                                    <field name="leaveText" align="right"><default-field title="Leave"><display/></default-field></field>
-                                    <field name="inputsText"><default-field title="Prepared"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="day"/><field-ref name="approvedText"/></column>
-                                        <column><field-ref name="leaveText"/><field-ref name="inputsText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="DayRowsSection" condition="dayRows.length">
+                                    <widgets>
+                                        <form-list name="DayRows" list="dayRows" skip-form="true" paginate="false">
+                                            <field name="day"><default-field title="Day"><display/></default-field></field>
+                                            <field name="approvedText" align="right"><default-field title="Approved time"><display/></default-field></field>
+                                            <field name="presentText" align="right"><default-field title="Attendance"><display/></default-field></field>
+                                            <field name="leaveText" align="right"><default-field title="Leave"><display/></default-field></field>
+                                            <field name="inputsText"><default-field title="Prepared"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="day"/><field-ref name="approvedText"/></column>
+                                                <column><field-ref name="leaveText"/><field-ref name="inputsText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label text="No time, attendance or leave in this period." type="p" style="m-muted" condition="!dayRows.length"/>
-                                <form-list name="SheetRows" list="sheetRows" skip-form="true" paginate="false" condition="sheetRows.length">
-                                    <field name="weekText">
-                                        <default-field title="Timesheet">
-                                            <link url="${timesheetUrl}" url-type="plain" text="${weekText}" link-type="anchor"
-                                                    parameter-map="{timesheetId:timesheetId}" condition="timesheetUrl"/>
-                                            <label text="${weekText}" type="span" condition="!timesheetUrl"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
-                                </form-list>
-                                <form-list name="LeaveRows" list="leaveRows" skip-form="true" paginate="false" condition="leaveRows.length">
-                                    <field name="text">
-                                        <default-field title="Leave">
-                                            <link url="${leaveUrl}" url-type="plain" text="${text}" link-type="anchor"
-                                                    parameter-map="{leaveRequestId:leaveRequestId}" condition="leaveUrl"/>
-                                            <label text="${text}" type="span" condition="!leaveUrl"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                </form-list>
+                                <section name="SheetRowsSection" condition="sheetRows.length">
+                                    <widgets>
+                                        <form-list name="SheetRows" list="sheetRows" skip-form="true" paginate="false">
+                                            <field name="weekText">
+                                                <default-field title="Timesheet">
+                                                    <link url="${timesheetUrl}" url-type="plain" text="${weekText}" link-type="anchor"
+                                                            parameter-map="{timesheetId:timesheetId}" condition="timesheetUrl"/>
+                                                    <label text="${weekText}" type="span" condition="!timesheetUrl"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="LeaveRowsSection" condition="leaveRows.length">
+                                    <widgets>
+                                        <form-list name="LeaveRows" list="leaveRows" skip-form="true" paginate="false">
+                                            <field name="text">
+                                                <default-field title="Leave">
+                                                    <link url="${leaveUrl}" url-type="plain" text="${text}" link-type="anchor"
+                                                            parameter-map="{leaveRequestId:leaveRequestId}" condition="leaveUrl"/>
+                                                    <label text="${text}" type="span" condition="!leaveUrl"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <link url="${attendanceUrl}" url-type="plain" text="Resolve attendance" icon="sym_o_fact_check" link-type="anchor-button"
                                         condition="attendanceUrl &amp;&amp; employment.unresolvedDays?.length"/>
-                                <form-list name="InputRows" list="inputRows" skip-form="true" paginate="false" condition="inputRows.length">
-                                    <field name="inputDateText"><default-field title="Day"><display/></default-field></field>
-                                    <field name="typeText"><default-field title="Input"><display/></default-field></field>
-                                    <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
-                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="typeText"/><field-ref name="inputDateText"/></column>
-                                        <column><field-ref name="quantityText"/><field-ref name="stateText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="InputRowsSection" condition="inputRows.length">
+                                    <widgets>
+                                        <form-list name="InputRows" list="inputRows" skip-form="true" paginate="false">
+                                            <field name="inputDateText"><default-field title="Day"><display/></default-field></field>
+                                            <field name="typeText"><default-field title="Input"><display/></default-field></field>
+                                            <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="typeText"/><field-ref name="inputDateText"/></column>
+                                                <column><field-ref name="quantityText"/><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                     </widgets>

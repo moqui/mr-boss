@@ -175,22 +175,26 @@ along with this software (see the LICENSE.md file). If not, see
                 </box-toolbar>
                 <box-body>
                     <label text="In no category. A newsletter takes the approved posts of a category." type="p" style="m-muted" condition="!categories.length"/>
-                    <form-list name="Categories" list="categories" skip-form="true" paginate="false" condition="categories.length">
-                        <field name="categoryName"><default-field title="Category"><display/></default-field></field>
-                        <field name="sentDateText"><default-field title="Sent (legacy)" tooltip="The baseline's mark; a campaign send's recipients are its record"><display/></default-field></field>
-                        <field name="remove">
-                            <conditional-field condition="canEdit" title="">
-                                <link url="removeBlogCategory" text="Remove" icon="sym_o_remove" link-type="hidden-form-link" btn-type="danger"
-                                        confirmation="Take ${post.title} out of ${categoryName}?"
-                                        parameter-map="{wikiBlogId:wikiBlogId, wikiPageCategoryId:wikiPageCategoryId}"/>
-                            </conditional-field>
-                            <default-field><display text=""/></default-field>
-                        </field>
-                        <columns type="mobile">
-                            <column><field-ref name="categoryName"/></column>
-                            <column><field-ref name="sentDateText"/><field-ref name="remove"/></column>
-                        </columns>
-                    </form-list>
+                    <section name="CategoriesSection" condition="categories.length">
+                        <widgets>
+                            <form-list name="Categories" list="categories" skip-form="true" paginate="false">
+                                <field name="categoryName"><default-field title="Category"><display/></default-field></field>
+                                <field name="sentDateText"><default-field title="Sent (legacy)" tooltip="The baseline's mark; a campaign send's recipients are its record"><display/></default-field></field>
+                                <field name="remove">
+                                    <conditional-field condition="canEdit" title="">
+                                        <link url="removeBlogCategory" text="Remove" icon="sym_o_remove" link-type="hidden-form-link" btn-type="danger"
+                                                confirmation="Take ${post.title} out of ${categoryName}?"
+                                                parameter-map="{wikiBlogId:wikiBlogId, wikiPageCategoryId:wikiPageCategoryId}"/>
+                                    </conditional-field>
+                                    <default-field><display text=""/></default-field>
+                                </field>
+                                <columns type="mobile">
+                                    <column><field-ref name="categoryName"/></column>
+                                    <column><field-ref name="sentDateText"/><field-ref name="remove"/></column>
+                                </columns>
+                            </form-list>
+                        </widgets>
+                    </section>
                 </box-body>
             </container-box>
 
@@ -198,20 +202,24 @@ along with this software (see the LICENSE.md file). If not, see
                 <box-header title="Campaign use"/>
                 <box-body>
                     <label text="No campaign uses this post." type="p" style="m-muted" condition="!campaignUses.length"/>
-                    <form-list name="CampaignUse" list="campaignUses" skip-form="true" paginate="false" condition="campaignUses.length">
-                        <field name="campaignName">
-                            <default-field title="Campaign">
-                                <link url="${contentDetailPath}" text="${campaignName}" link-type="anchor" parameter-map="{campaignContentId:campaignContentId}"/>
-                            </default-field>
-                        </field>
-                        <field name="useText"><default-field title="Use"><display/></default-field></field>
-                        <field name="intendedDateText"><default-field title="Intended"><display/></default-field></field>
-                        <field name="sendsText"><default-field title="Sends"><display text="${distribution.map((send) =&gt; send.sendName + ' (' + send.statusText + ')').join(', ')}"/></default-field></field>
-                        <columns type="mobile">
-                            <column><field-ref name="campaignName"/><field-ref name="useText"/></column>
-                            <column><field-ref name="intendedDateText"/><field-ref name="sendsText"/></column>
-                        </columns>
-                    </form-list>
+                    <section name="CampaignUseSection" condition="campaignUses.length">
+                        <widgets>
+                            <form-list name="CampaignUse" list="campaignUses" skip-form="true" paginate="false">
+                                <field name="campaignName">
+                                    <default-field title="Campaign">
+                                        <link url="${contentDetailPath}" text="${campaignName}" link-type="anchor" parameter-map="{campaignContentId:campaignContentId}"/>
+                                    </default-field>
+                                </field>
+                                <field name="useText"><default-field title="Use"><display/></default-field></field>
+                                <field name="intendedDateText"><default-field title="Intended"><display/></default-field></field>
+                                <field name="sendsText"><default-field title="Sends"><display text="${distribution.map((send) =&gt; send.sendName + ' (' + send.statusText + ')').join(', ')}"/></default-field></field>
+                                <columns type="mobile">
+                                    <column><field-ref name="campaignName"/><field-ref name="useText"/></column>
+                                    <column><field-ref name="intendedDateText"/><field-ref name="sendsText"/></column>
+                                </columns>
+                            </form-list>
+                        </widgets>
+                    </section>
                 </box-body>
             </container-box>
         </widgets></section>

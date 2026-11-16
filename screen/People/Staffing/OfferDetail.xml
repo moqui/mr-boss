@@ -405,11 +405,14 @@ along with this software (see the LICENSE.md file). If not, see
                                 <link url="letter" text="Open the issued letter" link-type="anchor" target-window="_blank"
                                         parameter-map="{employmentOfferId:offer.employmentOfferId}" condition="offer.letterIssued &amp;&amp; !offer.letterRestricted"/>
                                 <!-- P17 review: the letter's email to the applicant: whether it went, where and why not -->
-                                <form-list name="LetterSendRows" list="sendRows" skip-form="true" skip-header="true" paginate="false"
-                                        condition="sendRows.length">
-                                    <field name="label"><default-field title=""><display style="text-weight-medium"/></default-field></field>
-                                    <field name="value"><default-field title=""><display/></default-field></field>
-                                </form-list>
+                                <section name="LetterSendRowsSection" condition="sendRows.length">
+                                    <widgets>
+                                        <form-list name="LetterSendRows" list="sendRows" skip-form="true" skip-header="true" paginate="false">
+                                            <field name="label"><default-field title=""><display style="text-weight-medium"/></default-field></field>
+                                            <field name="value"><default-field title=""><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="m-muted" condition="!offer.letterIssued"
                                         text="The letter is stored when the offer is issued, once approved."/>
                                 <link url="${printUrl}" url-type="plain" text="Preview the letter" link-type="anchor" target-window="_blank"
@@ -420,25 +423,33 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Approval"/>
                             <box-body-nopad>
                                 <label type="p" style="q-px-md q-pt-sm" text="${approval.waitingText}" condition="approval?.waitingText"/>
-                                <form-list name="ApprovalSteps" list="stepRows" skip-form="true" paginate="false" condition="stepRows.length">
-                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
-                                    <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
-                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
-                                        <column><field-ref name="stateText"/></column>
-                                    </columns>
-                                </form-list>
-                                <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false" condition="decisionRows.length">
-                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
-                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
-                                    <field name="reason"><default-field title="Why"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
-                                        <column><field-ref name="decisionDateText"/></column>
-                                    </columns>
-                                </form-list>
+                                <section name="ApprovalStepsSection" condition="stepRows.length">
+                                    <widgets>
+                                        <form-list name="ApprovalSteps" list="stepRows" skip-form="true" paginate="false">
+                                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                            <field name="explanation"><default-field title="Who decides"><display/></default-field></field>
+                                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="stepText"/><field-ref name="explanation"/></column>
+                                                <column><field-ref name="stateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="ApprovalDecisionsSection" condition="decisionRows.length">
+                                    <widgets>
+                                        <form-list name="ApprovalDecisions" list="decisionRows" skip-form="true" paginate="false">
+                                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                            <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                            <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                            <field name="reason"><default-field title="Why"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                                                <column><field-ref name="decisionDateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="q-pa-md m-muted" condition="!approval" text="Not submitted for approval yet."/>
                             </box-body-nopad>
                         </container-box>

@@ -89,50 +89,54 @@ along with this software (see the LICENSE.md file). If not, see
         </form-single>
 
         <label text="No flow map matches." type="p" style="m-muted" condition="insights.capabilities.view &amp;&amp; !mapRows.length"/>
-        <form-list name="MapList" list="mapRows" skip-form="true" paginate="false" condition="mapRows.length">
-            <field name="title"><default-field title="Map">
-                <link url="../FlowMap" text="${title}" link-type="anchor" parameter-map="{definitionId:definitionId}"/>
-                <label text="Your default" type="span" style="text-caption m-muted q-ml-sm" condition="isDefault"/>
-            </default-field></field>
-            <field name="kindText"><default-field title="Kind">
-                <render-mode>
-                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${template ? 'grey-8' : 'primary'}">${
+        <section name="MapListSection" condition="mapRows.length">
+            <widgets>
+                <form-list name="MapList" list="mapRows" skip-form="true" paginate="false">
+                    <field name="title"><default-field title="Map">
+                        <link url="../FlowMap" text="${title}" link-type="anchor" parameter-map="{definitionId:definitionId}"/>
+                        <label text="Your default" type="span" style="text-caption m-muted q-ml-sm" condition="isDefault"/>
+                    </default-field></field>
+                    <field name="kindText"><default-field title="Kind">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${template ? 'grey-8' : 'primary'}">${
                         WebUtilities.encodeHtml(kindText)}</q-chip>]]></text>
-                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: kindText})}]]></text>
-                    <text type="html">${kindText}</text>
-                </render-mode>
-            </default-field></field>
-            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
-            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
-            <field name="version"><default-field title="Version" align="right"><display/></default-field></field>
-            <field name="sharing"><default-field title="Shared with"><display text="${ownerText} · ${sharing}"/></default-field></field>
-            <field name="actions"><default-field title="">
-                <link url="../FlowMapEditor" text="Edit" link-type="anchor" condition="canEdit" parameter-map="{definitionId:definitionId}"/>
-                <container-dialog id="CopyMap_${definitionId}" button-text="Copy" title="Copy ${title} for an organization" condition="canCopy">
-                    <label type="p" style="m-muted" text="Your copy is yours to change. It records what it was copied from; a later change of this map leaves your copy as it is."/>
-                    <form-single name="CopyMapForm" transition="copyMap">
-                        <field name="sourceDefinitionId"><default-field><hidden default-value="${definitionId}"/></default-field></field>
-                        <field name="sourceVersion"><default-field><hidden default-value="${version}"/></default-field></field>
-                        <field name="copyTitle"><default-field title="Name"><text-line size="50" default-value="${title}"/></default-field></field>
-                        <field name="copyOrganizationPartyId"><default-field title="Organization">
-                            <drop-down><list-options list="scopeOptions" key="${value}" text="${label}"/></drop-down>
-                        </default-field></field>
-                        <field name="copyUserGroupId"><default-field title="Share with" tooltip="One of your groups; its members who see the organization read the map. Empty keeps it private.">
-                            <drop-down allow-empty="true"><list-options list="groupOptions" key="${value}" text="${label}"/></drop-down>
-                        </default-field></field>
-                        <field name="copy"><default-field><submit text="Copy map"/></default-field></field>
-                    </form-single>
-                </container-dialog>
-                <link url="setDefault" link-type="hidden-form" text="Open by default" condition="!isDefault"
-                        parameter-map="{defaultDefinitionId:definitionId}"/>
-                <link url="deleteMap" link-type="hidden-form" text="Remove" btn-type="danger" condition="canEdit"
-                        confirmation="Remove ${title} of ${organizationName} with its versions? This cannot be undone."
-                        parameter-map="{deleteDefinitionId:definitionId, expectedVersion:version}"/>
-            </default-field></field>
-            <columns type="mobile">
-                <column><field-ref name="title"/><field-ref name="organizationName"/></column>
-                <column><field-ref name="kindText"/><field-ref name="actions"/></column>
-            </columns>
-        </form-list>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: kindText})}]]></text>
+                            <text type="html">${kindText}</text>
+                        </render-mode>
+                    </default-field></field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                    <field name="version"><default-field title="Version" align="right"><display/></default-field></field>
+                    <field name="sharing"><default-field title="Shared with"><display text="${ownerText} · ${sharing}"/></default-field></field>
+                    <field name="actions"><default-field title="">
+                        <link url="../FlowMapEditor" text="Edit" link-type="anchor" condition="canEdit" parameter-map="{definitionId:definitionId}"/>
+                        <container-dialog id="CopyMap_${definitionId}" button-text="Copy" title="Copy ${title} for an organization" condition="canCopy">
+                            <label type="p" style="m-muted" text="Your copy is yours to change. It records what it was copied from; a later change of this map leaves your copy as it is."/>
+                            <form-single name="CopyMapForm" transition="copyMap">
+                                <field name="sourceDefinitionId"><default-field><hidden default-value="${definitionId}"/></default-field></field>
+                                <field name="sourceVersion"><default-field><hidden default-value="${version}"/></default-field></field>
+                                <field name="copyTitle"><default-field title="Name"><text-line size="50" default-value="${title}"/></default-field></field>
+                                <field name="copyOrganizationPartyId"><default-field title="Organization">
+                                    <drop-down><list-options list="scopeOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field></field>
+                                <field name="copyUserGroupId"><default-field title="Share with" tooltip="One of your groups; its members who see the organization read the map. Empty keeps it private.">
+                                    <drop-down allow-empty="true"><list-options list="groupOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field></field>
+                                <field name="copy"><default-field><submit text="Copy map"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <link url="setDefault" link-type="hidden-form" text="Open by default" condition="!isDefault"
+                                parameter-map="{defaultDefinitionId:definitionId}"/>
+                        <link url="deleteMap" link-type="hidden-form" text="Remove" btn-type="danger" condition="canEdit"
+                                confirmation="Remove ${title} of ${organizationName} with its versions? This cannot be undone."
+                                parameter-map="{deleteDefinitionId:definitionId, expectedVersion:version}"/>
+                    </default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="organizationName"/></column>
+                        <column><field-ref name="kindText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
     </widgets>
 </screen>

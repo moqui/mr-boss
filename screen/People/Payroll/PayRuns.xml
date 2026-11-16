@@ -142,35 +142,39 @@ along with this software (see the LICENSE.md file). If not, see
         </form-single>
         <container-box>
             <box-body-nopad>
-                <form-list name="RunList" list="runRows" skip-form="true" paginate="true" condition="runRows.length">
-                    <field name="groupName">
-                        <default-field title="Pay group">
-                            <link url="${detailUrl}" url-type="plain" text="${groupName}" link-type="anchor" parameter-map="{payrollRunId:payrollRunId}"/>
-                        </default-field>
-                    </field>
-                    <field name="periodText"><default-field title="Period"><display/></default-field></field>
-                    <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
-                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                    <field name="workerCount" align="right"><default-field title="Employees"><display/></default-field></field>
-                    <field name="errorCount" align="right"><default-field title="Errors"><display/></default-field></field>
-                    <field name="grossText" align="right" ai-opt-out="true"><default-field title="Gross"><display/></default-field></field>
-                    <field name="netText" align="right" ai-opt-out="true"><default-field title="Net"><display/></default-field></field>
-                    <field name="stateText">
-                        <default-field title="State">
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || stateColors[statusId] || 'grey-8'}">${
+                <section name="RunListSection" condition="runRows.length">
+                    <widgets>
+                        <form-list name="RunList" list="runRows" skip-form="true" paginate="true">
+                            <field name="groupName">
+                                <default-field title="Pay group">
+                                    <link url="${detailUrl}" url-type="plain" text="${groupName}" link-type="anchor" parameter-map="{payrollRunId:payrollRunId}"/>
+                                </default-field>
+                            </field>
+                            <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                            <field name="payDateText"><default-field title="Pay date"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="workerCount" align="right"><default-field title="Employees"><display/></default-field></field>
+                            <field name="errorCount" align="right"><default-field title="Errors"><display/></default-field></field>
+                            <field name="grossText" align="right" ai-opt-out="true"><default-field title="Gross"><display/></default-field></field>
+                            <field name="netText" align="right" ai-opt-out="true"><default-field title="Net"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || stateColors[statusId] || 'grey-8'}">${
                                     WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                <text type="html">${stateText}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="groupName"/><field-ref name="periodText"/></column>
-                        <column><field-ref name="stateText"/><field-ref name="netText"/></column>
-                    </columns>
-                </form-list>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="groupName"/><field-ref name="periodText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="netText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
                 <label type="p" style="q-pa-md m-muted" condition="!runRows.length"
                         text="No pay run matches. Create one for a pay group's prepared period with New pay run."/>
             </box-body-nopad>

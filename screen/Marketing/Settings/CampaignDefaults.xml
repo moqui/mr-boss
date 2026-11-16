@@ -162,10 +162,14 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-body>
                         <label text="${preview?.effectiveText}" type="p" style="text-caption m-muted"/>
                         <label text="Nothing else changes." type="p" style="m-muted" condition="!findingList.length"/>
-                        <form-list name="PolicyPreview" list="findingList" skip-form="true" paginate="false" condition="findingList.length">
-                            <field name="text"><default-field title="Finding"><display/></default-field></field>
-                            <columns type="mobile"><column><field-ref name="text"/></column></columns>
-                        </form-list>
+                        <section name="PolicyPreviewSection" condition="findingList.length">
+                            <widgets>
+                                <form-list name="PolicyPreview" list="findingList" skip-form="true" paginate="false">
+                                    <field name="text"><default-field title="Finding"><display/></default-field></field>
+                                    <columns type="mobile"><column><field-ref name="text"/></column></columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
                 <container-box condition="historyList.length">

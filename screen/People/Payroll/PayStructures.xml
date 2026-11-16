@@ -134,34 +134,38 @@ along with this software (see the LICENSE.md file). If not, see
                 </form-single>
                 <container-box>
                     <box-body-nopad>
-                        <form-list name="Structures" list="structureRows" skip-form="true" paginate="true" condition="structureRows.length">
-                            <field name="structureName">
-                                <default-field title="Structure">
-                                    <link url="../PayStructureDetail" text="${structureName}" link-type="anchor"
-                                            parameter-map="{payrollStructureId:payrollStructureId}"/>
-                                </default-field>
-                            </field>
-                            <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
-                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
-                            <field name="payBasisText"><default-field title="Pay basis"><display/></default-field></field>
-                            <field name="componentCount" align="right"><default-field title="Components"><display/></default-field></field>
-                            <field name="assignmentCount" align="right"><default-field title="Assigned" tooltip="Pay assignments in effect"><display/></default-field></field>
-                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
-                            <field name="stateText">
-                                <default-field title="State">
-                                    <render-mode>
-                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                        <section name="StructuresSection" condition="structureRows.length">
+                            <widgets>
+                                <form-list name="Structures" list="structureRows" skip-form="true" paginate="true">
+                                    <field name="structureName">
+                                        <default-field title="Structure">
+                                            <link url="../PayStructureDetail" text="${structureName}" link-type="anchor"
+                                                    parameter-map="{payrollStructureId:payrollStructureId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="organizationName"><default-field title="Employer"><display/></default-field></field>
+                                    <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                                    <field name="payBasisText"><default-field title="Pay basis"><display/></default-field></field>
+                                    <field name="componentCount" align="right"><default-field title="Components"><display/></default-field></field>
+                                    <field name="assignmentCount" align="right"><default-field title="Assigned" tooltip="Pay assignments in effect"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                             WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                        <text type="html">${stateText}</text>
-                                    </render-mode>
-                                </default-field>
-                            </field>
-                            <columns type="mobile">
-                                <column><field-ref name="structureName"/><field-ref name="organizationName"/></column>
-                                <column><field-ref name="currencyUomId"/><field-ref name="stateText"/></column>
-                            </columns>
-                        </form-list>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="structureName"/><field-ref name="organizationName"/></column>
+                                        <column><field-ref name="currencyUomId"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                         <label type="p" style="q-pa-md m-muted" condition="!structureRows.length &amp;&amp; filtered" text="No pay structure matches."/>
                         <label type="p" style="q-pa-md m-muted" condition="!structureRows.length &amp;&amp; !filtered"
                                 text="No pay structure is defined yet.${canEdit ? ' Start one with New structure.' : ''}"/>

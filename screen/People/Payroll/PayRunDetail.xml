@@ -303,47 +303,51 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-dialog>
                             </box-toolbar>
                             <box-body-nopad>
-                                <form-list name="PopulationList" list="unitRows" skip-form="true" paginate="true" condition="unitRows.length">
-                                    <field name="personName"><default-field title="Employee"><display/></default-field></field>
-                                    <field name="stateText">
-                                        <default-field title="State">
-                                            <render-mode>
-                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                <section name="PopulationListSection" condition="unitRows.length">
+                                    <widgets>
+                                        <form-list name="PopulationList" list="unitRows" skip-form="true" paginate="true">
+                                            <field name="personName"><default-field title="Employee"><display/></default-field></field>
+                                            <field name="stateText">
+                                                <default-field title="State">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                                     WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                                <text type="html">${stateText}</text>
-                                            </render-mode>
-                                        </default-field>
-                                    </field>
-                                    <field name="message"><default-field title="Reason"><display/></default-field></field>
-                                    <field name="actions">
-                                        <default-field title="">
-                                            <container-dialog id="Exclude_${partyRelationshipId}" button-text="Exclude" icon="sym_o_person_off" width="480"
-                                                    title="Exclude ${personName} from this run" condition="canEdit &amp;&amp; state != 'excluded'">
-                                                <form-single name="ExcludeEmployment" transition="selectEmployments"
-                                                        map="{payrollRunId:payrollRunId, excludeIds:partyRelationshipId}">
-                                                    <field name="payrollRunId"><default-field><hidden/></default-field></field>
-                                                    <field name="excludeIds"><default-field><hidden/></default-field></field>
-                                                    <field name="exclusionReason"><default-field title="Why" tooltip="Shown in the approval"><text-line size="40"/></default-field></field>
-                                                    <field name="submitButton"><default-field title="Exclude"><submit confirmation="Exclude ${personName} from this run?"/></default-field></field>
-                                                </form-single>
-                                            </container-dialog>
-                                            <container-dialog id="Include_${partyRelationshipId}" button-text="Include again" icon="sym_o_person_add" width="420"
-                                                    title="Include ${personName} again" condition="canEdit &amp;&amp; state == 'excluded'">
-                                                <form-single name="IncludeEmployment" transition="selectEmployments"
-                                                        map="{payrollRunId:payrollRunId, includeIds:partyRelationshipId}">
-                                                    <field name="payrollRunId"><default-field><hidden/></default-field></field>
-                                                    <field name="includeIds"><default-field><hidden/></default-field></field>
-                                                    <field name="submitButton"><default-field title="Include again"><submit/></default-field></field>
-                                                </form-single>
-                                            </container-dialog>
-                                        </default-field>
-                                    </field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="personName"/><field-ref name="message"/></column>
-                                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
-                                    </columns>
-                                </form-list>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                        <text type="html">${stateText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <field name="message"><default-field title="Reason"><display/></default-field></field>
+                                            <field name="actions">
+                                                <default-field title="">
+                                                    <container-dialog id="Exclude_${partyRelationshipId}" button-text="Exclude" icon="sym_o_person_off" width="480"
+                                                            title="Exclude ${personName} from this run" condition="canEdit &amp;&amp; state != 'excluded'">
+                                                        <form-single name="ExcludeEmployment" transition="selectEmployments"
+                                                                map="{payrollRunId:payrollRunId, excludeIds:partyRelationshipId}">
+                                                            <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                                            <field name="excludeIds"><default-field><hidden/></default-field></field>
+                                                            <field name="exclusionReason"><default-field title="Why" tooltip="Shown in the approval"><text-line size="40"/></default-field></field>
+                                                            <field name="submitButton"><default-field title="Exclude"><submit confirmation="Exclude ${personName} from this run?"/></default-field></field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                    <container-dialog id="Include_${partyRelationshipId}" button-text="Include again" icon="sym_o_person_add" width="420"
+                                                            title="Include ${personName} again" condition="canEdit &amp;&amp; state == 'excluded'">
+                                                        <form-single name="IncludeEmployment" transition="selectEmployments"
+                                                                map="{payrollRunId:payrollRunId, includeIds:partyRelationshipId}">
+                                                            <field name="payrollRunId"><default-field><hidden/></default-field></field>
+                                                            <field name="includeIds"><default-field><hidden/></default-field></field>
+                                                            <field name="submitButton"><default-field title="Include again"><submit/></default-field></field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="personName"/><field-ref name="message"/></column>
+                                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <label type="p" style="q-pa-md m-muted" condition="!unitRows.length"
                                         text="The group pays no employee in this period. Employees join a pay group through their pay assignment."/>
                             </box-body-nopad>
@@ -406,34 +410,38 @@ along with this software (see the LICENSE.md file). If not, see
                                                 text="Calculated: gross ${totalsText.gross}, deductions ${totalsText.deductions}, localization ${totalsText.localEmployee}, net ${totalsText.net}, employer cost ${totalsText.employerCost}"/>
                                     </widgets>
                                 </section>
-                                <form-list name="UnitList" list="unitRows" skip-form="true" paginate="true" condition="unitRows.length">
-                                    <field name="personName">
-                                        <default-field title="Employee">
-                                            <link url="." text="${personName}" link-type="anchor"
-                                                    parameter-map="{payrollRunId:payrollRunId, step:'review', partyRelationshipId:partyRelationshipId}"/>
-                                        </default-field>
-                                    </field>
-                                    <field name="stateText">
-                                        <default-field title="State">
-                                            <render-mode>
-                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
+                                <section name="UnitListSection" condition="unitRows.length">
+                                    <widgets>
+                                        <form-list name="UnitList" list="unitRows" skip-form="true" paginate="true">
+                                            <field name="personName">
+                                                <default-field title="Employee">
+                                                    <link url="." text="${personName}" link-type="anchor"
+                                                            parameter-map="{payrollRunId:payrollRunId, step:'review', partyRelationshipId:partyRelationshipId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="stateText">
+                                                <default-field title="State">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-8'}">${
                                                     WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
-                                                <text type="html">${stateText}</text>
-                                            </render-mode>
-                                        </default-field>
-                                    </field>
-                                    <field name="grossText" align="right" ai-opt-out="true"><default-field title="Gross"><display/></default-field></field>
-                                    <field name="deductionText" align="right" ai-opt-out="true"><default-field title="Deductions"><display/></default-field></field>
-                                    <field name="netText" align="right" ai-opt-out="true"><default-field title="Net"><display/></default-field></field>
-                                    <field name="employerCostText" align="right" ai-opt-out="true"><default-field title="Employer cost"><display/></default-field></field>
-                                    <field name="varianceText" align="right" ai-opt-out="true"><default-field title="Change from last run"><display/></default-field></field>
-                                    <field name="message"><default-field title="Reason"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="personName"/><field-ref name="message"/></column>
-                                        <column><field-ref name="stateText"/><field-ref name="netText"/></column>
-                                    </columns>
-                                </form-list>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                        <text type="html">${stateText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <field name="grossText" align="right" ai-opt-out="true"><default-field title="Gross"><display/></default-field></field>
+                                            <field name="deductionText" align="right" ai-opt-out="true"><default-field title="Deductions"><display/></default-field></field>
+                                            <field name="netText" align="right" ai-opt-out="true"><default-field title="Net"><display/></default-field></field>
+                                            <field name="employerCostText" align="right" ai-opt-out="true"><default-field title="Employer cost"><display/></default-field></field>
+                                            <field name="varianceText" align="right" ai-opt-out="true"><default-field title="Change from last run"><display/></default-field></field>
+                                            <field name="message"><default-field title="Reason"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="personName"/><field-ref name="message"/></column>
+                                                <column><field-ref name="stateText"/><field-ref name="netText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body-nopad>
                         </container-box>
                         <section name="OpenedEmployment" condition="employment" ai-opt-out="true">
@@ -447,25 +455,33 @@ along with this software (see the LICENSE.md file). If not, see
                                     <box-body>
                                         <label text="${employment.message}" type="p" style="text-warning" condition="employment.message"/>
                                         <label text="Period: ${employment.splitText}" type="p" style="text-caption" condition="employment.splitText"/>
-                                        <form-list name="ResultLines" list="resultRows" skip-form="true" paginate="false" condition="resultRows.length">
-                                            <field name="resultName"><default-field title="Line"><display/></default-field></field>
-                                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
-                                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
-                                            <field name="explanation"><default-field title="How"><display/></default-field></field>
-                                            <columns type="mobile">
-                                                <column><field-ref name="resultName"/><field-ref name="kindText"/></column>
-                                                <column><field-ref name="amountText"/></column>
-                                            </columns>
-                                        </form-list>
-                                        <form-list name="TakenInputs" list="takenRows" skip-form="true" paginate="false" condition="takenRows.length">
-                                            <field name="inputDateText"><default-field title="Day"><display/></default-field></field>
-                                            <field name="typeText"><default-field title="Input"><display/></default-field></field>
-                                            <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
-                                            <columns type="mobile">
-                                                <column><field-ref name="typeText"/><field-ref name="inputDateText"/></column>
-                                                <column><field-ref name="quantityText"/></column>
-                                            </columns>
-                                        </form-list>
+                                        <section name="ResultLinesSection" condition="resultRows.length">
+                                            <widgets>
+                                                <form-list name="ResultLines" list="resultRows" skip-form="true" paginate="false">
+                                                    <field name="resultName"><default-field title="Line"><display/></default-field></field>
+                                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                                    <field name="explanation"><default-field title="How"><display/></default-field></field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="resultName"/><field-ref name="kindText"/></column>
+                                                        <column><field-ref name="amountText"/></column>
+                                                    </columns>
+                                                </form-list>
+                                            </widgets>
+                                        </section>
+                                        <section name="TakenInputsSection" condition="takenRows.length">
+                                            <widgets>
+                                                <form-list name="TakenInputs" list="takenRows" skip-form="true" paginate="false">
+                                                    <field name="inputDateText"><default-field title="Day"><display/></default-field></field>
+                                                    <field name="typeText"><default-field title="Input"><display/></default-field></field>
+                                                    <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="typeText"/><field-ref name="inputDateText"/></column>
+                                                        <column><field-ref name="quantityText"/></column>
+                                                    </columns>
+                                                </form-list>
+                                            </widgets>
+                                        </section>
                                     </box-body>
                                 </container-box>
                             </widgets>
@@ -637,10 +653,14 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label type="p" text="${counts.calculated || 0} employees calculated, ${counts.excluded || 0} excluded, ${counts.error || 0} in error, ${counts.stale || 0} changed since calculated."/>
                                 <label type="p" style="text-warning" text="Employees in error are fixed and calculated again, or excluded with a reason, before approval." condition="counts.error"/>
                                 <label type="p" style="text-warning" text="Some results changed since they were calculated: calculate again." condition="counts.stale"/>
-                                <form-list name="ExcludedList" list="excludedRows" skip-form="true" paginate="false" condition="excludedRows.length">
-                                    <field name="personName"><default-field title="Excluded"><display/></default-field></field>
-                                    <field name="exclusionReason"><default-field title="Why"><display/></default-field></field>
-                                </form-list>
+                                <section name="ExcludedListSection" condition="excludedRows.length">
+                                    <widgets>
+                                        <form-list name="ExcludedList" list="excludedRows" skip-form="true" paginate="false">
+                                            <field name="personName"><default-field title="Excluded"><display/></default-field></field>
+                                            <field name="exclusionReason"><default-field title="Why"><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                                 <section name="ApprovalState" condition="approval">
                                     <widgets>
                                         <label type="p" text="${approval.statusText}${approval.waitingText ? ': ' + approval.waitingText : ''}. Asked by ${approval.requestedByName} ${approval.requestedDateText}${approval.justification ? ': ' + approval.justification : ''}"/>
