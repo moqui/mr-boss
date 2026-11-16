@@ -412,7 +412,30 @@ function batchOutput(parameters) {
     return {fileLocation: result.result.contentLocation, fileName: "Invoice-" + parameters.invoiceId + ".pdf"}
 }
 
-const operations = {invoiceContext, invoices, billingQueue, customerContext, batchContext, batchOutput}
+// The alert of each invoice a batch processed: a send names what reached its recipients, so one bad address among good
+// ones is not shown as a failed invoice (ACC-UI-026); warning when anything was not done.
+function batchMessages(parameters) {
+    return array(parameters.results).map(result => {
+        const recipients = array(result.result?.recipientResults)
+        const failed = recipients.filter(row => row.status === "failed")
+        const sent = recipients.length - failed.length
+        const recipientText = !recipients.length
+            ? null
+            : (sent
+                  ? "sent to " + sent + " of " + recipients.length + (recipients.length === 1 ? " recipient" : " recipients")
+                  : "not sent") + failed.map(row => "; " + row.recipient + ": " + (row.errorMessage || "not sent")).join("")
+        const text =
+            recipientText ||
+            result.message ||
+            result.errorMessage ||
+            result.error ||
+            result.status ||
+            (result.success ? "Completed" : "Failed")
+        return {text: (result.invoiceId || "Invoice") + ": " + text, warning: result.success === false || !!result.error}
+    })
+}
+
+const operations = {invoiceContext, invoices, billingQueue, customerContext, batchContext, batchOutput, batchMessages}
 ;({
     execute: (operation, parameters) => {
         if (!operations[operation]) throw new Error("Unknown receivables screen operation " + operation)

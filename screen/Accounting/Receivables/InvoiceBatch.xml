@@ -37,16 +37,16 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{organizationPartyId:organizationPartyId, invoiceIdList:invoiceIdList,
                         action:batchAction, operationKey:operationKey, sourceVersions:sourceVersions,
                         template:'standard', toAddresses:toAddresses}"/>
-            <iterate list="batchResult.results ?? []" entry="result">
-                <set field="resultText"
-                        from="(result.invoiceId || 'Invoice') + ': ' + (result.message || result.errorMessage || result.error
-                            || result.status || (result.success ? 'Completed' : 'Failed'))"/>
-                <if condition="result.success === false || result.error">
+            <!-- each invoice's alert, a send naming what reached each recipient (ACC-UI-026) -->
+            <set field="batchMessageRows" from="ec.resource.script('component://mr-boss/service/ironstone/accounting/Receivables.js')
+                    .execute('batchMessages', {results: batchResult.results ?? []})"/>
+            <iterate list="batchMessageRows" entry="batchMessage">
+                <if condition="batchMessage.warning">
                     <then>
-                        <message type="warning">${resultText}</message>
+                        <message type="warning">${batchMessage.text}</message>
                     </then>
                     <else>
-                        <message type="success">${resultText}</message>
+                        <message type="success">${batchMessage.text}</message>
                     </else>
                 </if>
             </iterate>

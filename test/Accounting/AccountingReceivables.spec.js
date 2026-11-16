@@ -219,6 +219,28 @@ feature("the selected invoices export as CSV whether the reviewed versions come 
     }
 })
 
+// ACC-UI-026: a send with one bad address among good ones says what reached each recipient, not that the invoice failed
+feature("a batch's alert names each recipient's outcome of a send", {
+    when() {
+        const failedOne = {recipient: "bad-address", status: "failed", errorMessage: "Invalid recipient address"}
+        const messages = ec.resource.script("component://mr-boss/service/ironstone/accounting/Receivables.js").execute("batchMessages", {
+            results: [
+                {invoiceId: "A", success: false, result: {recipientResults: [{recipient: "c@example.com", status: "sent"}, failedOne]}},
+                {invoiceId: "B", success: true, result: {recipientResults: [{recipient: "c@example.com", status: "queued"}]}},
+                {invoiceId: "C", success: false, result: {recipientResults: [failedOne]}},
+                {invoiceId: "D", success: false, errorMessage: "STALE_REVISION: Invoice changed"}
+            ]
+        })
+        return {messages}
+    },
+    then({messages}) {
+        messages[0].text == "A: sent to 1 of 2 recipients; bad-address: Invalid recipient address" && messages[0].warning
+        messages[1].text == "B: sent to 1 of 1 recipient" && !messages[1].warning
+        messages[2].text == "C: not sent; bad-address: Invalid recipient address"
+        messages[3].text == "D: STALE_REVISION: Invoice changed" && messages[3].warning
+    }
+})
+
 feature("customer context checks the organization even with artifact authorization disabled", {
     when() {
         return helper.asUser(
