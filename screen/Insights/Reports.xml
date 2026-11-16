@@ -46,6 +46,19 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="${link.url}" url-type="plain"/>
         <error-response url="."><parameter name="entryId"/></error-response>
     </transition>
+    <!-- the fiscal periods of the organization chosen in the options, as it changes (ACC-UI-042): get#ReportOptions checks
+        the entry and the organization -->
+    <transition name="periodChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.insights.RegistryServices.get#ReportOptions" out-map="periodOptions"
+                    in-map="{entryId:entryId, organizationPartyId:(organizationPartyId || null)}"/>
+            <script><![CDATA[
+                const periodField = Array.from(periodOptions?.fields || []).find(field => field.name === 'timePeriodId')
+                ec.web.sendJsonResponse(Array.from(periodField?.options || []).map(option => ({value: option.key, label: option.text})))
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
 
     <actions>
         <service-call name="ironstone.insights.RegistryServices.find#Reports" out-map="found" transaction="force-new"
@@ -73,7 +86,6 @@ along with this software (see the LICENSE.md file). If not, see
                     organizationPartyId:optionFields.organizationPartyId?.value, fromDate:optionFields.fromDate?.value,
                     thruDate:optionFields.thruDate?.value, timePeriodId:optionFields.timePeriodId?.value}"/>
             <set field="organizationChoices" from="optionFields.organizationPartyId?.options || []"/>
-            <set field="periodChoices" from="optionFields.timePeriodId?.options || []"/>
         </if>
     </actions>
     <widgets>
@@ -129,7 +141,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 </field>
                                 <field name="timePeriodId" hide="!optionFields.timePeriodId">
                                     <default-field title="Fiscal period" tooltip="The organization's own fiscal periods; empty, the report's default">
-                                        <drop-down allow-empty="true"><list-options list="periodChoices" key="${key}" text="${text}"/></drop-down>
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="periodChoices" min-length="0"
+                                                    parameter-map="{entryId:entryId, organizationPartyId:organizationPartyId}">
+                                                <depends-on field="organizationPartyId"/></dynamic-options>
+                                        </drop-down>
                                     </default-field>
                                 </field>
                                 <field name="fromDate" hide="!optionFields.fromDate">

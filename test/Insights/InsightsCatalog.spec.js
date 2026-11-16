@@ -92,6 +92,30 @@ feature("a financial reader without the Accounting app is offered none of its re
     }
 })
 
+// Reports' options (ACC-UI-042): the fiscal period choices follow the organization chosen in the form, through periodChoices,
+// which refuses an organization not the user's
+feature("the report options' fiscal periods are the chosen organization's, and another organization's are refused", {
+    when() {
+        return asUser(users.finance, () => {
+            const choices = organizationPartyId => {
+                const result = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Insights.xml")
+                    .render("Reports/periodChoices", {entryId: "Accounting.TrialBalance", organizationPartyId}, null)
+                const answer = {errors: Array.from(result.errorMessages || []).join(" | "), output: String(result.output || "")}
+                ec.message.clearErrors()
+                return answer
+            }
+            return {retail: choices("ORG_ZIZI_RETAIL"), none: choices(null), other: choices("BOSS_ACCT_ORG")}
+        })
+    },
+    then({retail, none, other}) {
+        retail.errors == ""
+        JSON.parse(retail.output).some(option => option.label === "Ziziwork Retail 2026-11" && option.value === "BOSS_SAL_TP_2026_11")
+        JSON.parse(none.output) == []
+        other.errors.includes("ORGANIZATION_UNAVAILABLE")
+        !other.output.includes("BOSS_ACCT")
+    }
+})
+
 feature("a reader sees only the entries their owner grants; SalesAnalysis is Sales' entry and Accounting's mount's", {
     when() {
         const salesAnalysis = system(() =>
