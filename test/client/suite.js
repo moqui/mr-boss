@@ -1,6 +1,7 @@
 // Focused client regressions and one golden-path walk per app; other walks belong in test/acceptance/client.
 suite(
     [
+        "NotesResponses",
         "ProjectsPlanningResponses",
         "ProjectsDiffState",
         "ProjectsTimeAsync",

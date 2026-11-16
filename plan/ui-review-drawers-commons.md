@@ -1080,6 +1080,14 @@ below stay open independently of the historical ledger.
 | DC-UI-044 | **P2 / live.** `comms/chat-review-menu.png`, `comms/observations.txt`. | On a readable Chat message, ordinary staff see Create lead/RFQ, Create application, and Create a case. The corresponding requests on that message refuse with `SALES_UNAVAILABLE`, `PERMISSION_DENIED` and `CUSTOMER_SERVICE_UNAVAILABLE`. No record is created. | BOSS Comms action visibility and shared action provider |
 | DC-UI-045 | **P3 / live.** `comms/settings-{apps,qapps}-1920.{png,txt}`. | Reading and keys links work in Material. Standard renders the same two labels with no anchors. Current TUI markup also supplies empty link branches. The Calls card is current, but discovering Call handling still requires another route. | BOSS Comms settings and BasicComms index |
 
+#### Corrections after the repeat review
+
+Each correction has a regression that failed before it. The live retest belongs to the next pass.
+
+| ID | Correction | Regression | Live retest owed |
+| --- | --- | --- | --- |
+| DC-UI-040 | Notes saves one at a time: a save asked for while one is on its way (the flush before another note opens, Ctrl+S, a named version) waits for it, then saves what was typed by then on the version it made. A response changes only the saved state of the note it saved. | `test/client/NotesResponses` (held save, more typing, second note opened). | Markdown fallback with a delayed response, then the rich editor and a failed save. |
+
 #### Verification and scope
 
 The five Commons fixture features passed on the Commons database. The single selected moderation fixture passed

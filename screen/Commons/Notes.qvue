@@ -206,7 +206,7 @@ module.exports = {
     data() {
         return {
             ready: false, notes: [], tags: [], totalCount: 0, tag: null, searchText: '', loadingList: false, listSeq: 0, creating: false,
-            note: null, loadingNote: false, notFound: false, noteSeq: 0, text: '', savedText: '', baseVersion: null, saving: false, saveFailed: false,
+            note: null, loadingNote: false, notFound: false, noteSeq: 0, text: '', savedText: '', baseVersion: null, saving: false, savePending: null, saveFailed: false,
             savedAt: '', conflict: null, newTag: '', linkRecordValue: null, coeditOff: false,
             named: { open: false, note: '' },
             move: { open: false, spaceId: null, spaceOptions: [], parentPath: '', options: [], name: '', busy: false },
@@ -343,34 +343,42 @@ module.exports = {
         // save what is typed: on idle, before leaving the note, Ctrl+S, or a named version
         saveNow(versionNote, force) {
             clearTimeout(this.saveTimer);
-            if (!this.note || this.saving) return Promise.resolve();
+            if (!this.note) return Promise.resolve();
+            // one save at a time: a save asked for while one is on its way (the flush before opening another note, Ctrl+S, a
+            // named version) waits for it, then saves what is typed by then on the version that save made
+            if (this.savePending) return this.savePending.then(() => this.saveNow(versionNote, force));
+            const note = this.note;
+            let pending;
             if (this.useCoedit) {
                 // the server saves the co-edited note; a named version is saved now
                 if (!versionNote) return Promise.resolve();
-                const note = this.note;
                 this.saving = true;
-                return this.post('saveNote', { wikiPageId: note.wikiPageId, versionNote: versionNote, collab: 'true' }).then((json) => {
-                    this.saving = false;
+                pending = this.post('saveNote', { wikiPageId: note.wikiPageId, versionNote: versionNote, collab: 'true' }).then((json) => {
+                    if (this.note === note) this.savedAt = json.savedText || '';
+                }, () => { if (this.note === note) this.saveFailed = true; });
+            } else {
+                if (!this.dirty && !versionNote) return Promise.resolve();
+                const text = this.text;
+                const title = this.liveTitle;
+                this.saving = true;
+                pending = this.post('saveNote', { wikiPageId: note.wikiPageId, pageText: text, versionNote: versionNote || '', baseVersionName: this.baseVersion || '',
+                    force: force ? 'true' : 'false' }).then((json) => {
+                    const item = this.notes.find((row) => row.wikiPageId === note.wikiPageId);
+                    if (item && !json.conflict) { item.title = title; item.whenText = json.savedText || item.whenText; }
+                    // the saved state is the note's that was saved: another note opened since keeps its own
+                    if (this.note !== note) return;
+                    if (json.conflict) { this.conflict = json.conflictText || this.t('This note was saved elsewhere'); return; }
+                    this.conflict = null;
+                    this.saveFailed = false;
+                    this.savedText = text;
+                    if (json.currentVersionName) this.baseVersion = json.currentVersionName;
                     this.savedAt = json.savedText || '';
-                }, () => { this.saving = false; this.saveFailed = true; });
+                    if (this.text !== text) this.saveTimer = setTimeout(() => this.saveNow(null, false), AUTOSAVE_MS);
+                }, () => { if (this.note === note) this.saveFailed = true; });
             }
-            if (!this.dirty && !versionNote) return Promise.resolve();
-            const note = this.note;
-            const text = this.text;
-            this.saving = true;
-            return this.post('saveNote', { wikiPageId: note.wikiPageId, pageText: text, versionNote: versionNote || '', baseVersionName: this.baseVersion || '',
-                force: force ? 'true' : 'false' }).then((json) => {
-                this.saving = false;
-                if (json.conflict) { this.conflict = json.conflictText || this.t('This note was saved elsewhere'); return; }
-                this.conflict = null;
-                this.saveFailed = false;
-                this.savedText = text;
-                if (json.currentVersionName) this.baseVersion = json.currentVersionName;
-                this.savedAt = json.savedText || '';
-                const item = this.notes.find((row) => row.wikiPageId === note.wikiPageId);
-                if (item) { item.title = this.liveTitle; item.whenText = json.savedText || item.whenText; }
-                if (this.text !== text && this.note === note) this.saveTimer = setTimeout(() => this.saveNow(null, false), AUTOSAVE_MS);
-            }, () => { this.saving = false; this.saveFailed = true; });
+            pending = pending.finally(() => { if (this.savePending === pending) { this.savePending = null; this.saving = false; } });
+            this.savePending = pending;
+            return pending;
         },
         flush() { return this.dirty && !this.conflict ? this.saveNow(null, false).catch(() => {}) : Promise.resolve(); },
         // the shared editor did not start: the markdown text, from the last saved version
