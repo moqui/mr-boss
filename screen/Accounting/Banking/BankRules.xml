@@ -82,7 +82,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 title="Add a bank rule"
                                 width="760"
                                 type="primary"
-                                condition="canReconcile">
+                                disable-condition="!canReconcile"
+                                disable-message="Needs bank reconciliation access, which an administrator can grant.">
                             <form-single name="AddRule" transition="storeRule">
                                 <field name="organizationPartyId" from="organizationPartyId">
                                     <default-field>

@@ -125,7 +125,9 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col-auto row items-center q-gutter-sm">
                 <container-dialog id="ChangeCostingPolicy" button-text="Change policy" type="primary" icon="sym_o_edit"
                         title="Change the production costing policy" width="760"
-                        condition="organizationPartyId &amp;&amp; policies?.canEdit">
+                        condition="organizationPartyId"
+                        disable-condition="!policies?.canEdit"
+                        disable-message="Needs accounting administration access, which an administrator can grant.">
                     <form-single name="CostingPolicy" transition="savePolicy" map="policyForm">
                         <field name="organizationPartyId">
                             <default-field>

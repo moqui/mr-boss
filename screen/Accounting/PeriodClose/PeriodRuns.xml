@@ -77,7 +77,8 @@ along with this software (see the LICENSE.md file). If not, see
                         type="primary"
                         icon="sym_o_calculate"
                         title="Start a period run"
-                        condition="canPreview">
+                        disable-condition="!canPreview"
+                        disable-message="Needs general ledger posting access, which an administrator can grant.">
                     <label text="The run calculates without posting; review its results, then post them." type="p"/>
                     <form-single name="StartRun" transition="previewRun" map="newRun">
                         <field name="runKindEnumId">

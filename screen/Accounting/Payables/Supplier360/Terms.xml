@@ -55,7 +55,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 title="Change the terms of ${supplierDetail.supplierName}"
                                 width="560"
                                 type="default"
-                                condition="supplierDetail.capabilities.canEditTerms">
+                                disable-condition="!supplierDetail.capabilities.canEditTerms"
+                                disable-message="Needs supplier terms access, which an administrator can grant.">
                             <form-single name="SupplierTermsForm" transition="saveTerms" map="termsValue">
                                 <field name="organizationPartyId" from="organizationPartyId">
                                     <default-field title="">

@@ -74,14 +74,16 @@ feature("a finance administrator sees the authorities and rates with their actio
         admin.authorities.errors == []
         admin.authorities.output.includes("Utah sales tax")
         admin.authorities.output.includes("12345678-002-STC")
-        admin.authorities.output.includes("Add authority")
+        admin.authorities.output.includes('data-dialog="AddAuthorityDialog"')
         admin.rates.errors == []
         admin.rates.output.includes("6.1%")
         admin.rates.output.includes("Add rate")
         admin.rates.output.includes("New version")
         tax.authorities.errors == []
         tax.authorities.output.includes("Utah sales tax")
-        !tax.authorities.output.includes("Add authority")
+        // the authorities are the finance administrator's: Add authority is shown disabled with the reason, no dialog
+        !tax.authorities.output.includes('data-dialog="AddAuthorityDialog"')
+        tax.authorities.output.includes('aria-label="Add authority: Needs accounting administration access')
         tax.rates.errors == []
         !tax.rates.output.includes("New version")
     }

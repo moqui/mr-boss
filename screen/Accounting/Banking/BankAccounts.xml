@@ -66,7 +66,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 title="Add bank account"
                                 width="760"
                                 type="primary"
-                                condition="banks.canReconcile">
+                                disable-condition="!banks.canReconcile"
+                                disable-message="Needs bank reconciliation access, which an administrator can grant.">
                             <form-single name="AddBankAccount" transition="createBankAccount">
                                 <field name="organizationPartyId" from="organizationPartyId">
                                     <default-field>

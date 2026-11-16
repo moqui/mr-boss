@@ -49,7 +49,8 @@ along with this software (see the LICENSE.md file). If not, see
                         icon="sym_o_add"
                         title="Add a tax authority"
                         width="760"
-                        condition="canEdit">
+                        disable-condition="!canEdit"
+                        disable-message="Needs accounting administration access, which an administrator can grant.">
                     <form-single name="TaxAuthority" transition="storeAuthority" map="newAuthority">
                         <field name="organizationPartyId">
                             <default-field>

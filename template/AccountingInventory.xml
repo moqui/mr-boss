@@ -693,7 +693,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         title="Map an account for ${product.productName || productId}"
                                         width="640"
                                         icon="sym_o_add"
-                                        condition="canEditGl">
+                                        disable-condition="!canEditGl"
+                                        disable-message="Needs accounting administration access, which an administrator can grant.">
                                     <form-single name="AddProductGlForm" transition="storeProductGl">
                                         <field name="productId" from="productId">
                                             <default-field>

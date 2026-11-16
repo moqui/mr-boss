@@ -62,7 +62,8 @@ along with this software (see the LICENSE.md file). If not, see
                         type="primary"
                         icon="sym_o_lock"
                         title="Add a posting lock"
-                        condition="isAdmin">
+                        disable-condition="!isAdmin"
+                        disable-message="Needs accounting administration access, which an administrator can grant.">
                     <form-single name="PostingLock" transition="lock" map="newLock">
                         <field name="organizationPartyId">
                             <default-field title="Organization">

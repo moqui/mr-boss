@@ -335,10 +335,10 @@ feature("CostingPolicies opens with its change for the finance administrator, an
     },
     then({admin, reader, production}) {
         admin.errors.length == 0
-        admin.output.includes("Change policy")
+        admin.output.includes('data-dialog="ChangeCostingPolicy"')
         admin.output.includes("Rate per work-center hour")
         // the settings are the finance administrator's
-        reader.status != 200 || !reader.output.includes("Change policy")
+        reader.status != 200 || !reader.output.includes('data-dialog="ChangeCostingPolicy"')
         production.errors.length == 0
         production.output.includes("Costing policy: Overhead Rate per work-center hour")
         !production.output.includes("/qapps/Accounting/Settings/CostingPolicies")

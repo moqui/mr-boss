@@ -73,7 +73,8 @@ along with this software (see the LICENSE.md file). If not, see
                             title="New receivable"
                             width="720"
                             type="primary"
-                            condition="accounting.capabilities.arEdit">
+                            disable-condition="!accounting.capabilities.arEdit"
+                            disable-message="Needs accounts receivable access, which an administrator can grant.">
                         <form-single name="CreateReceivable" transition="createReceivable">
                             <field name="organizationPartyId" from="organizationPartyId">
                                 <default-field title="">

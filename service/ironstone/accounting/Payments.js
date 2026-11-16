@@ -225,6 +225,9 @@ function listContext(parameters) {
             incomplete: !!result.incomplete,
             errors: array(result.errors),
             canCreate: filters.queue !== "transfers" && cap.canCreate === true,
+            // New payment is offered outside the transfers queue, and shown disabled there to a user who may not create one
+            newOffered: filters.queue !== "transfers",
+            mayCreate: cap.canCreate === true,
             canTransfer: cap.canTransfer === true,
             queueTitle: queueTitles[filters.queue] || "Payments",
             queues: [

@@ -50,7 +50,8 @@ along with this software (see the LICENSE.md file). If not, see
                         type="primary"
                         icon="sym_o_event_repeat"
                         title="Generate fiscal periods"
-                        condition="accounting.capabilities.glPost">
+                        disable-condition="!accounting.capabilities.glPost"
+                        disable-message="Needs general ledger posting access, which an administrator can grant.">
                     <form-single name="GeneratePeriods" transition="generate">
                         <field name="organizationPartyId" from="organizationPartyId">
                             <default-field title="Organization">

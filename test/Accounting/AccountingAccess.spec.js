@@ -1193,16 +1193,31 @@ feature("a section a role lacks does not open, and the screens with no logic spe
         const pages = [
             [
                 "budgets as a reader",
-                as("finance.read", () => shows(lib.page("Budgets/Budgets"), ["Operating budget"], ["New budget"]))
+                as("finance.read", () =>
+                    shows(
+                        lib.page("Budgets/Budgets"),
+                        ["Operating budget", 'aria-label="New budget: Needs budget editing access'],
+                        ['<m-container-dialog id="NewBudgetDialog"']
+                    )
+                )
             ],
-            ["budgets as GL", as("finance.gl", () => shows(lib.page("Budgets/Budgets"), ["Operating budget", "New budget"]))],
+            [
+                "budgets as GL",
+                as("finance.gl", () => shows(lib.page("Budgets/Budgets"), ["Operating budget", '<m-container-dialog id="NewBudgetDialog"']))
+            ],
             [
                 "budget controls as a reader",
-                as("finance.read", () => shows(lib.page("Budgets/BudgetControls"), ["Policies"], ["Add policy"]))
+                as("finance.read", () =>
+                    shows(
+                        lib.page("Budgets/BudgetControls"),
+                        ["Policies", 'aria-label="Add policy: Needs accounting administration access'],
+                        ['<m-container-dialog id="AddPolicyDialog"']
+                    )
+                )
             ],
             [
                 "budget controls as the admin",
-                as("finance.admin", () => shows(lib.page("Budgets/BudgetControls"), ["Add policy"]))
+                as("finance.admin", () => shows(lib.page("Budgets/BudgetControls"), ['<m-container-dialog id="AddPolicyDialog"']))
             ],
             ["balance sheet as a reader", as("finance.read", () => shows(lib.page("Reports/BalanceSheet"), ["Total assets"]))],
             [

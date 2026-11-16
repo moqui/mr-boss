@@ -72,7 +72,8 @@ along with this software (see the LICENSE.md file). If not, see
                         type="primary"
                         icon="sym_o_add"
                         title="New account"
-                        condition="accounting.capabilities.glPost">
+                        disable-condition="!accounting.capabilities.glPost"
+                        disable-message="Needs general ledger posting access, which an administrator can grant.">
                     <form-single name="NewAccount" transition="create" map="newAccount">
                         <field name="organizationPartyId">
                             <default-field>
@@ -138,7 +139,8 @@ along with this software (see the LICENSE.md file). If not, see
                         button-text="Assign existing account"
                         icon="sym_o_add_link"
                         title="Assign an existing chart account"
-                        condition="accounting.capabilities.glPost">
+                        disable-condition="!accounting.capabilities.glPost"
+                        disable-message="Needs general ledger posting access, which an administrator can grant.">
                     <form-single name="AssignExistingAccount" transition="assign" map="newAccount">
                         <field name="organizationPartyId">
                             <default-field>
