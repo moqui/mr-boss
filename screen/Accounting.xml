@@ -28,9 +28,9 @@ along with this software (see the LICENSE.md file). If not, see
             accounting = ec.service.sync().name('ironstone.accounting.AccessServices.get#SharedContext')
                 .parameters({organizationPartyId: organizationPartyId}).call()
             if (ec.message.hasError()) {
-                const reason = String(ec.message.getErrorsString()).trim().replace(/^(?:Error: )+/, '')
+                const reason = String(ec.message.getErrorsString()).trim().replace(/^(Error: )+/, '')
                 const refusal = new Error(reason)
-                if (/^[A-Z_]*(?:DENIED|REQUIRED)\b/.test(reason)) refusal.moquiErrorKind = 'Unauthorized'
+                if (/^[A-Z_]*(DENIED|REQUIRED)\b/.test(reason)) refusal.moquiErrorKind = 'Unauthorized'
                 throw refusal
             }
         ]]></script>
