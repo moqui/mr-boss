@@ -300,6 +300,8 @@ feature("search and due filtering retain the draft while explicit customer or da
     }
 })
 
+// A draft changed after its review never changes what the review shows or posts; since ACC-UI-033 it also makes the
+// review stale, so it is not confirmed until previewed again, while a review of the unchanged draft is.
 feature("the retained native review owns mixed amounts and versions even when client draft fields change", {
     when() {
         return helper.asUser("finance.ar", () => {
@@ -313,6 +315,16 @@ feature("the retained native review owns mixed amounts and versions even when cl
             tampered.allocations[0].amount = "999999"
             const parameters = Object.assign({}, draft.scope, {previewId: preview.previewId, draftId: storeDraft(tampered)})
             const context = helper.call("ironstone.accounting.SettlementScreenServices.get#SettlementReviewContext", parameters)
+            const unchangedParameters = Object.assign({}, draft.scope, {previewId: preview.previewId, draftId: storeDraft(draft)})
+            const unchanged = helper.call(
+                "ironstone.accounting.SettlementScreenServices.get#SettlementReviewContext",
+                unchangedParameters
+            )
+            const staleConfirm = helper.refusal("ironstone.accounting.SettlementScreenServices.check#SettlementReviewCurrent", parameters)
+            const currentConfirm = helper.refusal(
+                "ironstone.accounting.SettlementScreenServices.check#SettlementReviewCurrent",
+                unchangedParameters
+            )
             const reloaded = helper.call(
                 "ironstone.accounting.SettlementScreenServices.get#SettlementReviewContext",
                 Object.assign({}, parameters, {text: "reloaded"})
@@ -345,6 +357,9 @@ feature("the retained native review owns mixed amounts and versions even when cl
             return {
                 preview,
                 context,
+                unchanged,
+                staleConfirm,
+                currentConfirm,
                 reloaded,
                 afterRefusal,
                 nextContext,
@@ -355,12 +370,15 @@ feature("the retained native review owns mixed amounts and versions even when cl
             }
         })
     },
-    then({preview, context, reloaded, afterRefusal, nextContext, refusal, original, retained, outputs}) {
+    then({preview, context, unchanged, staleConfirm, currentConfirm, reloaded, afterRefusal, nextContext, refusal, original, retained, outputs}) {
         !!preview.previewId
         !!preview.inputFingerprint
         context.reviewFound == true
         context.settlementReview.hasResults == false
-        context.settlementReview.canConfirm == true
+        context.settlementReview.canConfirm == false && context.settlementReview.staleSelection == true
+        unchanged.settlementReview.canConfirm == true && unchanged.settlementReview.staleSelection == false
+        staleConfirm.includes("STALE_REVIEW")
+        currentConfirm == ""
         !!context.draftId
         context.selectionParameters.draftId == context.draftId
         context.selectionParameters.partyId == context.settlementReview.partyId
@@ -388,7 +406,8 @@ feature("the retained native review owns mixed amounts and versions even when cl
                 row.result.status === 200 &&
                 !row.result.errors.length &&
                 row.result.output.includes("Settlement for") &&
-                row.result.output.includes("Confirm settlement")
+                row.result.output.includes("The selection changed after this review was prepared") &&
+                !row.result.output.includes("Confirm settlement")
         )
         outputs.every(row => !row.result.output.includes("$999,999.00"))
         outputs.find(row => row.mode === "html").result.output.includes("$15.00")

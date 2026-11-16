@@ -484,7 +484,14 @@ const sources = {
         const cf = ec.entity.conditionFactory
         let query = policy
             .find("mantle.account.invoice.Invoice")
-            .condition(cf.makeCondition([cf.makeCondition("fromPartyId", org), cf.makeCondition("toPartyId", org)], "or"))
+            // field, operator, value: a two-argument comparison took the organization for the operator, and the
+            // choice failed for every search (ACC-UI-031)
+            .condition(
+                cf.makeCondition(
+                    [cf.makeCondition("fromPartyId", "equals", org), cf.makeCondition("toPartyId", "equals", org)],
+                    "or"
+                )
+            )
             .condition("statusId", "not-equals", "InvoiceCancelled")
         const term = String(parameters.term || "").trim()
         if (term)

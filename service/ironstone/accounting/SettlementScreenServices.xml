@@ -164,6 +164,24 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="newSelectionParameters" from="screenContext.newSelectionParameters"/>
         </actions>
     </service>
+    <service verb="check" noun="SettlementReviewCurrent" allow-remote="false">
+        <description>Refuse (STALE_REVIEW) to confirm a settlement review whose draft (draftId) changed after the review was
+            prepared: its allocations, adjustments, amounts or reviewed revisions. A review already applied, one with no draft
+            named and a draft no longer kept pass. Changes nothing.</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="previewId" type="String"/>
+            <parameter name="draftId" type="String"/>
+            <parameter name="direction" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="current" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="settlements" value="component://mr-boss/service/ironstone/accounting/Settlements.js"/>
+            <set field="current" from="ec.resource.script(settlements).execute('checkReviewCurrent', context).current"/>
+        </actions>
+    </service>
     <service verb="edit" noun="SettlementDraft" allow-remote="false">
         <description>Add, change or remove an allocation or adjustment of the user's settlement draft, kept by Mantle
             (store#SettlementDraft) behind draftId, for one party, currency and date selection of a side. Open items come as
