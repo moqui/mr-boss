@@ -87,7 +87,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto">
                 <container-dialog id="CreateOrganizationDialog" button-text="New organization" icon="sym_o_domain_add" type="primary" width="560"
-                        title="New internal organization" condition="canCreate">
+                        title="New internal organization" disable-condition="!canCreate"
+                        disable-message="Needs organization management access, which an administrator can grant.">
                     <label type="p" text="Creates the organization and its place under its parent only. Accounting, members and connections are set up afterwards, each by whoever owns it."/>
                     <form-single name="CreateOrganization" transition="createOrganization" focus-field="organizationName">
                         <field name="organizationName"><default-field title="Name"><text-line size="40"/></default-field></field>

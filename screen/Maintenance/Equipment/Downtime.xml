@@ -63,7 +63,8 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="text-caption m-muted"/>
             </container>
             <container style="col-12 col-md-auto">
-                <container-dialog id="RecordDowntimeDialog" condition="canRecord" type="primary" button-text="Record outage"
+                <container-dialog id="RecordDowntimeDialog" disable-condition="!canRecord"
+                        disable-message="Needs downtime recording access, which an administrator can grant." type="primary" button-text="Record outage"
                         icon="sym_o_report" title="Record an outage" width="640">
                     <section-include name="RecordDowntimeForm" location="component://mr-boss/template/MaintenanceDowntimeParts.xml"/>
                 </container-dialog>

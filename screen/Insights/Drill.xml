@@ -68,7 +68,9 @@ along with this software (see the LICENSE.md file). If not, see
                         condition="drill.available &amp;&amp; drill.selected.length"/>
                 <link url="${sharedLinks['ReportBuilder/Analysis']}" text="Open as analysis" link-type="anchor-button"
                         parameter-map="{datasetId:drill.datasetId}"
-                        condition="drill.available &amp;&amp; (insights.capabilities.author || insights.capabilities.datasetEdit)"/>
+                        condition="drill.available"
+                        disable-condition="!(insights.capabilities.author || insights.capabilities.datasetEdit)"
+                        disable-message="Needs analysis authoring access, which an administrator can grant."/>
             </container>
         </container>
         <section-include name="DrillUnavailable" location="component://tools/screen/Dashboards/Drill.xml"/>

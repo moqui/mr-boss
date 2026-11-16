@@ -106,7 +106,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Members"/>
                     <box-toolbar>
                         <container-dialog id="AddMemberDialog" button-text="Add member" icon="sym_o_person_add" width="560"
-                                title="Add a member to ${group.description || userGroupId}" condition="canManage">
+                                title="Add a member to ${group.description || userGroupId}" disable-condition="!canManage"
+                                disable-message="Needs access management access, which an administrator can grant.">
                             <label type="p" text="The member gets this group's permissions and app gates from the date given. Ending a membership keeps it on record."/>
                             <form-single name="AddMember" extends="component://tools/screen/System/Access/GroupDetail.xml#AddMember" transition="addMember"
                                     map="{userGroupId:userGroupId}">

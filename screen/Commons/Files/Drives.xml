@@ -81,7 +81,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="submitButton"><default-field title="Create"><submit/></default-field></field>
                 </form-single>
             </container-dialog>
-            <container-dialog id="NewMirrorDialog" button-text="Add mirror" icon="sym_o_lock" width="600" title="Add a read-only mirror" condition="isAdmin">
+            <container-dialog id="NewMirrorDialog" button-text="Add mirror" icon="sym_o_lock" width="600" title="Add a read-only mirror" disable-condition="!isAdmin" disable-message="Needs drive administration access, which an administrator can grant.">
                 <form-single name="NewMirror" transition="createMirror" focus-field="driveName">
                     <field name="driveName"><default-field title="Name"><text-line size="40"/></default-field></field>
                     <field name="remoteUrl"><default-field title="HTTPS URL of the git repository"><text-line size="60"/></default-field></field>

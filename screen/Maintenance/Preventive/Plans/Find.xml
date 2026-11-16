@@ -62,7 +62,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row items-center q-gutter-xs">
                 <container-dialog id="NewPlanDialog" button-text="New plan" type="primary" icon="sym_o_add" title="New preventive plan"
-                        width="720" condition="canPlan">
+                        width="720" disable-condition="!canPlan"
+                        disable-message="Needs maintenance planning access, which an administrator can grant.">
                     <label text="A plan starts as a draft; activate it on the plan once its time zone is set. With no procedure, its work is made from its name and estimate." type="p"
                             style="text-caption m-muted"/>
                     <form-single name="NewPlan" transition="storePlan" map="newPlan">

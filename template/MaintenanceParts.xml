@@ -161,10 +161,12 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- NewFacility (design §6 Facilities) for a holder of FACILITY_EDIT (maintenance.capabilities.facilityEdit): the including
             screen's newFacilityDefaults, a parentFacilityId in its context the new facility's parent and newFacilityTitle and
             newFacilityType the dialog's words; a top-level facility asks for its time zone (rooms inherit theirs) -->
-        <section name="NewMaintenanceFacility" condition="maintenance?.capabilities?.facilityEdit">
+        <section name="NewMaintenanceFacility">
             <widgets>
                 <container-dialog id="NewMaintenanceFacilityDialog" button-text="${newFacilityTitle || 'New facility'}"
-                        title="${newFacilityTitle || 'New facility'}" icon="sym_o_add" width="760" type="${newFacilityType || 'primary'}">
+                        title="${newFacilityTitle || 'New facility'}" icon="sym_o_add" width="760" type="${newFacilityType || 'primary'}"
+                        disable-condition="!(maintenance?.capabilities?.facilityEdit)"
+                        disable-message="Needs facility editing access, which an administrator can grant.">
                     <form-single name="NewMaintenanceFacility" transition="createMaintenanceFacility" map="newFacilityDefaults">
                         <field name="facilityName">
                             <default-field title="Name" required="true">

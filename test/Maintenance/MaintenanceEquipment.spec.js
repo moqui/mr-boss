@@ -157,7 +157,9 @@ feature("the facility tree names no ancestor outside the scope; Facilities and F
         listed.status == 200 && listed.errors.length == 0
         listed.output.includes("Service Center")
         listed.output.includes("A facility you do not have access to")
-        !listed.output.includes("New facility")
+        // New facility is shown disabled with the reason, no dialog
+        !listed.output.includes('id="NewMaintenanceFacilityDialog"')
+        listed.output.includes("New facility: Needs")
         rooms.status == 200 && rooms.errors.length == 0
         rooms.output.includes("Room 101 Huddle") && rooms.output.includes("Video conference")
         rooms.output.includes("Add feature")

@@ -124,9 +124,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 <!-- P9: a return of this order (NewReturn with the order; its lines' ceilings are Mantle's) -->
                                 <link url="${sharedLinks['Returns/NewReturn']}" text="Create return" icon="sym_o_assignment_return"
                                         link-type="anchor-button" parameter-map="{orderId:orderId}"
-                                        condition="customerService.capabilities.returns &amp;&amp; (customerService.capabilities.caseEdit
-                                            || customerService.capabilities.returnAuthorize) &amp;&amp; ['OrderApproved', 'OrderSent',
-                                            'OrderCompleted'].includes(so.statusId)"/>
+                                        condition="customerService.capabilities.returns &amp;&amp; ['OrderApproved', 'OrderSent',
+                                            'OrderCompleted'].includes(so.statusId)"
+                                        disable-condition="!(customerService.capabilities.caseEdit || customerService.capabilities.returnAuthorize)"
+                                        disable-message="Needs case editing or return authorization access, which an administrator can grant."/>
                                 <container-dialog id="ServiceResendConfirmation" button-text="Resend confirmation" icon="sym_o_forward_to_inbox"
                                         title="Resend the confirmation of order ${orderId} as placed" width="600"
                                         condition="serviceOrder.canResend">

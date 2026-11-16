@@ -133,7 +133,9 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <container style="col-auto">
                         <container-dialog id="AddRoute" button-text="Add route" icon="sym_o_add" type="primary" width="720"
-                                title="Add a route" condition="routing.canEdit &amp;&amp; queueOptions.length">
+                                title="Add a route" condition="queueOptions.length"
+                                disable-condition="!routing.canEdit"
+                                disable-message="Needs service settings access, which an administrator can grant.">
                             <form-single name="AddRouteForm" transition="saveRoute" map="newRoute">
                                 <field name="requestCategoryId">
                                     <default-field title="Queue">

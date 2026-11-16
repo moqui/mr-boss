@@ -139,8 +139,8 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="text-caption m-muted q-mb-none"/>
             </container>
             <container style="col-auto row q-gutter-sm">
-                <section name="RegisterSection" condition="canManage &amp;&amp; available"><widgets>
-                    <container-dialog id="RegisterDevice" button-text="Register device" type="primary" icon="sym_o_add" title="Register a device">
+                <section name="RegisterSection" condition="available"><widgets>
+                    <container-dialog id="RegisterDevice" button-text="Register device" type="primary" icon="sym_o_add" title="Register a device" disable-condition="!canManage" disable-message="Needs device management access, which an administrator can grant.">
                         <label type="p" style="m-muted" condition="!displayOptions.length"
                                 text="No display account is available to you yet. A device runs as a display account, which an identity operator makes in Users (New display account)."/>
                         <label type="p" style="m-muted" condition="!routeGroupOptions.length" text="No app has registered a route group for devices."/>

@@ -221,9 +221,9 @@ along with this software (see the LICENSE.md file). If not, see
                 </section-iterate>
             </widgets>
         </section>
-        <section name="NewContentEditor" condition="canEdit">
+        <section name="NewContentEditor">
             <widgets>
-                <container-dialog id="AddCatalogText" button-text="Add document or text" title="Add typed content" width="720">
+                <container-dialog id="AddCatalogText" button-text="Add document or text" title="Add typed content" width="720" disable-condition="!canEdit" disable-message="Needs document editing access, which an administrator can grant.">
                     <form-single name="AddCatalogText" transition="storeContent" map="contentDraft">
                         <field name="productCategoryId">
                             <default-field>
@@ -325,7 +325,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </field>
                     </form-single>
                 </container-dialog>
-                <container-dialog id="UploadCatalogFiles" button-text="Upload files" title="Upload catalog files" width="640">
+                <container-dialog id="UploadCatalogFiles" button-text="Upload files" title="Upload catalog files" width="640" disable-condition="!canEdit" disable-message="Needs document editing access, which an administrator can grant.">
                     <form-single name="UploadCatalogFiles" transition="uploadContents">
                         <field name="productCategoryId">
                             <default-field>

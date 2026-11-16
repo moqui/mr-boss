@@ -132,11 +132,12 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="text-caption m-muted q-mb-none"/>
             </container>
             <container style="col-auto">
-                <link url="../InviteStaff" text="Invite users" icon="sym_o_person_add" btn-type="primary" condition="canCreate"/>
+                <link url="../InviteStaff" text="Invite users" icon="sym_o_person_add" btn-type="primary" disable-condition="!canCreate" disable-message="Needs identity management access, which an administrator can grant."/>
             </container>
             <container style="col-auto">
                 <container-dialog id="BulkDisableDialog" button-text="Disable users" icon="sym_o_person_off" width="560"
-                        title="Disable users" condition="canCreate">
+                        title="Disable users" disable-condition="!canCreate"
+                        disable-message="Needs identity management access, which an administrator can grant.">
                     <label type="p" text="Choose the staff to disable. You review each one before anything is done; each is its own lifecycle operation."/>
                     <form-single name="BulkDisablePreview" transition=".">
                         <field name="bulkUserIds">
@@ -153,7 +154,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto">
                 <container-dialog id="NewStaffAccountDialog" button-text="New staff account" icon="sym_o_person_add" width="600"
-                        title="New staff account" condition="canCreate">
+                        title="New staff account" disable-condition="!canCreate"
+                        disable-message="Needs identity management access, which an administrator can grant.">
                     <label type="p" text="Invitations are the usual way to add staff. A direct account gets no password: a reset password is mailed so the person sets their own. IronStone BOSS users is always included."/>
                     <form-single name="NewStaffAccount" transition="createStaffAccount" focus-field="firstName">
                         <field name="firstName"><default-field title="First name"><text-line size="25"/></default-field></field>
@@ -185,7 +187,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </form-single>
                 </container-dialog>
                 <container-dialog id="NewDisplayAccountDialog" button-text="New display account" icon="sym_o_tv" width="600"
-                        title="New display account" condition="canCreate">
+                        title="New display account" disable-condition="!canCreate"
+                        disable-message="Needs identity management access, which an administrator can grant.">
                     <label type="p" text="A display account stands for a shared screen, not a person: it has no password or email and nothing signs it in. A device registered in Security › Devices runs as it and shows the organization and access chosen here."/>
                     <form-single name="NewDisplayAccount" transition="createDisplayAccount" focus-field="displayName">
                         <field name="displayName"><default-field title="Name" tooltip="What the display is, such as Plant floor wall"><text-line size="40"/></default-field></field>

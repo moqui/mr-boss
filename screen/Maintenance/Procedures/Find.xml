@@ -58,7 +58,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row items-center q-gutter-xs">
                 <container-dialog id="NewProcedureDialog" button-text="New procedure" type="primary" icon="sym_o_add" title="New procedure"
-                        width="640" condition="canAuthor">
+                        width="640" disable-condition="!canAuthor"
+                        disable-message="Needs procedure editing access, which an administrator can grant.">
                     <form-single name="NewProcedure" transition="storeProcedure" map="newProcedure">
                         <field name="workEffortName"><default-field title="Name"><text-line size="60"/></default-field></field>
                         <field name="description"><default-field title="Description"><text-area rows="3"/></default-field></field>
