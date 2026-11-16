@@ -102,7 +102,7 @@ along with this software (see the LICENSE.md file). If not, see
         Admin P3 left out as unbuilt): each group with the permissions it carries (view, edit or export) and the root user group's
         launcher with the root's filter sets; MARKETING_AUDIENCE_IMPORT in the audience manager's and the administrator's bundles
         (§4). A phase that grants a group a permission adds it to the group's bundle. -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_MARKETING_ADMIN" appName="Marketing" description="Marketing administrator" scopeDependency="organization" sequenceNum="1600"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MARKETING_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Marketing" description="Marketing administrator" scopeDependency="organization" sequenceNum="1600"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MARKETING_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MARKETING_CAMPAIGN_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MARKETING_ADMIN" userPermissionId="MARKETING_SEND_EDIT" capabilityKindEnumId="CpkEdit"/>

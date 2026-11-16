@@ -2840,13 +2840,13 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_USERS" appName="Commons" description="IronStone BOSS users" scopeDependency="organization" sequenceNum="10"/>
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_USERS" artifactGroupId="BOSS_COMMONS" description="Commons launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_USERS" artifactGroupId="BOSS_COMMS" description="Comms launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMONS_ADMIN" appName="Commons" description="Commons administrator" scopeDependency="organization" sequenceNum="20"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMONS_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Commons" description="Commons administrator" scopeDependency="organization" sequenceNum="20"/>
     <!-- Comms -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMS_ADMIN" appName="Comms" description="Comms administrator" scopeDependency="organization" sequenceNum="30"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMS_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Comms" description="Comms administrator" scopeDependency="organization" sequenceNum="30"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_CONTACT_ADMIN" appName="Comms" description="Contact admins (IronStone): edit and delete directory contacts, review duplicates" scopeDependency="organization" sequenceNum="40"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CONTACT_ADMIN" userPermissionId="CONTACT_ADMIN" capabilityKindEnumId="CpkEdit"/>
     <!-- Customer Service -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" appName="Customer Service" description="Customer Service administrator" scopeDependency="organization, team" sequenceNum="50"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Customer Service" description="Customer Service administrator" scopeDependency="organization, team" sequenceNum="50"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_CASE_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="ORDER_CHANGE_REQUEST" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="CUSTOMER_CREDIT_VIEW" capabilityKindEnumId="CpkSensitive"/>
@@ -2889,7 +2889,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE" appName="Customer Service" description="Service knowledge author" scopeDependency="organization, team" sequenceNum="110"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE" userPermissionId="SUPPORT_KNOWLEDGE_EDIT" capabilityKindEnumId="CpkEdit"/>
     <!-- Commerce -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_ADMIN" appName="Commerce" description="Commerce administrator" scopeDependency="organization, store" sequenceNum="120"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Commerce" description="Commerce administrator" scopeDependency="organization, store" sequenceNum="120"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_STORE_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_MERCHANDISE" capabilityKindEnumId="CpkEdit"/>
@@ -2959,7 +2959,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_COST_APPROVE" appName="Products" description="Standard-cost approver" scopeDependency="organization" sequenceNum="300"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_COST_APPROVE" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_COST_APPROVE" userPermissionId="PRODUCT_COST_APPROVE" capabilityKindEnumId="CpkSensitive"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_ADMIN" appName="Products" description="Catalog administrator" scopeDependency="organization" sequenceNum="310"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Products" description="Catalog administrator" scopeDependency="organization" sequenceNum="310"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_COST_ESTIMATE" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_COST_APPROVE" capabilityKindEnumId="CpkSensitive"/>
@@ -2971,7 +2971,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_CATALOG_EDIT" capabilityKindEnumId="CpkEdit"/>
     <!-- Purchasing -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_PURCHASING_ADMIN" appName="Purchasing" description="Purchasing administrator" scopeDependency="organization" sequenceNum="320"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PURCHASING_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Purchasing" description="Purchasing administrator" scopeDependency="organization" sequenceNum="320"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="STOCK_POLICY_PLAN" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLIER_PRICE_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_ORDER_EDIT" capabilityKindEnumId="CpkEdit"/>
@@ -3011,7 +3011,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_READ" userPermissionId="SUPPLY_PLAN_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_READ" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
     <!-- Warehouse -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_ADMIN" appName="Warehouse" description="Warehouse administrator" scopeDependency="organization, facility" sequenceNum="390"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Warehouse" description="Warehouse administrator" scopeDependency="organization, facility" sequenceNum="390"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_POLICY_PLAN" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_POLICY_MANAGE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
@@ -3095,7 +3095,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userPermissionId="METHOD_APPROVE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_ADMIN" appName="Manufacturing" description="Manufacturing administrator" scopeDependency="organization, plant" sequenceNum="630"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Manufacturing" description="Manufacturing administrator" scopeDependency="organization, plant" sequenceNum="630"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_APPROVE" capabilityKindEnumId="CpkEdit"/>
@@ -3164,7 +3164,7 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Accounting. The administrator works in the organizations its holder works for: ACCOUNTING_ADMIN is bound to them, and
         every internal organization of the instance takes ACCOUNTING_ALL_ORGANIZATIONS, which ADMIN alone holds and no bundle
         carries (the user's call of Nov 16, 2026, SEC-BOS-02; as People's and Sales' *_ALL_ORGANIZATIONS widen theirs). -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_ADMIN" appName="Accounting" description="Accounting administrator" scopeDependency="organization" sequenceNum="740"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Accounting" description="Accounting administrator" scopeDependency="organization" sequenceNum="740"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_GL_POST" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
@@ -3260,9 +3260,9 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="ALLOCATION_APPROVE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="MILESTONE_APPROVE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="RECEIVABLE_EDIT" capabilityKindEnumId="CpkEdit"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_PROJECTS_ADMIN" appName="Projects" description="Projects administrator" scopeDependency="organization, project" sequenceNum="860"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PROJECTS_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Projects" description="Projects administrator" scopeDependency="organization, project" sequenceNum="860"/>
     <!-- Insights -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_ADMIN" appName="Insights" description="Insights administrator" scopeDependency="organization; each source by its own view permission" sequenceNum="870"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Insights" description="Insights administrator" scopeDependency="organization; each source by its own view permission" sequenceNum="870"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_ADMIN" userPermissionId="INSIGHTS_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_ADMIN" userPermissionId="INSIGHTS_SETTINGS_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_ADMIN" userPermissionId="INSIGHTS_SETTINGS_EDIT" capabilityKindEnumId="CpkEdit"/>
@@ -3284,36 +3284,38 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_FLOW" appName="Insights" description="Insights flow editor" scopeDependency="organization; each source by its own view permission" sequenceNum="930"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_FLOW" userPermissionId="INSIGHTS_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_FLOW" userPermissionId="INSIGHTS_FLOW_EDIT" capabilityKindEnumId="CpkEdit"/>
-    <!-- Admin -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN" appName="Admin" description="Admin app users (the launcher)" scopeDependency="organization" sequenceNum="940"/>
+    <!-- Admin. Admin's bundles and each app's administrator bundle name delegablePermissionId ADMIN_ACCESS_MANAGE: only an access
+        administrator assigns them or grants from them; an identity operator (ADMIN_IDENTITY_MANAGE, not sealed) proposes an
+        app's other bundles only (SEC-ADM-06; org.moqui.admin Access.js delegable). -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Admin app users (the launcher)" scopeDependency="organization" sequenceNum="940"/>
     <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_ADMIN" artifactGroupId="BOSS_ADMIN" description="Admin launcher and services" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_READ" appName="Admin" description="Administrative reader" scopeDependency="organization" sequenceNum="950"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_READ" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Administrative reader" scopeDependency="organization" sequenceNum="950"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_READ" userPermissionId="ADMIN_OVERVIEW_VIEW" capabilityKindEnumId="CpkView"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_IDENTITY" appName="Admin" description="Identity operator" scopeDependency="organization" sequenceNum="960"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_IDENTITY" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Identity operator" scopeDependency="organization" sequenceNum="960"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="ADMIN_IDENTITY_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="ADMIN_IDENTITY_MANAGE" capabilityKindEnumId="CpkEdit"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_ACCESS" appName="Admin" description="Access administrator" scopeDependency="organization" sequenceNum="970"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_ACCESS" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Access administrator" scopeDependency="organization" sequenceNum="970"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ACCESS" userPermissionId="ADMIN_ACCESS_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ACCESS" userPermissionId="ADMIN_ACCESS_MANAGE" capabilityKindEnumId="CpkEdit"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_CONFIGURE" appName="Admin" description="Configuration administrator" scopeDependency="organization" sequenceNum="980"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_CONFIGURE" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Configuration administrator" scopeDependency="organization" sequenceNum="980"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ADMIN_SETTINGS_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ADMIN_SETTINGS_MANAGE" capabilityKindEnumId="CpkEdit"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_INTEGRATIONS" appName="Admin" description="Integration administrator" scopeDependency="organization" sequenceNum="990"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_INTEGRATIONS" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Integration administrator" scopeDependency="organization" sequenceNum="990"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_INTEGRATIONS" userPermissionId="ADMIN_CONNECTION_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_INTEGRATIONS" userPermissionId="ADMIN_CONNECTION_MANAGE" capabilityKindEnumId="CpkEdit"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_OPERATIONS" appName="Admin" description="Operations operator" scopeDependency="organization" sequenceNum="1000"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_OPERATIONS" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Operations operator" scopeDependency="organization" sequenceNum="1000"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_OPERATIONS" userPermissionId="ADMIN_OPERATION_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_OPERATIONS" userPermissionId="ADMIN_OPERATION_MANAGE" capabilityKindEnumId="CpkEdit"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_DATA" appName="Admin" description="Data operator" scopeDependency="organization" sequenceNum="1010"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_DATA" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Data operator" scopeDependency="organization" sequenceNum="1010"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_DATA" userPermissionId="ADMIN_TRANSFER_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_DATA" userPermissionId="ADMIN_TRANSFER_RUN" capabilityKindEnumId="CpkExport"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_AUDIT" appName="Admin" description="Audit reader" scopeDependency="organization" sequenceNum="1020"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_AUDIT" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Audit reader" scopeDependency="organization" sequenceNum="1020"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_AUDIT" userPermissionId="ADMIN_AUDIT_VIEW" capabilityKindEnumId="CpkView"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_PRIVACY" appName="Admin" description="Privacy administrator" scopeDependency="organization" sequenceNum="1030"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_BACKUP" appName="Admin" description="Backup operator" scopeDependency="organization" sequenceNum="1040"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_PRIVACY" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Privacy administrator" scopeDependency="organization" sequenceNum="1030"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_BACKUP" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Backup operator" scopeDependency="organization" sequenceNum="1040"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_BACKUP" userPermissionId="ADMIN_BACKUP_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_BACKUP" userPermissionId="ADMIN_BACKUP_RUN" capabilityKindEnumId="CpkEdit"/>
-    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_ADMIN" appName="Admin" description="Admin administrator" scopeDependency="organization" sequenceNum="1050"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Admin" description="Admin administrator" scopeDependency="organization" sequenceNum="1050"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_OVERVIEW_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_IDENTITY_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_IDENTITY_MANAGE" capabilityKindEnumId="CpkEdit"/>
@@ -5307,7 +5309,7 @@ along with this software (see the LICENSE.md file). If not, see
         built apps' above): each group with the permissions it carries (view, edit or sensitive: private person data, pay and
         cases) and the root user group's launcher with the root's filter sets; PEOPLE_IMPORT in the HR bundle; PEOPLE_ROSTER_EDIT in
         the manager's and HR's (P14). -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_ADMIN" appName="People" description="People administrator" scopeDependency="organization, employment" sequenceNum="1100"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="People" description="People administrator" scopeDependency="organization, employment" sequenceNum="1100"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PEOPLE_CONFIGURE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_ADMIN" userPermissionId="PAYROLL_EDIT" capabilityKindEnumId="CpkSensitive"/>

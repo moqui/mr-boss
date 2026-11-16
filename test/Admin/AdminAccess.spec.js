@@ -412,6 +412,32 @@ feature("a privileged group's membership and a sealed grant need a member and a 
     }
 })
 
+// the administrative bundles (Admin's and each app's administrator) are assigned only by an access administrator: an identity
+// operator (ADMIN_IDENTITY_MANAGE) proposes an app's other bundles but none of these (SEC-ADM-06)
+const adminBundles = ["BOSS_ADMIN_CONFIGURE", "BOSS_ADMIN_DATA", "BOSS_ACCOUNTING_ADMIN", "BOSS_PEOPLE_ADMIN"]
+feature("an administrative bundle is proposed by an access administrator, never by an identity operator", {
+    when() {
+        const proposal = (user, bundleGroupIdList) =>
+            asUser(user, () => invoke("org.moqui.admin.AccessServices.check#GrantProposal", {bundleGroupIdList}))
+        const operatorAdmin = proposal(users.identity, adminBundles)
+        const operatorPlain = proposal(users.identity, ["BOSS_ACCOUNTING_READ"])
+        const accessAdmin = proposal(users.access, adminBundles)
+        const unnamed = system(() =>
+            Array.from(ec.entity.find("moqui.security.CapabilityBundle").list())
+                .filter(row => /^BOSS_ADMIN(_|$)|^BOSS_(ACCOUNTING|COMMERCE|COMMONS|COMMS|CUSTOMER_SERVICE|INSIGHTS|MAINTENANCE|MANUFACTURING|MARKETING|PEOPLE|PRODUCTS|PROJECTS|PURCHASING|SALES|WAREHOUSE)_ADMIN$/.test(row.userGroupId))
+                .filter(row => row.delegablePermissionId !== "ADMIN_ACCESS_MANAGE")
+                .map(row => row.userGroupId)
+        )
+        return {operatorAdmin, operatorPlain, accessAdmin, unnamed}
+    },
+    then({operatorAdmin, operatorPlain, accessAdmin, unnamed}) {
+        operatorAdmin.bundleList.every(row => row.allowed === false && row.reasonCode === "NOT_DELEGABLE")
+        operatorPlain.allowed === true
+        accessAdmin.allowed === true
+        unnamed.length == 0
+    }
+})
+
 feature(
     "an identity is checked by the organizations it works for; another organization's is refused, a shared one shown by its own",
     {

@@ -161,7 +161,7 @@ along with this software (see the LICENSE.md file). If not, see
         Admin P3 left out as unbuilt): each group with the permissions it carries (view, edit, or sensitive: costs) and the root
         user group's launcher with the root's filter sets; MAINTENANCE_IMPORT in the resource administrator's and the administrator's
         bundles, MAINTENANCE_ALL_ORGANIZATIONS in the administrator's alone. -->
-    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_ADMIN" appName="Maintenance" description="Maintenance administrator" scopeDependency="organization" sequenceNum="1300"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MAINTENANCE_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Maintenance" description="Maintenance administrator" scopeDependency="organization" sequenceNum="1300"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_ASSIGNED_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MAINTENANCE_ADMIN" userPermissionId="MAINTENANCE_REQUEST" capabilityKindEnumId="CpkEdit"/>
