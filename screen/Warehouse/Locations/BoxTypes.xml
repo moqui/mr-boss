@@ -69,7 +69,8 @@ along with this software (see the LICENSE.md file). If not, see
         <container style="row items-center q-gutter-sm q-mb-sm">
             <label text="Box types" type="h5"/>
             <container-dialog id="NewBoxTypeDialog" button-text="New box type" icon="sym_o_add" type="primary"
-                    title="New box type" width="720" condition="canEdit">
+                    title="New box type" width="720" disable-condition="!canEdit"
+                    disable-message="Needs facility editing access, which an administrator can grant.">
                 <form-single name="NewBoxType" transition="storeBoxType" map="{isNew:'Y', dimensionUomId:'LEN_in',
                         weightUomId:'WT_lb'}">
                     <field name="isNew">
@@ -316,7 +317,8 @@ along with this software (see the LICENSE.md file). If not, see
             <box-header title="Carrier package codes · ${codeRows.length}"/>
             <box-toolbar>
                 <container-dialog id="NewCarrierCodeDialog" button-text="Add carrier code" icon="sym_o_add"
-                        title="Add a carrier's package code" width="560" condition="canEdit">
+                        title="Add a carrier's package code" width="560" disable-condition="!canEdit"
+                        disable-message="Needs facility editing access, which an administrator can grant.">
                     <form-single name="NewCarrierCode" transition="storeCarrierCode">
                         <field name="carrierPartyId">
                             <default-field title="Carrier">

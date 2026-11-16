@@ -103,7 +103,8 @@ along with this software (see the LICENSE.md file). If not, see
             </form-single>
         </widgets></section>
         <container-dialog id="NewReturnPolicy" button-text="New policy" type="primary" icon="sym_o_add" title="New return policy"
-                width="720" condition="cfg.canEdit">
+                width="720" disable-condition="!cfg.canEdit"
+                disable-message="Needs return policy editing access, which an administrator can grant.">
             <form-single name="NewReturnPolicyForm" transition="savePolicy" map="newPolicy" extends="component://mr-boss/screen/CustomerService/Settings/ReturnPolicies.xml#ReturnPolicyEditForm"/>
         </container-dialog>
         <section-iterate name="ReturnPolicyList" list="policies" entry="policy">
@@ -144,7 +145,8 @@ along with this software (see the LICENSE.md file). If not, see
             </box-body-nopad>
         </container-box>
         <container-dialog id="SaveReturnReason" button-text="Set a reason" type="default" title="A return reason" width="560"
-                condition="cfg.canEdit">
+                disable-condition="!cfg.canEdit"
+                disable-message="Needs return policy editing access, which an administrator can grant.">
             <form-single name="SaveReturnReasonForm" transition="saveReason"
                     map="{organizationPartyId:cfg.organizationPartyId, customerVisible:'Y'}">
                 <field name="organizationPartyId"><default-field><hidden/></default-field></field>

@@ -109,7 +109,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Clocking"/>
                     <box-toolbar>
                         <container-dialog id="ChangeClocking" button-text="Change" icon="sym_o_edit" width="560"
-                                title="Clocking at ${employer.organizationName}" condition="employer.canChangeClocking">
+                                title="Clocking at ${employer.organizationName}" disable-condition="!employer.canChangeClocking"
+                                disable-message="Needs employer settings access, which an administrator can grant.">
                             <label type="p" text="The employer's default. An employee HR set apart in Attendance's Who clocks keeps their own setting."/>
                             <form-single name="ClockingForm" transition="storeClocking" map="clockingValues">
                                 <field name="organizationPartyId"><default-field><hidden/></default-field></field>

@@ -154,9 +154,9 @@ newSupplier={productId:productId||null,customerPartyId:defaultOrganizationPartyI
                 </form-single>
             </box-body>
         </container-box>
-        <section name="NewSalesPriceAllowed" condition="canPriceEdit">
+        <section name="NewSalesPriceAllowed">
             <widgets>
-                <container-dialog id="NewSalesPriceDialog" title="New sales price" button-text="New sales price" width="960">
+                <container-dialog id="NewSalesPriceDialog" title="New sales price" button-text="New sales price" width="960" disable-condition="!(canPriceEdit)" disable-message="Needs price editing access, which an administrator can grant.">
                     <form-single name="NewSalesPrice" transition="store" map="newSales">
                         <field name="productId">
                             <default-field title="Product">
@@ -283,9 +283,9 @@ newSupplier={productId:productId||null,customerPartyId:defaultOrganizationPartyI
                 </container-dialog>
             </widgets>
         </section>
-        <section name="NewSupplierPriceAllowed" condition="canSupplierPriceEdit">
+        <section name="NewSupplierPriceAllowed">
             <widgets>
-                <container-dialog id="NewSupplierPriceDialog" title="New supplier price" button-text="New supplier price" width="960">
+                <container-dialog id="NewSupplierPriceDialog" title="New supplier price" button-text="New supplier price" width="960" disable-condition="!(canSupplierPriceEdit)" disable-message="Needs supplier price editing access, which an administrator can grant.">
                     <form-single name="NewSupplierPrice" transition="store" map="newSupplier">
                         <field name="productId">
                             <default-field title="Product">

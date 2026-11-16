@@ -73,7 +73,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <container style="col-auto">
                         <container-dialog id="NewFeedbackForm" button-text="${words.newButton}" icon="sym_o_add" type="primary" width="560"
-                                title="${words.newButton}" condition="canEdit">
+                                title="${words.newButton}" disable-condition="!canEdit"
+                                disable-message="Needs form editing access, which an administrator can grant.">
                             <form-single name="NewFeedbackFormForm" transition="createForm" map="newForm">
                                 <field name="organizationPartyId"><default-field><hidden/></default-field></field>
                                 <field name="purposeEnumId">

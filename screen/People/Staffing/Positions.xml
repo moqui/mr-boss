@@ -78,7 +78,9 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewPositionDialog" button-text="New position" icon="sym_o_add" type="primary" width="720"
-                        title="Plan a position" condition="canEdit &amp;&amp; people.organizationPartyIds.length">
+                        title="Plan a position" condition="people.organizationPartyIds.length"
+                        disable-condition="!canEdit"
+                        disable-message="Needs HR editing access, which an administrator can grant.">
                     <label type="p" text="A position is a seat of its employer, in one of the employer's departments. It starts planned; it is filled by hiring into it."/>
                     <form-single name="NewPosition" transition="storePosition" map="newPosition">
                         <field name="organizationPartyId">

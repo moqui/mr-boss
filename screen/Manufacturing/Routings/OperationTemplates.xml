@@ -86,7 +86,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="${methodMessage}" type="p" style="m-muted" condition="!!methodMessage"/>
             </container>
             <container style="col-auto">
-                <container-dialog id="NewTemplateDialog" condition="canEdit" button-text="New template" icon="sym_o_add"
+                <container-dialog id="NewTemplateDialog" disable-condition="!canEdit"
+                        disable-message="Needs manufacturing method editing access, which an administrator can grant." button-text="New template" icon="sym_o_add"
                         title="New operation template" width="800">
                     <form-single name="NewTemplate" transition="storeTemplate" map="newTemplate">
                         <field name="organizationPartyId">

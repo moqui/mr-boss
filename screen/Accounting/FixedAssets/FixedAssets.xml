@@ -54,7 +54,8 @@ along with this software (see the LICENSE.md file). If not, see
                         text="Run depreciation"
                         btn-type="primary"
                         icon="sym_o_calculate"
-                        condition="canPostLedger"
+                        disable-condition="!canPostLedger"
+                        disable-message="Needs general ledger posting access, which an administrator can grant."
                         parameter-map="{organizationPartyId:organizationPartyId}"/>
             </container>
         </container>

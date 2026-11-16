@@ -133,9 +133,9 @@ along with this software (see the LICENSE.md file). If not, see
                         <column><field-ref name="amount"/></column>
                     </columns>
                 </form-list>
-                <section name="InteractionEditor" condition="canEdit">
+                <section name="InteractionEditor">
                     <widgets>
-                        <container-dialog id="NewInteraction" button-text="Add rule" title="One rule per feature pair" width="640">
+                        <container-dialog id="NewInteraction" button-text="Add rule" title="One rule per feature pair" width="640" disable-condition="!(canEdit)" disable-message="Needs catalog editing access, which an administrator can grant.">
                             <form-single name="Interaction" transition="saveInteraction">
                                 <field name="productFeatureId">
                                     <default-field title="Feature">

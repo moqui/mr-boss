@@ -178,7 +178,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="The site has no menus yet." type="span" style="text-caption m-muted" condition="!menus.length"/>
                     </container>
                     <container style="col-auto">
-                        <container-dialog id="NewMenu" button-text="New menu" icon="sym_o_add" width="560" title="New menu" condition="canEdit">
+                        <container-dialog id="NewMenu" button-text="New menu" icon="sym_o_add" width="560" title="New menu" disable-condition="!canEdit" disable-message="Needs website editing access, which an administrator can grant.">
                             <form-single name="NewMenuForm" transition="createMenu" map="siteValues">
                                 <field name="siteId"><default-field><hidden/></default-field></field>
                                 <field name="menuKey">
@@ -204,7 +204,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="${menu.name} (${menu.menuKey}${menu.locale ? ', ' + menu.locale : ''})"/>
                             <box-toolbar>
                                 <container-dialog id="PublishMenu" button-text="Publish" icon="sym_o_public" type="primary" width="760"
-                                        title="Publish ${menu.name}" condition="canPublish">
+                                        title="Publish ${menu.name}" disable-condition="!canPublish"
+                                        disable-message="Needs website publishing access, which an administrator can grant.">
                                     <label type="p" text="The site shows these items; each is checked again as it publishes, and the site's caches move to its next generation."/>
                                     <label type="p" style="text-negative" text="${itemProblems} items cannot be shown: fix or remove them first."
                                             condition="itemProblems"/>
@@ -332,7 +333,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label text="The menu has no items yet." type="p" style="text-caption m-muted q-pa-md" condition="!items.length"/>
                             </box-body-nopad>
                             <box-body>
-                                <container-dialog id="AddItem" button-text="Add item" icon="sym_o_add" width="640" title="Add an item to ${menu.name}" condition="canEdit">
+                                <container-dialog id="AddItem" button-text="Add item" icon="sym_o_add" width="640" title="Add an item to ${menu.name}" disable-condition="!canEdit" disable-message="Needs website editing access, which an administrator can grant.">
                                     <form-single name="AddItemForm" transition="saveItem" map="newItemValues">
                                         <field name="siteId"><default-field><hidden/></default-field></field>
                                         <field name="navigationId"><default-field><hidden/></default-field></field>
@@ -387,7 +388,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Redirects"/>
                     <box-toolbar>
-                        <container-dialog id="AddRedirect" button-text="Add redirect" icon="sym_o_add" width="640" title="Redirect an old path" condition="canEdit">
+                        <container-dialog id="AddRedirect" button-text="Add redirect" icon="sym_o_add" width="640" title="Redirect an old path" disable-condition="!canEdit" disable-message="Needs website editing access, which an administrator can grant.">
                             <form-single name="AddRedirectForm" transition="saveRedirect" map="newRedirectValues">
                                 <field name="siteId"><default-field><hidden/></default-field></field>
                                 <field name="navigationId"><default-field><hidden/></default-field></field>

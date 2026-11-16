@@ -92,7 +92,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Evaluation basis"/>
                     <box-toolbar>
-                        <container-dialog id="ScorePolicyDialog" condition="policy.canEdit" button-text="Change basis" icon="sym_o_edit"
+                        <container-dialog id="ScorePolicyDialog" disable-condition="!policy.canEdit"
+                                disable-message="Needs purchasing settings access, which an administrator can grant." button-text="Change basis" icon="sym_o_edit"
                                 width="640" title="Change the scorecard basis of ${policy.organizationName}">
                             <form-single name="ScorePolicy" transition="storePolicy" map="policyValue">
                                 <field name="organizationPartyId"><default-field><hidden/></default-field></field>
@@ -171,7 +172,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Response rules · ${actionRows.length}"/>
                     <box-toolbar>
-                        <container-dialog id="NewScoreAction" condition="policy.canEdit" button-text="New rule" icon="sym_o_add"
+                        <container-dialog id="NewScoreAction" disable-condition="!policy.canEdit"
+                                disable-message="Needs purchasing settings access, which an administrator can grant." button-text="New rule" icon="sym_o_add"
                                 type="primary" width="640" title="New response rule of ${policy.organizationName}">
                             <form-single name="ScoreAction" transition="storeAction" map="newActionValue">
                                 <field name="organizationPartyId"><default-field><hidden/></default-field></field>

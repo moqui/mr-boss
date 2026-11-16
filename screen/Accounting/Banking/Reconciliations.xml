@@ -65,7 +65,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 title="Start a bank statement"
                                 width="720"
                                 type="primary"
-                                condition="canReconcile">
+                                disable-condition="!canReconcile"
+                                disable-message="Needs bank reconciliation access, which an administrator can grant.">
                             <form-single name="StartReconciliation" transition="createReconciliation">
                                 <field name="organizationPartyId" from="organizationPartyId">
                                     <default-field>

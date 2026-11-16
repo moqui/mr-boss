@@ -93,7 +93,8 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col"/>
             <section name="RepositoryActions" condition="codeHosting &amp;&amp; !clientUser"><widgets>
                 <container-dialog id="MirrorRepositoryDialog" button-text="Mirror" icon="sym_o_sync" width="560" title="A mirror of a repository hosted elsewhere"
-                        condition="isAdmin">
+                        disable-condition="!isAdmin"
+                        disable-message="Needs code hosting administration access, which an administrator can grant.">
                     <form-single name="MirrorRepository" transition="createMirror" focus-field="repositoryId">
                         <field name="repositoryId"><default-field title="Repository ID"><text-line size="30"/></default-field></field>
                         <field name="remoteUrl"><default-field title="Remote URL (https://…)"><text-line size="50"/></default-field></field>

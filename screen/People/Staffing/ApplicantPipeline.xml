@@ -104,7 +104,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="AddApplicationDialog" button-text="Add application" icon="sym_o_person_add" type="primary" width="720"
-                        title="Record an application" condition="canEdit">
+                        title="Record an application" disable-condition="!canEdit"
+                        disable-message="Needs recruiting access, which an administrator can grant.">
                     <label type="p" text="Choose a person who already works for or applied to the employer, or name a new applicant; an address someone already has finds them, so no one is made twice."/>
                     <form-single name="AddApplication" transition="addApplication" map="newApplication">
                         <field name="jobOpeningId">

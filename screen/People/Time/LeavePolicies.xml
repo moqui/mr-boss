@@ -67,7 +67,9 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewPolicyDialog" button-text="New policy" icon="sym_o_add" type="primary" width="720"
-                        title="Start a leave policy" condition="canEdit &amp;&amp; people.organizationPartyIds.length">
+                        title="Start a leave policy" condition="people.organizationPartyIds.length"
+                        disable-condition="!canEdit"
+                        disable-message="Needs HR editing access, which an administrator can grant.">
                     <label type="p" text="A policy is an employer's rules for one kind of leave. Add how it accrues on the policy, then assign it to employees from a date."/>
                     <form-single name="NewPolicy" transition="storePolicy" map="newPolicy">
                         <field name="policyName"><default-field title="Name"><text-line size="40"/></default-field></field>

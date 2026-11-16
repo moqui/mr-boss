@@ -71,7 +71,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="${methodMessage}" type="p" style="m-muted" condition="!!methodMessage"/>
             </container>
             <container style="col-auto row items-center q-gutter-xs">
-                <container-dialog id="NewRoutingDialog" condition="canEdit" type="primary" button-text="New routing" icon="sym_o_add"
+                <container-dialog id="NewRoutingDialog" disable-condition="!canEdit"
+                        disable-message="Needs manufacturing method editing access, which an administrator can grant." type="primary" button-text="New routing" icon="sym_o_add"
                         title="New routing" width="640">
                     <form-single name="NewRouting" transition="createRouting" map="{organizationPartyId:organizationPartyId}">
                         <field name="organizationPartyId">

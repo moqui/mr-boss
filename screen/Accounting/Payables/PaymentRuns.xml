@@ -60,7 +60,8 @@ along with this software (see the LICENSE.md file). If not, see
                             width="640"
                             type="primary"
                             icon="sym_o_add"
-                            condition="runCapabilities.canCreate">
+                            disable-condition="!runCapabilities.canCreate"
+                            disable-message="Needs accounts payable access, which an administrator can grant.">
                         <form-single name="NewRunForm" transition="createRun">
                             <field name="organizationPartyId" from="organizationPartyId">
                                 <default-field title="">

@@ -140,10 +140,12 @@ along with this software (see the LICENSE.md file). If not, see
 
         <!-- the operation policy at the scope: steps, default locations (a facility's), tolerances, short quantity,
             blind counts and auto-print; an empty field inherits -->
-        <section name="OperationPolicyForm" condition="policy?.available &amp;&amp; policy.canManage">
+        <section name="OperationPolicyForm" condition="policy?.available">
             <widgets>
                 <container-dialog id="OperationPolicyDialog" button-text="Change operations" type="primary"
-                        title="Change the operation policy at ${policy.scopeText}">
+                        title="Change the operation policy at ${policy.scopeText}"
+                        disable-condition="!policy.canManage"
+                        disable-message="Needs warehouse settings access, which an administrator can grant.">
                     <form-single name="OperationPolicy" transition="storeOperationPolicy" map="policy.operationSettings">
                         <field name="organizationPartyId">
                             <default-field>
@@ -274,10 +276,12 @@ along with this software (see the LICENSE.md file). If not, see
         </section>
 
         <!-- the facility reservation default at the scope, used where a store leaves the setting unset -->
-        <section name="ReservationPolicyForm" condition="policy?.available &amp;&amp; policy.canManage">
+        <section name="ReservationPolicyForm" condition="policy?.available">
             <widgets>
                 <container-dialog id="ReservationPolicyDialog" button-text="Change reservation default"
-                        title="Change the reservation default at ${policy.scopeText}">
+                        title="Change the reservation default at ${policy.scopeText}"
+                        disable-condition="!policy.canManage"
+                        disable-message="Needs warehouse settings access, which an administrator can grant.">
                     <form-single name="ReservationPolicy" transition="storeReservationPolicy"
                             map="policy.reservationSettings">
                         <field name="organizationPartyId">

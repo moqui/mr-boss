@@ -272,6 +272,15 @@ const screens = [
     {path: "Settings/AssetPools/PoolList", parameters: {}, text: "KEY-ACCOUNTS"},
     {path: "Settings/AssetPools/PoolDetail", parameters: {assetPoolId: "BOSS_WH_POOL"}, text: "Key account stock"}
 ]
+// the change actions a manager has: a reader's are absent, or shown disabled with the access they need
+const changeActions = [
+    "Change operations",
+    "Change tracking",
+    "Change reservation default",
+    "Change store settings",
+    "New pool",
+    "Add party"
+]
 feature("the settings screen #path renders for a reader without the change actions a manager has", {
     where: screens,
     when({path, parameters}) {
@@ -285,9 +294,8 @@ feature("the settings screen #path renders for a reader without the change actio
         manager.errors.length == 0
         reader.output.includes(text)
         manager.output.includes(text)
-        !/Change operations|Change tracking|Change reservation default|Change store settings|New pool|Add party/.test(
-            reader.output
-        )
+        // a change action is not the reader's: absent, or shown disabled with the access it needs
+        changeActions.every(text => !reader.output.includes(text) || reader.output.includes('aria-label="' + text + ': Needs'))
     }
 })
 feature("a manager has the change action of each screen", {
@@ -319,7 +327,9 @@ feature("FacilityDetail's Policies tab renders on its own: a manager changes the
         manager.output.includes("Organization: Ziziwork Retail")
         reader.errors.length == 0
         reader.output.includes("Delivery steps")
-        !reader.output.includes("Change operations")
+        // Change operations is shown disabled with the reason, no dialog
+        !reader.output.includes('id="OperationPolicyDialog"')
+        reader.output.includes("Change operations: Needs")
         other.output.includes("are not available to you")
     }
 })

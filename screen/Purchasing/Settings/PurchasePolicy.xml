@@ -85,7 +85,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Buying defaults"/>
                     <box-toolbar>
-                        <container-dialog id="BuyingDefaultsDialog" condition="policy.canEdit" button-text="Change defaults"
+                        <container-dialog id="BuyingDefaultsDialog" disable-condition="!policy.canEdit"
+                                disable-message="Needs purchasing settings access, which an administrator can grant." button-text="Change defaults"
                                 icon="sym_o_edit" width="760" title="Change the buying defaults of ${policy.organizationName}">
                             <form-single name="BuyingDefaults" transition="storePolicy"
                                     map="Object.assign({}, policy.configuredPolicy, formScope, {policyGroup:'defaults'})">
@@ -212,7 +213,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Purchase controls"/>
                     <box-toolbar>
-                        <container-dialog id="PurchaseControlsDialog" condition="policy.canEdit" button-text="Change controls"
+                        <container-dialog id="PurchaseControlsDialog" disable-condition="!policy.canEdit"
+                                disable-message="Needs purchasing settings access, which an administrator can grant." button-text="Change controls"
                                 icon="sym_o_edit" width="760" title="Change the purchase controls of ${policy.organizationName}">
                             <form-single name="PurchaseControls" transition="storePolicy"
                                     map="Object.assign({}, policy.configuredPolicy, formScope, {policyGroup:'controls'})">

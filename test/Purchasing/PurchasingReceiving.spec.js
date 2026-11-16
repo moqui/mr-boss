@@ -99,7 +99,9 @@ feature("Inspections, the receipt templates and Supplier360's Receipts and quali
         templates.status == 200
         templates.errors == []
         templates.output.includes("Inspection templates")
-        !templates.output.includes("New template")
+        // New template is shown disabled with the reason, no dialog
+        !templates.output.includes('id="NewTemplateDialog"')
+        templates.output.includes("New template: Needs")
         supplier.status == 200
         supplier.errors == []
         supplier.output.includes(ids.receiptOrderId + ":01")

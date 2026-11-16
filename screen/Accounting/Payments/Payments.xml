@@ -55,7 +55,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 title="New payment"
                                 width="760"
                                 type="primary"
-                                condition="paymentList.canCreate">
+                                condition="paymentList.newOffered"
+                                disable-condition="!paymentList.mayCreate"
+                                disable-message="Needs payments access, which an administrator can grant.">
                             <section-include name="PaymentDraftForm"
                                     location="component://mr-boss/template/AccountingPayments.xml"/>
                         </container-dialog>
@@ -64,7 +66,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 title="Transfer funds"
                                 width="760"
                                 type="default"
-                                condition="paymentList.canTransfer">
+                                disable-condition="!paymentList.canTransfer"
+                                disable-message="Needs payments access, which an administrator can grant.">
                             <section-include name="InternalTransferForm"
                                     location="component://mr-boss/template/AccountingPayments.xml"/>
                         </container-dialog>

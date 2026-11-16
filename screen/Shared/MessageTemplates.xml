@@ -69,7 +69,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <container style="col"><label text="Message templates" type="h5"/></container>
                     <container style="col-auto row items-center q-gutter-xs">
                         <container-dialog id="NewTemplateDialog" button-text="New template" title="New template" icon="sym_o_add"
-                                width="640" type="primary" condition="found.canCreate">
+                                width="640" type="primary" disable-condition="!found.canCreate"
+                                disable-message="Needs message template editing access, which an administrator can grant.">
                             <label text="A template starts as a draft: it is used only once its content is published." type="p" style="m-muted"/>
                             <form-single name="NewTemplate" transition="createTemplate" map="newValues">
                                 <field name="templateName"><default-field title="Name"><text-line size="40"/></default-field></field>

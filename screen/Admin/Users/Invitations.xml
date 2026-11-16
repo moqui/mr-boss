@@ -97,11 +97,12 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="text-caption m-muted q-mb-none"/>
             </container>
             <container style="col-auto">
-                <link url="../InviteStaff" text="Invite users" icon="sym_o_person_add" btn-type="primary" condition="canInvite"/>
+                <link url="../InviteStaff" text="Invite users" icon="sym_o_person_add" btn-type="primary" disable-condition="!canInvite" disable-message="Needs identity management access, which an administrator can grant."/>
                 <!-- the bulk invite (design §4; impl-admin P15): the shared import wizard with the staff-invitations target, for
                     a user who also opens the Data area and holds ADMIN_TRANSFER_RUN -->
                 <link url="${sharedLinks['Data/DataImport']}" text="Invite from a file" icon="sym_o_upload_file" parameter-map="{targetId:'staffInvitations'}"
-                        condition="canInvite &amp;&amp; !!admin?.capabilities?.data &amp;&amp; !!admin?.capabilities?.transferRun"/>
+                        disable-condition="!(canInvite &amp;&amp; !!admin?.capabilities?.data &amp;&amp; !!admin?.capabilities?.transferRun)"
+                        disable-message="Needs identity management and data import access, which an administrator can grant."/>
             </container>
         </container>
 

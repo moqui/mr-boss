@@ -86,7 +86,9 @@ along with this software (see the LICENSE.md file). If not, see
                         condition="can.anyRead"/>
                 <!-- P2: New campaign, the author's primary action (design §3 Home) -->
                 <container-dialog id="HomeNewCampaignDialog" button-text="New campaign" title="New campaign" icon="sym_o_add" width="760"
-                        type="primary" condition="marketing.capabilities.campaignEdit &amp;&amp; marketing.capabilities.anyRead">
+                        type="primary" condition="marketing.capabilities.anyRead"
+                        disable-condition="!marketing.capabilities.campaignEdit"
+                        disable-message="Needs campaign editing access, which an administrator can grant.">
                     <section-include name="NewCampaignForm" location="component://mr-boss/template/MarketingCampaigns.xml"/>
                 </container-dialog>
             </container>

@@ -37,7 +37,9 @@ feature("QuoteTemplateDetail shows a published template to its manager with its 
         list.output.includes("Quote templates")
         list.output.includes("Store refit starter")
         !list.output.includes("Yearly service visit")
-        !list.output.includes("New template")
+        // New template is shown disabled with the reason, no dialog
+        !list.output.includes('id="NewTemplateDialog"')
+        list.output.includes("New template: Needs quote editing")
     }
 })
 

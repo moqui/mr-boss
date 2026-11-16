@@ -194,7 +194,8 @@ along with this software (see the LICENSE.md file). If not, see
             <box-header title="${pipeline?.pipelineName}: stages"/>
             <box-toolbar>
                 <container-dialog id="NewStageDialog" button-text="Add stage" icon="sym_o_add" type="default" width="520"
-                        title="Add a stage to ${pipeline?.pipelineName}" condition="pipeline?.canEdit">
+                        title="Add a stage to ${pipeline?.pipelineName}" disable-condition="!pipeline?.canEdit"
+                        disable-message="Needs sales settings access, which an administrator can grant.">
                     <form-single name="NewStage" transition="storeStage" map="newStage">
                         <field name="organizationPartyId"><default-field><hidden/></default-field></field>
                         <field name="salesPipelineId"><default-field><hidden/></default-field></field>

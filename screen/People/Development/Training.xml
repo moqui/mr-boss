@@ -105,7 +105,9 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="ScheduleSessionDialog" button-text="Schedule session" icon="sym_o_event" type="primary" width="760"
-                        title="Schedule a training session" condition="canSchedule &amp;&amp; courseOptions.length">
+                        title="Schedule a training session" condition="courseOptions.length"
+                        disable-condition="!canSchedule"
+                        disable-message="Needs training access, which an administrator can grant.">
                     <label type="p" style="text-caption m-muted"
                             text="The session is a private event in the calendars of its trainer and the people enrolled. A room is booked for it, by the room's rules; its results answer the assessment form."/>
                     <form-single name="ScheduleSession" transition="storeTraining">

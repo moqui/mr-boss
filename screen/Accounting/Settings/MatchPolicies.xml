@@ -64,7 +64,9 @@ along with this software (see the LICENSE.md file). If not, see
                         text="Link legacy bills"
                         link-type="anchor-button"
                         icon="sym_o_link"
-                        condition="organizationPartyId &amp;&amp; policies?.canBackfill"
+                        condition="organizationPartyId"
+                        disable-condition="!policies?.canBackfill"
+                        disable-message="Needs bill matching access, which an administrator can grant."
                         parameter-map="{organizationPartyId:organizationPartyId}"/>
                 <container-dialog id="NewMatchPolicy"
                         button-text="Change policy"
@@ -72,7 +74,9 @@ along with this software (see the LICENSE.md file). If not, see
                         icon="sym_o_add"
                         title="Change the match policy"
                         width="760"
-                        condition="organizationPartyId &amp;&amp; policies?.canEdit">
+                        condition="organizationPartyId"
+                        disable-condition="!policies?.canEdit"
+                        disable-message="Needs accounting administration access, which an administrator can grant.">
                     <form-single name="MatchPolicy" transition="savePolicy">
                         <field name="organizationPartyId" from="organizationPartyId">
                             <default-field>

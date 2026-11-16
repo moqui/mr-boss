@@ -90,7 +90,9 @@ feature("a reader lists their organization's facilities as a tree by parent, sea
         percent == 0
         list.errors == []
         list.output.includes("Ziziwork Retail East Warehouse")
-        !list.output.includes("New facility")
+        // New facility is shown disabled with the reason, no dialog
+        !list.output.includes('id="NewFacilityDialog"')
+        list.output.includes("New facility: Needs")
         tree.output.includes("BOSS_WH_ANNEX")
     }
 })

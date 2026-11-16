@@ -36,7 +36,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Contacts"/>
                     <box-toolbar>
                         <container-dialog id="NewAccountContactDialog" button-text="New contact" icon="sym_o_person_add"
-                                title="New contact of ${customerDetail.customerName}" width="760" condition="canEdit">
+                                title="New contact of ${customerDetail.customerName}" width="760" disable-condition="!canEdit"
+                                disable-message="Needs customer editing access, which an administrator can grant.">
                             <form-single name="NewAccountContact" transition="createContact">
                                 <field name="accountPartyId" from="customerPartyId"><default-field><hidden/></default-field></field>
                                 <field name="firstName">
@@ -84,7 +85,8 @@ along with this software (see the LICENSE.md file). If not, see
                             </form-single>
                         </container-dialog>
                         <container-dialog id="AddAccountPersonDialog" button-text="Add a person" icon="sym_o_add_link"
-                                title="Add a person to ${customerDetail.customerName}" condition="canEdit">
+                                title="Add a person to ${customerDetail.customerName}" disable-condition="!canEdit"
+                                disable-message="Needs customer editing access, which an administrator can grant.">
                             <form-single name="AddAccountPerson" transition="addContact">
                                 <field name="accountPartyId" from="customerPartyId"><default-field><hidden/></default-field></field>
                                 <field name="partyId">

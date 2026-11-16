@@ -68,7 +68,7 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col-auto row q-gutter-sm">
                 <link url="${sharedLinks['ScheduledReports/Schedules']}" text="Schedule" link-type="anchor-button" btn-type="primary" icon="sym_o_schedule"
                         condition="digest &amp;&amp; found.canSchedule" parameter-map="{definitionId:digest?.definitionId, _openDialog:'NewSchedule'}"/>
-                <container-dialog id="NewDigest" button-text="New digest" icon="sym_o_add" type="${digest ? 'default' : 'primary'}" condition="canCompose">
+                <container-dialog id="NewDigest" button-text="New digest" icon="sym_o_add" type="${digest ? 'default' : 'primary'}" disable-condition="!canCompose" disable-message="Needs digest composing access, which an administrator can grant.">
                     <form-single name="DigestComposition" transition="storeDigest" map="newValues">
                         <field name="title"><default-field title="Name"><text-line size="50"/></default-field></field>
                         <field name="dashboardIds"><default-field title="Dashboards" tooltip="One to six dashboards you may read, in the order chosen">

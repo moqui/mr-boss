@@ -170,7 +170,9 @@ feature("the Centers list shows each center's slots and load; Equipment and Equi
         centersPage.output.includes("Assembly line B")
         !centersPage.output.includes("Services kit line")
         // the operator makes no work center
-        !centersPage.output.includes("New work center")
+        // New work center is shown disabled with the reason, no dialog
+        !centersPage.output.includes('id="NewCenterDialog"')
+        centersPage.output.includes("New work center: Needs")
         equipmentPage.errors == []
         equipmentPage.output.includes("Assembly Bot 4 1234")
         detail.errors == []

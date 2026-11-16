@@ -75,7 +75,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row items-center q-gutter-xs">
                 <container-dialog id="GenerateWorkDialog" button-text="Generate due work" type="primary" icon="sym_o_playlist_add"
-                        title="Generate the due work of this page" width="760" condition="canPlan">
+                        title="Generate the due work of this page" width="760" disable-condition="!canPlan"
+                        disable-message="Needs maintenance planning access, which an administrator can grant.">
                     <label text="Each plan is taken on its own: one work order for its next obligation, none while its work is open. What each would do now:"
                             type="p" style="text-caption m-muted"/>
                     <form-list name="GeneratePreview" list="dueList" skip-form="true" paginate="false">

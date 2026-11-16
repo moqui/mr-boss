@@ -103,7 +103,9 @@ along with this software (see the LICENSE.md file). If not, see
                             width="480"
                             type="${runFound &amp;&amp; waitingCount &gt; 0 ? 'default' : 'primary'}"
                             icon="sym_o_add"
-                            condition="dunningCapabilities.canSend &amp;&amp; hasLevels">
+                            condition="hasLevels"
+                            disable-condition="!dunningCapabilities.canSend"
+                            disable-message="Needs accounts receivable access, which an administrator can grant.">
                         <form-single name="NewDunningRunForm" transition="previewDunning">
                             <field name="organizationPartyId" from="organizationPartyId">
                                 <default-field>

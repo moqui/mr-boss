@@ -63,7 +63,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <container style="col"><label text="Automations" type="h5"/></container>
                     <container style="col-auto row items-center q-gutter-xs">
                         <container-dialog id="NewAutomationDialog" button-text="New automation" title="New automation" icon="sym_o_add" width="640"
-                                type="primary" condition="canEdit">
+                                type="primary" disable-condition="!canEdit"
+                                disable-message="Needs automation editing access, which an administrator can grant.">
                             <section-include name="NewAutomationForm" location="component://mr-boss/template/MarketingAutomations.xml"/>
                         </container-dialog>
                         <section-iterate name="SavedFinds" list="savedFinds" entry="saved">

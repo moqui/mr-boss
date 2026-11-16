@@ -95,7 +95,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <container style="col-auto row items-center q-gutter-xs">
                         <container-dialog id="NewOpportunityDialog" button-text="New opportunity" title="New opportunity" icon="sym_o_add"
-                                width="760" type="primary" condition="canEdit">
+                                width="760" type="primary" disable-condition="!canEdit"
+                                disable-message="Needs opportunity editing access, which an administrator can grant.">
                             <section-include name="NewOpportunityForm" location="component://mr-boss/template/SalesOpportunityForms.xml"/>
                         </container-dialog>
                         <link url="${sales.sharedLinks['Pipeline/OpportunityImport']}" text="Import" link-type="anchor-button" icon="sym_o_upload"

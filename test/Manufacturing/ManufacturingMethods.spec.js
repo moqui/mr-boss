@@ -231,7 +231,9 @@ feature("the method pages render the demo method for the engineer with their act
     then({engineer, reader}) {
         ;[engineer, reader].every(pages => Object.values(pages).every(found => found.status == 200 && !found.errors.length))
         engineer.list.output.includes("New BOM")
-        !reader.list.output.includes("New BOM")
+        // New BOM is shown disabled with the reason, no dialog
+        !reader.list.output.includes('id="NewBomDialog"')
+        reader.list.output.includes("New BOM: Needs")
         engineer.detail.output.includes("Request release")
         !reader.detail.output.includes("Request release")
         engineer.routing.output.includes("Copy operations")

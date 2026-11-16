@@ -128,7 +128,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewAdjustmentDialog" button-text="New adjustment" icon="sym_o_add" type="primary" width="720"
-                        title="New pay adjustment" condition="canEdit">
+                        title="New pay adjustment" disable-condition="!canEdit"
+                        disable-message="Needs payroll editing access, which an administrator can grant.">
                     <label type="p" text="An amount of an earning or a deduction for an employee, or the recovery of an advance they were paid, in their pay group's currency. It waits for a payroll approver who did not make it. A recurring one is one adjustment a pay period through its end."/>
                     <form-single name="NewAdjustment" transition="storeAdjustment" map="{organizationPartyId:organizationPartyId, inputTypeEnumId:'PitAdjustment'}">
                         <field name="organizationPartyId">

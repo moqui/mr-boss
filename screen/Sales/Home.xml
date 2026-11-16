@@ -74,16 +74,20 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <container style="row items-center q-col-gutter-sm q-mb-sm">
             <container style="col"><label text="Sales" type="h5"/></container>
-            <section name="HomeActions" condition="can.anyRead &amp;&amp; canEdit">
+            <section name="HomeActions" condition="can.anyRead">
                 <widgets>
                     <container style="col-auto row items-center q-gutter-xs">
                         <link url="${sharedLinks['Pipeline/Opportunities']}" text="New opportunity" link-type="anchor-button" btn-type="primary" icon="sym_o_add"
-                                parameter-map="{_openDialog:'NewOpportunityDialog'}"/>
+                                parameter-map="{_openDialog:'NewOpportunityDialog'}"
+                                disable-condition="!canEdit" disable-message="Needs opportunity editing access, which an administrator can grant."/>
                         <link url="${sharedLinks['Pipeline/Leads']}" text="New lead" link-type="anchor-button" icon="sym_o_person_add"
-                                parameter-map="{_openDialog:'NewLeadDialog'}"/>
-                        <link url="${sharedLinks['QuickCreate']}/NewActivity" text="Schedule activity" link-type="anchor-button" icon="sym_o_event"/>
+                                parameter-map="{_openDialog:'NewLeadDialog'}"
+                                disable-condition="!canEdit" disable-message="Needs opportunity editing access, which an administrator can grant."/>
+                        <link url="${sharedLinks['QuickCreate']}/NewActivity" text="Schedule activity" link-type="anchor-button" icon="sym_o_event"
+                                disable-condition="!canEdit" disable-message="Needs opportunity editing access, which an administrator can grant."/>
                         <link url="${sharedLinks['Pipeline/OpportunityImport']}" text="Import" link-type="anchor-button" icon="sym_o_upload"
-                                condition="canImport"/>
+                                disable-condition="!(canEdit &amp;&amp; canImport)"
+                                disable-message="Needs sales import access, which an administrator can grant."/>
                     </container>
                 </widgets>
             </section>

@@ -36,7 +36,8 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <container style="row justify-end q-mb-sm">
                     <container-dialog id="AccountNewQuoteDialog" button-text="New quote" icon="sym_o_add" width="760"
-                            title="New quote" condition="sales.capabilities.quoteEdit">
+                            title="New quote" disable-condition="!sales.capabilities.quoteEdit"
+                            disable-message="Needs quote editing access, which an administrator can grant.">
                         <section-include name="NewQuoteForm" location="component://mr-boss/template/SalesQuoteForms.xml"/>
                     </container-dialog>
                 </container>

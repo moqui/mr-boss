@@ -127,7 +127,9 @@ feature("Carriers shows the test gateway with its account masked, edits for the 
         setup.canEdit == false
         reader.errors == []
         reader.output.includes("Test Carrier")
-        !reader.output.includes("Add method")
+        // Add method is shown disabled with the reason, no dialog
+        !reader.output.includes('id="AddMethodDialog"')
+        reader.output.includes("Add method: Needs")
         manager.errors == []
         manager.output.includes("Add method")
         manager.output.includes("Carrier test")

@@ -102,7 +102,8 @@ along with this software (see the LICENSE.md file). If not, see
                         type="primary"
                         icon="sym_o_add"
                         title="New journal template"
-                        condition="canPost">
+                        disable-condition="!canPost"
+                        disable-message="Needs general ledger posting access, which an administrator can grant.">
                     <form-single name="TemplateHeader" transition="saveTemplate">
                         <field name="organizationPartyId" from="organizationPartyId">
                             <default-field title="Organization">

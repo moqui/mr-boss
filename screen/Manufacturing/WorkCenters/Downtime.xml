@@ -71,7 +71,8 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="text-caption m-muted"/>
             </container>
             <container style="col-12 col-md-auto">
-                <container-dialog id="ReportStopDialog" condition="canReport"
+                <container-dialog id="ReportStopDialog" disable-condition="!canReport"
+                        disable-message="Needs downtime reporting access, which an administrator can grant."
                         type="${selectedStop?.suggestMaintenance ? 'default' : 'primary'}" button-text="Report stop"
                         icon="sym_o_report" title="Report a stop" width="720">
                     <section-include name="ReportStopForm" location="component://mr-boss/template/ManufacturingDowntime.xml"/>

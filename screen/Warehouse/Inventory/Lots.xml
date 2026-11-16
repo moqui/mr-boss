@@ -82,7 +82,8 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <context title="Lots" selection-form="LotList"/>
         <container style="row items-center q-gutter-sm q-mb-sm">
-            <container-dialog id="NewLotDialog" condition="warehouse.capabilities.receive" type="primary" button-text="New lot"
+            <container-dialog id="NewLotDialog" disable-condition="!warehouse.capabilities.receive"
+                    disable-message="Needs receiving access, which an administrator can grant." type="primary" button-text="New lot"
                     icon="sym_o_add" title="New lot" width="640">
                 <form-single name="NewLot" transition="createLot">
                     <field name="lotNumber">

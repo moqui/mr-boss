@@ -114,7 +114,9 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewCycleDialog" button-text="New cycle" icon="sym_o_add" type="primary" width="760" title="Set up a review cycle"
-                        condition="canSetUp &amp;&amp; templateOptions.length">
+                        condition="templateOptions.length"
+                        disable-condition="!canSetUp"
+                        disable-message="Needs performance review setup access, which an administrator can grant.">
                     <form-single name="NewCycle" transition="storeCycle" map="newCycle">
                         <field name="organizationPartyId">
                             <default-field title="Employer">
@@ -282,7 +284,8 @@ along with this software (see the LICENSE.md file). If not, see
             <box-header title="Templates"/>
             <box-toolbar>
                 <container-dialog id="NewTemplateDialog" button-text="New template" icon="sym_o_add" width="760" title="Add a review template"
-                        condition="canSetUp">
+                        disable-condition="!canSetUp"
+                        disable-message="Needs performance review setup access, which an administrator can grant.">
                     <form-single name="NewTemplate" transition="storeTemplate" map="newTemplate">
                         <field name="organizationPartyId">
                             <default-field title="Employer">

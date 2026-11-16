@@ -83,7 +83,8 @@ along with this software (see the LICENSE.md file). If not, see
                             ${policy.store.inventoryFacilityName || 'no facility'}" type="p"/>
                         <container-dialog id="StoreReservationDialog" button-text="Change store settings" type="primary"
                                 title="Change the reservation settings of ${policy.store.storeName}"
-                                condition="policy.canManage">
+                                disable-condition="!policy.canManage"
+                                disable-message="Needs warehouse settings access, which an administrator can grant.">
                             <form-single name="StoreReservation" transition="storeStoreReservation" map="policy.store">
                                 <field name="productStoreId">
                                     <default-field>

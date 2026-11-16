@@ -48,7 +48,8 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <context title="Containers" selection-form="ContainerList"/>
         <container style="row items-center q-gutter-sm q-mb-sm">
-            <container-dialog id="NewContainerDialog" condition="warehouse.capabilities.move" type="primary"
+            <container-dialog id="NewContainerDialog" disable-condition="!warehouse.capabilities.move"
+                    disable-message="Needs inventory moves access, which an administrator can grant." type="primary"
                     button-text="New container" icon="sym_o_add" title="New container" width="640">
                 <form-single name="NewContainer" transition="createContainer" map="{newFacilityId:newFacilityId}">
                     <field name="newFacilityId">

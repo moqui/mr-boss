@@ -148,7 +148,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="AssignPayDialog" button-text="Assign pay" icon="sym_o_add" type="primary" width="760"
-                        title="Assign pay" condition="canEdit">
+                        title="Assign pay" disable-condition="!canEdit"
+                        disable-message="Needs payroll editing access, which an administrator can grant.">
                     <label type="p" text="Put employees of one employer on a published pay structure and a pay group from a date. Their salaries and rates do not change. Preview first to see who would be assigned."/>
                     <form-single name="AssignPay" transition="assignPay" map="{organizationPartyId:organizationPartyId, isPrimary:'Y'}">
                         <field name="organizationPartyId">
@@ -416,7 +417,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     </form-single>
                                 </container-dialog>
                                 <container-dialog id="AddBenefitDialog" button-text="Add benefit" icon="sym_o_add" width="560"
-                                        title="Add a benefit for ${employment.personName}" condition="canEdit">
+                                        title="Add a benefit for ${employment.personName}" disable-condition="!canEdit"
+                                        disable-message="Needs payroll editing access, which an administrator can grant.">
                                     <form-single name="AddBenefit" transition="storeBenefit" map="{partyRelationshipId:partyRelationshipId, expectedRevision:benefitRevision}">
                                         <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
                                         <field name="expectedRevision"><default-field><hidden/></default-field></field>

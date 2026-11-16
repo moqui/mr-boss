@@ -109,7 +109,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="Which approved relay and sender each organization's mail goes out from, its limits and bounce address. Relays, domains and credentials are Admin's."
                                 type="p" style="m-muted"/></container>
                     <container style="col-auto">
-                        <link url="." text="New profile" link-type="anchor-button" icon="sym_o_add" condition="found.canCreate &amp;&amp; profile"/>
+                        <link url="." text="New profile" link-type="anchor-button" icon="sym_o_add" condition="profile" disable-condition="!found.canCreate" disable-message="Needs sending profile editing access, which an administrator can grant."/>
                     </container>
                 </container>
                 <container-box>

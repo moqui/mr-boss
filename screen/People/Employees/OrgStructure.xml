@@ -115,7 +115,8 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewUnitDialog" button-text="New unit" icon="sym_o_add" type="primary" width="640"
-                        title="New department or team" condition="can.staff &amp;&amp; canEdit">
+                        title="New department or team" disable-condition="!(can.staff &amp;&amp; canEdit)"
+                        disable-message="Needs HR editing access, which an administrator can grant.">
                     <label type="p" text="A department belongs to an employer or another department; a team to either or to a department. It starts under its parent on the date given."/>
                     <form-single name="NewUnit" transition="storeUnit" map="newUnit">
                         <field name="unitKind">

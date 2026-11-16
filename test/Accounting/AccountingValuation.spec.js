@@ -69,7 +69,9 @@ feature("the reader sees the valuation, the product's accounting context and the
         !valuation.output.includes("Repair product cost")
         product.errors.length == 0
         product.output.includes("Costs and history") && product.output.includes("Landed cost")
-        product.output.includes("GL mappings") && !product.output.includes("Add mapping")
+        // the mappings are the finance administrator's: Add mapping is shown disabled with the reason, no dialog
+        product.output.includes("GL mappings") && !product.output.includes('data-dialog="AddProductGl"')
+        product.output.includes('aria-label="Add mapping: Needs accounting administration access')
         stock.errors.length == 0 && stock.output.includes("Count variance")
         arValuation.includes("PERMISSION_DENIED")
     }

@@ -64,7 +64,8 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col"><label text="Pay runs" type="h5"/></container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewRunDialog" button-text="New pay run" icon="sym_o_add" type="primary" width="560"
-                        title="New pay run" condition="canCreate">
+                        title="New pay run" disable-condition="!canCreate"
+                        disable-message="Needs payroll editing access, which an administrator can grant.">
                     <label type="p" text="A run of a pay group for one of its prepared periods: the regular run pays the period; an off-cycle run pays only the period's approved adjustments no run has taken, on any pay date. Its employees are selected at once; you then check their inputs, calculate and send it for approval. A correction is made from its payslip. Nothing is paid or posted."/>
                     <form-single name="NewRun" transition="createRun">
                         <field name="payrollGroupId">

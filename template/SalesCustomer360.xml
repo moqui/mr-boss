@@ -54,7 +54,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                                     <link url="${customer360Base}/SalesContacts${accountQuery}&amp;_openDialog=NewAccountContactDialog"
                                             url-type="plain" text="New contact" icon="sym_o_person_add" link-type="anchor-button"
-                                            btn-type="primary" condition="customerDetail.canEdit"/>
+                                            btn-type="primary" disable-condition="!customerDetail.canEdit"
+                                            disable-message="Needs customer editing access, which an administrator can grant."/>
                                     <!-- P13: Invite to Sales for a holder of SALES_CUSTOMER_INVITE (template/SalesInvite.xml) -->
                                     <section name="SalesCustomerInvite">
                                         <actions><set field="salesInviteFor" from="{accountPartyId: customerPartyId}"/></actions>

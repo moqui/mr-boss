@@ -220,7 +220,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container style="col"/>
                 <render-mode><text type="qvt"><![CDATA[${newContactHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify({t: "link", id: "ContactsNew", text: ec.l10n.localize("New contact"), url: sri.buildUrl("../../QuickCreate").path + "?kind=contact"})}]]></text></render-mode>
                 <link url="../Import" text="Import" icon="sym_o_upload_file" style="q-ml-sm"/>
-                <link url="../Duplicates" text="Find duplicates" icon="sym_o_join" condition="isContactAdmin" style="q-ml-sm"/>
+                <link url="../Duplicates" text="Find duplicates" icon="sym_o_join" disable-condition="!isContactAdmin" disable-message="Needs contact administration access, which an administrator can grant." style="q-ml-sm"/>
                 <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" target-window="_blank" style="q-ml-sm"/>
             </container>
 

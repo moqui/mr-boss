@@ -83,7 +83,8 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <container style="row items-center q-gutter-sm q-mb-sm">
             <label text="Counts" type="h5"/>
-            <container-dialog id="NewCountDialog" condition="canCreate" type="primary" button-text="New count" icon="sym_o_add"
+            <container-dialog id="NewCountDialog" disable-condition="!canCreate"
+                    disable-message="Needs inventory counting access, which an administrator can grant." type="primary" button-text="New count" icon="sym_o_add"
                     title="Plan a count" width="760">
                 <section-include name="NewCountForm" location="component://mr-boss/template/WarehouseCountParts.xml"/>
             </container-dialog>
