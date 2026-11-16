@@ -164,7 +164,8 @@ feature("PayRuns' one html render as the payroll approver, and payroll exception
             status: rendered.status,
             errors: rendered.errors,
             listsRun: rendered.output.includes("Spec salaried staff"),
-            offersNew: rendered.output.includes("New pay run"),
+            // shown disabled with the access it needs, not offered
+            offersNew: rendered.output.includes("New pay run") && !rendered.output.includes('aria-label="New pay run: Needs'),
             payrollToday: today(users.payroll),
             approverToday: today(users.payApprover)
         }

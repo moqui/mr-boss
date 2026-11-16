@@ -34,7 +34,8 @@ feature("the asset list shows each asset's book state; GL posting may run deprec
         // a reader sees Run depreciation disabled, with the reason
         reader.errors.length == 0 && reader.output.includes("Delivery van")
         reader.output.includes('aria-label="Run depreciation: Needs general ledger posting access')
-        classes.errors.length == 0 && classes.output.includes("Trucks") && !classes.output.includes("AddClassDialog")
+        classes.errors.length == 0 && classes.output.includes("Trucks") && !classes.output.includes('id="AddClassDialog"')
+        classes.output.includes("Add class: Needs accounting administration")
         adminClasses.errors.length == 0 && adminClasses.output.includes("AddClassDialog")
     }
 })

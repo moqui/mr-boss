@@ -31,8 +31,6 @@ feature("AgreementDetail shows an active agreement with its prices to its keeper
         list.errors.length == 0
         list.output.includes("Contoso supply terms")
         !list.output.includes("Standard supply terms")
-        // New agreement is shown disabled with the reason, no dialog
-        !list.output.includes('id="AccountNewAgreementDialog"')
-        list.output.includes("New agreement: Needs agreement editing")
+        !list.output.includes("New agreement")
     }
 })

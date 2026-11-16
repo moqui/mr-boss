@@ -183,7 +183,9 @@ feature(
                 "Waiting for"
             ])
                 if (!out.includes(text)) problems.push("no " + text)
-            if (out.includes("New adjustment")) problems.push("the approver offered New adjustment")
+            // shown disabled with the access it needs, not offered
+            if (out.includes("New adjustment") && !out.includes('aria-label="New adjustment: Needs'))
+                problems.push("the approver offered New adjustment")
             const values = list => Array.from(list || []).map(option => option.value)
             return {
                 status: rendered.status,
