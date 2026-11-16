@@ -89,7 +89,7 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <label text="${report.fromText} – ${report.thruText}, as of ${report.asOfText}. ${report.basis}" type="p" style="text-caption m-muted"/>
                 <label text="Accepted ${totals.acceptedCount} of ${totals.attemptedCount} handed off · Delivered ${totals.deliveredCount} (${totals.deliveryRateText}; receipts for ${totals.receiptCoverageText}) · Failed ${totals.failedCount} · Uncertain ${totals.uncertainCount} · Opens ${totals.openRateText} · Clicks ${totals.clickRateText} of ${totals.trackedAcceptedCount} tracked"
-                        type="h6"/>
+                        type="h6" condition="totals.attemptedCount"/>
                 <label text="No send was released in this period." type="p" style="m-muted" condition="!sendRows.length"/>
                 <container-box condition="sendRows.length">
                     <box-header title="Delivery by send"/>

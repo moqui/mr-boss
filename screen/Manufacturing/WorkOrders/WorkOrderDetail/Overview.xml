@@ -120,7 +120,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="workEffortId"><default-field><hidden/></default-field></field>
                                         <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                         <field name="operationKey"><default-field><hidden/></default-field></field>
-                                        <field name="workEffortName"><default-field title="Name"><text-line required="true"/></default-field></field>
+                                        <field name="workEffortName"><default-field title="Name" required="true"><text-line/></default-field></field>
                                         <field name="priority"><default-field title="Priority"><text-line size="4"/></default-field></field>
                                         <field name="estimatedStartDate"><default-field title="Start"><date-time/></default-field></field>
                                         <field name="estimatedCompletionDate"><default-field title="Due"><date-time/></default-field></field>

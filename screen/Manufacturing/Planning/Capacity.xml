@@ -130,12 +130,12 @@ along with this software (see the LICENSE.md file). If not, see
                         </default-field>
                     </field>
                     <field name="periodText"><default-field title="Period"><display/></default-field></field>
-                    <field name="slotsText"><default-field title="Slots"><display align="right"/></default-field></field>
-                    <field name="nominalHours"><default-field title="Nominal"><display align="right"/></default-field></field>
-                    <field name="calendarHours"><default-field title="Calendar-adjusted"><display align="right"/></default-field></field>
-                    <field name="downtimeHours"><default-field title="Downtime"><display align="right"/></default-field></field>
-                    <field name="availableHours"><default-field title="Available"><display align="right"/></default-field></field>
-                    <field name="bookedHours"><default-field title="Booked"><display align="right"/></default-field></field>
+                    <field name="slotsText" align="right"><default-field title="Slots"><display/></default-field></field>
+                    <field name="nominalHours" align="right"><default-field title="Nominal"><display/></default-field></field>
+                    <field name="calendarHours" align="right"><default-field title="Calendar-adjusted"><display/></default-field></field>
+                    <field name="downtimeHours" align="right"><default-field title="Downtime"><display/></default-field></field>
+                    <field name="availableHours" align="right"><default-field title="Available"><display/></default-field></field>
+                    <field name="bookedHours" align="right"><default-field title="Booked"><display/></default-field></field>
                     <field name="overloadHours">
                         <default-field title="Overload">
                             <render-mode>
@@ -145,7 +145,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </render-mode>
                         </default-field>
                     </field>
-                    <field name="utilizationText"><default-field title="Utilization"><display align="right"/></default-field></field>
+                    <field name="utilizationText" align="right"><default-field title="Utilization"><display/></default-field></field>
                     <field name="missingText"><default-field title="Missing data"><display style="text-warning"/></default-field></field>
                     <columns type="mobile">
                         <column><field-ref name="facilityName"/><field-ref name="periodText"/></column>

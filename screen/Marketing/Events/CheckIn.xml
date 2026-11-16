@@ -271,7 +271,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                             <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                                             <field name="override"><default-field><hidden/></default-field></field>
                                                             <field name="operationKey"><default-field><hidden/></default-field></field>
-                                                            <field name="reason"><default-field title="Why"><text-line size="40" required="true"/></default-field></field>
+                                                            <field name="reason"><default-field title="Why" required="true"><text-line size="40"/></default-field></field>
                                                             <field name="submitButton">
                                                                 <default-field title=""><submit text="Check in" confirmation="Check in ${attendeeText}?"/></default-field>
                                                             </field>

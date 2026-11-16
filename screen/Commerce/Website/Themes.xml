@@ -127,8 +127,10 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="releaseId">
                             <default-field title="Release">
                                 <drop-down allow-empty="true">
-                                    <dynamic-options transition="choices" server-search="true" min-length="0" depends-on="productStoreId"
-                                            parameter-map="{choice:'storeReleases', productStoreId:productStoreId, selected:releaseId}"/>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'storeReleases', selected:releaseId}">
+                                        <depends-on field="productStoreId"/>
+                                    </dynamic-options>
                                 </drop-down>
                             </default-field>
                         </field>

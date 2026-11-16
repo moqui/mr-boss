@@ -296,7 +296,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <container style="row items-center q-gutter-x-sm">
                                             <label text="${record.name}" type="h5"/>
                                             <section name="FavoriteOn" condition="record.isFavorite"><widgets>
-                                                <link url="contactFavorite" link-type="hidden-form-link" icon="star" text="" tooltip="Starred: unstar" style="m-btn-flat text-warning"
+                                                <link url="contactFavorite" link-type="hidden-form-link" icon="star" text="" tooltip="Unstar" style="m-btn-flat text-warning"
                                                         parameter-map="{partyId:recordPartyId, contactBookId:favoriteBookId, isFavorite:'N'}"/>
                                             </widgets><fail-widgets>
                                                 <link url="contactFavorite" link-type="hidden-form-link" icon="star_border" text="" tooltip="Star" style="m-btn-flat"

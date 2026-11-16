@@ -188,8 +188,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="workTypeText"><default-field title="Work type"><display/></default-field></field>
                             <field name="fromText"><default-field title="From"><display/></default-field></field>
                             <field name="thruText"><default-field title="Through"><display/></default-field></field>
-                            <field name="hours"><default-field title="Hours"><display align="right"/></default-field></field>
-                            <field name="pieceCount"><default-field title="Pieces"><display align="right"/></default-field></field>
+                            <field name="hours" align="right"><default-field title="Hours"><display/></default-field></field>
+                            <field name="pieceCount" align="right"><default-field title="Pieces"><display/></default-field></field>
                             <field name="timesheetText"><default-field title="Week"><display/></default-field></field>
                             <field name="laborText"><default-field title="Labor cost"><display/></default-field></field>
                             <columns type="mobile">

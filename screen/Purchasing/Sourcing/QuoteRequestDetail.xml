@@ -432,7 +432,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="requestId"><default-field><hidden/></default-field></field>
                                             <field name="orderId"><default-field><hidden/></default-field></field>
                                             <field name="reason">
-                                                <default-field title="The supplier's reason"><text-area rows="2" required="true"/></default-field>
+                                                <default-field title="The supplier's reason" required="true"><text-area rows="2"/></default-field>
                                             </field>
                                             <field name="submitButton">
                                                 <default-field title="Record the decline">

@@ -222,7 +222,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="promoCode"><default-field title="Code"><display/></default-field></field>
                                     <field name="usedDateText"><default-field title="Used"><display/></default-field></field>
-                                    <field name="discount"><default-field title="Discount"><display currency-unit-field="currencyUomId" align="right"/></default-field></field>
+                                    <field name="discount" align="right"><default-field title="Discount"><display currency-unit-field="currencyUomId"/></default-field></field>
                                     <columns type="mobile">
                                         <column><field-ref name="promotionName"/><field-ref name="promoCode"/></column>
                                         <column><field-ref name="discount"/><field-ref name="usedDateText"/></column>

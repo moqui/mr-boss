@@ -75,8 +75,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     </default-field>
                                 </field>
                                 <field name="finAccountName">
-                                    <default-field title="Name">
-                                        <text-line required="true"/>
+                                    <default-field title="Name" required="true">
+                                        <text-line/>
                                     </default-field>
                                 </field>
                                 <field name="finAccountTypeId">

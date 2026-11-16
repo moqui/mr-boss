@@ -276,7 +276,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <form-single name="EditCampaign" transition="storeCampaign" map="editValues">
                                 <field name="marketingCampaignId"><default-field><hidden/></default-field></field>
                                 <field name="expectedRevision"><default-field><hidden/></default-field></field>
-                                <field name="campaignName"><default-field title="Name"><text-line size="40" required="true"/></default-field></field>
+                                <field name="campaignName"><default-field title="Name" required="true"><text-line size="40"/></default-field></field>
                                 <field name="parentCampaignId">
                                     <conditional-field title="Part of" condition="can.canEditMaterial">
                                         <drop-down allow-empty="true">
@@ -449,7 +449,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         </radio>
                                     </default-field>
                                 </field>
-                                <field name="amount"><default-field title="Amount (${campaign.costUomId || ''})"><text-line size="12" required="true"/></default-field></field>
+                                <field name="amount"><default-field title="Amount (${campaign.costUomId || ''})" required="true"><text-line size="12"/></default-field></field>
                                 <field name="description"><default-field title="Description" tooltip="A manual cost needs one"><text-line size="40"/></default-field></field>
                                 <field name="invoiceId"><default-field title="Invoice"><text-line size="14"/></default-field></field>
                                 <field name="invoiceItemSeqId"><default-field title="Item"><text-line size="6"/></default-field></field>

@@ -472,7 +472,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     parameter-map="{requestId:requestId}" condition="change.orderContentId"/>
                             <link url="${caseLink}" text="Case ${change.caseRequestId}"
                                     parameter-map="{requestId:change.caseRequestId}" condition="change.caseRequestId &amp;&amp; caseLink"/>
-                            <container-dialog id="OrderChangeWithdraw" button-text="Withdraw" icon="sym_o_cancel" btn-type="danger"
+                            <container-dialog id="OrderChangeWithdraw" button-text="Withdraw" icon="sym_o_cancel" type="danger"
                                     title="Withdraw order change ${requestId}" width="480" condition="change.actions.withdraw.allowed">
                                 <form-single name="ChangeWithdraw" transition="withdrawChange" map="withdrawValue">
                                     <field name="requestId"><default-field><hidden/></default-field></field>

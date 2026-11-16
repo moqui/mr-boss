@@ -51,7 +51,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="vendorPartyId"><default-field><hidden/></default-field></field>
                         <field name="organizationPartyId"><default-field><hidden/></default-field></field>
                         <field name="emailAddress">
-                            <default-field title="Contact's email"><text-line size="40" input-type="email" required="true"/></default-field>
+                            <default-field title="Contact's email" required="true"><text-line size="40" input-type="email"/></default-field>
                         </field>
                         <field name="submitButton"><default-field title="Invite"><submit/></default-field></field>
                     </form-single>

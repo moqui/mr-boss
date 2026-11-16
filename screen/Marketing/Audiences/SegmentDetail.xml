@@ -497,7 +497,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="marketSegmentId"><default-field><hidden/></default-field></field>
                             <field name="show">
                                 <default-field title="Show">
-                                    <drop-down no-current-selected-key="matched" submit-on-change="true">
+                                    <drop-down no-current-selected-key="matched" submit-on-select="true">
                                         <option key="matched" text="Matched"/>
                                         <option key="excluded" text="Left out"/>
                                         <option key="all" text="Both"/>

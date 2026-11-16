@@ -200,7 +200,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="ownerName"><default-field title="Owner"><display/></default-field></field>
                             <field name="fromDateText"><default-field title="Open from"><display/></default-field></field>
                             <field name="thruDateText"><default-field title="Closing"><display/></default-field></field>
-                            <field name="applicationCount"><default-field title="Applicants"><display align="right"/></default-field></field>
+                            <field name="applicationCount" align="right"><default-field title="Applicants"><display/></default-field></field>
                             <field name="stateText">
                                 <default-field title="State">
                                     <render-mode>

@@ -106,7 +106,7 @@ along with this software (see the LICENSE.md file). If not, see
                     </default-field></field>
                     <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
                     <field name="sourceText"><default-field title="Source"><display/></default-field></field>
-                    <field name="version"><default-field title="Version" align="right"><display/></default-field></field>
+                    <field name="version" align="right"><default-field title="Version"><display/></default-field></field>
                     <field name="sharing"><default-field title="Shared with"><display text="${ownerText} · ${sharing}"/></default-field></field>
                     <field name="actions"><default-field title="">
                         <link url="../FlowMapEditor" text="Edit" link-type="anchor" condition="canEdit" parameter-map="{definitionId:definitionId}"/>

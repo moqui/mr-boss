@@ -188,7 +188,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <form-list name="Lanes" list="laneRows" skip-form="true" paginate="false">
                         <field name="title"><default-field title="Lane"><display/></default-field></field>
                         <field name="description"><default-field title="Description"><display/></default-field></field>
-                        <field name="stepCount"><default-field title="Steps" align="right"><display/></default-field></field>
+                        <field name="stepCount" align="right"><default-field title="Steps"><display/></default-field></field>
                         <field name="actions"><default-field title="">
                             <container-dialog id="EditLane_${laneId}" button-text="Edit" title="Edit lane ${title}" condition="canEdit">
                                 <form-single name="EditLaneForm" transition="storeLane">
@@ -324,7 +324,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Versions"/>
                     <box-body-nopad>
                         <form-list name="MapVersions" list="versionRows" skip-form="true" paginate="false">
-                            <field name="version"><default-field title="Version" align="right"><display text="${version}${current ? ' (current)' : ''}"/></default-field></field>
+                            <field name="version" align="right"><default-field title="Version"><display text="${version}${current ? ' (current)' : ''}"/></default-field></field>
                             <field name="note"><default-field title="Change"><display/></default-field></field>
                             <field name="changedBy"><default-field title="By"><display/></default-field></field>
                             <field name="changedText"><default-field title="When"><display/></default-field></field>

@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <form-single name="NewOpportunity" transition="createOpportunity" map="newDefaults">
                     <field name="typeEnumId"><default-field><hidden/></default-field></field>
-                    <field name="opportunityName"><default-field title="Name"><text-line required="true"/></default-field></field>
+                    <field name="opportunityName"><default-field title="Name" required="true"><text-line/></default-field></field>
                     <field name="organizationPartyId">
                         <default-field title="Organization" tooltip="The selling organization">
                             <drop-down allow-empty="false">
@@ -131,7 +131,7 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <form-single name="NewLead" transition="createOpportunity" map="newLeadDefaults">
                     <field name="typeEnumId" from="'SotLead'"><default-field><hidden/></default-field></field>
-                    <field name="opportunityName"><default-field title="Interest" tooltip="What they asked about"><text-line required="true"/></default-field></field>
+                    <field name="opportunityName"><default-field title="Interest" tooltip="What they asked about" required="true"><text-line/></default-field></field>
                     <field name="organizationPartyId">
                         <default-field title="Organization" tooltip="The selling organization">
                             <drop-down allow-empty="false">

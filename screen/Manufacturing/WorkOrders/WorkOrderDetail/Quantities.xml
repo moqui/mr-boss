@@ -236,7 +236,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="assetId"><default-field title="Asset or lot" tooltip="The output asset scrapped"><text-line size="14"/></default-field></field>
-                            <field name="quantity"><default-field title="Quantity"><text-line size="8" input-type="number" required="true"/></default-field></field>
+                            <field name="quantity"><default-field title="Quantity" required="true"><text-line size="8" input-type="number"/></default-field></field>
                             <field name="reasonCode">
                                 <default-field title="Reason">
                                     <drop-down allow-empty="true">
@@ -258,8 +258,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="expectedRevision"><default-field><hidden/></default-field></field>
                             <field name="operationKey"><default-field><hidden/></default-field></field>
                             <field name="productionRunLineId"><default-field><hidden/></default-field></field>
-                            <field name="targetQuantity"><default-field title="New target"><text-line size="8" input-type="number" required="true"/></default-field></field>
-                            <field name="reason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                            <field name="targetQuantity"><default-field title="New target" required="true"><text-line size="8" input-type="number"/></default-field></field>
+                            <field name="reason"><default-field title="Reason" required="true"><text-line/></default-field></field>
                             <field name="submit"><default-field title=""><submit text="Change target"/></default-field></field>
                         </form-single>
                     </container-dialog>
@@ -277,8 +277,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     </drop-down>
                                 </default-field>
                             </field>
-                            <field name="productId"><default-field title="Product"><text-line size="16" required="true"/></default-field></field>
-                            <field name="quantity"><default-field title="Quantity"><text-line size="8" input-type="number" required="true"/></default-field></field>
+                            <field name="productId"><default-field title="Product" required="true"><text-line size="16"/></default-field></field>
+                            <field name="quantity"><default-field title="Quantity" required="true"><text-line size="8" input-type="number"/></default-field></field>
                             <field name="quantityUomId"><default-field title="Unit" tooltip="The product's stock unit when empty"><text-line size="8"/></default-field></field>
                             <field name="submit"><default-field title=""><submit text="Add output"/></default-field></field>
                         </form-single>
@@ -318,15 +318,15 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="productName">
                                 <default-field title="Product"><display text="${productName} · ${roleText}"/></default-field>
                             </field>
-                            <field name="target"><default-field title="Planned"><display align="right"/></default-field></field>
-                            <field name="good"><default-field title="Good"><display align="right"/></default-field></field>
-                            <field name="held"><default-field title="Held" tooltip="Produced, awaiting disposition: not available"><display align="right"/></default-field></field>
-                            <field name="processLoss"><default-field title="Process loss"><display align="right"/></default-field></field>
-                            <field name="scrap"><default-field title="Scrap"><display align="right"/></default-field></field>
-                            <field name="rework"><default-field title="Rework"><display align="right"/></default-field></field>
-                            <field name="remaining"><default-field title="Remaining"><display align="right"/></default-field></field>
-                            <field name="over">
-                                <default-field title="Over"><display text="${over}${tolerance != '0' ? ' (tolerance ' + tolerance + ')' : ''}${approvedOver != '0' ? ', approved ' + approvedOver : ''}" align="right"/></default-field>
+                            <field name="target" align="right"><default-field title="Planned"><display/></default-field></field>
+                            <field name="good" align="right"><default-field title="Good"><display/></default-field></field>
+                            <field name="held" align="right"><default-field title="Held" tooltip="Produced, awaiting disposition: not available"><display/></default-field></field>
+                            <field name="processLoss" align="right"><default-field title="Process loss"><display/></default-field></field>
+                            <field name="scrap" align="right"><default-field title="Scrap"><display/></default-field></field>
+                            <field name="rework" align="right"><default-field title="Rework"><display/></default-field></field>
+                            <field name="remaining" align="right"><default-field title="Remaining"><display/></default-field></field>
+                            <field name="over" align="right">
+                                <default-field title="Over"><display text="${over}${tolerance != '0' ? ' (tolerance ' + tolerance + ')' : ''}${approvedOver != '0' ? ', approved ' + approvedOver : ''}"/></default-field>
                             </field>
                             <field name="stockUomId"><default-field title="Unit"><display/></default-field></field>
                             <columns type="mobile">
@@ -368,11 +368,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 type="p" style="text-caption m-muted q-pa-md"/>
                         <form-list name="MaterialQuantities" list="materialRows" skip-form="true" paginate="false">
                             <field name="productName"><default-field title="Component"><display/></default-field></field>
-                            <field name="required"><default-field title="Required"><display align="right"/></default-field></field>
-                            <field name="issued"><default-field title="Issued"><display align="right"/></default-field></field>
-                            <field name="returned"><default-field title="Returned"><display align="right"/></default-field></field>
-                            <field name="scrapped"><default-field title="Scrapped"><display align="right"/></default-field></field>
-                            <field name="remaining"><default-field title="To issue"><display align="right"/></default-field></field>
+                            <field name="required" align="right"><default-field title="Required"><display/></default-field></field>
+                            <field name="issued" align="right"><default-field title="Issued"><display/></default-field></field>
+                            <field name="returned" align="right"><default-field title="Returned"><display/></default-field></field>
+                            <field name="scrapped" align="right"><default-field title="Scrapped"><display/></default-field></field>
+                            <field name="remaining" align="right"><default-field title="To issue"><display/></default-field></field>
                             <field name="stockUomId"><default-field title="Unit"><display/></default-field></field>
                             <columns type="mobile">
                                 <column><field-ref name="productName"/><field-ref name="required"/></column>
@@ -391,11 +391,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 <form-list name="RunLosses" list="lossRows" skip-form="true" paginate="false">
                                     <field name="lossTypeText"><default-field title="Loss"><display text="${lossTypeText} · ${lossDateText}"/></default-field></field>
                                     <field name="productName"><default-field title="Product"><display text="${productName}${assetId ? ' · ' + assetId : ''}"/></default-field></field>
-                                    <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                                    <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
                                     <field name="reasonName"><default-field title="Reason"><display/></default-field></field>
                                     <field name="effectText"><default-field title="Effect"><display/></default-field></field>
                                     <field name="statusText"><default-field title="Status"><display/></default-field></field>
-                                    <field name="costAmount" hide="!financialRead"><default-field title="Cost"><display currency-unit-field="costUomId" align="right"/></default-field></field>
+                                    <field name="costAmount" align="right" hide="!financialRead"><default-field title="Cost"><display currency-unit-field="costUomId"/></default-field></field>
                                     <columns type="mobile">
                                         <column><field-ref name="lossTypeText"/><field-ref name="productName"/></column>
                                         <column><field-ref name="quantity"/><field-ref name="statusText"/></column>
@@ -414,8 +414,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <widgets>
                                 <form-list name="QuantityEvents" list="eventRows" skip-form="true" paginate="false">
                                     <field name="eventTypeText"><default-field title="Event"><display text="${eventTypeText} · ${eventDateText}"/></default-field></field>
-                                    <field name="quantity">
-                                        <default-field title="Quantity"><display text="${quantity}${target ? ' (target ' + previousTarget + ' to ' + target + ')' : ''}" align="right"/></default-field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Quantity"><display text="${quantity}${target ? ' (target ' + previousTarget + ' to ' + target + ')' : ''}"/></default-field>
                                     </field>
                                     <field name="reason"><default-field title="Reason"><display/></default-field></field>
                                     <field name="approvalText"><default-field title="Approval"><display/></default-field></field>

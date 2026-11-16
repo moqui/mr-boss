@@ -85,7 +85,7 @@ along with this software (see the LICENSE.md file). If not, see
                             type="p" style="text-caption"/>
                     <form-single name="RecordLoss" transition="recordLoss" map="lossForm">
                         <field name="operationKey"><default-field><hidden/></default-field></field>
-                        <field name="workEffortId"><default-field title="Work order"><text-line size="12" required="true"/></default-field></field>
+                        <field name="workEffortId"><default-field title="Work order" required="true"><text-line size="12"/></default-field></field>
                         <field name="lossTypeEnumId">
                             <default-field title="Loss">
                                 <drop-down allow-empty="false">
@@ -97,7 +97,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="productionRunLineId"><default-field title="Line" tooltip="The material line of a component scrap; the output line otherwise">
                             <text-line size="12"/></default-field></field>
                         <field name="assetId"><default-field title="Asset" tooltip="The output asset scrapped"><text-line size="14"/></default-field></field>
-                        <field name="quantity"><default-field title="Quantity"><text-line size="8" input-type="number" required="true"/></default-field></field>
+                        <field name="quantity"><default-field title="Quantity" required="true"><text-line size="8" input-type="number"/></default-field></field>
                         <field name="reasonCode">
                             <default-field title="Reason">
                                 <drop-down allow-empty="true">
@@ -161,7 +161,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <header-field title="Product"><text-line size="12"/></header-field>
                         <default-field title="Product"><display text="${productName}${lotId ? ' · lot ' + lotId : ''}${assetId ? ' · ' + assetId : ''}"/></default-field>
                     </field>
-                    <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                    <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
                     <field name="reasonCode">
                         <header-field title="Reason">
                             <drop-down allow-empty="true">
@@ -189,7 +189,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <header-field title="Before"><date-time type="date"/></header-field>
                         <default-field><ignored/></default-field>
                     </field>
-                    <field name="costAmount" hide="!financialRead"><default-field title="Cost"><display currency-unit-field="costUomId" align="right"/></default-field></field>
+                    <field name="costAmount" align="right" hide="!financialRead"><default-field title="Cost"><display currency-unit-field="costUomId"/></default-field></field>
                     <field name="find"><header-field title=""><submit text="Find"/></header-field><default-field><ignored/></default-field></field>
                     <columns type="mobile">
                         <column><field-ref name="workEffortId"/><field-ref name="lossTypeEnumId"/></column>

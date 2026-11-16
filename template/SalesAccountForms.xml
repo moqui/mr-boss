@@ -26,8 +26,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <form-single name="NewAccount" transition="createAccount" map="newAccountDefaults">
                     <field name="partyTypeEnumId" from="'PtyOrganization'"><default-field><hidden/></default-field></field>
                     <field name="organizationName">
-                        <default-field title="Name">
-                            <text-line required="true"/>
+                        <default-field title="Name" required="true">
+                            <text-line/>
                         </default-field>
                     </field>
                     <field name="organizationPartyId">
@@ -106,8 +106,8 @@ along with this software (see the LICENSE.md file). If not, see
                         </default-field>
                     </field>
                     <field name="lastName">
-                        <default-field title="Last name">
-                            <text-line required="true"/>
+                        <default-field title="Last name" required="true">
+                            <text-line/>
                         </default-field>
                     </field>
                     <field name="organizationPartyId">
@@ -176,8 +176,8 @@ along with this software (see the LICENSE.md file). If not, see
                         </default-field>
                     </field>
                     <field name="lastName">
-                        <default-field title="Last name">
-                            <text-line required="true"/>
+                        <default-field title="Last name" required="true">
+                            <text-line/>
                         </default-field>
                     </field>
                     <field name="relationshipName">

@@ -17,10 +17,12 @@ along with this software (see the LICENSE.md file). If not, see
     value (the recipient was checked to read what the owner reads), and a link to AlertDetail in Insights, which shows their
     own state after sign-in. No data and Error are said as not known. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
-    <parameter name="title" default-value="Business alert"/>
+    <parameter name="title"/>
     <parameter name="link"/>
     <parameter name="events"/>
-    <actions><script><![CDATA[
+    <actions>
+        <set field="title" from="title" default-value="Business alert"/>
+        <script><![CDATA[
         const words = {Firing: 'Firing', Normal: 'Normal', Pending: 'Pending', Recovering: 'Recovering', NoData: 'No data (not known)', Error: 'Error (not known)'}
         alertLink = link ? String(link) : ''
         if (alertLink.startsWith('/') && typeof webHostName !== 'undefined' && webHostName)
