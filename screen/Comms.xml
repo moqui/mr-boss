@@ -71,6 +71,8 @@ along with this software (see the LICENSE.md file). If not, see
         <external-conversation name="boss.parties" service="ironstone.comms.ChatServices.file#ExternalConversation"/>
         <!-- who a user may call, transfer a call to or add to one: the users of the parties they may see (§3.3, the hardening pass) -->
         <call-target name="boss.parties" service="ironstone.comms.ComposeServices.get#CallTarget"/>
+        <!-- whom a user may find, message, put in a chat room or mention: the same users as for calls (SEC-COM-01) -->
+        <chat-target name="boss.parties" service="ironstone.comms.ComposeServices.get#CallTarget"/>
     </shell-providers>
 
     <widgets><subscreens-panel id="comms-panel" type="popup"/></widgets>
