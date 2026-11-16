@@ -217,16 +217,20 @@ along with this software (see the LICENSE.md file). If not, see
                                         <container-box>
                                             <box-header title="Work asked of others"/>
                                             <box-body-nopad>
-                                                <form-list name="PeopleCaseTasks" list="caseTasks" skip-form="true" paginate="false" condition="caseTasks.length">
-                                                    <field name="workEffortName"><default-field title="Task"><display/></default-field></field>
-                                                    <field name="assigneeText"><default-field title="With"><display/></default-field></field>
-                                                    <field name="statusText"><default-field title="State"><display/></default-field></field>
-                                                    <field name="dueDateText"><default-field title="Due"><display/></default-field></field>
-                                                    <columns type="mobile">
-                                                        <column><field-ref name="workEffortName"/><field-ref name="assigneeText"/></column>
-                                                        <column><field-ref name="statusText"/><field-ref name="dueDateText"/></column>
-                                                    </columns>
-                                                </form-list>
+                                                <section name="PeopleCaseTasksSection" condition="caseTasks.length">
+                                                    <widgets>
+                                                        <form-list name="PeopleCaseTasks" list="caseTasks" skip-form="true" paginate="false">
+                                                            <field name="workEffortName"><default-field title="Task"><display/></default-field></field>
+                                                            <field name="assigneeText"><default-field title="With"><display/></default-field></field>
+                                                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                                                            <field name="dueDateText"><default-field title="Due"><display/></default-field></field>
+                                                            <columns type="mobile">
+                                                                <column><field-ref name="workEffortName"/><field-ref name="assigneeText"/></column>
+                                                                <column><field-ref name="statusText"/><field-ref name="dueDateText"/></column>
+                                                            </columns>
+                                                        </form-list>
+                                                    </widgets>
+                                                </section>
                                                 <label type="p" style="q-pa-md m-muted" condition="!caseTasks.length"
                                                         text="No work asked of others. Ask for work in More asks someone for a task without showing them the case."/>
                                             </box-body-nopad>

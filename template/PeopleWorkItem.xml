@@ -92,15 +92,19 @@ along with this software (see the LICENSE.md file). If not, see
                                 <section name="ExitInterviewNoneHolder" condition="false">
                                     <widgets><form-single name="ExitInterviewNone"/></widgets>
                                 </section>
-                                <form-list name="ExitInterviewAnswers" list="pplContext.exitInterview.answers" skip-form="true" paginate="false"
+                                <section name="ExitInterviewAnswersSection"
                                         condition="pplContext.exitInterview.answers?.length">
-                                    <field name="title"><default-field title="Question"><display/></default-field></field>
-                                    <field name="displayText" ai-opt-out="true"><default-field title="Answer"><display/></default-field></field>
-                                    <columns type="mobile">
-                                        <column><field-ref name="title"/></column>
-                                        <column><field-ref name="displayText"/></column>
-                                    </columns>
-                                </form-list>
+                                    <widgets>
+                                        <form-list name="ExitInterviewAnswers" list="pplContext.exitInterview.answers" skip-form="true" paginate="false">
+                                            <field name="title"><default-field title="Question"><display/></default-field></field>
+                                            <field name="displayText" ai-opt-out="true"><default-field title="Answer"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="title"/></column>
+                                                <column><field-ref name="displayText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </widgets>
                         </section>
                         <section name="PeopleTaskAccess" condition="pplContext.access">
@@ -109,20 +113,23 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label type="p" style="text-caption m-muted" text="${pplContext.access.stepsText}" condition="pplContext.access.stepsText"/>
                             </widgets>
                         </section>
-                        <form-list name="ChecklistSiblings" list="pplContext.siblings" skip-form="true" paginate="false"
-                                condition="pplContext.siblings?.length">
-                            <field name="workEffortName">
-                                <default-field title="The checklist's other tasks">
-                                    <link url="${sharedLinks['Tasks/WorkItemDetail']}" text="${workEffortName}" link-type="anchor"
-                                            parameter-map="{workEffortId:workEffortId}"/>
-                                </default-field>
-                            </field>
-                            <field name="done"><default-field title="Done"><display text="${done ? 'Done' : 'Open'}"/></default-field></field>
-                            <columns type="mobile">
-                                <column><field-ref name="workEffortName"/></column>
-                                <column><field-ref name="done"/></column>
-                            </columns>
-                        </form-list>
+                        <section name="ChecklistSiblingsSection" condition="pplContext.siblings?.length">
+                            <widgets>
+                                <form-list name="ChecklistSiblings" list="pplContext.siblings" skip-form="true" paginate="false">
+                                    <field name="workEffortName">
+                                        <default-field title="The checklist's other tasks">
+                                            <link url="${sharedLinks['Tasks/WorkItemDetail']}" text="${workEffortName}" link-type="anchor"
+                                                    parameter-map="{workEffortId:workEffortId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="done"><default-field title="Done"><display text="${done ? 'Done' : 'Open'}"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="workEffortName"/></column>
+                                        <column><field-ref name="done"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
             </widgets>

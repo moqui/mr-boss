@@ -67,12 +67,15 @@ along with this software (see the LICENSE.md file). If not, see
                                     <number-card title="Applied" value="${peopleClaim.claim.appliedText}" icon="sym_o_payments" size="sm"/>
                                     <number-card title="Unpaid" value="${peopleClaim.claim.unpaidText}" icon="sym_o_pending" size="sm"/>
                                 </dashboard>
-                                <form-list name="PeopleInvoicePayments" list="peopleClaim.payments" skip-form="true" paginate="false"
-                                        condition="peopleClaim.payments.length">
-                                    <field name="kindText"><default-field title="Applied"><display/></default-field></field>
-                                    <field name="appliedDateText"><default-field title="Day"><display/></default-field></field>
-                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
-                                </form-list>
+                                <section name="PeopleInvoicePaymentsSection" condition="peopleClaim.payments.length">
+                                    <widgets>
+                                        <form-list name="PeopleInvoicePayments" list="peopleClaim.payments" skip-form="true" paginate="false">
+                                            <field name="kindText"><default-field title="Applied"><display/></default-field></field>
+                                            <field name="appliedDateText"><default-field title="Day"><display/></default-field></field>
+                                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
                             </box-body>
                         </container-box>
                         <container-box>
@@ -126,12 +129,16 @@ along with this software (see the LICENSE.md file). If not, see
                                             <number-card title="Total" value="${peopleObligation.invoice?.totalText}" icon="sym_o_receipt_long" size="sm"/>
                                             <number-card title="Unpaid" value="${peopleObligation.invoice?.unpaidText}" icon="sym_o_pending" size="sm"/>
                                         </dashboard>
-                                        <form-list name="PeopleObligationPayments" list="peopleObligation.payments" skip-form="true" paginate="false"
+                                        <section name="PeopleObligationPaymentsSection"
                                                 condition="peopleObligation.payments.length">
-                                            <field name="appliedText"><default-field title="Applied"><display/></default-field></field>
-                                            <field name="appliedDateText"><default-field title="Day"><display/></default-field></field>
-                                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
-                                        </form-list>
+                                            <widgets>
+                                                <form-list name="PeopleObligationPayments" list="peopleObligation.payments" skip-form="true" paginate="false">
+                                                    <field name="appliedText"><default-field title="Applied"><display/></default-field></field>
+                                                    <field name="appliedDateText"><default-field title="Day"><display/></default-field></field>
+                                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                                </form-list>
+                                            </widgets>
+                                        </section>
                                     </box-body>
                                 </container-box>
                                 <container-box>
