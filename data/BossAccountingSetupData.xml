@@ -40,6 +40,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYABLE_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_NUMBER_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="INVOICE_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="INVOICE_HOLD" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_RUN_APPROVE" fromDate="0"/>
@@ -50,6 +51,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_MATCH" userPermissionId="PAYABLE_VIEW" fromDate="0"/>
     <moqui.security.UserGroup userGroupId="BOSS_ACCOUNTING_TREASURY" description="Treasury: payments and banking"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_NUMBER_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="BANK_RECONCILE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYABLE_VIEW" fromDate="0"/>
@@ -96,6 +98,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYABLE_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYABLE_IMPORT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYMENT_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYMENT_NUMBER_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYMENT_RUN_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PRODUCTION_COST_POST" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>

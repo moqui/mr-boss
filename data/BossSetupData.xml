@@ -3187,6 +3187,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYABLE_EDIT" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYABLE_IMPORT" capabilityKindEnumId="CpkExport"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYMENT_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYMENT_NUMBER_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYMENT_RUN_APPROVE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PRODUCTION_COST_POST" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="RECEIVABLE_EDIT" capabilityKindEnumId="CpkEdit"/>
@@ -3223,6 +3224,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYABLE_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_NUMBER_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="INVOICE_APPROVE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="INVOICE_HOLD" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_PAYROLL" userPermissionId="PAYMENT_RUN_APPROVE" capabilityKindEnumId="CpkEdit"/>
@@ -3232,6 +3234,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_MATCH" userPermissionId="PAYABLE_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_TREASURY" appName="Accounting" description="Treasury: payments and banking" scopeDependency="organization" sequenceNum="810"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_NUMBER_VIEW" capabilityKindEnumId="CpkSensitive"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="BANK_RECONCILE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYABLE_VIEW" capabilityKindEnumId="CpkView"/>
