@@ -56,6 +56,12 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="comparisonRows" from="Array.from(comparisonRows || []).map((row) =&gt; Object.assign({}, row,
                     {periodText: comparisonPeriodText}))"/>
         </if>
+        <!-- a CSV export renders the whole screen: both periods are one list under one header, the comparison's rows after the
+            report's, rather than a second list that repeats the header in the middle of the file (ACC-UI-030) -->
+        <set field="oneExportList" from="hasComparison &amp;&amp; sri.getRenderMode() == 'csv'"/>
+        <if condition="oneExportList">
+            <set field="reportRows" from="Array.from(reportRows).concat(Array.from(comparisonRows))"/>
+        </if>
     </actions>
     <widgets>
         <container style="row items-center q-col-gutter-sm">
@@ -150,7 +156,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </column>
                     </columns>
                 </form-list>
-                <section name="Comparison" condition="hasComparison">
+                <section name="Comparison" condition="hasComparison &amp;&amp; !oneExportList">
                     <widgets>
                         <label text="Comparison period ${comparisonPeriodText}" type="h6"/>
                         <label text="No posted entries in the comparison period." type="p" condition="!comparisonRows.length"/>

@@ -132,8 +132,8 @@ feature("an account's Back to report keeps the report's own account filter, not 
     }
 })
 
-// ACC-UI-030: with a comparison, the export's rows each name their period (one file holds both lists, the same columns)
-feature("the general ledger's export with a comparison names each row's period", {
+// ACC-UI-030: with a comparison, the export is one list under one header, each row naming its period
+feature("the general ledger's export with a comparison is one list with one header, each row naming its period", {
     when() {
         const today = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
         const monthStart = today.slice(0, 8) + "01"
@@ -144,8 +144,10 @@ feature("the general ledger's export with a comparison names each row's period",
     then({csv, errors, primary, comparison}) {
         errors == []
         csv.split("\n")[0].includes("Period")
+        csv.split("\n").filter(line => line === csv.split("\n")[0]).length == 1
         csv.includes(primary)
         csv.includes(comparison)
+        csv.lastIndexOf(primary) < csv.indexOf(comparison)
     }
 })
 
