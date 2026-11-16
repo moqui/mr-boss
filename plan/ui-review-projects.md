@@ -18,12 +18,10 @@ the [document convention](design-doc-guide.md#ui-review-and-refinement-phase). K
 findings, decisions and bounded execution notes here throughout the review. Research records references, design
 specifies behavior, implementation records construction, and this file records review and refinement.
 
-**Execution authorized, 2026-11-09.** The user requested the complete review with three delegated workers,
-independent review of corrections, and a local commit after each completed batch; the user will push at the end.
-Run focused checks during the batches and defer `test-apps` and any applicable `test-framework` gate until the end
-of the entire review. The eleven existing Projects acceptance specs in §5 are explicitly authorized. Live coverage
-starts **pending** and changes only with observed evidence; earlier implementation and Commons results do not
-establish this pass's coverage. The planning-only records below remain historical.
+**November 16, 2026 (America/Chicago).** The repeat review starts again at PR-01 and follows Accounting's separate
+review and refinement passes. See [current coverage, findings and checks](#november-16-repeat-review). The
+November 9–10 waves, corrections, commits and acceptance runs remain historical evidence. This pass updates this
+review record.
 
 ### Inputs and reference patterns
 
@@ -99,10 +97,9 @@ Check Git capability and fixture content before the Code wave, or earlier if usi
 local repositories/remotes, controlled CI-status data and local captured mail; no external provider or webhook
 delivery is inferred from a success toast.
 
-There is no `ProjectsClientFixtures` spec or Projects browser golden path at planning time. Start from suitable demo
-data; identify any missing roles before adding a small fixture. Do not use `CommonsClientFixtures` as an incidental
-bootstrap: it lives in acceptance and is not authorized by this planning task. Record the chosen setup command and
-suite when execution is planned; a new fixture or automated walk must name its suite before being written.
+Projects has four focused offline client specs and no dedicated browser fixture or golden-path walk. The repeat
+uses the demo data on a disposable runtime, with manual scratch setup for distinct work. The other apps'
+acceptance fixtures belong to their own reviews.
 
 | Fixture role | Existing starting point and purpose |
 | --- | --- |
@@ -182,11 +179,10 @@ PR-19, and PR-20's client estimate decision with PR-24. After initial execution,
 with status `exercised`, outcome `partial`, and their named outstanding continuations until those are observed. Do
 not collapse an upstream activity's remaining work into a later activity's pass.
 
-Each authorized batch follows observe → prioritize → refine → rerun affected activities → compare evidence → verify
-→ update this record. Start with PR-01 and PR-02, establishing fixtures and measured browser/TUI baselines before
-parallelizing dependent work. Delegated workers may own bounded source or evidence reviews; the coordinator owns
-shared files, runtime lifecycle and integration. Confirm tool/identity availability before assigning live browsing.
-The prior pass's coordinator-only browser limitation is a lesson to check, not an assumed limitation of this pass.
+For the repeat, start at PR-01 and PR-02 and establish fixtures and measured browser/TUI baselines. Assign
+independent work to reviewers with their own browser contexts and records. The coordinator owns the runtime,
+evidence and running record. Review every wave, record gaps, then triage the findings for a separate refinement
+pass. The observe/fix/retest cadence below describes the earlier pass.
 
 ## 3. Screen and surface inventory
 
@@ -334,6 +330,8 @@ experience and from supported terminal functionality.
 | Separate Portfolio/Program, Board, phase, Budgets and Expenses routes | Design §2 deliberately uses Projects list/Timeline portfolio, WorkItems board, milestones with a start/gate, Money/Profitability and Money's expense summary. Expense capture is People's. Review those surfaces, not invented routes |
 | Project Docs, shared detail and progress routes | Current mounts reuse Commons Knowledge, Shared records and Commons import-progress templates; retain consuming-project context |
 | Project quick-create in a single QuickCreate screen | Root providers now send workItem/time to QuickCreate and project to QuickProject; review both |
+| Public issue and Smithy handoffs | WorkItemDetail can show a linked public tracker issue and discussion separately from Chatter. Merge request Changes supports both local review threads and Smithy-backed posts. Projects owns its presentation and authorization handoff |
+| Sales RFQs and project billing bases | RFQs stay in Sales. The Projects order-line picker excludes recurring bases and quote templates, and the link service refuses them |
 | Public RequestIntake | XML wrapper serves `RequestIntake.qvue`; `RequestIntake.tui.json` delegates to the browser, and plain html/qvt shows a JavaScript-browser notice |
 | PASS Client portal and retirement of BOSS client mode | Planned impl-projects §9; current restricted BOSS client and `/r/<token>` remain review scope |
 | Historical terminal/read-only and “Later” notes | Several were superseded by P11 or later code. Current twins support the operations listed above; record genuine limitations per activity, not blanket parity or blanket absence |
@@ -709,6 +707,7 @@ test breadth is not a reason to add duplicate rules, renders or scenarios.
 | mr-boss regression `test/Projects/` | TimeEntries, Resources | PR-16–19; grid, timer, approval and capacity interaction remain separate |
 | mr-boss regression `test/Projects/` | Billing, Reports | PR-20–22; actual invoice/estimate/report output and client reads need evidence |
 | mr-boss regression `test/Projects/` | ProjectsAccess, ClientBilling | PR-24–25; selected rule refusals are not the complete access walk |
+| mr-boss regression `test/client/Projects/` | ProjectsPlanningResponses, ProjectsDiffState, ProjectsTimeAsync, ProjectsResourcesAsync | Offline mounted-component checks for deferred responses, navigation, keyboard review and draft ownership |
 | mr-boss regression `test/Shared/`, `test/Commons/` | Chatter, RecordFiles; Knowledge, KnowledgeReview, Calendar, QuickCreate, TodayPanel, Notifications | PR-01, 04, 06, 08, 11, 16–17, 25; reuse affected shared-rule checks without duplicating the Commons review |
 | mr-boss regression `test/Commons/` | Tasks, Requests | PR-05–06, 11–12; the Commons consumers of Shared WorkItemDetail (as TaskDetail) and RequestDetail, for the shared-fix retest |
 | mr-boss acceptance `test/acceptance/Projects/` | SprintWalk, TimelineWalk, ReleaseWalk | PR-07–10, 14; TimelineWalk includes import mapping/options/preview and row failure; server scenarios, not browser/terminal interaction evidence |
@@ -1021,6 +1020,78 @@ Follow-ups recorded rather than done:
 - `Changes.qvue` mounts a comment button on every diff line;
 - `store#VoiceTrunk` may find no live SIP node to reload right after boot (the edge fixture waits for one).
 
+### November 16 repeat review
+
+The coordinator and three reviewers restarted at PR-01 against a fresh BOSS/Mantle database on loopback 57951.
+They used separate browser contexts and distinct disposable records. Material measurements include 1920 × 1080
+and 390 × 844. Terminal evidence comes from the current remote TUI client. See `environment.txt` for revisions,
+ports and prerequisites. Evidence paths below are relative to
+[the ignored Projects repeat evidence directory](../../../../../plans/ui-refinement-evidence/boss-projects/review-2026-11-16/).
+Each row records a current representative and the branches still open.
+
+| Activity | Current result and evidence | Remaining branches |
+| --- | --- | --- |
+| PR-01 | **Exercised / partial.** Joe's Home My open count and progress both showed seven. The card went to WorkItems and the keyboard palette found IRON-3. `planning/projects-browser-http.jsonl`. | Recent/deleted results, no-project landing in browser, and Assist with a model. The first-run regression passed. |
+| PR-02 | **Exercised / failed branch.** At 390 × 844, unchecked Create now advanced to Team. Leave and resume opened the same draft, then Modules, Money and Review finished on that project. Template reuse and clone worked. Duplicate key, blank entry and ordinary team member were refused. A bookmarked wizard edited an active project, PR-UI-038. | Subproject, clone options and interrupted step recovery. |
+| PR-03 | **Exercised / partial.** A disposable project reached Closed. Its child lost Edit, and otherwise valid edit/create directly returned `PROJECT_CLOSED`. A nonmanager could not reopen; the manager reopened and the same edit saved. TUI parent header refreshed to Approved immediately and after F5 on a separate project. `planning/projects-planning-tui.txt`. | Health update/print, membership revoke, nonempty delete and complete terminal F10 action sampling. |
+| PR-04 | **Exercised / partial.** Saved a scoped DB Docs page and read its history. Downloaded an exact attachment, and private outsider access did not disclose page/file. Chatter and the native Docs link kept the project context. `planning/projects-browser-http.jsonl`, `planning/projects-planning-tui.txt`. | Git-backed editing, co-edit/restore, review and mention delivery. |
+| PR-05 | **Exercised / partial.** Fixed-project no-match Clear filters retained IRON and restored only its rows. Self-parent was refused and the compound edit rolled back. `planning/projects-browser-http.jsonl`. | Recalculate all smart counts, full Board/Calendar/Tree state preservation, bulk scope and exact same-find export. |
+| PR-06 | **Exercised / partial.** Quick Create made the work item. A valid priority change saved, invalid multi-edit rolled back, and Commons opened the same task ID. Closed-ancestor edits were refused. `planning/projects-browser-http.jsonl`, `settings/terminal-cross-mount.txt`. | Watch, recurrence, relation/clone and detailed parent/child readback. |
+| PR-07 | **Exercised / partial.** Enabled planning, ranked work, started the sprint, refused a team-only start and invalid range, then completed and moved one unfinished item to the named next sprint. Report returned 200 and the item read back in the next sprint. `planning/projects-browser-http.jsonl`. | Live drag refusal/revert, narrow chart and capacity continuity. |
+| PR-08 | **Exercised / partial.** Date move and dependency lag persisted. Cycle was refused and removal left no edge. Native Calendar opened the intended agenda item and Standard gave the browser fallback. `planning/projects-browser-http.jsonl`, `planning/projects-planning-tui.txt`. | Drag/keyboard dependency editing, date range boundaries, and current Manufacturing consumer. |
+| PR-09 | **Exercised / partial.** Milestone gate request/approval saved as the holder and refused Bob. Deliverable remained visible. Release published matching project Docs notes and retained Released after reload. `planning/projects-browser-http.jsonl`. | Git tag/changelog, duplicate gate/release and client decision. |
+| PR-10 | **Exercised / partial.** Previewed three CSV rows and applied two. Parent and child read back. Repeating imported zero, skipped two and still named one failure. Bob's foreign preview exposed no row. `planning/projects-browser-http.jsonl`. | Mapping variants, failure download, background resume and specialty formats. |
+| PR-11 | **Exercised / partial.** Staff accepted and assigned anonymous request 100011 and created IRON-15. Work linked to the exact item and Joe started and completed it. Staff could download staff-internal and outward bytes on the ACME request. Sheldon read only the outward file; Gob received neither. `intake-code-client/`. | Bulk triage, outward reply delivery and duplicate conversion. |
+| PR-12 | **Exercised / partial.** Phone anonymous intake exercised bad token 404, blank subject refusal, honeypot with no request and valid multipart submit. Staff found Submitted under IRON with the expected attachment. `intake-code-client/`. | Local SMTP/reply capture and active token rotation/disable in the browser. Token rule regression passed. |
+| PR-13 | **Exercised / partial.** Current IRON README appeared in Material and TUI, downloaded as 363 exact bytes, and an invalid revision returned 404. New repository refused `git://` before creation. Local relative bare export succeeded with 37 objects. `intake-code-client/`. | Mirror lifecycle, storage maintenance, exact Raw browser delegation and viewer/manager export matrix. |
+| PR-14 | **Exercised / partial.** Current MR !2 described no merge conflicts alongside 0 of 1 approvals. Merge was refused. In Material, Bob focused the named line-comment action and Enter opened the composer. The saved comment appeared in Unified and Side by side. Bob approved the same head, John merged and exact main-branch file bytes returned. `intake-code-client/observations.txt`. | Changed-head, conflict, protected push/CI, Smithy-backed thread and full terminal review. |
+| PR-15 | **Exercised / partial.** Personal token appeared once and disappeared on reload. It allowed local clone and a new branch push while generic REST returned 401. Both temporary tokens were revoked. Git info/refs changed from 200 to 401 on the revoked token. Admin local export succeeded and Joe was refused. `intake-code-client/observations.txt`. | Native terminal one-time token, protected branch controls and webhook delivery/failure. |
+| PR-16 | **Exercised / partial.** Joe saved 1.25 h with the response held, typed 0.75 h in another cell, and retained both edits after release and reload. Dark phone day view showed 2 h without overflow. A second session saw the running timer and comment. Stopping in under one minute cleared it as a discarded entry. `time-finance/week.log`. | Invalid/failed own cell retry, offline timer and longer-duration time capture. |
+| PR-17 | **Exercised / partial.** Submitted November 9 time refused edit. Bob received unavailable. Return without reason was refused. The manager returned with a reason, Joe corrected and resubmitted, and the manager approved. Worker view reloaded read-only with 38 h, and print showed Joe and the corrected work. `time-finance/week.log`. | Alternative approver policy, bulk actions and second-user stale decision. |
+| PR-18 | **Exercised / partial.** The first mixed CSV and exact repeat left one 1 h entry. Each failure CSV returned 200 via its authored POST and named only the invalid work item. Global and project-specific grouped print both kept the selected date and displayed the imported row. `time-finance/import-resources-reports.log`, `time-finance/followup.log`. | Historical TUI edit return, four-week future cutoff and background progress. |
+| PR-19 | **Exercised / partial.** Manager requested 6 h of SUPP capacity, staffed Ana, shifted the dated allocation by a week and canceled it. Ana and Bob showed the expected capacity/leave. Joe could open candidates but rates and staffing capability were absent and the direct write was refused. Dated TUI labels rendered; candidate headers exposed raw names, PR-UI-040. `time-finance/followup.log`. | Actual TUI staffing keys, planner drag and delayed/stale live decisions. |
+| PR-20 | **Exercised / partial.** Approved four hours at a manual USD 187.50 changed SUPP's Money actual client value from USD 15,602.50 to USD 15,792.50. The USD 190 delta matches four hours above the earlier USD 140 rate. Hours stayed unchanged. The focused explicit/zero/fallback rule passed. `time-finance/draft.log`, `verification.txt`. | Budget revision, client estimate and rate end-date variants. |
+| PR-21 | **Exercised / partial.** Worker-grouped draft 100051 gained USD 750 for the four hours, with the source marked invoiced. Reconsideration refused the same entry as not approved time to invoice. Joe received 403 without amount; the authorized print showed USD 750 and its time. `time-finance/draft.log`. | Automatic approval review rejected the proposed combined creation, approval and send walkthrough over potential financial and email side effects. Live narrow send, delivery and milestone issuance remain open. The narrow send regression passed. |
+| PR-22 | **Exercised / partial.** Seven report routes loaded without render-error text. Native Time showed 113.5 h, 108.5 billable and USD 15,602.50, matching CSV totals. XLSX and print agreed with the same totals. Teammate Profitability CSV returned 403 and no margin. `time-finance/import-resources-reports.log`. | Actual terminal attachment save, report drill and more output/scope variants. |
+| PR-23 | **Exercised / partial.** At 1920 × 1080, General Office Offer was enabled and persisted, raising the offered count from eight to nine. Quick Time showed it. Stop offering restored eight and removed the option. Joe's direct Settings request returned 403. Both states retained a literal CSS class instead of the intended emphasis, PR-UI-039. `settings/browser.jsonl`. | Full definition/merge and override cases, repeated row dialogs, and temporary time-policy flags. |
+| PR-24 | **Exercised / partial.** Sheldon opened ACME and downloaded only the outward file. Gob received neither attachment. Temporary Code share allowed Sheldon to open and download exact ACME README bytes without Settings, while Gob stayed refused. Clearing the share returned Sheldon to 404. The paired Hours and internal Time requests are recorded below. `intake-code-client/observations.txt`. | Actual shared hours data, client gate/estimate and full revoked membership round trip. |
+| PR-25 | **Exercised / partial.** Joe opened IRON-3, Expand and collapse rows, in both Projects and Commons via Standard and native terminal. An internal user received 403 for ClientHours. At 390 × 844, Sheldon opened own ACME Hours and saw the explicit unshared state, while Time/EditEntry returned 403 and BLUTH showed unavailable. The focused terminal notification title checks passed on the current build. `settings/browser.jsonl`, `settings/terminal-cross-mount.txt`, `verification.txt`. | Live notification destination/read behavior, revoked memberships across all shell entry paths and other shared consumers. |
+
+#### Earlier findings on the current checkout
+
+| Earlier IDs | Current disposition |
+| --- | --- |
+| PR-UI-001–003 | Live attachment audience and byte-level scope retained, including direct internal and cross-client refusals. Normal five-step draft/resume worked. Empty project starts passed in ProjectsHome. PR-UI-038 concerns an active record rather than the original premature wizard completion. |
+| PR-UI-004–005, 007–009 | Current mounted browser regressions passed for sprint, shared timeline, code review, time and staffing request ownership. The real time grid also retained newer text after a delayed save. Live asynchronous and navigation variants outside that sample remain open. |
+| PR-UI-006 | Real anonymous submit and staff receipt verified. Current success text is conditional on receiving an email. Confirmation-disabled delivery and loopback SMTP were not rerun. |
+| PR-UI-010–014 | Current browser/TUI renders kept repository filenames, project Docs and Calendar links, and live parent status refresh after a write. Other append/download paths and F10 row menus were sampled only as recorded above. |
+| PR-UI-015–017 | Current TimeEntries and grouped billing checks passed. Manual-rate rollup and linked grouped source were verified live. A full current terminal historical-week edit and remove/cancel/rebuild remains open. |
+| PR-UI-018–020 | Fixed find and row scope returned current project results. Exact totals, previous contrast calculations and terminal print delegation were not fully repeated. Current browser report print returned 200. |
+| PR-UI-021–024 | Current merge gate and browser one-time Git display, Git access and revocation were verified. The closed-project live refusal and manager reopen passed. Narrow send passed in the existing Billing regression. The live send branch was blocked. |
+| PR-UI-025–029 | InvoiceCalendarDates passed with both book-day zones. Current repository and capacity rows were inspected. The grouped print kept its exact selected day in browser. Full terminal Raw/download, webhook retry, and broader grouped print ranges remain open. |
+| PR-UI-030–035 | Browser Offer/Stop and both Standard fallback routes worked. Fixed-project Clear filters restored results and Home counters agreed. Exact current CSV/XLSX work-item cells and the terminal future-time boundary remain open. |
+| PR-UI-036–037 | Current Material Work Types offer and stop persisted and changed the consuming choices. Client Code share and revoke produced the expected file scope. The separate Time policy checkbox sequence was not repeated. |
+
+#### Findings awaiting refinement
+
+| ID | Severity and evidence | Reproduction and impact | Likely owner |
+| --- | --- | --- | --- |
+| PR-UI-038 | **P2 / live.** `planning/projects-browser-http.jsonl`. | As a manager, bookmark Start for a project and move the project to In Progress. Reopen the old URL. It says the project is “in planning,” offers Modules and Review, and saves changing Hours to Story points. Finish repeats the planning message while Overview correctly remains In Progress. This bypasses the wizard's expected draft boundary for an existing manager. | Projects NewProject wizard and its status checks |
+| PR-UI-039 | **P3 / live.** `settings/browser.jsonl`, `settings/time-work-type-changed.png`. | In server-static Settings → Time, change General Office from unoffered to offered and reload. The visible action and count change correctly, but both states leave the conditional style expression as literal CSS class text. The intended muted or emphasized label styling never applies. | Projects Work Types row and the server-static renderer |
+| PR-UI-040 | **P3 / live.** `time-finance/followup.log`. | In Resources → Allocations, open Staff for a requested allocation as the project manager at 1280 × 960. Candidate table headings show “Rate Text” and “Staff Link” where the form authors Cost and an unlabeled action. The rate and staffing permission checks worked. | Projects Staff candidate list title rendering |
+
+#### Verification and cleanup
+
+The repeat used the current release, with one ProjectsHome bootstrap feature. The targeted regression run
+passed 119 features across 17 Projects server specs. The four registered offline browser specs passed 11
+features. The focused Mantle manual-rate/billing and shared Notifications run passed 20 features, including
+the current terminal record-link check. See `verification.txt`. The existing acceptance walks and sweeps
+remain historical evidence.
+
+Temporary settings and local access artifacts were restored or removed as recorded in `cleanup.txt`.
+Review records stayed in the disposable database. The server, terminal clients and temporary browsers were
+stopped. The findings are ready to triage with the other repeat reviews during the separate refinement pass.
+
 ### Completion
 
 Mark an activity passed only with observed completion and relevant recovery outcomes. A blocked/deferred disposition
@@ -1036,8 +1107,10 @@ decided behavior changes; feed reusable patterns into the framework UI review gu
 
 ## 7. Decisions
 
-- **Execution boundary:** the user authorized all 25 activities, corrections, three workers, reviewed local batch
-  commits and the eleven existing Projects acceptance specs. No push or deployment is authorized by this pass.
+- **November 16 repeat.** Separate review and refinement, as in Accounting and the companion repeat reviews.
+  Exercise current Projects workflows and focused regressions. Update this review record during the pass.
+- **Historical execution boundary:** the November 9–10 pass covered all 25 activities, three workers, reviewed
+  corrections and local batch commits, and the eleven existing Projects acceptance specs.
 - **Scope:** review current BOSS Projects, including Code, restricted clients and public request intake. No PASS Client
   migration, absent-feature implementation or full adjacent-app/desktop review.
 - **Inventory authority:** current mounts and templates determine scope. Historical design and “Later” notes are
