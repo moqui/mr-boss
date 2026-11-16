@@ -356,15 +356,21 @@ feature(
                 }),
                 chatter: panelRequest("apps/Sales/Chatter/chatterData")
             }))
+            // PRD-UI-039: a product's notes are Products', which Sales' Chatter refuses, so its Product360 has none; Products' has it
+            const productParameters = {productId: "DEMO_1_1", organizationPartyId: ids.organizationId, lastStandalone: "true"}
+            const repProduct = asUser(users.rep, () => page("Products/Product360/Summary", productParameters))
+            const catalogProduct = page("Products/Product360/Summary", productParameters, "qvt", "Products")
             return {
                 repHome,
                 otherHome,
                 panels,
+                repProduct,
+                catalogProduct,
                 readerSummary: asUser(users.reader, () => page("Reports/SalesSummary", {}, "html")),
                 repReports: screenRefusal(users.rep, "Reports/SalesSummary")
             }
         },
-        then({repHome, otherHome, panels, readerSummary, repReports}) {
+        then({repHome, otherHome, panels, repProduct, catalogProduct, readerSummary, repReports}) {
             repHome.errors.length == 0
             repHome.output.includes("Sales work")
             repHome.output.includes("RFQs awaiting response")
@@ -385,6 +391,11 @@ feature(
             !panels.chatter.errors.includes("RECORD_PANEL_UNAVAILABLE")
             panels.account.errors == ""
             panels.otherAccount.errors.includes("RECORD_PANEL_UNAVAILABLE")
+            repProduct.errors.length == 0
+            repProduct.output.includes("DEMO_1_1")
+            !repProduct.output.includes("ProductChatter")
+            catalogProduct.errors.length == 0
+            catalogProduct.output.includes("ProductChatter")
         }
     }
 )

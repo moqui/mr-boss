@@ -1408,6 +1408,7 @@ Each correction has a regression that failed before it. The live retest belongs 
 | --- | --- | --- | --- |
 | PRD-UI-036 | Queue is a request of its own kind, as Generate is: typing an operation key while it is on its way clears the old results but no longer drops its answer, so the field shows the stored batch's key and the summary names it. | `test/client/ProductsVariantResponses` (Queue held, a key typed, then answered). | The held Queue in the browser, then Run on the shown key. |
 | PRD-UI-037 | The shared PriceListDetail builds its print and PDF links from its own `effectiveOutput` transition, so each mount (Products' Prices, Sales' Agreements, Commerce's Merchandising) links under itself, on `/apps`. They named Products' `Prices` path, which Sales and Commerce do not have. | `test/Products/ProductsFinish` (Sales' link is under Agreements and answers 200 with the list). | Commerce's Merchandising links, HTML and PDF, in the browser. |
+| PRD-UI-039 | Product360's Summary shows Chatter only where the mounting root keeps a product's notes: not under Sales or Maintenance, whose Chatter refuses a product (`RECORD_PANEL_UNAVAILABLE`), as EquipmentDetail leaves its panels out. Accounting's and Insights' mounts have no Summary. | `test/Sales/SalesAccess` (a representative's Product360 Summary has no Chatter; Products' has it). | Sales and Maintenance Product360 in the browser with no error toast. |
 
 #### Verification and scope
 

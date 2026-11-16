@@ -302,7 +302,9 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-box>
             </widgets>
         </section>
-        <section name="ProductChatter" condition="productFound">
+        <!-- Sales' and Maintenance's roots keep a product's notes and messages in the app that owns it, Products (their Chatter
+            refuses a product as RECORD_PANEL_UNAVAILABLE), so their Product360 shows none (PRD-UI-039), as EquipmentDetail does -->
+        <section name="ProductChatter" condition="productFound &amp;&amp; appRoot != 'Sales' &amp;&amp; appRoot != 'Maintenance'">
             <widgets>
                 <chatter id="ProductChatter" record-entity="mantle.product.Product" record-id="${productId}" default-tab="message"/>
             </widgets>
