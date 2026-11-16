@@ -36,7 +36,8 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <container style="row justify-end q-mb-sm">
                     <container-dialog id="AccountNewAgreementDialog" button-text="New agreement" icon="sym_o_add" width="640"
-                            title="New agreement" condition="sales.capabilities.agreementEdit">
+                            title="New agreement" disable-condition="!sales.capabilities.agreementEdit"
+                            disable-message="Needs agreement editing access, which an administrator can grant.">
                         <form-single name="AccountNewAgreement" transition="createSalesAgreement" map="newAgreementDefaults">
                             <field name="organizationPartyId">
                                 <default-field title="Selling organization">

@@ -81,7 +81,9 @@ along with this software (see the LICENSE.md file). If not, see
             </container>
             <container style="row items-center q-gutter-xs m-record-actions">
                 <container-dialog id="NewRuleDialog" button-text="New rule" icon="sym_o_add" type="primary" width="640" title="New approval rule"
-                        condition="rulesFound &amp;&amp; found.canConfigure">
+                        condition="rulesFound"
+                        disable-condition="!found.canConfigure"
+                        disable-message="Needs sales settings access, which an administrator can grant.">
                     <form-single name="NewRule" transition="storeRule" map="newRule">
                         <field name="organizationPartyId"><default-field><hidden/></default-field></field>
                         <field name="purposeEnumId">
