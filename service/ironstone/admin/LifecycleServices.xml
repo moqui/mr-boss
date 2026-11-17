@@ -80,9 +80,12 @@ along with this software (see the LICENSE.md file). If not, see
         mr-boss tx-commit rules on People's hire and applied employment change (service/PeopleLifecycle.secas.xml) and by HR's
         Request access again on Employee360; Mantle's IdentityServices keep the operation and run or hold its steps. -->
     <service verb="request" noun="Provisioning" allow-remote="false">
-        <description>A People hire's provisioning (employmentChangeId: an applied hire whose HR officer asked an account for): the
+        <description>A People hire's provisioning (employmentChangeId: an applied hire whose HR officer asked an account for), for
+            an HR editor of the hire's employer (PEOPLE_HR_EDIT in the caller's People scope, or authorization disabled;
+            NOT_A_HIRE otherwise, as a hire not found, SEC-BOS-08): the
             grant proposal BOSS_USERS and BOSS_PEOPLE_SELF, with any other bundle of bundleGroupIdList the caller may give
-            (registered, its delegable permission held, never a privileged group; GRANT_INVALID, GRANT_NOT_YOURS otherwise), sent
+            (registered, its delegable permission held, or ADMIN_ACCESS_MANAGE for a bundle that names none, never a privileged
+            group; GRANT_INVALID, GRANT_NOT_YOURS otherwise), sent
             to mantle.party.IdentityServices.request#Provisioning, keyed by the change (operationKey, else Mantle's key of it): a
             retry answers the first operation. Its steps run now for an identity operator and wait for one otherwise (Admin's
             delegation rules decide when the invitation is sent); the employment is the organization membership. A failure never

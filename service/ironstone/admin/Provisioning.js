@@ -58,7 +58,7 @@ const changeOf = employmentChangeId =>
         ? lib.one("mantle.humanres.employment.EmploymentChange", {employmentChangeId: text(employmentChangeId)})
         : null
 // The proposal: the defaults, and each other bundle the caller may give (registered, enabled, its delegable permission held, not
-// a privileged group); else refused by name.
+// a privileged group; one that names no delegable permission only by an access manager, SEC-BOS-08); else refused by name.
 function proposal(extra) {
     const ids = Array.from(
         new Set(
@@ -76,16 +76,29 @@ function proposal(extra) {
         if (!bundle || bundle.disabled === "Y" || !group)
             return {refusal: refused("GRANT_INVALID", groupId + " is not a registered bundle")}
         const privileged = groupId === "ADMIN" || Array.from(UserSecurityChecks.privilegedGroups()).includes(groupId)
-        if (privileged || (bundle.delegablePermissionId && !ec.user.hasPermission(bundle.delegablePermissionId)))
+        const delegable = bundle.delegablePermissionId
+            ? ec.user.hasPermission(bundle.delegablePermissionId)
+            : ec.artifactExecution.authzDisabled() || ec.user.hasPermission("ADMIN_ACCESS_MANAGE")
+        if (privileged || !delegable)
             return {refusal: refused("GRANT_NOT_YOURS", (bundle.description || groupId) + " is not yours to give")}
     }
     return {ids}
+}
+// Whether the caller edits HR records of the hire's employer (PEOPLE_HR_EDIT in its People scope, SEC-BOS-08): the service is
+// granted to every user, as People's tx-commit rule runs it as the HR editor who hired. A call with authorization disabled (a
+// job, a data load) is trusted.
+function hrEditorOf(change) {
+    if (ec.artifactExecution.authzDisabled()) return true
+    const scope = ec.resource.script("component://mr-mantle/service/mantle/humanres/People.js").scopeOf()
+    return !!scope.capabilities?.hrEdit && Array.from(scope.organizationPartyIds || []).includes(change.organizationPartyId)
 }
 // request#Provisioning: a hire HR asked an account for.
 function requestProvisioning(p) {
     const change = changeOf(p.employmentChangeId)
     if (!change || change.changeKindEnumId !== "EckHire") return refused("NOT_A_HIRE", "Not a hire")
     if (change.accessRequested !== "Y") return refused("NOT_REQUESTED", "The hire asked for no account")
+    // as a hire not found, so a caller learns nothing of another employer's hires
+    if (!hrEditorOf(change)) return refused("NOT_A_HIRE", "Not a hire")
     const proposed = proposal(p.bundleGroupIdList)
     if (proposed.refusal) {
         noteFailure(change.employmentChangeId, proposed.refusal)

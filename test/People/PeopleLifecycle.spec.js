@@ -160,6 +160,12 @@ feature(
                     })
                 )
             ).reasonCode
+            // with authorization on, the service itself refuses a caller who is no HR editor of the employer (SEC-BOS-08)
+            out.readerDirect = asUser(users.reader, () =>
+                invoke("ironstone.admin.LifecycleServices.request#Provisioning", {
+                    employmentChangeId: failed.employmentChangeId
+                })
+            ).reasonCode
             return out
         },
         then(out) {
@@ -174,6 +180,7 @@ feature(
             out.failure == ""
             out.again.join("|") == "0|true|"
             out.reader == "RECORD_UNAVAILABLE"
+            out.readerDirect == "NOT_A_HIRE"
         }
     }
 )
