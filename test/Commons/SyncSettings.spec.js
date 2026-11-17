@@ -62,7 +62,7 @@ feature("Sync lists no devices yet, the addresses a device uses and the steps pe
     },
 })
 
-feature("New app password makes one for the phone, a device by its name", {
+feature("New app password makes one for the phone, a device by its name, for DAV only (SEC-COM-21)", {
     when() {
         const created = post("Settings/Sync/createAppPassword", { name: "Spec phone" })
         const rows = devices()
@@ -74,6 +74,7 @@ feature("New app password makes one for the phone, a device by its name", {
         rows.length == 1
         rows[0].passwordHash != null
         rows[0].revokedDate == null
+        rows[0].scope == "dav"
         page.output.includes("Spec phone")
         !page.output.includes("No devices yet")
     },
@@ -81,7 +82,7 @@ feature("New app password makes one for the phone, a device by its name", {
 
 feature("an app password made by the service is taken by the DAV server until Revoke", {
     when() {
-        made.password = sys(() => call("org.moqui.impl.UserServices.create#UserAppPassword", { name: "Spec laptop" }).password)
+        made.password = sys(() => call("org.moqui.impl.UserServices.create#UserAppPassword", { name: "Spec laptop", scope: "dav" }).password)
         made.laptopId = sys(() => ec.entity.find("moqui.security.UserAppPassword").condition("userId", ec.user.userId)
                 .condition("name", "Spec laptop").one()).appPasswordId
         const before = davRoot(made.password)
