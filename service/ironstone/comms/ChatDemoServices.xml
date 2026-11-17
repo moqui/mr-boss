@@ -52,9 +52,14 @@ along with this software (see the LICENSE.md file). If not, see
                     try { if (file.location) { const ref = ec.resource.getLocationReference(file.location); if (ref.getExists()) ref.delete() } }
                     catch (err) { ec.logger.warn(`Chat demo: file ${file.location} not removed: ${err && err.message ? err.message : err}`) }
                 }
-                for (const entityName of ['moqui.chat.ChatEventMention', 'moqui.chat.ChatAttachment', 'moqui.chat.ChatPollVote', 'moqui.chat.ChatPollOption',
-                        'moqui.chat.ChatPoll', 'moqui.chat.ChatEvent', 'moqui.chat.ChatRoomMember', 'moqui.chat.ChatRoom'])
+                // every row that names one of the rooms, the room last; the push queue, activity feed and link rows are the
+                // framework's since Comms-Messaging phases 2 and 7, so a framework without one of them skips it
+                for (const entityName of ['moqui.chat.PushOutbox', 'moqui.chat.ChatPushJob', 'moqui.chat.ChatUserActivity',
+                        'moqui.chat.ChatEventLink', 'moqui.chat.ChatEventMention', 'moqui.chat.ChatAttachment', 'moqui.chat.ChatPollVote',
+                        'moqui.chat.ChatPollOption', 'moqui.chat.ChatPoll', 'moqui.chat.ChatEvent', 'moqui.chat.ChatRoomMember', 'moqui.chat.ChatRoom']) {
+                    if (!ec.entity.isEntityDefined(entityName)) continue
                     ec.entity.find(entityName).condition('chatRoomId', 'in', ROOMS).deleteAll()
+                }
 
                 const toText = (html) => String(html || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|li|blockquote)>/gi, '\n').replace(/<[^>]*>/g, '')
                         .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')

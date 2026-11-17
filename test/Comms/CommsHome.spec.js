@@ -292,8 +292,10 @@ feature("Home's Chat list shows a room's last message, and an encrypted room's a
         const row = (chatRoomId) => (out.roomList || []).find((room) => room.chatRoomId == chatRoomId) || {}
         const result = { failedParts: out.failedParts, plain: row(rooms.plain).snippet, encrypted: row(rooms.encrypted).snippet }
         sys(() => {
-            for (const entityName of ["moqui.chat.ChatEventMention", "moqui.chat.ChatEvent", "moqui.chat.ChatRoomMember", "moqui.chat.ChatRoom"])
-                ec.entity.find(entityName).condition("chatRoomId", "in", Object.values(rooms)).deleteAll()
+            // the push queue, activity and link rows name the rooms too (the framework's since Comms-Messaging phases 2 and 7)
+            for (const entityName of ["moqui.chat.PushOutbox", "moqui.chat.ChatPushJob", "moqui.chat.ChatUserActivity", "moqui.chat.ChatEventLink",
+                    "moqui.chat.ChatEventMention", "moqui.chat.ChatEvent", "moqui.chat.ChatRoomMember", "moqui.chat.ChatRoom"])
+                if (ec.entity.isEntityDefined(entityName)) ec.entity.find(entityName).condition("chatRoomId", "in", Object.values(rooms)).deleteAll()
         })
         return result
     },
