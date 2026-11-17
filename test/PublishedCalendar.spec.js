@@ -12,8 +12,10 @@ const UNSHARE = "mantle.work.CalendarServices.unshare#Calendar"
 const FAMILY = "BOSS_DEMO_CAL_FAMILY"
 const USER_TOKEN = "NotAPublishLinkToken0000000000000000"
 
-function visit(name, token, parameters) {
-    const str = ec.screen.makeTest().rootScreen(page).render(name, Object.assign({ token }, parameters || {}), null)
+// the page's request: a POST with the session token, as PublishedCalendar.qvue sends it (or as asked, a GET)
+function visit(name, token, parameters, method = "post") {
+    const asked = Object.assign({ token }, parameters || {}, method === "post" ? { moquiSessionToken: ec.web.sessionToken } : {})
+    const str = ec.screen.makeTest().rootScreen(page).render(name, asked, method)
     let json = null
     try { json = JSON.parse(str.output) } catch (err) { json = null }
     const errors = (json && !Array.isArray(json) && json.errors) || str.errorMessages.join(" | ")
@@ -108,9 +110,13 @@ feature("a link with a password: nothing until the right one, and a wrong one is
         const token = shared.publishToken
         return { check: call(CHECK, { token, routeName: "cal" }), none: visit("events", token, range()),
             wrong: visit("events", token, Object.assign({ password: "not it" }, range())),
-            right: visit("events", token, Object.assign({ password: "family" }, range())) }
+            right: visit("events", token, Object.assign({ password: "family" }, range())),
+            // the password never rides in an address: a GET of the events is refused (SEC-BOS-05)
+            byGet: visit("events", token, Object.assign({ password: "family" }, range()), null) }
     },
-    then({ check, none, wrong, right }) {
+    then({ check, none, wrong, right, byGet }) {
+        byGet.status != 200
+        !byGet.output.includes("Mary")
         check.valid
         check.routeContext.needsPassword
         none.status == 200
@@ -155,5 +161,6 @@ feature("a free/busy link shows Busy, and an ended link reaches the page only to
         component.status == 200
         component.output.includes("module.exports")
         component.output.includes("BossPublishedCalendar")
+        component.output.includes("method: 'POST'")
     },
 })

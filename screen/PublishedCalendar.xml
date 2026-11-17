@@ -24,7 +24,9 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         require-authentication="false" default-menu-include="false" default-menu-title="Calendar" render-modes="vue,qvue,tui" server-static="vue,qvue">
 
-    <transition name="events" method="get" read-only="true">
+    <!-- a POST (SEC-BOS-05): the link's password goes in the body, never in the address, where access and proxy logs and
+        the browser's history would keep it; a read, so like PublicShare's open it takes no session token -->
+    <transition name="events" method="post" read-only="true" require-session-token="false">
         <actions><script><![CDATA[
             const out = ec.service.sync().name('ironstone.commons.CalendarServices.get#PublishedCalendar').parameters({token: token || '',
                 password: password || null, start: start || null, end: end || null}).call()

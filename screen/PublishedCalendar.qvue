@@ -118,7 +118,8 @@ module.exports = {
             this.state = 'loading';
             this.busy = true;
             const params = Object.assign({ password: this.password || '' }, this.range());
-            moqui.request(this.base + '/events', { params: params }).then((result) => {
+            // a POST, so the password is in the body, never in the address (SEC-BOS-05)
+            moqui.request(this.base + '/events', { method: 'POST', params: params }).then((result) => {
                 this.busy = false;
                 const json = result.json || {};
                 if (json.needsPassword) { this.state = 'password'; this.passwordError = this.password ? t('The password is not right') : null; return; }
