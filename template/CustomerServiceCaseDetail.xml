@@ -155,6 +155,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     </container>
                                     <label text="${[sc.customerName, sc.queueName, sc.typeText, sc.channelText ? 'by ' + sc.channelText : '',
                                             'opened ' + sc.requestDateText].filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                                    <!-- SEC-PSS-28: a public form's typed address, until a reply from it or the filer's sign-in -->
+                                    <label text="Sender not verified: the address was typed into a public form" type="div"
+                                            style="text-caption text-warning" condition="sc.senderUnverified"/>
                                 </container>
                                 <container style="col-12 col-md-auto m-record-status">
                                     <render-mode>
