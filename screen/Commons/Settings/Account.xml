@@ -51,6 +51,16 @@ along with this software (see the LICENSE.md file). If not, see
         </if></actions>
         <default-response url="."/><error-response url="."/>
     </transition>
+    <!-- sign out everywhere and end my keys and app passwords (SEC-WEB-06): every session (this one at its next request),
+        the login and device keys and the app passwords, after a sign-in or confirmation in the last five minutes
+        (org.moqui.admin.IdentityServices.revoke#OwnAccess; its reauthRequired answer asks the browser to confirm) -->
+    <transition name="signOutEverywhere">
+        <service-call name="org.moqui.admin.IdentityServices.revoke#OwnAccess" out-map="ownOut"/>
+        <actions><if condition="!ec.message.hasError() &amp;&amp; !ownOut.reasonCode">
+            <script>ec.message.addMessage('Signed out everywhere; your keys and app passwords are ended', 'success')</script>
+        </if></actions>
+        <default-response url="."/><error-response url="."/>
+    </transition>
     <!-- the desktop and mobile apps signed in with a key of their own (plans/Mobile-Desktop.md in mr-moqui) -->
     <transition name="revokeDevice">
         <service-call name="org.moqui.impl.UserServices.revoke#UserDeviceKey" in-map="{loginKey:loginKey}"/>
@@ -413,6 +423,11 @@ along with this software (see the LICENSE.md file). If not, see
                     <section name="NoSessions" condition="!(sessionList &amp;&amp; sessionList.length)"><widgets>
                         <label type="p" text="No sign-ins recorded" style="m-muted q-pa-sm q-mb-none"/>
                     </widgets></section>
+                    <container style="q-pa-sm">
+                        <link url="signOutEverywhere" link-type="hidden-form-link" text="Sign out everywhere and end my keys and app passwords"
+                                icon="sym_o_logout" btn-type="danger"
+                                confirmation="Sign out of every session, this one included, and end your login keys, device keys and app passwords? Apps and scripts that use them stop working until you sign them in again."/>
+                    </container>
                 </box-body-nopad></container-box>
 
                 <container-box><box-header title="Apps and devices"/><box-body-nopad>

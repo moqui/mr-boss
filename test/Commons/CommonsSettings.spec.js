@@ -348,3 +348,43 @@ feature("Where you are signed in lists my sessions and signs another one out, no
         })
     },
 })
+
+// Sign out everywhere and end my keys and app passwords (SEC-WEB-06; org.moqui.admin.IdentityServices.revoke#OwnAccess):
+// refused without a sign-in in the last five minutes, then it ends the user's own login keys and app passwords
+feature("Sign out everywhere ends my own keys and app passwords, after a recent sign-in", {
+    when() {
+        const run = String(Date.now()).slice(-7)
+        const username = "cms.everywhere." + run
+        const userId = sys(() => {
+            const partyId = call("mantle.party.PartyServices.create#Person", { firstName: "Everywhere", lastName: run }).partyId
+            return call("mantle.party.PartyServices.create#PartyUserAccount", { partyId, username, emailAddress: username + "@example.com",
+                newPassword: "moqui1!!", newPasswordVerify: "moqui1!!" }).userId
+        })
+        sys(() => {
+            call("create#moqui.security.UserLoginKey", { loginKey: "CMS_EVERYWHERE_KEY_" + run, userId, fromDate: ec.user.nowTimestamp })
+            call("create#moqui.security.UserAppPassword", { appPasswordId: "CMS_EVERYWHERE_APP_" + run, userId, name: "Phone mail",
+                passwordHash: "cms-" + run, createdDate: ec.user.nowTimestamp })
+            // Commons is opened by BOSS_USERS
+            call("create#moqui.security.UserGroupMember", { userGroupId: "BOSS_USERS", userId, fromDate: ec.user.nowTimestamp })
+        })
+        const key = () => one("moqui.security.UserLoginKey", { loginKey: "CMS_EVERYWHERE_KEY_" + run })
+        const app = () => one("moqui.security.UserAppPassword", { appPasswordId: "CMS_EVERYWHERE_APP_" + run })
+        ec.user.internalLoginUser(username)
+        try {
+            const stale = post("Settings/Account/signOutEverywhere", {})
+            const keptKey = key().thruDate == null
+            const keptApp = app().revokedDate == null
+            sys(() => ec.service.sync().name("org.moqui.sso.RecentAuthServices.reauthenticate#User").parameters({ password: "moqui1!!" }).call())
+            const done = post("Settings/Account/signOutEverywhere", {})
+            return { stale, keptKey, keptApp, done, keyAfter: key(), appAfter: app() }
+        } finally {
+            login("john.doe")
+        }
+    },
+    then({ stale, keptKey, keptApp, done, keyAfter, appAfter }) {
+        stale.errors.includes("Confirm it is you") && keptKey && keptApp
+        done.errors == ""
+        keyAfter.thruDate != null
+        appAfter.revokedDate != null
+    },
+})
