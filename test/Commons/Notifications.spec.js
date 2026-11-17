@@ -59,9 +59,10 @@ feature("the Notifications tab lists the approval waiting, the unread and the ea
     },
 })
 
-// the terminal's rows (the titles' tui twins, ACC-UI-040): in the tray's panel and in the center (an app's Approvals mounts
-// it), a title is a link to its record, which Right opens (a post does not)
-feature("in the terminal a notification's and an approval's title is a link to its record, in the panel and the center", {
+// the terminal's rows (the titles' tui twins, ACC-UI-040; DC-UI-042): in the tray's panel and in the center (an app's Approvals
+// mounts it), a title is a post to openRead, which reads the row and opens its record; the center's is its rows' open link,
+// which Enter posts (row-open-field), and the panel's (a link of its own there) reads the row as the center's does
+feature("in the terminal a notification's and an approval's title reads it and opens its record, in the panel and the center", {
     when() {
         // a node and what it holds: its children, and a list's rows' cells
         const walk = (node) => !node || typeof node !== "object" ? [] : [node].concat(...(Array.isArray(node) ? node
@@ -79,23 +80,45 @@ feature("in the terminal a notification's and an approval's title is a link to i
                 posts: links.filter((node) => String(node.url || "").includes("openNotification")).length
             }
         }
-        return { panel: titles("Panel/Notifications", {}), center: titles("Notifications", { appName: "Commons" }) }
+        const mention = sys(() =>
+            Array.from(ec.entity.find("moqui.security.user.NotificationMessageByUser").condition("userId", "EX_JOHN_DOE").list()).find(row =>
+                String(row.titleText || "").startsWith("Joe Developer mentioned you on Request BOSS_DEMO_REQUEST")
+            )
+        )
+        const id = mention.notificationMessageId
+        sys(() => {
+            const row = ec.entity.find("moqui.security.user.NotificationMessageUser").condition({notificationMessageId: id, userId: "EX_JOHN_DOE"}).one()
+            row.viewedDate = null
+            row.update()
+        })
+        const panel = titles("Panel/Notifications", {})
+        const center = titles("Notifications", { appName: "Commons" })
+        // the panel's title as the terminal posts it
+        const opened = ec.screen.makeTest().rootScreen(webroot).render("apps/Commons/Panel/Notifications/openRead", {notificationMessageId: id}, "post")
+        const location = String(opened.header("Location") || "")
+        const errors = opened.errorMessages.join(" | ")
+        ec.message.clearErrors()
+        return { panel, center, location, errors, viewed: viewedOf(id) }
     },
-    then({ panel, center }) {
+    then({ panel, center, location, errors, viewed }) {
         panel.status == 200
         !panel.broken
-        panel.mention.url.includes("/Commons/Requests/RequestDetail?requestId=BOSS_DEMO_REQUEST")
-        panel.mention.method == null
-        panel.approval.url.length > 0
-        panel.approval.method == null
+        panel.mention.url.includes("/Panel/Notifications/openRead")
+        panel.mention.method == "post"
+        panel.approval.url.includes("/openRead")
+        panel.approval.method == "post"
         panel.posts == 0
         center.status == 200
         !center.broken
-        center.mention.url.includes("/Commons/Requests/RequestDetail?requestId=BOSS_DEMO_REQUEST")
-        center.mention.method == null
-        center.approval.url.length > 0
-        center.approval.method == null
+        center.mention.url.includes("/Notifications/openRead")
+        center.mention.method == "post"
+        center.mention.open == true
+        center.approval.url.includes("/openRead")
+        center.approval.open == true
         center.posts == 0
+        errors == ""
+        location.includes("/apps/Commons/Requests/RequestDetail?requestId=BOSS_DEMO_REQUEST")
+        viewed != null
     },
 })
 
