@@ -141,3 +141,23 @@ feature("cost source links and history charts retain the capability and comparis
         history.costHistoryRows[0].dateText.includes("-")
     }
 })
+
+// PRD-UI-040: Pricing & costs offers its cost tabs only to a cost reader; a price reader, whom the cost screens refuse, sees none
+feature("the cost tabs are a cost reader's: a price reader's Pricing & costs has none of them", {
+    when() {
+        const tabs = user => as(user, () => {
+            const menu = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").render("menuData/apps/Products/Prices/List", {}, null)
+            ec.message.clearErrors()
+            const level = JSON.parse(menu.output).find(level => level.name === "Prices")
+            return level ? level.subscreens.filter(item => item.menuInclude).map(item => item.name) : null
+        })
+        return {price: tabs("catalog.price.read"), cost: tabs("catalog.cost.read")}
+    },
+    then({price, cost}) {
+        price.includes("List")
+        !price.includes("StandardCosts") && !price.includes("CostRollup") && !price.includes("CostHistory")
+        cost.includes("StandardCosts") && cost.includes("CostRollup") && cost.includes("CostHistory")
+        // each once: the declared tabs take the place of the directory's
+        new Set(cost).size == cost.length
+    }
+})

@@ -17,6 +17,15 @@ function run(op, parameters) {
             enumDescriptions.set(enumId, one("moqui.basic.Enumeration", {enumId})?.description || enumId)
         return enumDescriptions.get(enumId)
     }
+    // A purchase or customer agreement's price changes on its agreement (PricePolicy.js refuses any other write to it), so its
+    // row offers no Schedule, Correct or End (PRD-UI-038). Each agreement is read once.
+    const agreementTypes = new Map()
+    const onAgreement = agreementId => {
+        if (!agreementId) return false
+        if (!agreementTypes.has(agreementId))
+            agreementTypes.set(agreementId, one("mantle.party.agreement.Agreement", {agreementId})?.agreementTypeEnumId || null)
+        return ["AgrPurchase", "AgrSales", "AgrProduct"].includes(agreementTypes.get(agreementId))
+    }
     function access() {
         const context = shared()
         if (!context.capabilities.read) throw new Error("Catalog read authority is required")
@@ -58,7 +67,9 @@ function run(op, parameters) {
         out.direction = direction === "public" ? "sales" : direction
         out.productName = product(price.productId).productName
         out.priceType = enumDescription(price.priceTypeEnumId)
+        out.onAgreement = onAgreement(price.agreementId)
         out.canEdit =
+            !out.onAgreement &&
             price.priceTypeEnumId !== "PptAverage" &&
             (capabilities.systemAdmin || (direction === "purchase" ? capabilities.supplierPriceEdit : capabilities.priceEdit))
         for (const field of ["fromDate", "thruDate", "lastUpdatedStamp"]) out[field + "Text"] = dateText(price[field])
