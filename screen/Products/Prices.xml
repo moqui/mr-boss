@@ -15,6 +15,14 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Pricing &amp; costs" default-menu-index="5" menu-image="sym_o_sell" menu-image-type="icon">
     <subscreens default-item="List">
         <subscreens-item name="List" location="component://mr-boss/screen/Shared/Prices.xml"/>
+        <!-- the cost tabs only for a cost reader (PRD-UI-040): the screens refuse anyone else ("Standard-cost read authority is
+            required"); Mantle's CostPolicy decides both, a cost permission or Accounting's view or posting -->
+        <subscreens-item name="StandardCosts" location="component://mr-boss/screen/Products/Prices/StandardCosts.xml" menu-title="Standard costs"
+                menu-index="5" menu-include="ec.resource.script('component://mr-mantle/service/mantle/product/CostPolicy.js').capabilities().read"/>
+        <subscreens-item name="CostRollup" location="component://mr-boss/screen/Products/Prices/CostRollup.xml" menu-title="Cost roll-up"
+                menu-index="6" menu-include="ec.resource.script('component://mr-mantle/service/mantle/product/CostPolicy.js').capabilities().read"/>
+        <subscreens-item name="CostHistory" location="component://mr-boss/screen/Products/Prices/CostHistory.xml" menu-title="Cost history"
+                menu-index="7" menu-include="ec.resource.script('component://mr-mantle/service/mantle/product/CostPolicy.js').capabilities().read"/>
     </subscreens>
     <widgets>
         <subscreens-menu id="PricingTabs" type="tab"/>
