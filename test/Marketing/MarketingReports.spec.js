@@ -247,12 +247,20 @@ feature("the weekly digest's dashboard computes every panel for the analyst, the
         const digest = system(
             () => invoke("org.moqui.report.ReportServices.get#Definition", {definitionId: "boss-marketing-weekly-digest"}).definition
         )
+        // the digest's last seven days reach back at least to the fixture's newest Garden membership, whose date is fixed in the
+        // demo data: the panels are checked, not the day the suite runs
+        const newest = system(() =>
+            Array.from(ec.entity.find("mantle.marketing.contact.ContactListParty").condition("contactListId", ids.gardenListId)
+                .orderBy("-fromDate").list())[0]
+        )
+        const sinceDays = Math.ceil((Date.now() - Number(newest.fromDate)) / 86400000) + 1
+        const reach = (from) => (from === "now-7d" && sinceDays > 7 ? `now-${sinceDays}d` : from)
         const panels = {}
         asUser(users.analyst, () => {
             for (const spec of digest.body.dashboards) {
                 const dashboard = invoke("org.moqui.report.ReportServices.render#Dashboard", {
                     definitionId: spec.dashboardRef,
-                    from: spec.from,
+                    from: reach(spec.from),
                     thru: spec.thru
                 }).dashboard
                 for (const [id, panel] of Object.entries(dashboard.panels || {})) panels[id] = panel
