@@ -93,6 +93,21 @@ feature("sales, supplier and cost values leave only their own authorized read bo
         !JSON.stringify(sales).includes("B5_SUPPLIER")
     }
 })
+// PRD-UI-038: a customer or purchase agreement's price changes on its agreement (Mantle's PricePolicy refuses it here), so its
+// row is not editable and says so; a price of the same product with no agreement still is
+feature("an agreement's price row offers no Schedule, Correct or End; a price with no agreement does", {
+    when() {
+        return {rows: call(C + "find#ProductPrices", {productId: "DEMO_1_1", includeHistory: true}).priceRows}
+    },
+    then({rows}) {
+        const contoso = rows.find(row => row.productPriceId === "BOSS_SAL_AGR_CONTOSO_01")
+        const supplier = rows.find(row => row.productPriceId === "BOSS_PUR_AGR_A_01")
+        const plain = rows.find(row => row.productPriceId === "BOSS_SAL_PRICE_WINGTIP")
+        contoso.onAgreement == true && contoso.canEdit == false && contoso.canCorrect == false
+        supplier.onAgreement == true && supplier.canEdit == false
+        plain.onAgreement == false && plain.canEdit == true
+    }
+})
 feature("the Standard sales correction submits its original date once", {
     when() {
         return as("catalog.price.edit", () => ec.screen.makeTest()

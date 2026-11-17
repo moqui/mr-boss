@@ -572,6 +572,8 @@ newSupplier={productId:productId||null,customerPartyId:defaultOrganizationPartyI
                     </field>
                     <field name="rowActions" hide="['csv','xlsx'].includes(sri.getRenderMode())">
                         <default-field title="">
+                            <!-- a purchase or customer agreement's price changes on its agreement, so it has no actions here (PRD-UI-038) -->
+                            <label text="Changes on its agreement" type="span" style="m-muted" condition="onAgreement"/>
                             <container-dialog condition="canEdit" id="ChangePrice" button-text="Schedule" icon="sym_o_event_repeat" title="Schedule a successor price" width="720">
                                 <form-single name="ChangePrice" transition="replace">
                                     <field name="productPriceId">
