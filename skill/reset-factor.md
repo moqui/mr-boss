@@ -5,7 +5,7 @@ description: Use when an administrator asks why a staff user cannot sign in, or 
 kind: procedure
 aliases: [cannot sign in, locked out, lost phone, reset factor, reset two-factor, reset password, sign-in lock, sign out everywhere]
 screens: [/qapps/Admin/Users/UserDetail]
-risk: reversible
+risk: confirm
 ---
 A staff user's sign-in is administered on Admin's UserDetail, for the identities of the organizations the administrator
 administers. Every action checks the administrator's own permissions: `ADMIN_IDENTITY_MANAGE`, and `ADMIN_IDENTITY_GLOBAL`

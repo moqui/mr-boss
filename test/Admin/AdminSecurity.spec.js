@@ -40,6 +40,18 @@ spec({
     }
 })
 
+feature("Admin's skills that reset a sign-in or end a user's access declare that their writes need confirming (SEC-BOS-07)", {
+    when() {
+        // a skill's front matter risk: what the agent relaxes for a reversible one is relaxed for its every action
+        const risk = name =>
+            (/^risk:\s*(\S+)\s*$/m.exec(ec.resource.getLocationReference("component://mr-boss/skill/" + name + ".md").getText() || "") ||
+                [])[1] || null
+        return {risks: ["reset-factor", "offboard-user", "invite-staff"].map(risk)}
+    },
+    then({risks}) {
+        risks == ["confirm", "confirm", "confirm"]
+    }
+})
 feature("SignInPolicy shows the access administrator the rules in force, the groups' rules and the review of a change", {
     when() {
         return {
