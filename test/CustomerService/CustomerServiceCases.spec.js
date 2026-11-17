@@ -298,7 +298,12 @@ feature("NewCase asked for a type starts in an organization that service-enables
 
 feature("CaseDetail's Customer Service section and NewCase's duplicate warning render for the agent (qvt)", {
     when() {
+        // SEC-PSS-28: shown as a case a public form filed, its sender not verified
+        const mark = senderVerified =>
+            system(() => ec.service.sync().name("update#mantle.request.Request").parameters({requestId: ids.thermostatCaseId, senderVerified}).call())
+        mark("N")
         const detail = asUser(users.agent, () => lib.page("Cases/CaseDetail", {requestId: ids.thermostatCaseId}))
+        mark(null)
         const newCase = asUser(users.agent, () => lib.page("Cases/NewCase", {customerPartyId: ids.customerId}))
         return {detail, newCase}
     },
@@ -309,6 +314,7 @@ feature("CaseDetail's Customer Service section and NewCase's duplicate warning r
         detail.output.includes("Joe Q Public")
         detail.output.includes("High (3)")
         detail.output.includes("The customer sees: Received")
+        detail.output.includes("Sender not verified")
         detail.output.includes("Recent cases of")
         // P4: the clocks beside the header and the Service level tab
         detail.output.includes("First response:")

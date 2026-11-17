@@ -749,6 +749,8 @@ function caseDetail(p) {
             contactName: contactPartyId ? cs.partyName(contactPartyId) : "",
             organizationName: cs.partyName(decorated.organizationPartyId),
             filedByName: row.filedByPartyId ? cs.partyName(row.filedByPartyId) : "",
+            // SEC-PSS-28: filed by a public form with a typed address, not yet confirmed by a reply from it or a sign-in
+            senderUnverified: one("mantle.request.Request", {requestId: p.requestId})?.senderVerified === "N",
             intakeText: textOf(profile?.intakeDate),
             resolutionText:
                 row.requestResolutionEnumId && row.requestResolutionEnumId !== "RrUnresolved"
