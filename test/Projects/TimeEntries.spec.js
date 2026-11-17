@@ -513,7 +513,9 @@ feature("the Today source gives joe's running timer and his week to submit; Stop
         )
         const group = (joeView.groups || []).find(one => one.label === "Projects") || {items: []}
         const timer = group.items.find(item => item.kind === "timer") || {}
-        const week = group.items.find(item => item.kind === "timesheet") || {}
+        // the week of this spec's entries: the demo's own time (dated from today) may leave a week of today's to submit too
+        const weeks = group.items.filter(item => item.kind === "timesheet")
+        const week = weeks.find(item => String(item.url || "").includes("weekDate=2027-01-11")) || weeks[0] || {}
         const panel = as("joe.developer", () => render("apps/Commons/Panel/Today", {}))
         const stopped = as("joe.developer", () => {
             const str = ec.screen
@@ -539,7 +541,7 @@ feature("the Today source gives joe's running timer and his week to submit; Stop
         week.url.includes("/Projects/Time/MyTime?weekDate=2027-01-11")
         week.title.includes("Submit your week")
         // the submitted week of January 4 is not one to submit
-        group.items.filter(item => item.kind === "timesheet").length == 1
+        !group.items.some(item => item.kind === "timesheet" && String(item.url || "").includes("weekDate=2027-01-04"))
         !panel.broken && panel.output.includes("Stop the timer")
         stopped.messageInfos[0].message.includes("Timer stopped")
         timerAfter == null
@@ -642,6 +644,8 @@ feature("TimeSettings keeps the policy and the work types offered; MyTime and th
     },
     then({page, saved, stopped, added, teamSave, settings, myWeek, dialog}) {
         !page.broken && page.output.includes("Timesheet policy") && page.output.includes("Work types")
+        // a work type's label style is an expression, bound over the row and never class text (PR-UI-039)
+        !page.output.includes("text-inline ${offered")
         saved.errors == "" && settings.policy.minHours == "0.5" && settings.policy.dayHours == "7.5"
         stopped.errors == "" && added.errors == ""
         !settings.typeList.find(type => type.enumId === "WktpTravel").offered

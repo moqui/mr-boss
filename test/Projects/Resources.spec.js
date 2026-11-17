@@ -220,6 +220,8 @@ feature("Allocations' Requested list and the staffing dialog for john.doe; Ana's
         staff.output.indexOf("Ana Designer") > 0
         staff.output.includes("Has the skill (5 of 5)")
         staff.output.indexOf("Ana Designer") < staff.output.indexOf("Joe Developer")
+        // the candidates' Cost and action columns are headed by their conditional-field titles, not "Rate Text" (PR-UI-040)
+        !staff.output.includes("Rate Text") && !staff.output.includes("Staff Link")
         edit.output.includes("Hours a week")
         Object.values(tabs).every((tab) => tab.status == 200 && !tab.broken && tab.errors == "")
         tabs.Overview.output.includes("UI design")
