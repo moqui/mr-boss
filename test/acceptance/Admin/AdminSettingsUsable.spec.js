@@ -73,9 +73,11 @@ feature("the configuration administrator names the instance and sets its time zo
             screen.output.includes("America/Chicago") &&
             screen.output.includes("Instance preference")
         // the deployment's values: their keys, where they come from and that a change waits for a restart
-        screen.output.includes("default_time_zone") && screen.output.includes("webapp-list/webapp[webroot]@http-host")
+        screen.output.includes("instance@default-time-zone") && screen.output.includes("webapp-list/webapp[webroot]@http-host")
         screen.output.includes("In the deployment") && screen.output.includes("After a restart")
-        screen.output.includes("Set default_time_zone in the environment or the runtime conf and restart")
+        screen.output.includes(
+            "Set moqui_conf__instance__default_time_zone in the environment or runtime/.env, or the attribute in the runtime conf, and restart"
+        )
         // the name is shown where the instance is named, and code reads it without an Admin permission
         home.output.includes("Ziziwork")
         read.value == "Ziziwork"

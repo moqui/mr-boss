@@ -44,7 +44,7 @@ feature("InstanceSettings shows the configuration administrator the preferences 
         output.includes("New-device sign-in window") && output.includes("Group recipient ceiling")
         // the ceiling's default, and a deployment value with its key and restart effect
         output.includes("200") && output.includes("Default")
-        output.includes("default_time_zone") && output.includes("After a restart") && output.includes("In the deployment")
+        output.includes("instance@default-time-zone") && output.includes("After a restart") && output.includes("In the deployment")
         // the conf itself is an instance administrator's
         !output.includes("Open the conf")
     }

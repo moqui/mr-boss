@@ -200,7 +200,7 @@ function context(p) {
         errorsOnly: p.errorsOnly === true
     })
     // the server's time zone, in which Imports and ImportDetail show an import's times
-    Object.assign(out, found, {targetId: mounted.targetId, timeZone: text(System.getProperty("default_time_zone")) || "UTC"})
+    Object.assign(out, found, {targetId: mounted.targetId, timeZone: text(ec.factory.getConfValue("instance@default-time-zone")) || "UTC"})
     const columns = Array.from(found.columns || [])
     const labelOf = name => columns.find(column => column.name === name)?.label || name
     out.organizationName =
