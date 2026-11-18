@@ -136,6 +136,8 @@ function findRoutes(p) {
     const forumCategories = siteIds.length
         ? Array.from(find("mantle.forum.ForumCategory").condition("siteId", "in", siteIds).limit(300).list())
         : []
+    // the acknowledgement's text blocks: the user's own, and those shared with a service group of the organization the user
+    // is in (its service-wide group or a team's), as Mantle's save#ServiceRoute takes them (SEC-BAP-81)
     const blockFind = find("moqui.basic.email.EmailTextBlock").condition(
         ec.entity.conditionFactory.makeCondition(
             [
@@ -143,7 +145,9 @@ function findRoutes(p) {
                 ec.entity.conditionFactory.makeCondition(
                     "userGroupId",
                     "in",
-                    Array.from(ec.user.getUserGroupIdSet() || []).concat(["_NONE_"])
+                    Array.from(ec.user.getUserGroupIdSet() || [])
+                        .filter(userGroupId => mantleChannels.serviceGroupOf(userGroupId, organizationPartyId))
+                        .concat(["_NONE_"])
                 )
             ],
             "or"
