@@ -2983,7 +2983,7 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
     none tries a refused or unreached send again by itself (they read a Ready message as handed off), but for
     `send#CustomerPastDueEmail` if its job, shipped paused, is turned on.
   - **R2 (medium).** Sign-in mail (PASSWORD_RESET, SINGLE_USE_CODE, ADDED_EMAIL_AUTHC_FACTOR, EMAIL_AUTHC_FACTOR_SENT,
-    ACCOUNT_SIGN_IN and the `pass_verification_template`) holds a reset password, a code or a link of its moment: it is
+    ACCOUNT_SIGN_IN and the `pass-authority@verification-template`) holds a reset password, a code or a link of its moment: it is
     not sent again from the queue (SIGN_IN_MAIL), only closed.
   - **R3 (medium, disclosure).** A mail account's message answered its error text (struck out), which can name an
     attachment or quote a server's words about the message: an account's row now answers no error, only its id, count
