@@ -285,20 +285,30 @@ along with this software (see the LICENSE.md file). If not, see
             answer: the current user's entry put or brought up to date (going, maybe), or taken off their calendars (no, or
             no answer); change: the event's name, place, details and times from the chat event; cancel: WeCancelled (also once the
             chat event's message is gone). A
-            user with no party, and a server with no event yet on change or cancel, change nothing. Out: eventUrl, the
-            user's event in Commons, Calendar.</description>
+            user with no party, and a server with no event yet on change or cancel, change nothing. The caller must read the
+            chat room (ChatServices get#RoomAccess) before anything changes, as it is a shared event; and its writes are
+            serialized by a lock on the chat event's own row (else the event's room row, once the event is gone), so two
+            answers at once make one Mantle event. A change and a cancel touch every event with the UID. The Mantle event is
+            shared: an edit of it in Commons, Calendar is overwritten by the next change of the chat event, which is its
+            source. Out: eventUrl, the user's event in Commons, Calendar.</description>
         <actions><script><![CDATA[
             eventUrl = null
+            // a shared event: only one who can read the chat room changes it
+            const access = ec.service.sync().name('org.moqui.chat.ChatServices.get#RoomAccess').parameter('chatRoomId', chatRoomId).call()
+            if (ec.message.hasError() || !access || !access.canRead) { ec.message.clearErrors(); return }
             const uid = `chat-${chatRoomId}-${eventSeq}@${System.getProperty('chat_cal_uid_domain') || 'chat.moqui'}`
+            // the writes of one chat event one at a time: a lock on a row that is there before any Mantle event is
+            const cal = ec.entity.find('moqui.chat.ChatCalEvent').condition('chatRoomId', chatRoomId).condition('eventSeq', eventSeq)
+                    .forUpdate(true).disableAuthz().one()
+            if (!cal) ec.entity.find('moqui.chat.ChatRoom').condition('chatRoomId', chatRoomId).forUpdate(true).disableAuthz().one()
             const efforts = Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('universalId', uid).condition('workEffortTypeEnumId', 'WetEvent')
-                    .disableAuthz().forUpdate(true).list())
+                    .orderBy('workEffortId').disableAuthz().forUpdate(true).list())
             let effort = efforts.length ? efforts[0] : null
-            // a cancel: also when the chat event's message is gone (its rows may be removed already)
+            // a cancel: every event of the UID, also when the chat event's message is gone (its rows may be removed already)
             if (action === 'cancel') {
-                if (effort && effort.statusId !== 'WeCancelled') { effort.set('statusId', 'WeCancelled'); effort.update() }
+                for (const one of efforts) if (one.statusId !== 'WeCancelled') { one.set('statusId', 'WeCancelled'); one.update() }
                 return
             }
-            const cal = ec.entity.find('moqui.chat.ChatCalEvent').condition('chatRoomId', chatRoomId).condition('eventSeq', eventSeq).disableAuthz().one()
             if (!cal) return
             const now = ec.user.nowTimestamp
             const link = (id) => '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(id)
@@ -311,9 +321,7 @@ along with this software (see the LICENSE.md file). If not, see
                     statusId: cal.cancelledDate ? 'WeCancelled' : 'WeInPlanning'}
             }
             if (action === 'change') {
-                if (!effort) return
-                effort.setFields(fields(), true, null, null)
-                effort.update()
+                for (const one of efforts) { one.setFields(fields(), true, null, null); one.update() }
                 return
             }
             if (action !== 'answer') { ec.message.addError(`Unknown chat calendar action ${action}`); return }

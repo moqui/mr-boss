@@ -92,6 +92,39 @@ feature("Going with Add to calendar puts the event on the member's calendar; a c
     }
 })
 
+feature("one who cannot read the chat room changes nothing; a change reaches every event of the UID", {
+    when() {
+        const effort = effortOf(shared.uid)
+        // a second event of the same UID (made by hand): a change brings both up to date
+        const copyId = sys(() => {
+            const copy = ec.entity.makeValue("mantle.work.effort.WorkEffort")
+            copy.setSequencedIdPrimary()
+            copy.setFields({workEffortTypeEnumId: "WetEvent", purposeEnumId: "WepMeeting", statusId: "WeInPlanning", universalId: shared.uid,
+                workEffortName: "Copy"}, true, null, null)
+            copy.create()
+            return copy.workEffortId
+        })
+        // joe is in no such room: his call of the provider changes nothing
+        login("joe.developer")
+        ec.service.sync().name("ironstone.comms.ChatServices.sync#ChatCalendarEntry").parameters({chatRoomId: shared.room, eventSeq: shared.seq,
+            action: "change"}).disableAuthz().call()
+        ec.message.clearErrors()
+        const untouched = sys(() => ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", copyId).one()).workEffortName
+        login("john.doe")
+        post("updateCalEvent", {chatRoomId: shared.room, eventSeq: shared.seq, title: "Planning lunch, again"})
+        const names = sys(() => Array.from(ec.entity.find("mantle.work.effort.WorkEffort").condition("universalId", shared.uid).list()).map((one) => one.workEffortName))
+        sys(() => {
+            ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", copyId).deleteAll()
+        })
+        return {untouched, names}
+    },
+    then({untouched, names}) {
+        untouched == "Copy"
+        names.length == 2
+        names.every((name) => name == "Planning lunch, again")
+    }
+})
+
 feature("a cancelled chat event cancels the calendar's", {
     when() {
         post("answerCalEvent", {chatRoomId: shared.room, eventSeq: shared.seq, answer: "maybe", addToCalendar: "true"})
