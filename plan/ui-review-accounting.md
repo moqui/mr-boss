@@ -116,7 +116,7 @@ specific to Accounting.
   The demo `EmailServer`
   `BOSS_ACCOUNTING_DEMO` is a local sink (127.0.0.1:9) and `BOSS_ACCOUNTING_MAIL` (`accounts@finance.example`) gives
   send rights to `finance.ar`, `finance.admin` and john.doe only. Issued invoices, statements, receipts/checks and
-  retained revisions need Chromium for PDF (`moqui_chromium_path`); without it those branches are blocked, not failed.
+  retained revisions need Chromium for PDF (`screen-facade/pdf@chromium-path`); without it those branches are blocked, not failed.
   Gateway outcomes come from the test gateway (`BOSS_ACCT_GW_TEST`; PASS uses `ZIZI_PORTAL_HOSTED`); bank and return
   files are synthetic; the demo rate provider `get#EcbRates` is given a local copy of the ECB file (`sourceText`),
   since without one it fetches the bank's daily file.

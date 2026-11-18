@@ -8874,7 +8874,7 @@ merged.
   else none), Admin's registry (`Admin.js` `recordKinds`, `recordOf`, `mountRoutes`, `destinationOpens`; `AdminRegistry.js
   openUrls`), Admin's Devices (`find#SharedDevices` passes its parameters to the framework's `find#Devices`, which takes
   `deviceId`), BadgePrint (the number made at a GET render) and Employee360's Print badge link, the framework's CSRF rule
-  (`webapp_require_session_token`: a POST to a transition that runs actions needs `moquiSessionToken`; a `method="post"`
+  (`webapp-list/webapp[webroot]@require-session-token`: a POST to a transition that runs actions needs `moquiSessionToken`; a `method="post"`
   transition answers a GET 405; every response but `type="none"` redirects) and Login.xml's native form with
   `${ec.web.sessionToken}`.
 - The badge lock grows (the user's call 1), Mantle:
