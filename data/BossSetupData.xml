@@ -700,6 +700,11 @@ along with this software (see the LICENSE.md file). If not, see
         the owner's personal contacts, own and shared contact books, and the directory of the owner's organizations) -->
     <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="310" resourceTypeEnumId="STRT_EMAIL_CONTACT_SERVICE"
             resourceValue="mantle.party.ContactBookServices.filter#ContactAddresses"/>
+    <!-- Chat's people across networks (MR Moqui plans/Comms-Messaging.md §11.1): which of the user's rooms are one contact
+        (org.moqui.chat.ChatPeopleServices.find#ContactPeople calls this service: the contacts the user can see, by number, mail
+        address or user account, with their own addresses) -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="312" resourceTypeEnumId="STRT_CHAT_CONTACT_SERVICE"
+            resourceValue="mantle.party.ContactBookServices.find#ContactPeople"/>
     <!-- m-avatar given only a user id (the header). ${userId} is replaced in the browser. 404 leaves the initials. Under
         /apps, where a transition answers an image request: under /qapps the request gets the page shell, so no image loads.
         An existing database needs this row loaded (the STRT_AVATAR_URL enumeration comes with the framework seed). -->
