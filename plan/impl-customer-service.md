@@ -3320,7 +3320,7 @@ scanner with type, signature and size), BOSS's Invite to support and ServiceDefa
 - Specs run (this runtime; no full suite): acceptance TuiRender (3), CustomerServiceServerStatic (1),
   CustomerServiceAccessWalk (7), CustomerServiceSummaryWalk (2), CustomerServiceOrdersWalk (6), mr-pass SupportIsolation
   (1), all pass; regression mr-mantle AccountingControls (34), SupportAssignment (7), SupportWarranty (4), SupportPortal
-  (8, with `mail_capture_sends=true`, as the wave runs set it), and the §2 compatibility specs with Forum, ForumAccess,
+  (8, with `moqui_conf__email_client__capture_sends=true`, as the wave runs set it), and the §2 compatibility specs with Forum, ForumAccess,
   PublicIdentity, Integrations and SupportAccess (238 features), pass; BOSS CustomerServiceAssignment (4),
   CustomerServiceWarranty (1), CustomerServiceReturns (5), CustomerServiceRelations, pass. `moqui lint --screens`: no
   parse failure, no new flagged site, no Customer Service TUI worklist item.

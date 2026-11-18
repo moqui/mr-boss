@@ -573,7 +573,7 @@ AGENTS.md, Practices-App-Dev, Practices-Rust and Attack-Surface:
   time):** `./moq test-framework` passed but for cargo's `the_wrapped_ec_takes_probes_and_leaves_the_framework_the_real_one`
   (F38, failing on master before P1); the framework's specs 9.7 of 12 s, tools 2.6 of 3 s; webroot's client (45.9 of 44 s)
   and dev-aide (30.4 of 30 s) over budget under the worker's load, neither touched by P1. Standalone mr-mantle 1,902
-  passed, 2 failed (the baseline WorkTimeEntries and WorkTimesheets), 11 skipped. `mail_capture_sends=true ./moq
+  passed, 2 failed (the baseline WorkTimeEntries and WorkTimesheets), 11 skipped. `moqui_conf__email_client__capture_sends=true ./moq
   test-apps`: 3,316 server features passed, 2 failed in the full run only: AdminAccess compared the administrator's
   organization choices, a page, with organizations other specs add (now asked for by selection), and
   AppOrganizationFilters required every app administrator's root grant to be ALWAYS (Admin's and Insights' are ALLOW by
@@ -779,7 +779,7 @@ design §3, §7, §10, §13, §14 and §14.2, AGENTS.md, Practices-App-Dev and t
   every feature passed; cargo failed only F38's known test (impl-admin); the framework's server specs (15.9 of 12 s),
   webroot's client (50.5 of 44 s) and basic-comms' client (7.2 of 7 s) over budget under the load (Wave 1 had the
   framework at 9.7 s; P2's ReportMounts adds 0.1 s), to be measured on a quiet run before any raise. Standalone mr-mantle
-  1,902 passed, 2 failed (the baseline WorkTimeEntries and WorkTimesheets), 11 skipped. `mail_capture_sends=true ./moq
+  1,902 passed, 2 failed (the baseline WorkTimeEntries and WorkTimesheets), 11 skipped. `moqui_conf__email_client__capture_sends=true ./moq
   test-apps` 3,331 server and 18 client features passed, none failed; mr-mantle 389.1 of 393 s, mr-boss 223.4 of 264 s
   server and 53.1 of 57 s client (InsightsDashboardsWalk 3.0 s), mr-pass within budget. `moqui lint --screens` 132 sites.
   No budget raised.
@@ -970,7 +970,7 @@ Design §5 Groups and GroupDetail; ADM-ACCESS (AccessServices, the administratio
   test's empty driver, from Admin P3's audit log on UserGroupPermission); framework 10.7 of 12 s, webroot's client 46.4 of
   44 s under the load. Standalone mr-mantle 1,906 passed, 3 failed: the baseline two and SitePages' scheduled publication
   (`update#UserGroupPermission` with `fromDate: 0` on Postgres, the same audit log's read of the epoch key); a framework
-  follow-up fixes both. `mail_capture_sends=true ./moq test-apps` 3,341 server features passed, 2 failed: SitePages as
+  follow-up fixes both. `moqui_conf__email_client__capture_sends=true ./moq test-apps` 3,341 server features passed, 2 failed: SitePages as
   above and ProjectsAccess (Insights P3's `refresh#DatasetIndex` verb not in the client deny pattern; `refresh` added,
   mr-boss 7fc702b6); 18 client features passed. mr-mantle 407.6 of 393 s and mr-boss 261.6 of 264 s server under the two
   agents' load (Wave 2: 344.5 and 197.3 s), mr-boss client 52.3 of 57 s; measured on a quiet run before any raise.
@@ -1260,7 +1260,7 @@ an inherited ALLOW.
   `chat_tests::an_agent_member_gets_each_message_through_its_entry_point` (passed in Wave 4; under investigation in the
   adm/fw1 follow-up); webroot's client 45.9 of 44 s under the load. Standalone mr-mantle: the baseline two and
   WorkPlanToCashBasicFlow (10 features: its expected audit rows meet P4's audited `requirePasswordChange`, F67), fixed in
-  adm/fw1. `mail_capture_sends=true ./moq test-apps` 3,348 server features passed, 10 failed (WorkPlanToCashBasicFlow
+  adm/fw1. `moqui_conf__email_client__capture_sends=true ./moq test-apps` 3,348 server features passed, 10 failed (WorkPlanToCashBasicFlow
   only); the client run's mr-marble BrowserSmoke server did not start behind that failure, 16 client features passed.
   mr-mantle 428.2 of 393 s, mr-boss 250.0 of 264 s server and 58.5 of 57 s client (AdminUsersWalk 3.1 s added) under the
   load; the budgets are measured on a quiet run at gate 1 before any raise. `moqui lint --screens` 132 sites.
@@ -1826,13 +1826,13 @@ Design §7 Organizations, OrganizationDetail and Constitution (its maps note wai
   3 s, basic-comms 5.0 of 8 s; webroot's client specs 46.9 of 44 s, over its budget on a quiet run too (it was 45.9 s in
   Wave 1, before any Admin or Insights change reached webroot; Insights P2 added one browser case), so the budget is the
   user's call and not raised here. Standalone mr-mantle 1,934 passed, 2 failed (the baseline WorkTimeEntries and
-  WorkTimesheets), 11 skipped. `mail_capture_sends=true ./moq test-apps` 3,394 server and 19 client features passed, none
+  WorkTimesheets), 11 skipped. `moqui_conf__email_client__capture_sends=true ./moq test-apps` 3,394 server and 19 client features passed, none
   failed; feature time mr-mantle 353.0 of 393 s, mr-boss 206.2 of 264 s server and 54.9 of 57 s client, mr-pass 14.4 of
   20 s, within every budget, so none raised. `moqui lint --screens` 132 sites, as before. The acceptance tests each
   phase wrote are not run (two were changed and run alone in review: AdminInvitationsUsable, InsightsHomeUsable with
   InsightsDatasetsUsable); `./moq accept mr-boss` is owed for them when asked.
 
-- **Acceptance (Nov 7, after gate 1):** `mail_capture_sends=true ./moq accept mr-boss` on master (branch `adm/accept`), the
+- **Acceptance (Nov 7, after gate 1):** `moqui_conf__email_client__capture_sends=true ./moq accept mr-boss` on master (branch `adm/accept`), the
   first run of the acceptance tests the Admin and Insights phases wrote: server 517 features, 68 passed, 52 failed, 397
   skipped, 105 setup or cleanup failures; client 172, 170 passed, 2 failed. The cascade: AdminGroupsWalk's last feature
   gave john.doe a TOTP factor and set ADMIN's `requireAuthcFactor` and then signed in again with a password, which a
@@ -1855,7 +1855,7 @@ Design §7 Organizations, OrganizationDetail and Constitution (its maps note wai
   computed StockAtDate's day under two users' zones, a day apart after 18:00 Chicago (now once). ManufacturingScheduleWalk's
   drag (the dialog still fading in when its buttons were counted) failed once and passed on both reruns, unchanged.
   Fixed in mr-boss on `adm/accept` (one commit, "Admin and Insights acceptance: ..."). Final: server 517 of 517 passed,
-  client 172 of 172; the regression InsightsAccess and InsightsDashboards pass; `mail_capture_sends=true ./moq
+  client 172 of 172; the regression InsightsAccess and InsightsDashboards pass; `moqui_conf__email_client__capture_sends=true ./moq
   test-apps` 3,394 server and 19 client features passed; `moqui lint --screens` flags nothing in Insights.
 
 ### P8 — Instance settings, localization and reference data
@@ -2776,7 +2776,7 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
 
 - **ConfigurationServices `test#Protocol`** (the supported diagnostics, an external probe confirmed) and the protocol
   readiness over `get#EffectiveSettings` and `get#Readiness`: built, enabled, failing and absent told apart; SMTP trust
-  from `smtp_allowed_addresses` and `smtp_authserv_id`, never reported trusted on a mismatch.
+  from `smtp-server@allowed-addresses` and `smtp-server@authserv-id`, never reported trusted on a mismatch.
 - **`org.moqui.admin.OperationServices.find#MailOutcomes`** over EmailMessage send outcomes: safe recipient counts, no
   subject, body or address unless separately authorized; a retry through the owner, an uncertain submission sent to
   reconciliation, never a fresh send.
@@ -5239,7 +5239,7 @@ review: …"); Mantle and BOSS unchanged.
 - For the lead: budget share unchanged in substance (AdminRegistries' feature 0.44 s); F292's two facts above go with the
   user's call; nothing else open from the review.
 
-- **Acceptance Nov 11 (after gate 5).** `mail_capture_sends=true ./moq accept mr-boss` on master, the first run after the
+- **Acceptance Nov 11 (after gate 5).** `moqui_conf__email_client__capture_sends=true ./moq accept mr-boss` on master, the first run after the
   whole Admin and Insights build: eight Admin specs failed (the Insights and sweep failures are the other track's,
   `acc/insights`). None was a product defect; each was a spec bug, fixed in mr-boss on `acc/admin`. AdminReviewWalk's
   grant proposal check, taken first as a possible escalation: `check#GrantProposal` allowed admin.access BOSS_ADMIN_ACCESS
@@ -5277,14 +5277,14 @@ review: …"); Mantle and BOSS unchanged.
     connection (`curl 56 Recv failure`) and passed alone. Feature time: framework 16.8 s of 12 s (this build's
     eighteen framework specs 4.4 s; gate 1 measured 10.8 s, the rest is upstream's), tools 4.1 s of 4 s and dev-aide 41.6 s
     of 30 s (neither this build's), basic-comms 6.0 of 8 s, webroot client 43.2 of 44 s. The user agreed (Nov 11) to raise the framework server budget by this build's 4.4 s, rounded up: 12 to 17 s (mr-moqui framework test/budget).
-  - `mail_capture_sends=true ./moq test-apps`: 3,526 server and 35 client features, all passed (after the two full-run
+  - `moqui_conf__email_client__capture_sends=true ./moq test-apps`: 3,526 server and 35 client features, all passed (after the two full-run
     order dependences the first final run found were fixed in their specs: IdentityAudit matched an instance-level
     SystemMessage row whose sequenced id equals the spec's user id, mr-mantle 08448e42; AdminGroups' member choice is one
     page of 30, filled by other specs' staff, mr-boss 68c2212d; neither a product defect). Feature time mr-mantle 362.8 of
     393 s, mr-boss 239.5 of 264 s server and 59.9 of 57 s client (no mr-boss client spec changed in this build; Admin's
     and Insights' walks 2.9 s each, as at gate 1), mr-pass 13.6 of 20 s server and 6.7 of 9 s client. No budget raised.
   - `moqui lint --screens`: clean of this build's screens.
-  - `mail_capture_sends=true ./moq accept mr-boss`, after the two acceptance fix branches: server 600 of 602, client 174 of
+  - `moqui_conf__email_client__capture_sends=true ./moq accept mr-boss`, after the two acceptance fix branches: server 600 of 602, client 174 of
     175. Failing: WarehouseServerStatic (AssetDetail's Move link made a screen path from an expression by mr-boss
     35223fd6, Nov 10, before this build; the user's call: keep the screen path and unmark Files and Notes, or a plain link
     again); ManufacturingScheduleWalk's drag (the one that failed once at gate 1 and passed on reruns; not this build's);

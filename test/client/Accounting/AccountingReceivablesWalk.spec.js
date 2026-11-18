@@ -1,6 +1,6 @@
-// The suite's server keeps sends in the mail capture (suite.js, mail_capture_sends; docs/Build-Test.md): retained
+// The suite's server keeps sends in the mail capture (suite.js, email-client@capture-sends; docs/Build-Test.md): retained
 // recipient rows distinguish captured sends from queued transport. Against another server, run it with
-// mail_capture_sends=true.
+// moqui_conf__email_client__capture_sends=true.
 function invoiceHeaderAction(page, label) {
     page.evaluate(label => {
         const actions = document.querySelector(".m-record-header .m-record-actions")

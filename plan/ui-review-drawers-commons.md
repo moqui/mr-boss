@@ -89,7 +89,7 @@ The guide's bootstrap is framework-only and leaves `component/` empty. For this 
 `mr-boss` into the review runtime's `component/`. Add `mr-pass` only for the Wave 7 batch that runs DC-20, whose
 moderation outcome shows on a PASS forum page; every other activity runs on Mantle and BOSS data, including the
 demo public account. Serve it with the fixture runner as BOSS's client suite does: `moqui test mr-boss --spec
-<fixtures> --db fresh --serve <host>:<port>` on `conf/MoquiDevConf.xml` with `mail_capture_sends=true`. BOSS has no
+<fixtures> --db fresh --serve <host>:<port>` on `conf/MoquiDevConf.xml` with `moqui_conf__email_client__capture_sends=true`. BOSS has no
 Commons/Comms fixture spec yet (its client suite loads only `AccountingClientFixtures`, `InsightsClientFixtures`
 and `AdminClientFixtures`). The first batch (§6) starts on the demo data and writes a `CommonsClientFixtures` spec
 only for roles the demo data lacks, recording which.
@@ -846,7 +846,7 @@ and fixture setup reused by the later activities.
   `/tmp/mt-55471-b6ee910`; HTTP `127.0.0.1:18090`. Mutable configuration is copied; base/dev components are linked
   individually, and only Mantle and BOSS are linked as addons. No working database/resources or PASS are linked.
 - Initial revisions: framework `8d22dddc`, BOSS `58cffc1f`; existing release binary reused. The framework
-  `ClientFixtures` bootstrap passed 16 features and serves fresh demo data with `mail_capture_sends=true`.
+  `ClientFixtures` bootstrap passed 16 features and serves fresh demo data with `moqui_conf__email_client__capture_sends=true`.
 - Local evidence: framework `plans/ui-refinement-evidence/boss-waves-1-3/` (ignored), including `environment.json`.
   Built-in in-app browser tab opened successfully at the isolated login page; no activity is closed by that check.
 - Bootstrap logged the expected missing Commerce starter because PASS is deliberately absent, plus existing

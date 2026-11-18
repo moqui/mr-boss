@@ -1999,7 +1999,7 @@ MESSAGE_SENDING_CONFIGURE). A profile binds a relay Admin approved (an EmailServ
 reply-to, purpose, a throttle per hour, quiet hours in a time zone, the tracking policy (none, or consented recipients), the bounce
 domain and the PASS site of its unsubscribes. SenderReadiness checks: in effect; transport (the relay there, not a mail account's, not
 disabled, with a host, its last Admin test not failed; untested is a warning); the sender's domain (one this server signs, its hosted
-and shared accounts' or `mail_dkim_domains`, or a relay that passed its test; otherwise a warning, as Admin has no domain verification
+and shared accounts' or `mail-delivery/dkim@domains`, or a relay that passed its test; otherwise a warning, as Admin has no domain verification
 yet); the bounce account (a hosted or shared mail account `bounces@` the bounce domain, blocked without it, fixed in Comms' mail
 accounts); the unsubscribe page (the site's Account Email preferences, else the server's own `/u/`). A delivery naming a profile goes
 out through its relay from its sender with `bounces+<deliveryId>@` the bounce domain; its quiet hours and throttle make it wait, and a

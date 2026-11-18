@@ -96,7 +96,7 @@ suite(
             ],
             conf: "conf/MoquiDevConf.xml",
             // the walks that send (invoices, reminders, the close) keep their mail in the capture (docs/Build-Test.md)
-            properties: {mail_capture_sends: "true"}
+            properties: {moqui_conf__email_client__capture_sends: "true"}
         }
     }
 )

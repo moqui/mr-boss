@@ -119,7 +119,7 @@ feature(
             opened(home)
             home.output.includes("ProtocolReadiness") && home.output.includes("Mail reception")
             // off, and not in the build, are different answers with their reasons
-            home.output.includes("smtp_listen_port is not set") && home.output.includes("Office documents")
+            home.output.includes("smtp-server@listen-port is not set") && home.output.includes("Office documents")
             home.output.includes("Not in this build") && home.output.includes("No build has it yet")
             home.output.includes("Comms/Settings/MailAccounts") && home.output.includes("Protocols/MailRelays")
             home.output.includes("opened no listeners")

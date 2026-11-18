@@ -121,7 +121,7 @@ specific to Customer Service.
   branches blocked.
 - **Mail.** The service mailbox `BOSS_CS_SERVICE_MAIL` (`service@retail.example`, send users agent, manager and
   admin) sends through `BOSS_CS_DEMO_MAIL` at 127.0.0.1:9, so every send fails unless the runtime captures mail
-  (`mail_capture_sends`, as the guide's bootstrap sets). Run with capture and use the failure only as a deliberate
+  (`email-client@capture-sends`, as the guide's bootstrap sets). Run with capture and use the failure only as a deliberate
   recovery branch. No inbound mailbox is configured: the acceptance walk files mail by running Comms' mail rules on a
   stored message, so inbound intake in CS-05/09 is a prepared message, not a delivered one; record it so.
 - **Carrier and payments.** Return labels come only from Mantle's test carrier (see the Warehouse review's carrier

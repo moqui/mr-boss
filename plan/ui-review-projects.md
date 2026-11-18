@@ -925,7 +925,7 @@ remote terminal client. File upload/download tools wait for user approval: those
   binary identity and paths. The isolated bootstrap links tracked base/dev components individually and only
   `mr-mantle` and `mr-boss` addons; configuration is copied, mail captured, and all database/resources are disposable.
 - Bootstrap: `MOQUI_RUNTIME="$PROJECTS_REVIEW_BOOTSTRAP" MOQUI_CONF=conf/MoquiLoadTestConf.xml instance_purpose=dev
-  mail_capture_sends=true target/release/moqui test mr-boss --spec ProjectsHome --db fresh --keep
+  moqui_conf__email_client__capture_sends=true target/release/moqui test mr-boss --spec ProjectsHome --db fresh --keep
   --serve 127.0.0.1:8090`. Embedded Postgres required unsandboxed shared-memory access. The initial runtime was
   `/private/tmp/mt-20666-2bf86c88`; after stopping both client and server, the whole kept runtime moved to
   `/private/tmp/boss-projects-review-runtime`, outside the runner-owned namespace. Restarted with `--db existing`,

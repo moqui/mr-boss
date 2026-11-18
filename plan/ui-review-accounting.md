@@ -111,7 +111,7 @@ specific to Accounting.
   `AccountingClientFixtures`, the client suites' server spec, only checks that theme assets are local. Other
   components' fixture specs (Manufacturing's, for a cost-close run) are acceptance fixtures and need the user's
   selection.
-- **Mail and outputs.** Run mail tests with `mail_capture_sends=true` in a `moqui test --serve` fixture or the client
+- **Mail and outputs.** Run mail tests with `moqui_conf__email_client__capture_sends=true` in a `moqui test --serve` fixture or the client
   test runner. Normal server runs ignore that flag. Check the in-memory capture startup message before testing a send.
   The demo `EmailServer`
   `BOSS_ACCOUNTING_DEMO` is a local sink (127.0.0.1:9) and `BOSS_ACCOUNTING_MAIL` (`accounts@finance.example`) gives
@@ -1052,7 +1052,7 @@ tests](../../../../../docs/Build-Test.md#rendering-screens-in-tests). Accounting
 - **While working.** From the mr-moqui root on a built binary: `./moq test mr-boss --spec AccountingSettlement
   --nobuild`, the owning Mantle spec when its rule changes, and the golden path
   `./moq test-client mr-boss --serve --spec AccountingReceivablesWalk --nobuild`. PDF specs need Chromium; the
-  client suites set `mail_capture_sends`.
+  client suites set `email-client@capture-sends`.
 - **Before a commit (user decision, 2026-11-11).** Before each commit, in either pass, run only the local, focused
   checks for what changed: the specs it touched, the owning Mantle spec, the golden path and lint, as listed here. Run
   `./moq test-apps` once at the end of the refinement pass, and `./moq test-framework` as well if the pass changed

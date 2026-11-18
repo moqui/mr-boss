@@ -107,7 +107,7 @@ feature("ProtocolsHome tells SMTP reception that is off, the web protocols and a
     then(out) {
         const list = out.read.protocolList
         protocol(list, "smtpIn").state == "disabled" && protocol(list, "smtpIn").built == true
-        protocol(list, "smtpIn").reason.includes("smtp_listen_port")
+        protocol(list, "smtpIn").reason.includes("smtp-server@listen-port")
         // the web protocols stand with the web listener: ready on a running server, configured in a run that opened none
         protocol(list, "dav").state == (out.read.serverStarted ? "ready" : "notStarted")
         protocol(list, "wopi").state == "absent" && protocol(list, "speechLocal").state == "absent"
@@ -118,7 +118,7 @@ feature("ProtocolsHome tells SMTP reception that is off, the web protocols and a
         new Set(["smtpIn", "dav", "wopi"].map(key => protocol(list, key).stateText)).size == 3
         opened(out.home)
         out.home.output.includes("ProtocolReadiness") && out.home.output.includes("Mail reception")
-        out.home.output.includes("smtp_listen_port is not set") && out.home.output.includes("Not in this build")
+        out.home.output.includes("smtp-server@listen-port is not set") && out.home.output.includes("Not in this build")
         out.home.output.includes("Comms/Settings/MailAccounts") && out.home.output.includes("Protocols/MailRelays")
         opened(out.configuration)
         out.configuration.output.includes("EffectiveProtocolSettings") &&

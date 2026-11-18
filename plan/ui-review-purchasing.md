@@ -106,7 +106,7 @@ specific to Purchasing.
   `ZIZI_PORTAL` site must load first, or the Purchasing portal loader makes nothing (logged warning). Local and remote
   PASS authority are separate variants; remote is out of scope unless the user adds it.
 - **Mail.** `MANTLE_PURCHASE_ORDER_EMAIL`, `_REMINDER`, `MANTLE_RFQ_EMAIL` and `MANTLE_RFQ_REGRET_EMAIL` all use the
-  demo server `BOSS_PURCHASING_DEMO` at 127.0.0.1:9. Run with `mail_capture_sends` so sends are captured; whether an
+  demo server `BOSS_PURCHASING_DEMO` at 127.0.0.1:9. Run with `email-client@capture-sends` so sends are captured; whether an
   uncaptured send against port 9 gives a usable failed-recipient branch is to verify at execution, otherwise prepare
   an invalid address.
 - **Outputs.** Order, RFQ, agreement and comparison prints are PDFs (`xslFoTransform`) kept on the record for issued
