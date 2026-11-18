@@ -20,8 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     with a reason, previewed before it is made; assign#PayStructure, each employment on its own, a refusal named and the rest
     going on); an employment opened (partyRelationshipId) shows its assignments, each ended from a date, and TaxAndBenefits: the
     tax profile of its group's localization, whose fields are only those the installed localization declares (Edit tax profile,
-    store#PayrollProfile), its benefits (Add benefit, End), and its bank accounts as masked references, changed through Accounting's
-    payment-method services and never here. Assigning a structure changes no salary: the salary is changed on Employee360's
+    store#PayrollProfile), its benefits (Add benefit, End), and its bank accounts as masked references, a payroll account added
+    or changed here by a payroll editor (Add payroll bank account, Change: store#PayrollBankAccount; SEC-BOS-82, Accounting's
+    finance details refuse employees). Assigning a structure changes no salary: the salary is changed on Employee360's
     Compensation as a pay change. Under Payroll, payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read and change. Salaries,
     pay rates, an assignment's inputs and a benefit's cost are opted out of AI (the user's call of Nov 12, 2026, PE-21). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -79,6 +80,19 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{partyRelationshipId:partyRelationshipId, payrollLocalizationId:payrollLocalizationId, profileValues:profileValues,
                         expectedRevision:(expectedRevision || null), fromDate:(fromDate || null), reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">Tax profile saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="partyRelationshipId"/></default-response>
+        <error-response url="."><parameter name="partyRelationshipId"/></error-response>
+    </transition>
+    <!-- an employee's payroll bank account added, or one of their accounts changed at its revision (an empty number keeps the
+        stored one); Mantle checks the payroll editor and the employer -->
+    <transition name="storePayrollBank">
+        <actions>
+            <service-call name="mantle.humanres.PayrollSetupServices.store#PayrollBankAccount"
+                    in-map="{partyRelationshipId:partyRelationshipId, paymentMethodId:(paymentMethodId || null),
+                        lastUpdatedStamp:(lastUpdatedStamp || null), bankName:(bankName || null), accountNumber:(accountNumber || null),
+                        routingNumber:(routingNumber || null), typeEnumId:(typeEnumId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Payroll bank account saved</message></if>
         </actions>
         <default-response url="."><parameter name="partyRelationshipId"/></default-response>
         <error-response url="."><parameter name="partyRelationshipId"/></error-response>
@@ -443,6 +457,18 @@ along with this software (see the LICENSE.md file). If not, see
                                         </field-layout>
                                     </form-single>
                                 </container-dialog>
+                                <container-dialog id="AddPayrollBankDialog" button-text="Add payroll bank account" icon="sym_o_account_balance"
+                                        width="560" title="Payroll bank account of ${employment.personName}" disable-condition="!canEdit"
+                                        disable-message="Needs payroll editing access, which an administrator can grant.">
+                                    <label type="p" text="Pay goes to the newest payroll bank account."/>
+                                    <form-single name="AddPayrollBank" transition="storePayrollBank" map="{partyRelationshipId:partyRelationshipId}">
+                                        <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                        <field name="bankName"><default-field title="Bank"><text-line size="40"/></default-field></field>
+                                        <field name="accountNumber" ai-opt-out="true"><default-field title="Account number"><password/></default-field></field>
+                                        <field name="routingNumber" ai-opt-out="true"><default-field title="Routing number"><text-line size="12"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Add payroll bank account"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
                             </box-toolbar>
                             <box-body>
                                 <label text="No localization covers ${employment.personName}'s pay group, so no tax fields apply." type="p" style="m-muted"
@@ -505,10 +531,36 @@ along with this software (see the LICENSE.md file). If not, see
                                     <widgets>
                                         <form-list name="PaymentRows" list="paymentRows" skip-form="true" paginate="false">
                                             <field name="referenceText"><default-field title="Paid to"><display/></default-field></field>
+                                            <field name="purposeText"><default-field title="Use"><display/></default-field></field>
+                                            <field name="actions">
+                                                <default-field title="">
+                                                    <container-dialog id="ChangePayrollBank_${paymentMethodId}" button-text="Change" icon="sym_o_edit"
+                                                            width="560" title="Change ${referenceText}" condition="canEdit">
+                                                        <label type="p" text="The account ends and its successor takes the pay from now. An empty number keeps the stored one."/>
+                                                        <form-single name="ChangePayrollBank" transition="storePayrollBank"
+                                                                map="{partyRelationshipId:partyRelationshipId, paymentMethodId:paymentMethodId,
+                                                                    lastUpdatedStamp:lastUpdatedStamp, bankName:bankName}">
+                                                            <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                                            <field name="paymentMethodId"><default-field><hidden/></default-field></field>
+                                                            <field name="lastUpdatedStamp"><default-field><hidden/></default-field></field>
+                                                            <field name="bankName"><default-field title="Bank"><text-line size="40"/></default-field></field>
+                                                            <field name="accountNumber" from="''" ai-opt-out="true">
+                                                                <default-field title="New account number"><password/></default-field></field>
+                                                            <field name="routingNumber" from="''" ai-opt-out="true">
+                                                                <default-field title="New routing number"><text-line size="12"/></default-field></field>
+                                                            <field name="submitButton"><default-field title="Save payroll bank account"><submit/></default-field></field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="referenceText"/><field-ref name="purposeText"/></column>
+                                                <column><field-ref name="actions"/></column>
+                                            </columns>
                                         </form-list>
                                     </widgets>
                                 </section>
-                                <label text="Bank accounts change in Accounting, through its payment-method services, never here."
+                                <label text="Payroll pays into the newest payroll bank account. Numbers are shown masked."
                                         type="p" style="text-caption m-muted"/>
                             </box-body>
                         </container-box>

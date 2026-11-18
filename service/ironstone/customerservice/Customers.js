@@ -4,7 +4,7 @@
 // only the user's organizations' orders, cases, returns and invoices. The audience rule of §2: no payment details; invoice
 // amounts only for a holder of ACCOUNTING_VIEW or RECEIVABLE_VIEW (withheld, never zero); the credit status (Mantle's
 // mantle.account.CreditServices.get#CustomerCreditStatus, F36) only for a holder of CUSTOMER_CREDIT_VIEW, read only; the
-// identifications and tax registrations read only.
+// identifications (masked, never a tax one: CustomerFinance.js) and tax registrations read only.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const cs = ec.resource.script("component://mr-boss/service/ironstone/customerservice/CustomerService.js")
 const orders = ec.resource.script("component://mr-boss/service/ironstone/customerservice/Orders.js")
@@ -249,9 +249,14 @@ function customer360(p) {
     const read = orders.moneyRead()
     const openInvoices = invoiceRows.filter(row => !row.paid)
     const heldOrders = orderRows.filter(row => row.statusId === "OrderHold")
-    const identifications = rows("mantle.party.PartyIdentification", {partyId: customerPartyId}).map(row => ({
+    // SEC-BOS-82: Accounting's read of a party's identifications, masked and never a tax one (SSN, FEIN, FUID)
+    const identifications = Array.from(
+        ec.resource
+            .script("component://mr-mantle/service/mantle/account/CustomerFinance.js")
+            .execute("identifications", {partyId: customerPartyId}).identifications
+    ).map(row => ({
         typeText: cs.enumText(row.partyIdTypeEnumId),
-        value: row.idValue || "",
+        value: row.valueText,
         expireText: dayText(row.expireDate)
     }))
     const taxRows = rows("mantle.other.tax.TaxAuthorityParty", {partyId: customerPartyId})

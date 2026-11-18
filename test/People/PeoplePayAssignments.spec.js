@@ -111,6 +111,13 @@ spec({
             cost: "90",
             employerPaidPercent: "80"
         })
+        // SEC-BOS-82: payroll keeps an employee's payroll bank account here (Accounting refuses employees)
+        asPayroll(P + "store#PayrollBankAccount", {
+            partyRelationshipId: employmentId,
+            bankName: "Spec Payroll Bank",
+            accountNumber: "000123454321",
+            routingNumber: "011000015"
+        })
     },
     cleanupSpec() {
         ec.message.clearErrors()
@@ -147,7 +154,11 @@ feature(
             rendered.output.includes("pensionRate = 0.04")
             rendered.output.includes("Health Insurance")
             rendered.output.includes("80%")
-            rendered.output.includes("Bank accounts change in Accounting")
+            // the payroll bank account, masked, with its change and the add action (SEC-BOS-82)
+            rendered.output.includes("Spec Payroll Bank •••• 4321")
+            !rendered.output.includes("000123454321")
+            rendered.output.includes("Add payroll bank account")
+            rendered.output.includes("Payroll pays into the newest payroll bank account")
             !rendered.output.includes("filingStatus")
         }
     }
