@@ -2,7 +2,7 @@
 <!-- No copyright or license for configuration file, details here are not considered a creative work. -->
 <moqui-conf xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/moqui-conf-3.xsd">
     <!-- links to the Comms screens in notifications, mail and push go to BOSS's Comms, which mounts the BasicComms screens -->
-    <default-property name="comms_app_root" value="/qapps/Comms"/>
+    <comms app-root="/qapps/Comms"/>
     <!-- the public page of a file or folder shared by link (design-drawers-commons.md §9 PublicShare; impl R16): /s/<token> in
         the public shell, after the token check; screen/PublicShare.xml checks the token again in every call. The unsubscribe
         page of a list email (§16 Unsubscribe): /u/<token>, the List-Unsubscribe URL too: the RFC 8058 one-click POST to it runs
