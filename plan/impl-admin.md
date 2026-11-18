@@ -1943,7 +1943,7 @@ Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
 - Findings (provisional, numbered by the lead):
   - **F110** The conf's own view (`org.moqui.dev.ComponentServices.get#ConfView`: file, line and live/apply/restart class of each
     value) is Rust and for the `ADMIN` group alone, and scripts read a property's value only (`System.getProperty`). Built:
-    deployment values are registered rows (`InstanceSetting`, `editable` N) naming a `default-property`, their restart effect and
+    deployment values are registered rows (`InstanceSetting`, `editable` N) naming a conf attribute, their restart effect and
     operator note registered, their source "default" when the value equals the shipped MoquiDefaultConf's and "configuration"
     otherwise (not which file or the environment); `ADMIN` is linked to System › Conf. P10's EffectiveSignInPolicy needs conf
     attributes (`user-facade` `password`, `login`), which a property registration cannot name: a framework ask (a masked
