@@ -537,7 +537,14 @@ choiceSources.purchaseOrders = {
     value: row => row.orderId,
     label: row => row.orderId + (row.orderName ? " · " + row.orderName : "")
 }
-choiceSources.identificationTypes = choiceSources["enum:PartyIdType"]
+// SEC-BOS-82: a tax identification (SSN, FEIN, FUID) is payroll's and tax setup's; Mantle refuses it here
+choiceSources.identificationTypes = Object.assign({}, choiceSources["enum:PartyIdType"], {
+    find: () =>
+        policy
+            .find("moqui.basic.Enumeration", {enumTypeId: "PartyIdType"})
+            .condition("enumId", "not-in", ["PtidSsn", "PtidFein", "PtidFuid"])
+            .orderBy("sequenceNum,description")
+})
 // Fixed assets: the asset classes, the depreciation methods, the fixed asset types and the organization's fixed assets.
 choiceSources.assetClasses = choiceSources["enum:AssetClass"]
 choiceSources.depreciationMethods = choiceSources["enum:DepreciationType"]

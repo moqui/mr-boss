@@ -66,14 +66,14 @@ along with this software (see the LICENSE.md file). If not, see
                                     <display-entity entity-name="moqui.basic.Enumeration"/>
                                 </default-field>
                             </field>
-                            <field name="idValue">
+                            <field name="valueText">
                                 <default-field title="Value">
                                     <display/>
                                 </default-field>
                             </field>
                             <columns type="mobile">
                                 <column><field-ref name="partyIdTypeEnumId"/></column>
-                                <column><field-ref name="idValue"/></column>
+                                <column><field-ref name="valueText"/></column>
                             </columns>
                         </form-list>
                         <form-list name="SupplierTaxRegistrations" list="taxRegistrations" skip-form="true" paginate="false">

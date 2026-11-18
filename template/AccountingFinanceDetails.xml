@@ -14,9 +14,9 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The finance details of a customer or supplier (design-accounting D26), shared by Customer360's and Supplier360's
     Finance details tabs, each of which sets financeDetail (the lists, capabilities and partyName), financePartyId,
-    financeSide (customer or supplier) and financeFound: the bank accounts, masked, for treasury, the identifications and
-    the tax registrations, each added or changed through Mantle's CustomerFinanceServices writers with the side, which
-    decide the permission.
+    financeSide (customer or supplier) and financeFound: the bank accounts, masked, for treasury, the identifications
+    (masked to their last four characters, never a tax identification: SEC-BOS-82) and the tax registrations, each added or
+    changed through Mantle's CustomerFinanceServices writers with the side, which decide the permission.
     - saveIdentification, saveTaxRegistration, saveFinanceBank: the writers' transitions;
     - FinanceDetails: the three boxes. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -348,7 +348,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <display-entity entity-name="moqui.basic.Enumeration"/>
                                 </default-field>
                             </field>
-                            <field name="idValue">
+                            <field name="valueText">
                                 <header-field title="Identification"/>
                                 <default-field>
                                     <display/>
@@ -404,8 +404,9 @@ along with this software (see the LICENSE.md file). If not, see
                                                     <hidden/>
                                                 </default-field>
                                             </field>
-                                            <field name="idValue">
-                                                <default-field title="Identification">
+                                            <!-- the value is answered masked: an empty one keeps the stored value -->
+                                            <field name="idValue" from="''">
+                                                <default-field title="New identification">
                                                     <text-line/>
                                                 </default-field>
                                             </field>
@@ -434,7 +435,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field-ref name="issuedBy"/>
                                 </column>
                                 <column>
-                                    <field-ref name="idValue"/>
+                                    <field-ref name="valueText"/>
                                     <field-ref name="expireDate"/>
                                     <field-ref name="actions"/>
                                 </column>
