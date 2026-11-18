@@ -1,89 +1,123 @@
-# mr-boss
-IronStone Business OS Suite - ERP, CRM, Commons, and Comms
+# IronStone BOSS - Business OS Suite
 
-Commerce (`screen/Commerce/`) is built: store operations, merchandising, website authoring, orders and carts, promotions,
-checkout settings, integrations, feeds and store reports ([design](plan/design-commerce.md),
-[impl-commerce](plan/impl-commerce.md), which builds it in one order with its public companion,
-[IronStone Shop](../mr-pass/plan/design-shop.md) in IronStone PASS).
+> **Not ready for production (before 0.1.0).** Like [MR Moqui](https://github.com/moqui/mr-moqui#readme), which it
+> runs on, BOSS is in early development. Its data model and stored data change without migrations, and a security
+> review is under way with its findings recorded openly in the mr-moqui repository. Run it only on development
+> machines, with no real business data or credentials, and not exposed to the internet. The full notice is at the top
+> of the [mr-moqui README](https://github.com/moqui/mr-moqui#readme).
 
-Admin (`screen/Admin/`) is built: users, sessions and invitations (`AcceptInvitation`, the `i` route), lifecycle and
-offboarding, groups, grants, capabilities and row rules, sign-in policy, identity providers and shared devices,
-organizations, the Constitution and instance settings, connections, mail relays, protocols and the mail queue, system
-messages and recovery, jobs and topics, imports, exports and backups, audit and access evidence, Health with its support
-summary, and the settings index ([design](plan/design-admin.md), [impl-admin](plan/impl-admin.md)). Its rules are tested in
-`test/Admin/`; its scenario walks, the access review walk and its screen sweeps are in `test/acceptance/Admin/`. The screens
-with no business model in them (groups, sign-in policy, settings, connections, mail, jobs, health, data transfer, audit)
-are the framework's System screens, shown under Admin's root with what Admin adds for an organization
-([design-admin §1.4](plan/design-admin.md#14-screens-that-are-the-frameworks); mr-moqui
-[plans/archive/Admin-Screens-Down.md](../../../../plans/archive/Admin-Screens-Down.md)).
+IronStone BOSS is a business application suite for [MR Moqui](https://github.com/moqui/mr-moqui), the Moqui
+framework in Rust: a business-in-a-box. It has sixteen apps, each for a role or a department, in one shell, on one
+data model ([Mantle](https://github.com/moqui/mr-mantle)) and one database. Beside the ERP ground Moqui has always
+covered (orders, inventory, manufacturing, accounting), it has a full groupware and communication suite, Commons and
+Comms, and explicit CRM.
 
-Insights (`screen/Insights/`) is built:
-dashboards and Explore over admitted datasets, the report catalog and metrics, Home's attention board, analysis and drill with
-read-only record contexts, scheduled reports and digests delivered to recipients who read the same data, business alerts told
-to them the same way, business flow maps an organization copies from the suite's templates, its settings, data readiness and
-Assist, and wall displays on registered shared devices; its specs are `test/Insights/` and `test/acceptance/Insights/` (the screen
-sweeps InsightsTui and InsightsServerStatic, the review walk InsightsReviewWalk)
-([design](plan/design-insights.md), [impl-insights](plan/impl-insights.md)). Its dataset, delivery, alert, playlist,
-wall display, drill and analysis screens are the framework's Dashboards screens, shown under Insights' root with its
-links and policy ([design-insights §4.2](plan/design-insights.md#42-framework-screens-shown-under-insights)). Both were
-built in one order ([impl-admin §1](plan/impl-admin.md#1-scope-and-order)).
+It is meant for a large organization, where every employee has Commons and Comms beside the apps of their role, and
+for a small business, where one person may hold many apps and each app's home has to stand on its own. In a small
+business or a home, Commons and Comms may be the whole system. Running mail, files, calendar, chat and calls on your
+own hardware is a first purpose, not an extra: everything, files included, is in Postgres under one backup by default.
 
-Maintenance (`screen/Maintenance/`) is built: work orders from intake to completion with downtime and restoration,
-dispatch with teams, skills and qualifications, requests and Report a problem, procedures with execution checklists and
-evidence, parts and their cost routing, purchasing and outside service, costs, customer repair with its intervention report
-(which carries no price, cost or total, whoever reads or stores it), preventive plans with generation and compliance,
-resource booking policy, blackouts and booking decisions, reports with Insights' datasets, settings, lookups, readiness and
-the equipment import, and Assist, Comms, CalDAV and the prints ([design](plan/design-maintenance.md),
-[impl-maintenance](plan/impl-maintenance.md)). Its rules are tested in `test/Maintenance/` with the golden-path walk
-`test/client/Maintenance/MaintenanceWorkOrdersWalk`; its scenario walks, the screen sweeps MaintenanceTui and
-MaintenanceServerStatic and the access walk MaintenanceAccessWalk are in `test/acceptance/Maintenance/`, the phone walk
-MaintenancePhoneWalk in `test/acceptance/client/Maintenance/`. A database made before Maintenance loads its seed as
-[Upgrading](../mr-mantle/docs/Upgrading.md#maintenance-november-2026) says.
+![Commons Home: getting started, today's tasks, calls and meetings, and counts of what is waiting.](docs/images/commons-home.png)
 
-People (`screen/People/`) is built: the directory and Employee360, organization and positions, hire, change and
-separation, self-service in Commons, time, leave and attendance with the clocking kiosk, expenses, recruiting,
-development and reviews, confidential cases, and payroll in preview mode until a real localization
-([design](plan/design-people.md), [impl-people](plan/impl-people.md)). Its rules are tested in `test/People/` with the
-walk `test/client/People/PeopleHireWalk`; its scenario walks, the screen sweeps PeopleTui and PeopleServerStatic and the
-review walks PeopleReviewWalk and PeopleNavigationWalk are in `test/acceptance/People/`, the phone walk PeoplePhoneWalk in
-`test/acceptance/client/People/`.
+## What the apps share
 
-Sales (`screen/Sales/`) is built: leads and opportunities in pipelines with stages, teams and lead sources, lead intake
-from mail and Comms, accounts and contacts with merge, quotes with pricing, storeless tax, approvals, issue and send,
-requests for quote and quote templates, orders with approval and the storeless confirmation, commercial changes and the
-fulfillment and billing handoffs, customer agreements and prices, recurring orders and subscriptions, forecasts and
-targets, reports with Insights' datasets and alert templates, and Home, the palette, Assist and the import; the customer's
-side is PASS Sales in mr-pass ([design](plan/design-sales.md), [impl-sales](plan/impl-sales.md)). Its rules are tested in
-mr-mantle's `test/sales/` and `test/order/` and here in `test/Sales/` with the golden-path walk
-`test/client/Sales/SalesPipelineWalk`; its scenario walks, the screen sweeps SalesTui and SalesServerStatic and the review
-walks SalesLeadToInvoiceWalk and SalesAccessWalk are in `test/acceptance/Sales/`, the board walk in
-`test/acceptance/client/Sales/`. A database made before Sales' datasets loads them as
-[Upgrading](../mr-mantle/docs/Upgrading.md#sales-report-datasets-sales-p20-november-2026) says.
+- **One shell.** A header with search and the command palette (Ctrl+K), the app menu, quick access to today's
+  schedule, chat, notifications and mail from any screen, and the Assist drawer.
+- **Shared records.** A customer, a product or an order is the same screen in each app that shows it, and every
+  record has its own conversation.
+- **Keyboard.** Go-to keys, the palette and `?` for the list of keys on every screen; the Inbox and Chat have the
+  keys of the mail and chat apps people know.
+- **Phone and terminal.** Every screen works from a small laptop up, the ones used away from a desk at phone width,
+  and the plain screens also render in the terminal UI.
+- **Assist.** An agent in a drawer that works through the screens its user may open. Every write waits for the user's
+  approval. Each app adds skills for its own work (`skill/`).
+- **Access by role.** Each app is granted at its root, with groups for the roles inside it.
 
-Marketing (`screen/Marketing/`) is built: campaigns with budgets, costs and approvals, lists with evidenced consent,
-suppressions, the audience import and list merge, segments and the audience preview, message templates and sending
-profiles with bounce intake, sends with the composer, separate approval and dispatch through Comms' delivery ledger, A/B
-experiments, drip automations, surveys and form publication, leads handed to Sales, content, blog posts and storeless
-landing pages, tracking links and visits, events with registration, tickets, payment and check-in, promotions,
-Customer360 and engagement, attribution and reports with Insights' datasets and alert templates, the campaign calendar, the
-shell providers and Assist, and SMS; the public side is PASS Marketing in mr-pass ([design](plan/design-marketing.md),
-[impl-marketing](plan/impl-marketing.md)). Its rules are tested in mr-mantle's `test/marketing/`, `test/party/` and
-`test/work/` and here in `test/Marketing/` with the golden-path walk `test/client/Marketing/MarketingSendWalk`; its scenario
-walks, the screen sweeps MarketingTui and MarketingServerStatic and the access walk MarketingAccessWalk are in
-`test/acceptance/Marketing/`, the calendar and door check-in walks in `test/acceptance/client/Marketing/`.
+## The apps
 
-UI review and refinement plans use `plan/ui-review-*.md`, starting with
-[drawers, Commons and Comms](plan/ui-review-drawers-commons.md): screen coverage, complete user processes,
-refinement criteria, findings and verification. The [document guide](plan/design-doc-guide.md#ui-review-and-refinement-phase)
-defines the convention.
+Each is at `/qapps/<Name>` and has a design and a record of what is built in [`plan/`](plan/).
 
-Tests are in two suites ([Build-Test](../../../../docs/Build-Test.md)). The regression suite, `test/` and `test/client/`,
-checks rules and one golden-path client walk per app, within the budget in `test/budget`: run the specs you touch with
-`./moq test mr-boss --spec <name>` while working, and `./moq test-apps` before a commit. The acceptance suite,
-`test/acceptance/` and `test/acceptance/client/`, holds the scenario, access and isolation walks and one screen sweep per app
-per mode: `./moq accept mr-boss`, run on a schedule, before a release, or when asked. In both, specs are grouped in
-subdirectories named for the `screen/` directory of the app they cover (`Accounting`, `Products`, `Projects`, ...);
-specs that cover the whole suite stay at the top.
+| App | What it covers | |
+|---|---|---|
+| **Workspace** | | |
+| Commons | Contacts, calendar and schedules, tasks and requests, files, notes and knowledge, your account | [design](plan/design-drawers-commons.md) · [built](plan/impl-drawers-commons.md) |
+| Comms | Email, chat, calls, the conversation on every record, consent | [design](plan/design-drawers-commons.md) · [built](plan/impl-drawers-commons.md) |
+| **Customer-facing** | | |
+| Sales | Leads and opportunities, accounts and contacts, requests for quote, quotes and orders, customer agreements and prices, forecasts | [design](plan/design-sales.md) · [built](plan/impl-sales.md) |
+| Marketing | Campaigns and budgets, segments and lists, email and SMS, experiments and drip sequences, promotions, content, events, surveys, lead capture | [design](plan/design-marketing.md) · [built](plan/impl-marketing.md) |
+| Customer Service | Cases from intake to resolution, order enquiries, customer returns, warranty, knowledge and feedback | [design](plan/design-customer-service.md) · [built](plan/impl-customer-service.md) |
+| Commerce | Store operations, merchandising, online orders and carts, promotions, checkout settings, integrations, store reports and storefront authoring | [design](plan/design-commerce.md) · [built](plan/impl-commerce.md) |
+| **Supply & Operations** | | |
+| Products | Products and variants, categories, features, prices and cost estimates, supplier catalogs, documents, units and barcodes | [design](plan/design-products.md) · [built](plan/impl-products.md) |
+| Purchasing | Suppliers, purchase requests, sourcing, purchase orders and agreements, replenishment, receiving and supplier returns, bill exceptions | [design](plan/design-purchasing.md) · [built](plan/impl-purchasing.md) |
+| Warehouse | Receiving, inspection, inventory, counts, transfers, picking, packing and shipping, returns, locations, a handheld mode | [design](plan/design-warehouse.md) · [built](plan/impl-warehouse.md) |
+| Manufacturing | Production runs and routed work orders, bills of material and routings, quality, work centers, supply planning | [design](plan/design-manufacturing.md) · [built](plan/impl-manufacturing.md) |
+| Maintenance | Facilities, equipment and assets, corrective and preventive work, procedures, dispatch, customer repair | [design](plan/design-maintenance.md) · [built](plan/impl-maintenance.md) |
+| **Finance, People & Projects** | | |
+| Accounting | Receivables, payables, payments, banking, general ledger, period close, fixed assets, inventory, tax, budgets, reports | [design](plan/design-accounting.md) · [built](plan/impl-accounting.md) |
+| People | Employees and organization, positions and recruiting, time and leave, expenses, skills and training, reviews; payroll in preview mode | [design](plan/design-people.md) · [built](plan/impl-people.md) |
+| Projects | Projects and roadmaps, work items, requests, code and merge requests, timesheets, resources, billing | [design](plan/design-projects.md) · [built](plan/impl-projects.md) |
+| **Management** | | |
+| Insights | Dashboards and KPIs, a report builder, scheduled reports and digests, business alerts, maps of business flows | [design](plan/design-insights.md) · [built](plan/impl-insights.md) |
+| Admin | Users, groups and access, organizations and settings, integrations, mail, jobs and health, imports and exports, audit | [design](plan/design-admin.md) · [built](plan/impl-admin.md) |
+
+Five pages are reached by a link, with no sign-in: an invitation to join (`/i/<token>`), a file or folder shared by
+link (`/s/<token>`), email preferences and unsubscribe (`/u/<token>`), a published calendar (`/cal/<token>`), and a
+project's request form (`/r/<token>`).
+
+![The Comms Inbox with a conversation open.](docs/images/comms-inbox.png)
+
+![Projects Home: the running timer, counts, my work items and recent changes.](docs/images/projects-home.png)
+
+## Get it and try it
+
+In an [mr-moqui](https://github.com/moqui/mr-moqui#quick-start) checkout:
+
+```sh
+./moq component-get mr-boss   # With mr-mantle, which it depends on
+./moq load                    # Seed and demo data
+./moq run
+```
+
+Open `http://localhost:8080` and sign in as `john.doe` with the password `moqui`. The app list shows the BOSS apps.
+The demo data is a company, Ziziwork Industries, with its customers, suppliers, products, orders, mail and
+projects. There is also a demo user for each role, such as `sales.rep`, `finance.ar` and `maint.tech`, with the same
+password, to see an app as that role does.
+
+## How it fits
+
+- **[mr-mantle](https://github.com/moqui/mr-mantle)** is the data model and the service library underneath, and the
+  only component BOSS depends on.
+- **The framework** has the protocols: mail, CalDAV and CardDAV, WebDAV and SFTP, chat, calls and the agent runtime
+  are in mr-moqui, and BOSS has the screens and the business data. The framework's own Comms, System and Dashboards
+  screens are shown inside Comms, [Admin](plan/design-admin.md#14-screens-that-are-the-frameworks) and
+  [Insights](plan/design-insights.md#42-framework-screens-shown-under-insights).
+- **[mr-pass](https://github.com/moqui/mr-pass)**, IronStone PASS, is the public side: the Shop that Commerce runs,
+  the Forum, and the customer and supplier pages of Sales, Marketing, Customer Service, Accounting and Purchasing.
+  PASS runs without BOSS.
+- **[mr-l10n](https://github.com/moqui/mr-l10n)** has Spanish and Simplified Chinese for nine of the apps so far.
+- **[mr-home](https://github.com/moqui/mr-home)**, IronStone HOME, is a household suite planned on BOSS.
+
+## Developing
+
+Read mr-moqui's [AGENTS.md](https://github.com/moqui/mr-moqui/blob/master/AGENTS.md) and
+[application practices](https://github.com/moqui/mr-moqui/blob/master/docs/dev/Practices-App-Dev.md) first.
+
+- [`plan/`](plan/) has the designs. Start with the [initial design](plan/initial-design.md), the
+  [document guide](plan/design-doc-guide.md), the [style guide](plan/style-guide.md) and the screens shared across
+  apps ([design-crosscut](plan/design-crosscut.md)). Each app has `design-<app>.md`, `impl-<app>.md` (what is built,
+  and what is left), `research-<app>.md`, and for the apps reviewed so far `ui-review-<app>.md`
+  (the [convention](plan/design-doc-guide.md#ui-review-and-refinement-phase)).
+- [`docs/`](docs/) has implementation notes for Accounting, Manufacturing, Products and Warehouse.
+- `screen/<App>/`, `service/`, `entity/` and `data/` are the apps; `skill/` has the Assist skills and `report/` the
+  datasets, dashboards, reports and alerts Insights loads.
+- Tests are in two suites, described in [test/README.md](test/README.md):
+
+```sh
+./moq test mr-boss --spec SalesOpportunities   # The regression specs you touched, while working
+./moq test-apps                                # Every app component's regression suite, before a commit
+./moq accept mr-boss                           # The acceptance suite, before a release or when asked
+```
 
 ## License and Contributing
 
