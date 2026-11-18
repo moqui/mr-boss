@@ -296,7 +296,7 @@ along with this software (see the LICENSE.md file). If not, see
             // a shared event: only one who can read the chat room changes it
             const access = ec.service.sync().name('org.moqui.chat.ChatServices.get#RoomAccess').parameter('chatRoomId', chatRoomId).call()
             if (ec.message.hasError() || !access || !access.canRead) { ec.message.clearErrors(); return }
-            const uid = `chat-${chatRoomId}-${eventSeq}@${System.getProperty('chat_cal_uid_domain') || 'chat.moqui'}`
+            const uid = `chat-${chatRoomId}-${eventSeq}@${ec.factory.getConfValue('chat@calendar-uid-domain') || 'chat.moqui'}`
             // the writes of one chat event one at a time: a lock on a row that is there before any Mantle event is
             const cal = ec.entity.find('moqui.chat.ChatCalEvent').condition('chatRoomId', chatRoomId).condition('eventSeq', eventSeq)
                     .forUpdate(true).disableAuthz().one()
