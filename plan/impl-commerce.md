@@ -1235,7 +1235,7 @@ Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with 
   - Themes.js (Shop P2's core, F55): images and fonts under `assets/` (png, jpg, gif, webp, woff2) are package files
     kept as bytes (`putBytes`, versions read as streams), their package text the base64 of the bytes, digested as text,
     so releases, `getShopThemeFiles` and remote verification carry them unchanged; an upload's (and an import's) leading
-    bytes must be its type's (`ASSET_TYPE_MISMATCH`), at most 384 KB, and clean by `pass_scanner_service`
+    bytes must be its type's (`ASSET_TYPE_MISMATCH`), at most 384 KB, and clean by `pass@scanner-service`
     (`SCANNER_UNAVAILABLE` without one). Exports `compositionOf`, `sampleView`, `packageLimits` and the path tests.
   - F77: SitePages.js `templateOf` accepts a page's template key only when it names a page template of the site's active
     release or a draft of the store's themes (`TEMPLATE_UNKNOWN`); ShopCatalog's page view carries the key and ThemeView's
@@ -1246,17 +1246,17 @@ Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with 
     (`PREVIEW_NOT_CANONICAL`).
 - mr-pass:
   - `screen/ShopPreview.xml` (a Pass.xml subscreen) and `screen/Shop/ShopPreview.js`: on a site's preview host
-    (`get#PreviewHost`, on the authority only: with `pass_backend_url` there is none) `resolve#Route` answers only
+    (`get#PreviewHost`, on the authority only: with `pass@backend-url` there is none) `resolve#Route` answers only
     `/preview/{token}` and `/preview/{token}/asset/{path}`, every other path Not Found, and Pass.xml skips `getSiteInfo`
     and the shell (so an unpublished site previews). The page renders the draft through `ec.resource.theme.render` with
     ShopTheme.js's trusted components, the token's view and its template; headers `no-store`, `X-Robots-Tag: noindex,
     nofollow`, `Referrer-Policy: no-referrer`, and a CSP with a nonce'd script, `connect-src 'none'`, `form-action 'none'`
-    and `frame-ancestors` the origins of the new `pass_preview_frame_origins` (none: `'none'`). Its script takes one
+    and `frame-ancestors` the origins of the new `pass@preview-frame-origins` (none: `'none'`). Its script takes one
     MessageChannel port from an allowed parent origin with the URL's nonce, answers `ready`, sends `{type: "select",
     sectionId}` on a click and shows the editor's highlight; links and forms do nothing. Assets are the draft's, no-store.
   - ShopTheme.js: `sendAsset` serves the binary types as bytes; `renderView` passes the page's `template`. The starter's
     sections carry `data-section-id="${section.id}"`. `Contracts.d.ts` ShopPage gains `template`. Test conf: ZIZI_SHOP's
-    preview host `preview.shop.zizi.localhost` (mount `/`) and `pass_preview_frame_origins` `http://localhost:* http://127.0.0.1:*`.
+    preview host `preview.shop.zizi.localhost` (mount `/`) and `pass@preview-frame-origins` `http://localhost:* http://127.0.0.1:*`.
     `docs/Deployment.md` gains the preview host's setup.
 - BOSS:
   - `screen/Commerce/Website/Themes.xml` (ThemeFind, ThemeList with phone columns, NewTheme from a starter or a store
@@ -1344,7 +1344,7 @@ served, no HTML or script type in either type table), F77 (`templateOf` against 
 drafts), readiness, `pageUrl`, `sitesFor` and `getStoreSites` skipping preview hosts; the preview: only `/preview/{token}`
 and its assets route on a preview host, the token only as SHA-256, 20 minutes, its site, mount and theme bound and the
 host checked on each read, so a token of store A's draft cannot show on store B's site or host; the CSP (nonce'd script,
-`connect-src`/`form-action`/`base-uri` none, `frame-ancestors` from `pass_preview_frame_origins`, which only mr-pass's
+`connect-src`/`form-action`/`base-uri` none, `frame-ancestors` from `pass@preview-frame-origins`, which only mr-pass's
 test conf sets, so production frames nothing until an operator names BOSS's origin), no-store, noindex, no-referrer;
 the MessageChannel on both sides (target origin, `e.source` the parent, origin list, URL nonce, one port, section ids
 matched against the outline); no mail, cart, payment or analytics call. The editors' JSON transitions and TUI twins call
@@ -3401,7 +3401,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F38 | P0: the Support pages are bound to the site's own Support mount: every operation passes the resolved site, `served(siteId)` (SupportPortal.js:130-136) needs its enabled `support` mount with an internal target that has a ServicePolicy, `orderFor` (CustomerOrders.js:50-60) needs each order part's vendor to be that target, and the pages redirect to `passBases.support`; on a site with no Support mount every operation answers NotFound. OrderCancelRequest is NewCustomerCase's `cancelOrder` transition (NewCustomerCase.xml:41-52), shown for an `orderId`, not a page | §4: Shop links to the site's Support pages; P6's readiness requires the mount; design-shop §1, §2 and §9 changed |
 | F39 | P0: ExternalAccess's record kinds are now Invoice, Order (purchase orders), Quote, RequestCategory, Request, ReturnHeader and FormInvitation; its app kinds billing, supplier and support; the self relationship is `selfOf` (ExternalAccess.js:243-265: a current verified email, no internal role); the Support pages and Customer Service's customer services admit a contact or the self relationship, never a capability; there is no `SalesOrder` kind | Shop P5 adds the kind; Shop P6's owner contract admits its OrderView capability (Shop F27) |
 | F40 | P0: the sales commercial revision (X2) is `PartyAcctgPreference.salesCommercialRevisionOnly` (SupportOrderChangeEntities.xml:150-158; default N, inherited through `find#PartyAcctgPreference`, Y in the demo on ORG_ZIZI_CORP), read by `increment#OrderRevision` (OrderServices.xml:2903-2955) for OrderContent, OrderNote and status-only part changes; a part with no customer or vendor party counts every change (:2926) | Shop P4's cart part always carries a customer party, so a note leaves a frozen checkout's revision alone |
-| F41 | P0: the shared media stage is `mantle.party.PortalMedia.js` (`stage`, `keep`, `unstage`; PDF, PNG or JPEG up to 10 MB, scanned under `pass_media_root`), used by Billing, Support and returns; the Forum's `stageAttachment` stays separate | P9's review images use it (§4) |
+| F41 | P0: the shared media stage is `mantle.party.PortalMedia.js` (`stage`, `keep`, `unstage`; PDF, PNG or JPEG up to 10 MB, scanned under `pass@media-root`), used by Billing, Support and returns; the Forum's `stageAttachment` stays separate | P9's review images use it (§4) |
 | F42 | P0: `get#RecordLink`'s Customer Service sales-order branch (PaletteServices.xml:79-86) sets the link from `recordLink('order', id)` and returns even when that is null (a user out of Customer Service's scope), so a later branch never sees a sales order or cart | P8 makes the branch fall through on null, Customer Service's cases unchanged |
 | F43 | P0: `clone#Order` (OrderServices.xml:2385-2529) copies payments by default as Promised (`copyPayment`), copies each item's `unitAmount` without repricing, and makes an OrderOpen order | P8's Order again clones with `copyPayment=false` and reprices; Shop P7 clones renewals with `copyPayment=false` (Shop F17) |
 | F44 | P0: no spec is named `GoldenPath`: the client walks are `test/client/<App>/<App><Area>Walk.spec.js`, registered in `test/client/suite.js` (Customer Service's golden path is CustomerServiceCasesWalk); SpecLibs are `test/<App>/<App>SpecLib.js`; Mantle's `test/` has no `public/` folder | §2; the golden walks are CommerceThemesWalk and Shop's ShopCheckoutWalk; P4 starts `test/public/` |

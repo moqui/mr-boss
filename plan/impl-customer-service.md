@@ -2799,7 +2799,7 @@ consent, the notice naming no comment); no per-agent ranking; leanness.
   CustomerServiceFeedback, CustomerServiceTemplates; all pass. The true remote pair of docs/Deployment.md "Reproducing the
   remote check": the authority (this runtime, `--acceptance --spec ClientFixtures,PortalFixtures,SupplierPortalFixtures,
   SupportFixtures --serve`), a scratch frontend runtime of framework, webroot, tools and mr-pass only (RemoteFixtures passes: no
-  Mantle catalog) with `pass_backend_url` over REST, and RemoteHttp through it: 8 features pass, the Support feature's rating 2,
+  Mantle catalog) with `pass@backend-url` over REST, and RemoteHttp through it: 8 features pass, the Support feature's rating 2,
   its receipt, and a repeat's 5 answering "2 of 5".
 - Left for the lead: (1) the CSAT results tab shows to an agent, who is then told it is not available (F183); a menu item is
   hidden only by artifact authorization, which the shared file cannot carry, so hiding it needs P14's catalogue (the tab

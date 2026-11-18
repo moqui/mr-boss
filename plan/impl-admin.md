@@ -2024,7 +2024,7 @@ Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
     that is a link or a path (`://`, a leading `/`, `\`, `./` or a scheme). A translation of a relative url that holds words
     can still be changed to another relative path: see For the lead.
   - **R3 (low, secrets)** A setting was secret by its own flag or by its property's name (pass, pw, key, secret, token,
-    credential), but the conf marks secrets whose names do not read as one (`push/fcm@service-account`, `cluster_tls_cert`), which
+    credential), but the conf marks secrets whose names do not read as one (`push/fcm@service-account`, `cluster-member@tls-cert`), which
     a registration naming them would have returned. `ConfigurationSettings.js` now also reads the shipped conf's `is-secret`
     marks (one parse with the shipped values, attributes in any order) and masks those properties.
   - **R4 (low)** A text preference with `${` in it is refused (`VALUE_INVALID`): the value is shown, never run, whatever
