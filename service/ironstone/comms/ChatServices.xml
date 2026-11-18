@@ -274,4 +274,98 @@ along with this software (see the LICENSE.md file). If not, see
             url = info.url || null
         ]]></script></actions>
     </service>
+
+    <service verb="sync" noun="ChatCalendarEntry">
+        <implements service="org.moqui.comms.ProviderInterfaces.chat#CalendarEntry"/>
+        <description>The chat-calendar provider of IronStone's Comms root (mr-moqui plans/Comms-Messaging.md §18.3 phase 19): a
+            chat event on the members' calendars as one Mantle event (WorkEffort WetEvent, WepMeeting, its universalId the chat
+            event's UID), each member who added it an Assignee party of it (WeptAssigned for going, WeptTentative for maybe)
+            with a CalendarWorkEffort on their default calendar. Only ids and the action come in: the event is read from
+            moqui.chat.ChatCalEvent and the user's answer from moqui.chat.ChatCalAnswer, so nothing passed in is trusted.
+            answer: the current user's entry put or brought up to date (going, maybe), or taken off their calendars (no, or
+            no answer); change: the event's name, place, details and times from the chat event; cancel: WeCancelled (also once the
+            chat event's message is gone). A
+            user with no party, and a server with no event yet on change or cancel, change nothing. The caller must read the
+            chat room (ChatServices get#RoomAccess) before anything changes, as it is a shared event; and its writes are
+            serialized by a lock on the chat event's own row (else the event's room row, once the event is gone), so two
+            answers at once make one Mantle event. A change and a cancel touch every event with the UID. The Mantle event is
+            shared: an edit of it in Commons, Calendar is overwritten by the next change of the chat event, which is its
+            source. Out: eventUrl, the user's event in Commons, Calendar.</description>
+        <actions><script><![CDATA[
+            eventUrl = null
+            // a shared event: only one who can read the chat room changes it
+            const access = ec.service.sync().name('org.moqui.chat.ChatServices.get#RoomAccess').parameter('chatRoomId', chatRoomId).call()
+            if (ec.message.hasError() || !access || !access.canRead) { ec.message.clearErrors(); return }
+            const uid = `chat-${chatRoomId}-${eventSeq}@${System.getProperty('chat_cal_uid_domain') || 'chat.moqui'}`
+            // the writes of one chat event one at a time: a lock on a row that is there before any Mantle event is
+            const cal = ec.entity.find('moqui.chat.ChatCalEvent').condition('chatRoomId', chatRoomId).condition('eventSeq', eventSeq)
+                    .forUpdate(true).disableAuthz().one()
+            if (!cal) ec.entity.find('moqui.chat.ChatRoom').condition('chatRoomId', chatRoomId).forUpdate(true).disableAuthz().one()
+            const efforts = Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('universalId', uid).condition('workEffortTypeEnumId', 'WetEvent')
+                    .orderBy('workEffortId').disableAuthz().forUpdate(true).list())
+            let effort = efforts.length ? efforts[0] : null
+            // a cancel: every event of the UID, also when the chat event's message is gone (its rows may be removed already)
+            if (action === 'cancel') {
+                for (const one of efforts) if (one.statusId !== 'WeCancelled') { one.set('statusId', 'WeCancelled'); one.update() }
+                return
+            }
+            if (!cal) return
+            const now = ec.user.nowTimestamp
+            const link = (id) => '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(id)
+            const dayOf = (millis) => ec.l10n.format(new Date(Number(millis)), 'yyyy-MM-dd', null, cal.timeZone)
+            const fields = () => {
+                const allDay = cal.allDay === 'Y'
+                return {workEffortName: cal.title || ec.l10n.localize('Event'), description: cal.description || null, location: cal.place || null,
+                    estimatedStartDate: cal.startDate, estimatedCompletionDate: cal.endDate,
+                    allDayStart: allDay ? dayOf(cal.startDate) : null, allDayEnd: allDay ? dayOf(Number(cal.endDate) - 1) : null,
+                    statusId: cal.cancelledDate ? 'WeCancelled' : 'WeInPlanning'}
+            }
+            if (action === 'change') {
+                for (const one of efforts) { one.setFields(fields(), true, null, null); one.update() }
+                return
+            }
+            if (action !== 'answer') { ec.message.addError(`Unknown chat calendar action ${action}`); return }
+            const userId = ec.user.userId
+            const partyId = ec.user.userAccount?.partyId
+            if (!userId || !partyId) return
+            const answer = ec.entity.find('moqui.chat.ChatCalAnswer').condition('chatRoomId', chatRoomId).condition('eventSeq', eventSeq)
+                    .condition('userId', userId).disableAuthz().one()
+            const status = {CcaGoing: 'WeptAssigned', CcaMaybe: 'WeptTentative'}[answer?.answerEnumId] || null
+            const parties = effort ? Array.from(ec.entity.find('mantle.work.effort.WorkEffortParty').condition('workEffortId', effort.workEffortId)
+                    .condition('partyId', partyId).condition('roleTypeId', 'Assignee').condition('thruDate', null).disableAuthz().list()) : []
+            if (!status) {
+                // no, or no answer: the entry off the user's calendars, and their part of the event ended
+                if (!effort) return
+                for (const party of parties) { party.set('thruDate', now); party.update() }
+                const mine = Array.from(ec.entity.find('mantle.work.calendar.Calendar').condition('ownerPartyId', partyId).disableAuthz().list()).map((row) => row.calendarId)
+                if (mine.length) ec.entity.find('mantle.work.calendar.CalendarWorkEffort').condition('workEffortId', effort.workEffortId)
+                        .condition('calendarId', 'in', mine).disableAuthz().deleteAll()
+                return
+            }
+            if (!effort) {
+                effort = ec.entity.makeValue('mantle.work.effort.WorkEffort')
+                effort.setSequencedIdPrimary()
+                effort.setFields(Object.assign({workEffortTypeEnumId: 'WetEvent', purposeEnumId: 'WepMeeting', universalId: uid}, fields()), true, null, null)
+                effort.create()
+            } else {
+                effort.setFields(fields(), true, null, null)
+                effort.update()
+            }
+            if (parties.length) {
+                for (const party of parties) if (party.statusId !== status) { party.set('statusId', status); party.update() }
+            } else {
+                ec.entity.makeValue('mantle.work.effort.WorkEffortParty').setFields({workEffortId: effort.workEffortId, partyId: partyId, roleTypeId: 'Assignee',
+                    fromDate: now, statusId: status}, true, null, null).create()
+            }
+            const calendars = ec.service.sync().name('mantle.work.CalendarServices.get#UserCalendars').call()
+            if (ec.message.hasError()) return
+            const calendarId = calendars?.defaultCalendarId
+            if (calendarId && !ec.entity.find('mantle.work.calendar.CalendarWorkEffort').condition('calendarId', calendarId)
+                    .condition('workEffortId', effort.workEffortId).disableAuthz().count()) {
+                ec.entity.makeValue('mantle.work.calendar.CalendarWorkEffort').setFields({calendarId: calendarId, workEffortId: effort.workEffortId,
+                    addedDate: now}, true, null, null).create()
+            }
+            eventUrl = link(effort.workEffortId)
+        ]]></script></actions>
+    </service>
 </services>

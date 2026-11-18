@@ -63,6 +63,8 @@ along with this software (see the LICENSE.md file). If not, see
         <call-context name="boss.parties" service="ironstone.comms.ComposeServices.get#CallContext"/>
         <!-- the answer to a message's invitation, on the user's calendar (plans/archive/Comms-Framework.md §3.3) -->
         <invitation name="boss.calendar" service="ironstone.comms.InboxServices.respond#InvitationProvider"/>
+        <!-- a chat event on the members' calendars (mr-moqui plans/Comms-Messaging.md §18.3 phase 19) -->
+        <chat-calendar name="boss.calendar" service="ironstone.comms.ChatServices.sync#ChatCalendarEntry"/>
         <!-- who a sender or recipient is: the party with the address, for the reading pane's contact card -->
         <contact-card name="boss.parties" service="ironstone.comms.InboxServices.get#ContactCardProvider"/>
         <!-- its boxes on Comms Home: the mailboxes with unread -->
