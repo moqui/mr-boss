@@ -112,7 +112,7 @@ feature("ProtocolsHome tells SMTP reception that is off, the web protocols and a
         protocol(list, "dav").state == (out.read.serverStarted ? "ready" : "notStarted")
         protocol(list, "wopi").state == "absent" && protocol(list, "speechLocal").state == "absent"
         // call media: absent where the build has none; where it has it, on in every test run (basic-comms' test/MoquiConf.xml
-        // sets rtc_media_port, for its call specs), so configured and not known to run in this run, which opens no listeners
+        // sets media-server@port, for its call specs), so configured and not known to run in this run, which opens no listeners
         protocol(list, "rtc").state ==
             (ec.factory.hasFeature("rtc") ? (out.read.serverStarted ? "ready" : "notStarted") : "absent")
         new Set(["smtpIn", "dav", "wopi"].map(key => protocol(list, key).stateText)).size == 3
