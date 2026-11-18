@@ -1,5 +1,7 @@
 # IronStone BOSS — Cross-application design
 
+Nov 18, 2026 — the introduction's Maintenance paragraph and §7.6's first line say built, as §7.6's own record and impl-maintenance do
+
 Nov 13, 2026 — impl-people P31: People's needs PE-01 to PE-24 marked built (§7.5 and the People addendum)
 
 Nov 11, 2026 — the generic screens of Admin and Insights are the framework's System and Dashboards screens, shown under the BOSS roots, and the readiness, refresh and settings registries are the framework's (mr-moqui [plans/archive/Admin-Screens-Down.md](../../../../../plans/archive/Admin-Screens-Down.md)): §3.30, §4.9 (Z5, Z9), §5, §7 (ADM-SETTINGS, INS-04, INS-09) and §8
@@ -26,7 +28,8 @@ People owns these domain definitions; they are built (impl-people P1–P31, Nov 
 The Oct 31 [Maintenance design](design-maintenance.md) adds core maintenance work, reusable WorkEffort
 process templates and execution checklists, preventive schedules and resource-booking administration.
 [Maintenance contracts](#46-maintenance-processes-resources-and-repair) and [needs](#76-maintenance-needs)
-reconcile the shared screens below. These additions are proposed, not claims of implemented Maintenance workflows.
+reconcile the shared screens below. They are built (impl-maintenance P1–P19, Nov 11–12, 2026; §7.6), except
+MT-13 and MT-14, which are later.
 
 The Oct 31 [Commerce design](design-commerce.md) and [IronStone Shop design](../../mr-pass/plan/design-shop.md)
 add store operations, staff website authoring and the public storefront. Commerce owns the shared
@@ -3695,7 +3698,7 @@ finalization (which wait on a real localization), and an image input for reading
 
 ### 7.6 Maintenance needs
 
-[Maintenance §13](design-maintenance.md#13-framework-and-data-needs) owns these proposed contracts:
+[Maintenance §13](design-maintenance.md#13-framework-and-data-needs) owns these contracts:
 16 needs, MT-01 to MT-16. MT-01/MT-11 extend CX-ACCESS/CX-SHELL; MT-08/MT-09 extend CX-POSTING
 and Accounting; MT-13 extends CX-QUALITY. MT-03/MT-04 use the same WorkEffort foundation as
 People's checklists. Existing widgets, timers, bookings, content and asset books are reused, not

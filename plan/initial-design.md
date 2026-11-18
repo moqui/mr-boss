@@ -1,5 +1,7 @@
 # IronStone BOSS — Design Notes
 
+Nov 18, 2026 — Assist's state brought up to date: the drawer is built in mr-moqui and its writes wait for approval ("Assist today", the Decided table)
+
 Oct 14, 2026
 
 ## Overview
@@ -135,7 +137,7 @@ Rule for what lives in the header: **synchronous or time-bound things get a pane
 
 **Header ownership.** Header pieces come in two kinds: elements built into the header and owned by the system, and widgets plugged in by apps (the current My Account message / calendar / task widget, per-app search). Which of them Assist can reach is deferred; this split is the starting point for that decision.
 
-**Assist today.** Assist began as its own screen and is now an outer panel in the header, with a `screen_use` tool that works like browser-use: it can read and navigate screens but cannot click buttons that change data. That restriction is hard-coded for now and expected to become configurable.
+**Assist today.** Assist is the framework's drawer, opened from the header (mr-moqui `docs/ai/Assist.md`). Its agent works the user's own screens as the user, reading and navigating them, and every write waits for the user's approval. The Java panel it was ported from could not change data at all.
 
 **Write policy.** Covered by Moqui's existing, well-defined model; not an open design question for BOSS.
 
@@ -237,7 +239,7 @@ An alternative to WOPI that is not yet fully viable, and does not change the WOP
 | Collaborative docs store CRDT state and a rendered snapshot | Multi-entry JSON document type |
 | CRDT library: yrs | Yjs-compatible; Loro is the runner-up |
 | Assist is an always-available top-level drawer | Header panels and dialogs open beside it in the canvas Assist controls; the header bar stays outside Assist's reach |
-| Assist `screen_use` is read-only for now | Writes governed by Moqui's existing policy model |
+| Assist writes wait for the user's approval | Writes governed by Moqui's existing policy model; the Java panel's `screen_use` was read-only |
 
 ### Open
 

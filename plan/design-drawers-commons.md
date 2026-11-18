@@ -1,5 +1,6 @@
 # IronStone BOSS — Header, drawers, Commons & Comms design
 
+Nov 18, 2026 — Assist is built (mr-moqui Phase 13, `docs/ai/Assist.md`): §1.3 says so and notes what the port did with each of BOSS's asks; its key is Mod+J as built (the header table, §1.7's global keys and §21's open item)
 Nov 12, 2026 — impl-maintenance P19 as built (owner contract): Comms' Chat (`chat-message-actions`), Voicemail (`voicemail-actions`) and a received mail's MessageDetail (beside Link to a record) offer Report a problem to a user who may report (Commons' ReportProblem mounted under each by the `basic-comms` screen-extend, its `BOSS_MNT_REPORT_PROBLEM` grant deciding who sees it): the form opens prefilled with the message's text (Mantle's `get#MaintenanceProblemSource`, under the room check, the user's own voicemail or a mail they read), and the report files a chat message or a mail on the request. Maintenance's `record-lookup` answers ahead of the suite's (sequence -10) for work orders, equipment and facilities it admits the user to, and its `call-context` adds the caller organization's open work orders and equipment under repair; the other apps' providers are unchanged.
 Nov 12, 2026 — impl-maintenance P16 as built (owner contract): the approvals inbox has a card for Maintenance's `ResourceBooking` topic (a booking of a managed room or equipment waiting for its approver, naming the room, the time and the requester, never the meeting's title), approved and refused through `mantle.work.ResourceBookingServices.approve#ResourceBooking` and `refuse#ResourceBooking` (a reason required), which decide it on the time it was sent with; an approval topic's card opens the topic's own screen link before its record's (the user's call, impl-maintenance P16 review R8: ResourceBooking's opens Maintenance's BookingRequests rather than an event the approver may not open; a topic with no screen link, and every card that is no approval, opens its record as before); an organizer is told what became of a booking on `ResourceBookingNotice` (no approval topic). Schedules shows "Scheduling admin" (Maintenance's Scheduling) to a user who has it, and Maintenance mounts the Schedules component as `Maintenance/Scheduling/ResourceCalendar` with transitions of its own (the scope's resources, and each resource's outages and planned blocks as blocked items: `get#ResourceBookings` with `includeUnavailable`); Commons' own Schedules is otherwise unchanged.
 Nov 12, 2026 — impl-maintenance P4 as built (owner contract): Commons' + menu offers Maintenance's Report a problem (`Commons/ReportProblem`, quick create `maintenanceReportProblem`) to a holder of its screen's grant (`BOSS_MNT_REPORT_PROBLEM`: requesters and the Maintenance administrator), since a requester has no Maintenance launcher; it calls Mantle's `report#MaintenanceProblem` only. Commons' RequestDetail of a maintenance request shows its reporter a Maintenance box (the request's state, its equipment or facility, the work order's name and status, from Mantle's `find#MaintenanceRequests`), and its Tasks tab lists a maintenance work order only for a user Maintenance admits to it (`MaintenanceAccess.workHidden`, impl-maintenance F69). Reviewed (P4): a maintenance report opens by its id in Commons (RequestDetail, Chatter, files, search) only for its reporter, its people in person and Maintenance's, not for every member of its organization (Mantle's `MaintenanceAccess.requestHidden` in `get#RecordLinkInfo`).
@@ -120,7 +121,7 @@ list of root element ids the framework exposes as `assistReach`, not a layout ch
 | Documentation `?` | As today | Framework |
 | Theme plugins | As today; the My Account counters widget retires | Theme data |
 | Account | Avatar with presence dot; menu: name and user name, **status** (online, away, do not disturb, invisible, custom text with clear-at), Preferences (`Commons/Settings/Preferences`), Account (`Commons/Settings/Account`) (both `<account-menu-item>` providers of Commons), dark mode, the `STRT_HEADER_ACCOUNT_COMP` plugins, re-login, log out | Framework; `UserStatus` (§1.8) |
-| Assist | Toggles the Assist drawer; Ctrl+Shift+A; shown once the Phase 13 port lands (§1.3) | Framework |
+| Assist | Toggles the Assist drawer; Mod+J; shown when an agent answers the user (§1.3) | Framework |
 
 The theme values that name the BOSS screens for the framework frames are seeded by BOSS in
 `data/BossSetupData.xml`: `STRT_TRAY_TODAY`, `STRT_TRAY_CHAT`, `STRT_TRAY_NOTIFICATIONS`, `STRT_TRAY_DIALER`
@@ -144,10 +145,9 @@ framework stays Mantle-free.
 
 Assist is the framework's port of the Java Assist panel into a right `q-drawer` (320–720 px,
 resizable, full screen below 600 px). This design does not build it; it says what the port
-must keep and what BOSS needs from it. The port is mr-moqui's Phase 13, deferred on purpose
-(`plans/Remaining-Work.md`); until it lands the shell reserves the drawer's slot without a toggle,
-builds the screen context (§1.6) and the reach list (§1.1) as its inputs, and the BOSS skills and
-agent members below wait for it.
+was to keep and what BOSS needed from it. The port is built: mr-moqui's Phase 13, whose guide is
+`docs/ai/Assist.md` and whose design is `plans/LLM-A2A-Assist.md`. The shell's screen context (§1.6)
+and reach list (§1.1) are its inputs. What it did with each point below is under "As built".
 
 **Kept from the Java panel** (`js/assist/Assist.qvue`, `README_SANDBOX.txt`, the `llm/tools`):
 the conversation pane with streaming turns and the conversation list (`LlmConversation`,
@@ -181,6 +181,23 @@ the A2A server (the Java framework's `plans/A2A-Server.md`) so a remote agent re
   the things Assist is asked most: find a message, draft a reply, summarize a thread, find a
   time for a meeting, file an email on a record, make a task from a message. A skill that
   writes yields a `write_ui` confirm; the user clicks.
+
+**As built** (`docs/ai/Assist.md`; checked Nov 18, 2026).
+
+- **Writes.** The Java panel's rule that a mutation is never submitted is replaced: the agent works the user's own
+  screens through a server-side screen session as the user, and every write waits for the user's approval on a card
+  in the drawer. A skill that writes goes the same way.
+- **Screen context and reach.** A turn carries the page state built from the root's `screenContext` ("The page
+  state"), and a form outside `assistReach` is refused ("Its reach").
+- **Canvas placement.** Differs from the ask: a canvas takes the page while the drawer stays docked beside it, with
+  Back to the page and Show canvas ("The canvas").
+- **Running tasks.** The drawer's Tasks pane lists what waits for the user, and the running, failed and done runs,
+  with the waiting count as the header button's badge (`GET tasks`). Whether an A2A task shows there is not settled
+  by the guide.
+- **Agents in Comms.** An agent is a member of a chat room and answers when mentioned, and in a direct room with it
+  ("Chat agent members"). An A2A remote agent as a member is not settled by the guide.
+- **BOSS skills.** `skill/` has the skills of Sales, Marketing, Customer Service, Commerce, Maintenance, People, Admin
+  and Insights. The Commons and Comms skills listed above are not written.
 
 **Undocked** (mr-moqui `plans/Terminal-Fancy.md` §10.5, built Nov 2026). Undock, a button in the Assist header beside
 Close, moves the conversation (header, panes, thread, cards, composer: the framework's `m-assist-body`) into a floating
@@ -286,7 +303,7 @@ link is the communication event's from and to party and its `CommunicationEventP
 A suite-wide key map is a framework shell item (§19 "Keymap registry"): the shell registers the
 global keys, each screen registers its scope when it mounts, the `?` key opens an overlay
 listing the keys active now, and `Commons/Settings/Preferences` lets the user change any binding
-(stored as the `KEYMAP` user preference). Global keys: Ctrl+K palette, Ctrl+Shift+A Assist,
+(stored as the `KEYMAP` user preference). Global keys: Ctrl+K palette, Mod+J Assist,
 Esc closes the top-most dialog, menu or drawer, `?` help, `g` then a letter for the go-to set
 (`g i` Inbox, `g c` Contacts, `g k` Tasks, `g l` Calendar, `g f` Files, `g n` Notes, `g h` the
 app's Home; Gmail's chords where it has them, so the Inbox scope's `g t` Sent, `g s`, `g d` and
@@ -2588,10 +2605,8 @@ Each with the answer the author would give.
 - **Where the Office app (WOPI) opens from.** The Files preview and New menu assume it.
   Recommended: Office's design file names the `Commons/Files` hooks it needs (open with, new
   document from template) and this file gains them at review.
-- **The Assist key.** Ctrl+Shift+A is, as far as this review knows, bound by Chrome (tab search)
-  and Firefox (add-ons), and browsers keep some keys from pages. Recommended: check the default
-  against the browser-reserved keys of Chrome, Firefox, Safari and Edge when the Keymap registry
-  is built; it is editable either way.
+- **The Assist key.** Settled by the build: Mod+J (`WebrootAssist.js`), in place of Ctrl+Shift+A, which
+  Chrome (tab search) and Firefox (add-ons) bind. It is editable either way.
 - **Moving a note into a version-controlled space.** The notes space is on database files, so
   `move#WikiPage` cannot carry its history rows into a git repository. Recommended: replay the
   versions oldest first, one commit each with a note naming the original date and author;

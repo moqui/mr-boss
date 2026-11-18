@@ -1,5 +1,7 @@
 # IronStone BOSS — Style, widget and shell guide
 
+Nov 18, 2026 — the `tui` render mode is built (mr-moqui `docs/ui/TUI.md`): the places that called it planned (§4.8, §7, §8, the references) say so
+
 Oct 18, 2026
 
 How BOSS screens look and behave, the shell every screen runs in, the widgets a design may
@@ -715,8 +717,8 @@ the URL watches `$root.currentParameters` (deep) and reloads its data; navigatio
 `this.$root.setUrl(path)`.
 
 **The terminal twin.** A screen that goes custom in one render mode is implemented again for
-each other mode it should work in. For the terminal (the `tui` render mode, planned in mr-moqui
-`plans/archive/Screen-TUI-Impl.md`, §2.9 there) that means:
+each other mode it should work in. For the terminal (the `tui` render mode: mr-moqui
+`docs/ui/TUI.md`; its design is `plans/archive/Screen-TUI-Impl.md`, §2.9 there) that means:
 
 - **A raw `qvt` text** gets a `text type="tui"` in the same `render-mode` element: a fragment of
   the TUI screen model, as JSON. A chart names the `chart` component with the same data expression
@@ -926,7 +928,7 @@ crosscut design's roll-up is the work list.
 2. The qvt macro in `framework/template/screen/ScreenQvt.js` and its mirror in
    `ScreenQvtStatic.js`; a plain fallback in `ScreenHtml.js` for the html render mode; the `tui`
    macro in `ScreenTui.js`, a node of the TUI screen model, and its terminal widget in
-   `crates/moqui-tui` when the element needs one (once the `tui` mode is built).
+   `crates/moqui-tui` when the element needs one.
 3. The `m-*` wrapper in `webroot/screen/webroot/js/WebrootVue.qvt.js` when the element needs a
    component; regenerate the precompiled `WebrootVue.qvt.render.js`
    (`UPDATE_GOLDEN=1 cargo test -p moqui-core --lib client_components_are_precompiled`).
@@ -986,7 +988,7 @@ for now.
 | The style decisions this guide continues | `plans/archive/QvtStylePlan.txt` |
 | Render goldens and the browser smoke | `crates/moqui-core/src/script/testdata/screen/qvt/render/`, `crates/moqui-host/tests/gate3_browser.rs` |
 | Status flows (for §5.2) | `runtime/components/base/tools/screen/Tools/StatusFlows.xml` |
-| The terminal render mode: design, widget map, keys, the `tui` text and components (planned) | `plans/archive/Screen-TUI-Impl.md`; later `framework/template/screen/ScreenTui.js`, `crates/moqui-tui`, `docs/ui/TUI.md` |
+| The terminal render mode: design, widget map, keys, the `tui` text and components | `docs/ui/TUI.md`; the design `plans/archive/Screen-TUI-Impl.md`; `framework/template/screen/ScreenTui.js`, `crates/moqui-tui` |
 
 **Quasar 2.35.1** (paths under `~/work/moquiwork/3p_other/quasar/`):
 
