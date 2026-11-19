@@ -226,6 +226,40 @@ feature("contact tasks include generic links once and omit tasks the reader cann
     },
 })
 
+// SEC-BOS-112: the requests tab keeps a request only when the request rule lets the reader see it (get#RecordLinkInfo): a
+// request for quote the contact is the customer of is Sales', not every Commons user's; one the reader filed shows
+feature("contact requests omit a request the reader may not see by the request rule (SEC-BOS-112)", {
+    when() {
+        const create = (entity, fields) => call("create#" + entity, fields)
+        const service = "ironstone.commons.ContactServices.get#ContactActivity"
+        const grant = { artifactGroupId: "BOSS_COMMONS", artifactName: service, artifactTypeEnumId: "AT_SERVICE" }
+        const hadGrant = one("moqui.security.ArtifactGroupMember", grant) != null
+        const ids = ["BOSS_TEST_CONTACT_REQ_RFQ", "BOSS_TEST_CONTACT_REQ_OWN"]
+        try {
+            sys(() => {
+                if (!hadGrant) create("moqui.security.ArtifactGroupMember", Object.assign({ inheritAuthz: "Y" }, grant))
+                ids.forEach((requestId, index) => {
+                    create("mantle.request.Request", { requestId, requestName: requestId, statusId: "ReqSubmitted", requestDate: ec.user.nowTimestamp,
+                        requestTypeEnumId: index === 0 ? "RqtQuote" : "RqtSupport" })
+                    create("mantle.request.RequestParty", { requestId, partyId: "ORG_ACME_BA", roleTypeId: "Customer", fromDate: new Date(0) })
+                    create("mantle.request.RequestParty", { requestId, partyId: index === 0 ? "EX_JOHN_DOE" : "ORG_ZIZI_JD", roleTypeId: "Reporter",
+                        fromDate: new Date(0) })
+                })
+            })
+            const out = as("joe.developer", () => call(service, { partyId: "ORG_ACME_BA", tab: "requests" }))
+            return { shown: Array.from(out.requestList || []).map((row) => row.requestId).filter((id) => ids.includes(id)), ids }
+        } finally {
+            sys(() => {
+                for (const entity of ["mantle.request.RequestParty", "mantle.request.Request"]) ec.entity.find(entity).condition("requestId", "in", ids).deleteAll()
+                if (!hadGrant) ec.entity.find("moqui.security.ArtifactGroupMember").condition(grant).deleteAll()
+            })
+        }
+    },
+    then({ shown, ids }) {
+        shown == [ids[1]]
+    },
+})
+
 feature("a personal contact shows the Private banner with its book; an employee shows the read-only directory card", {
     when() {
         return { mary: detail(MARY), joe: detail("ORG_ZIZI_JD") }

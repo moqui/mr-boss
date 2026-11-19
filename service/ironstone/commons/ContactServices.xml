@@ -604,7 +604,7 @@ along with this software (see the LICENSE.md file). If not, see
         <description>One tab of the contact record beyond the overview, for a party the user may see: calendar (the party's
             events from 30 days ago to 90 days ahead, mantle.work.EventServices.get#FullCalendarData), tasks (the WetTask work
             efforts the party is on or linked to, while the user may see each task, open ones first) and requests (the
-            requests the party is on). The consent tab is ironstone.comms.ConsentServices.get#ContactConsent.</description>
+            requests the party is on that the user may see, get#RecordLinkInfo's request rule). The consent tab is ironstone.comms.ConsentServices.get#ContactConsent.</description>
         <in-parameters>
             <parameter name="partyId" required="true"/>
             <parameter name="tab" required="true"/>
@@ -680,6 +680,10 @@ along with this software (see the LICENSE.md file). If not, see
                     const request = ec.entity.find('mantle.request.Request').condition('requestId', row.requestId).one()
                     // a confidential case is People's alone, on no contact's tab (impl-people P21)
                     if (request == null || request.requestTypeEnumId === 'RqtHrCase') continue
+                    // and only a request the user may see by the request rule, as the Tasks tab asks of a task (SEC-BOS-112)
+                    const visible = ec.service.sync().name('mantle.party.CommunicationServices.get#RecordLinkInfo').parameters({
+                        recordEntityName: 'mantle.request.Request', recordId: request.requestId, checkOnly: true}).call()
+                    if (visible?.recordVisible !== true) continue
                     requestList.push({requestId: request.requestId, requestName: request.requestName || request.requestId, statusText: status(request.statusId),
                         roleText: role(row.roleTypeId), dateText: request.requestDate ? ec.l10n.format(request.requestDate, 'yyyy-MM-dd') : '',
                         url: '/qapps/Commons/Requests/RequestDetail?requestId=' + encodeURIComponent(request.requestId)})
