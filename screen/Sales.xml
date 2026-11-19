@@ -34,7 +34,8 @@ along with this software (see the LICENSE.md file). If not, see
     <always-actions>
         <set field="appRoot" value="Sales"/>
 
-        <!-- the search settings the party and product lookups of the reports use (template/SearchTransitions.xml) -->
+        <!-- the search settings of the party and product lookups (mr-marble's PartyForms and ProductTransitions, which take the
+            app's document types, never a request's: SEC-DAT-81) -->
         <set field="searchIndexName" value="mantle"/>
         <set field="searchLinkSets" value="boss"/>
         <set field="searchProductDocType" value="MantleProduct"/>
