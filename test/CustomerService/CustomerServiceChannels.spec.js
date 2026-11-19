@@ -221,8 +221,22 @@ feature(
     }
 )
 
-feature("ChannelSessions: a customer's calls without the internal one, linked to their case; its one render (qvt)", {
+feature("ChannelSessions: a customer's calls but the internal one and other organizations', on its case; its one render (qvt)", {
     when() {
+        // a call of the customer's with Retail and one with another organization, on no case (SEC-BAP-85)
+        const call = (fromPartyId, subject) =>
+            system(() =>
+                invoke("create#mantle.party.communication.CommunicationEvent", {
+                    communicationEventTypeId: "Phone",
+                    fromPartyId,
+                    toPartyId: ids.customerId,
+                    subject,
+                    entryDate: ec.user.nowTimestamp,
+                    datetimeStarted: ec.user.nowTimestamp
+                })
+            )
+        call(ids.organizationId, "CSCH Retail's own call")
+        call(ids.otherOrganizationId, "CSCH another organization's call")
         asUser(
             users.agent,
             () => {
@@ -261,6 +275,8 @@ feature("ChannelSessions: a customer's calls without the internal one, linked to
     },
     then({sessions, otherCustomer, page}) {
         sessions.some(row => row.requestId == state.mailCase && row.durationText == "6 min" && row.directionText == "Out")
+        sessions.some(row => row.subject == "CSCH Retail's own call")
+        !sessions.some(row => row.subject == "CSCH another organization's call")
         !sessions.some(row => row.audienceText == "Internal")
         otherCustomer.includes("RECORD_UNAVAILABLE")
         page.status == 200

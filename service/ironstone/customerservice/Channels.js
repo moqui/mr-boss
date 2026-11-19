@@ -216,25 +216,28 @@ function withPresentBlock(options, emailTextBlockId) {
 // The calls, chats and mail of a customer the user serves (and its contacts), through Mantle's
 // find#PartyCommunicationEvents with the customer audience (no note, internal message or call logged as internal); with no
 // customer, those filed on the cases the user sees (most recent cases first). By channel, agent, period and linked or not;
-// each with its case when the user sees it.
+// each with its case when the user sees it. A customer's are only those its Activities show (SEC-BAP-85).
 const channelTypes = {phone: ["Phone"], chat: ["Chat"], email: ["Email"]}
 function findSessions(p) {
     const userScope = cs.required()
+    const vendors = cs.vendorIds(userScope)
     const types = channelTypes[p.channel] || ["Phone", "Chat", "Email"]
     const fromMs = blank(p.fromDate) ? null : ms(p.fromDate)
     const thruMs = blank(p.thruDate) ? null : ms(p.thruDate)
     let eventIds = []
     let customerPartyId = null
+    let people = []
     if (!blank(p.customerPartyId)) {
         if (!cs.customerOf(userScope, p.customerPartyId))
             denied("RECORD_UNAVAILABLE", "Customer " + p.customerPartyId + " is not available")
         customerPartyId = p.customerPartyId
-        const partyIds = [customerPartyId].concat(
+        people = [customerPartyId].concat(
             rows("mantle.party.PartyRelationship", {toPartyId: customerPartyId})
                 .filter(row => lib.active(row) && ["PrtContact", "PrtEmployee"].includes(row.relationshipTypeEnumId))
                 .map(row => row.fromPartyId)
         )
-        for (const partyId of Array.from(new Set(partyIds)).slice(0, 20)) {
+        people = Array.from(new Set(people)).slice(0, 20)
+        for (const partyId of people) {
             const found = lib.call("mantle.party.CommunicationServices.find#PartyCommunicationEvents", {
                 partyId,
                 audience: "customer",
@@ -295,6 +298,15 @@ function findSessions(p) {
             })
         if (p.linked === "Y" && !links.length) continue
         if (p.linked === "N" && links.length) continue
+        // a customer's sessions as its Activities (Customers.js customerActivities, SEC-BAP-85): an event on a case the user
+        // sees, or on no case and with the user's organizations (its other party is one of them or of their people); another
+        // organization's or app's mail and calls with a shared customer, and an event on a case the user does not see, are
+        // left out
+        if (customerPartyId) {
+            if (links.length && !visible) continue
+            const other = people.includes(event.fromPartyId) ? event.toPartyId : event.fromPartyId
+            if (!visible && !cs.ofOrganizations(vendors, other)) continue
+        }
         const outbound = cs.isInternal(event.fromPartyId) || isStaff(event.fromPartyId)
         const participant = outbound ? event.toPartyId : event.fromPartyId
         const minutes =

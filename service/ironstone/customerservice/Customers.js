@@ -127,15 +127,7 @@ function creditOf(userScope, customerPartyId) {
 }
 
 // ===== Activities (crosscut §3.2 Customer Service row) =====
-// A party of the user's organizations: one of them, or a person with a current relationship to one (an employee, agent
-// or member).
-function ofOrganizations(vendors, partyId) {
-    if (!partyId) return false
-    if (vendors.includes(partyId)) return true
-    return rows("mantle.party.PartyRelationship", {fromPartyId: partyId}).some(
-        row => vendors.includes(row.toPartyId) && lib.active(row)
-    )
-}
+const ofOrganizations = cs.ofOrganizations
 // get#CustomerActivities: the customer's and its contact people's communication events and its activities the user may
 // see, read only, newest first. An event shows when it is on a case the user sees, or it is with the user's organizations
 // (its other party is one of them or of their people) and on no case the user does not see; a shared customer's other

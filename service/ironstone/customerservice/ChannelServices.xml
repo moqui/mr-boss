@@ -34,7 +34,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="find" noun="ChannelSessions" allow-remote="false">
         <description>ChannelSessions' SessionFind and SessionList: the calls, chats and mail of a customer the user serves and
             its contacts (Mantle's find#PartyCommunicationEvents with the customer audience: no note, internal message or
-            internal call), or with no customer those filed on the cases the user sees; by channel (phone, chat, email),
+            internal call), only those on a case the user sees or, on no case, with the user's organizations or their people
+            (as Customer360's Activities, SEC-BAP-85), or with no customer those filed on the cases the user sees; by channel (phone, chat, email),
             agent, period and linked or not, newest first, at most 100, each with its case when the user sees it. Refuses a
             customer the user does not serve (RECORD_UNAVAILABLE).</description>
         <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>

@@ -207,6 +207,15 @@ function vendorIds(userScope) {
     if (userScope.ownerIds) return userScope.ownerIds
     return rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(row => row.partyId)
 }
+// A party of the user's organizations (vendorIds): one of them, or a person with a current relationship to one (an
+// employee, agent or member).
+function ofOrganizations(vendors, partyId) {
+    if (!partyId) return false
+    if (vendors.includes(partyId)) return true
+    return rows("mantle.party.PartyRelationship", {fromPartyId: partyId}).some(
+        row => vendors.includes(row.toPartyId) && lib.active(row)
+    )
+}
 
 // ===== customers =====
 // A customer the user may serve (§2, design §1): a Customer-role party that is not an internal organization, not someone's
@@ -1187,6 +1196,7 @@ const operations = {sharedContext, checkRecord, search, choices}
     queueName,
     queueOwner,
     vendorIds,
+    ofOrganizations,
     likeText,
     // whether a kind has its Customer Service screen yet (get#RecordLink leaves a customer to Commons until it has)
     hasScreen: kind => !!recordKinds[kind]?.destination,
