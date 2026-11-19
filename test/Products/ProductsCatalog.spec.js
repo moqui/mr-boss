@@ -378,11 +378,15 @@ feature("clone preserves scoped IDs and independently copied document bytes, met
                 original,
                 text: detail?.contentRows[0]
                     ? ec.resource.getLocationReference(detail.contentRows[0].contentLocation).getText()
-                    : null
+                    : null,
+                // the copy's file is in the new product's content folder, the only place Shop reads its text from (SEC-PSS-82)
+                folder:
+                    String(ec.factory.getConfValue("mantle@content-root") || "dbresource://mantle/content").replace(/\/+$/, "") +
+                    "/product/PRD_P2_EQUIPMENT_COPY/"
             }
         })
     },
-    then({created, scoped, content, meter, maintenance, cloned, detail, original, text}) {
+    then({created, scoped, content, meter, maintenance, cloned, detail, original, text, folder}) {
         ;[created, scoped, content, meter, maintenance, cloned].every(out => out.error == "")
         detail.otherIdentifierRows.length == 1
         detail.otherIdentifierRows[0].idValue != "P2-SCOPED"
@@ -390,6 +394,7 @@ feature("clone preserves scoped IDs and independently copied document bytes, met
         detail.maintenanceRows[0].intervalProductMeterId == detail.meterRows[0].productMeterId
         detail.contentRows[0].contentLocation != original.contentRows[0].contentLocation
         text == "Independent clone document"
+        String(detail.contentRows[0].contentLocation).startsWith(folder)
     }
 })
 
