@@ -497,10 +497,7 @@ function choices(p) {
             // organizations and people with a customer or vendor role, shared (owned by _NA_) or of the user's organizations,
             // never another user's private contact; a selected id outside them answers nothing (SEC-BAP-102)
             const owners = organizationIds.concat(["_NA_"])
-            const ownerCondition = cf.makeCondition(
-                [cf.makeCondition("ownerPartyId", "in", owners), cf.makeCondition("ownerPartyId", "is-null", null)],
-                "or"
-            )
+            const ownerCondition = cf.makeCondition("ownerPartyId", "in", owners)
             let query = find("mantle.party.PartyDetailAndRole")
                 .condition("roleTypeId", "in", ["Customer", "Vendor", "Supplier"])
                 .condition("privateOwnerUserId", "is-null", null)
@@ -517,7 +514,7 @@ function choices(p) {
                 id => {
                     const party = one("mantle.party.Party", {partyId: id})
                     if (!party || party.privateOwnerUserId) return null
-                    if (party.ownerPartyId && !owners.includes(party.ownerPartyId)) return null
+                    if (!owners.includes(party.ownerPartyId)) return null
                     const names = partyNames([id])
                     return names[id] ? {value: id, label: names[id]} : null
                 }

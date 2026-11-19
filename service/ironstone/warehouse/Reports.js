@@ -179,13 +179,13 @@ function choices(p) {
             const options = Array.from(query.list()).map(option)
             return selected(options, row => userScope.unrestricted || userScope.organizationPartyIds.includes(row.partyId))
         },
-        // parties shared (owned by _NA_) or of the user's organizations, as the root's MANTLE_USER_ORG filter reads them, never
+        // parties shared (owned by _NA_) or of the user's organizations, as the root's MANTLE_USER_ORG filter reads them (a party
+        // with no owner is none of them, as the filter has it), never
         // another user's private contact; a selected id outside them answers nothing (SEC-BAP-102)
         parties: () => {
             const organizationIds = userScope.organizationPartyIds || []
             const mine = row =>
                 (userScope.unrestricted ||
-                    !row.ownerPartyId ||
                     row.ownerPartyId === "_NA_" ||
                     organizationIds.includes(row.ownerPartyId) ||
                     organizationIds.includes(row.partyId)) &&
@@ -196,7 +196,6 @@ function choices(p) {
                     factory.makeCondition(
                         [
                             factory.makeCondition("ownerPartyId", "in", organizationIds.concat(["_NA_"])),
-                            factory.makeCondition("ownerPartyId", "is-null", null),
                             factory.makeCondition("partyId", "in", organizationIds.length ? organizationIds : ["_NONE_"])
                         ],
                         "or"
