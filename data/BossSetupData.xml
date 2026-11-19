@@ -301,7 +301,11 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
         </authz>
-        <authz artifactAuthzId="BOSS_PRODUCTS_SERVICES_READ" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+        <!-- the services' own frame takes this record's filter sets (SEC-BOS-104), so it carries the root's -->
+        <authz artifactAuthzId="BOSS_PRODUCTS_SERVICES_READ" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
     <authz artifactAuthzId="BOSS_PRODUCTS_SERVICES_APPADMIN" userGroupId="BOSS_PRODUCTS_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
         <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
         <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
@@ -4754,7 +4758,8 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="ironstone.insights.FlowMapServices.restore#Map" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
         <artifacts artifactName="ironstone.insights.FlowMapServices.delete#Map" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_FLOW_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
-                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/><filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <!-- The flow targets (ironstone.insights.FlowTarget): the built apps' worklist routes a map's step may open, each with the
         parameters it takes (owner contracts, each in its owner's design; a registration grants nothing, the link is answered
@@ -5441,7 +5446,7 @@ along with this software (see the LICENSE.md file). If not, see
                 nameIsPattern="Y" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_PPL_ACCESS_REQUEST_ALL" userGroupId="ALL_USERS" authzTypeEnumId="AUTHZT_ALLOW"
                 authzActionEnumId="AUTHZA_ALL">
-            <filters entityFilterSetId="MANTLE_USER_ORG"/></authz>
+            <filters entityFilterSetId="MANTLE_USER_ORG"/><filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <!-- impl-people P8 (design-people §1.1, §3 SelfService; F28): a self-service employee opens their own self-service without the
         People launcher, as every BOSS user opens Admin's settings index: a non-inheritable ALLOW on the shared self-service screen
