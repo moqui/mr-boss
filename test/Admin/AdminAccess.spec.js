@@ -498,7 +498,9 @@ feature(
             if (!identityChoices.includes(ids.organizationId) || identityChoices.includes(ids.otherOrganizationId))
                 problems.push(`the identity operator's organizations: ${identityChoices}`)
             // the choice list is a page: other specs add organizations in a full run, so each is asked for by its selection
-            // the administrator's are its own organizations, not Services' (SEC-BAP-86)
+            // the administrator's are its own organizations, Retail's, not Services' (SEC-BAP-86)
+            if (!choices(users.admin, ids.organizationId).includes(ids.organizationId))
+                problems.push("the administrator's organizations lack Retail")
             if (choices(users.admin, ids.otherOrganizationId).includes(ids.otherOrganizationId))
                 problems.push("the administrator's organizations include Services")
             return {problems}

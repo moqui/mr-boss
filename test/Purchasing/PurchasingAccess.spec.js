@@ -245,6 +245,26 @@ feature("each group holds exactly the capabilities of its permissions and areas,
         if (missing.length) problems.push(`the administrator lacks ${missing}`)
         // the administrator works in its own organizations: every one only with PURCHASING_ALL_ORGANIZATIONS (SEC-BAP-86)
         if (admin.allOrganizations !== false) problems.push("the administrator is in every organization")
+        // with the permission granted to its group, the administrator reaches every organization with none active
+        system(() =>
+            invoke("store#moqui.security.UserGroupPermission", {
+                userGroupId: "BOSS_PURCHASING_ADMIN",
+                userPermissionId: "PURCHASING_ALL_ORGANIZATIONS",
+                fromDate: new Date("2000-01-01T00:00:00Z")
+            })
+        )
+        try {
+            if (asUser(users.admin, () => invoke(access + "get#SharedContext", {})).allOrganizations !== true)
+                problems.push("the administrator with PURCHASING_ALL_ORGANIZATIONS is not in every organization")
+        } finally {
+            system(() =>
+                invoke("delete#moqui.security.UserGroupPermission", {
+                    userGroupId: "BOSS_PURCHASING_ADMIN",
+                    userPermissionId: "PURCHASING_ALL_ORGANIZATIONS",
+                    fromDate: new Date("2000-01-01T00:00:00Z")
+                })
+            )
+        }
         return {problems}
     },
     then({problems}) {
