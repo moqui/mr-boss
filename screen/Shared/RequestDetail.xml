@@ -552,7 +552,7 @@ along with this software (see the LICENSE.md file). If not, see
                     + fact('Priority', enc(request.priorityText || '—'), '')
                     + fact('Due', enc(request.responseRequiredText ? String(request.responseRequiredText).replace(/ \d{1,2}:\d{2} [AP]M$/, '') : '—'), '')
                     + fact('Assignee', request.assigneeName ? person(request.assigneeName, request.assigneeUserId) : enc(L('Unassigned')), request.assigneeName ? '' : 'text-warning')
-                    + fact('Filed by', enc(request.filedByName || '—'), '')
+                    + fact('Filed by', enc(request.filedByName || '—') + (pd.senderUnverified ? ' <span class="text-warning">(' + enc(L('sender not verified')) + ')</span>' : ''), '')
                     + fact('Date', enc(request.requestDateText || '—'), '')
                     + fact('Channel', enc(pd.channelLabel || ''), '')
                     + (workList.length ? fact('Work', enc(workText), '') : '')
