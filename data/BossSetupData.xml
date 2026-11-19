@@ -718,7 +718,7 @@ along with this software (see the LICENSE.md file). If not, see
     <ironstone.commons.ContactServices.migrate-NotDuplicateSettings/>
 
     <!-- Files (design-drawers-commons.md §9 Records, impl-drawers-commons.md M8, R25): the Records drive, a view over the record
-        attachment folders Mantle's save#*ContentFile services write under the mantle.content.root preference (the default
+        attachment folders Mantle's save#*ContentFile services write under the mantle@content-root setting (the default
         dbresource://mantle/content; a deployment that moves the root changes rootLocation too). Every internal user may view it (the
         BOSS_USERS member row), and FileServices (get#DriveAccess, through the STRT_RECORD_VISIBLE_SERVICE hook above) lets a user
         into a record's folder only when the record is one the user may see (R5, R28), so the drive shows each user only their

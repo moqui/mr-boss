@@ -159,7 +159,7 @@ along with this software (see the LICENSE.md file). If not, see
                     })
                 } else if (part === 'team') {
                     if (ec.entity.find('moqui.resource.ResourceDrive').condition('driveId', 'BOSS_DEMO_TEAM').one() != null) return
-                    const root = String(ec.user.getPreference('moqui.drive.root') || 'dbresource://drive').replace(/\/+$/, '')
+                    const root = String(ec.factory.getConfValue('resource-facade@drive-root') || 'dbresource://drive').replace(/\/+$/, '')
                     make('moqui.resource.ResourceDrive', {driveId: 'BOSS_DEMO_TEAM', driveName: 'Team', description: 'The team\'s shared files: handbook, rotas, logos',
                         driveKindEnumId: 'RdkShared', rootLocation: `${root}/shared/BOSS_DEMO_TEAM`, ownerUserId: ids.john, quotaBytes: 50 * 1048576,
                         createdDate: new Date(nowMs - 35 * day)})
@@ -220,9 +220,9 @@ along with this software (see the LICENSE.md file). If not, see
                     link('BOSS_DEMO_LINK_DROP', 'Projects/Office move/Quotes', true, 'RspUpload', 'BossDemoQuoteDrop2026', 'Quotes from movers', null, null, 0)
                     link('BOSS_DEMO_LINK_PLAN', 'Projects/Office move/Plan.md', false, 'RspView', 'BossDemoOfficePlan2026', 'The move plan', null, 14, 1)
                 } else if (part === 'records') {
-                    // the records drive's tree (mantle.content.root), written as the user: the drive's own row may load after
+                    // the records drive's tree (mantle@content-root), written as the user: the drive's own row may load after
                     // this demo (data files load by name), so the files go straight into the tree the drive shows
-                    const root = String(ec.user.getPreference('mantle.content.root') || 'dbresource://mantle/content').replace(/\/+$/, '')
+                    const root = String(ec.factory.getConfValue('mantle@content-root') || 'dbresource://mantle/content').replace(/\/+$/, '')
                     const options = 'request/BOSS_DEMO_REQUEST/content_BOSS_DEMO_RC_OPTIONS/calendar-options.txt'
                     if (ec.resource.getLastChange(`${root}/${options}`) == null) return
                     if (ec.resource.getLastChange(`${root}/request/BOSS_DEMO_REQUEST/signed-quote.txt`) != null) return

@@ -539,7 +539,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 [content.typeField]: contentTypeEnumId || null}).call()
                             if (!ec.message.hasError()) {
                                 const rowId = out[content.idField]
-                                const root = ec.user.getPreference('mantle.content.large.root') || 'dbresource://mantle/content'
+                                const root = ec.factory.getConfValue('mantle@content-large-root') || 'dbresource://mantle/content'
                                 const location = `${root}/facility/${recordId}/content_${rowId}/${fileName}`
                                 const stream = file.getInputStream()
                                 try { ec.resource.getLocationReference(location).putStream(stream) } finally { if (stream && stream.close) stream.close() }
@@ -842,7 +842,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const rows = Array.from(ec.entity.find(content.entityName).condition(content.keyField, recordId).list())
                 const folder = ec.service.sync().name('ironstone.commons.DriveServices.get#RecordFolder').parameters({recordEntityName: entityName, recordId: recordId,
                     locationList: rows.map((row) => row.contentLocation).filter((location) => location)}).call()
-                const root = folder.rootLocation || String(ec.user.getPreference('mantle.content.root') || 'dbresource://mantle/content').replace(/\/+$/, '')
+                const root = folder.rootLocation || String(ec.factory.getConfValue('mantle@content-root') || 'dbresource://mantle/content').replace(/\/+$/, '')
                 if (!folder.folderPath) { ec.message.addError(ec.resource.expand('${recordName} has no folder for files yet: upload a file first', '', {recordName: recordName})); return }
                 const safe = (name) => String(name || 'file').replace(/[\/\\?#%:*"<>|]/g, '_').slice(0, 160)
                 // each file the user may open, read in a transaction of its own (a file that is refused does not stop the others)

@@ -104,6 +104,39 @@ feature("an upload to the task goes through create#WorkEffortContent", {
     },
 })
 
+// SEC-BAP-82: the content roots are Mantle's settings (mantle@content-root, mantle@content-large-root); a user's own
+// preference of the old keys, which any user may set, moves no file
+feature("an upload is kept under the content root settings, whatever the user's own content-root preferences say", {
+    when() {
+        const moved = "runtime://tmp/spec-record-files-moved"
+        ec.user.setPreference("mantle.content.root", moved)
+        ec.user.setPreference("mantle.content.large.root", moved)
+        try {
+            const uploaded = call_("upload", Object.assign({ contentTypeEnumId: "WectSupportingMedia",
+                contentFile: [uploadedFile("preference-root.txt", "Text"), uploadedFile("preference-root.png", "PNG", "image/png", true)] }, task), "post")
+            const facility = call_("upload", { recordEntity: "mantle.facility.Facility", recordId: "ZIRET_WH",
+                contentFile: uploadedFile("preference-root-dock.png", "PNG", "image/png", true) }, "post")
+            const rows = list("mantle.work.effort.WorkEffortContent", { workEffortId: "BOSS_DEMO_TASK" })
+                .filter((item) => /\/preference-root\.(txt|png)$/.test(String(item.contentLocation || "")))
+            const dock = list("mantle.facility.FacilityContent", { facilityId: "ZIRET_WH" })
+                .find((item) => String(item.contentLocation || "").endsWith("/preference-root-dock.png"))
+            return { uploaded, facility, rows, dock, moved: sys(() => ec.resource.getLocationReference(moved).getExists()) }
+        } finally {
+            ec.user.setPreference("mantle.content.root", null)
+            ec.user.setPreference("mantle.content.large.root", null)
+        }
+    },
+    then({ uploaded, facility, rows, dock, moved }) {
+        uploaded.status == 200
+        uploaded.errors == ""
+        rows.length == 2
+        rows.every((row) => row.contentLocation.startsWith("dbresource://mantle/content/work/BOSS_DEMO_TASK/"))
+        facility.errors == ""
+        dock.contentLocation.startsWith("dbresource://mantle/content/facility/ZIRET_WH/content_")
+        !moved
+    },
+})
+
 feature("download answers the file; inline only for a picture or a PDF", {
     when() {
         const data = call_("filesData", request)

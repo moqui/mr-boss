@@ -1239,8 +1239,8 @@ members, a quota and a storage chosen when it is created:
 
 - **My files**: each user's personal drive, made on first use, on the database-backed resource
   tree: every file and folder is a `moqui.resource.DbResource` with its bytes in `DbResourceFile`
-  and its past versions in `DbResourceFileHistory`. Its root is under the `moqui.drive.root`
-  preference (`dbresource://drive` by default); a deployment that wants personal files on disk
+  and its past versions in `DbResourceFileHistory`. Its root is under the
+  `resource-facade@drive-root` setting (`dbresource://drive` by default); a deployment that wants personal files on disk
   or in object storage points that at another resource location, and the screens do not change.
 - **Folder drives**: shared drives on the same tree, under the same root, with the same per-file
   versions.
@@ -1254,7 +1254,7 @@ members, a quota and a storage chosen when it is created:
 - **Records**: a system drive over the record attachments, in the layout Mantle already writes:
   each `save#*ContentFile` service stores a record's file at
   `dbresource://mantle/content/<type>/<id>/content_<contentId>/<file>` (the root is the
-  `mantle.content.root` preference) and the record's `*Content` row (`PartyContent`,
+  `mantle@content-root` setting) and the record's `*Content` row (`PartyContent`,
   `WorkEffortContent`, `RequestContent`, `OrderContent`, …) points at it. The browser's
   **Records** section is a view over those type folders, named by record type, and the
   `record-files` element is the same component scoped to one record; no file moves. The type
