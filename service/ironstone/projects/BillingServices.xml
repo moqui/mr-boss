@@ -1404,9 +1404,29 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
 
+    <service verb="get" noun="ProjectVendors" allow-remote="false">
+        <description>Internal (SEC-BOS-95): the organizations a project sells from, whose sales orders it may fulfil and whose orders
+            Projects shows through it: its owner (WorkEffort ownerPartyId) and its current Vendor and VendorBillFrom parties. Read
+            with authorization off; the caller has checked the project.</description>
+        <in-parameters><parameter name="workEffortId" required="true"/></in-parameters>
+        <out-parameters><parameter name="vendorPartyIdList" type="List"/></out-parameters>
+        <actions><script><![CDATA[
+            const wasDisabled = ec.artifactExecution.disableAuthz()
+            try {
+                const ids = new Set()
+                const project = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).one()
+                if (project?.ownerPartyId) ids.add(project.ownerPartyId)
+                for (const row of ec.entity.find('mantle.work.effort.WorkEffortParty').condition('workEffortId', workEffortId).condition('roleTypeId', 'in', ['Vendor', 'VendorBillFrom'])
+                        .conditionDate('fromDate', 'thruDate', null).selectField('partyId').list()) ids.add(row.partyId)
+                vendorPartyIdList = Array.from(ids)
+            } finally { if (!wasDisabled) ec.artifactExecution.enableAuthz() }
+        ]]></script></actions>
+    </service>
+
     <service verb="search" noun="OrderLines" allow-remote="false">
         <description>The order lines a project may fulfil (design-projects.md §4 ProjectMoneyStep's order line, Commercial): the lines of
-            sales orders to the project's client not cancelled, rejected or completed, not yet the project's, by the order id or the
+            sales orders from the project's organization (get#ProjectVendors: never another organization's order to a shared client,
+            SEC-BOS-95) to the project's client not cancelled, rejected or completed, not yet the project's, by the order id or the
             line's or order's words, as drop-down options [{value: 'orderId:orderItemSeqId', label}], up to 20. For one who manages money
             and manages the project; else none.</description>
         <in-parameters>
@@ -1424,7 +1444,10 @@ along with this software (see the LICENSE.md file). If not, see
                 const clients = Array.from(ec.entity.find('mantle.work.effort.WorkEffortParty').condition('workEffortId', workEffortId).condition('roleTypeId', 'in', ['Customer', 'CustomerBillTo'])
                         .conditionDate('fromDate', 'thruDate', null).list()).map((row) => row.partyId)
                 if (!clients.length) return
-                const parts = Array.from(ec.entity.find('mantle.order.OrderPart').condition('customerPartyId', 'in', clients)
+                const vendors = Array.from(ec.service.sync().name('ironstone.projects.BillingServices.get#ProjectVendors').parameter('workEffortId', workEffortId)
+                        .call()?.vendorPartyIdList || [])
+                if (!vendors.length) return
+                const parts = Array.from(ec.entity.find('mantle.order.OrderPart').condition('customerPartyId', 'in', clients).condition('vendorPartyId', 'in', vendors)
                         .condition('statusId', 'not-in', ['OrderCancelled', 'OrderRejected', 'OrderCompleted']).orderBy('-orderId').limit(200).list())
                 const linked = new Set(Array.from(ec.entity.find('mantle.order.OrderItemWorkEffort').condition('workEffortId', workEffortId).list()).map((row) => row.orderId + ':' + row.orderItemSeqId))
                 const words = String(term || '').trim().toLowerCase()
@@ -1449,7 +1472,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="link" noun="OrderLine">
         <description>Links (or with remove unlinks) an order line to a project (mantle.work.ProjectServices.link#ProjectOrderItem): orderLine
             is 'orderId:orderItemSeqId' (the search's value), or orderId and orderItemSeqId. For one who manages money and manages the
-            project.</description>
+            project; a line is linked only when its order part is from the project's organization (get#ProjectVendors, SEC-BOS-95).</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
             <parameter name="orderLine"/>
@@ -1467,9 +1490,19 @@ along with this software (see the LICENSE.md file). If not, see
             if (orderLine) { const parts = String(orderLine).split(':'); orderId = parts[0]; orderItemSeqId = parts[1] }
             if (!orderId || !orderItemSeqId) { ec.message.addError(L('Choose the order line')); return }
             const wasDisabled = ec.artifactExecution.disableAuthz()
-            try { ec.service.sync().name('mantle.work.ProjectServices.link#ProjectOrderItem').parameters({workEffortId: workEffortId, orderId: orderId,
-                orderItemSeqId: orderItemSeqId, remove: remove}).call() }
-            finally { if (!wasDisabled) ec.artifactExecution.enableAuthz() }
+            try {
+                // another organization's order to a shared client is not found, as the search does not offer it (SEC-BOS-95)
+                if (!remove) {
+                    const item = ec.entity.find('mantle.order.OrderItem').condition({orderId: orderId, orderItemSeqId: orderItemSeqId}).one()
+                    const part = item ? ec.entity.find('mantle.order.OrderPart').condition({orderId: orderId, orderPartSeqId: item.orderPartSeqId}).one() : null
+                    const vendors = Array.from(ec.service.sync().name('ironstone.projects.BillingServices.get#ProjectVendors').parameter('workEffortId', workEffortId)
+                            .call()?.vendorPartyIdList || [])
+                    if (!part || !vendors.includes(part.vendorPartyId)) {
+                        ec.message.addError(ec.resource.expand('Order line ${orderId} ${orderItemSeqId} not found', '', {orderId, orderItemSeqId})); return }
+                }
+                ec.service.sync().name('mantle.work.ProjectServices.link#ProjectOrderItem').parameters({workEffortId: workEffortId, orderId: orderId,
+                orderItemSeqId: orderItemSeqId, remove: remove}).call()
+            } finally { if (!wasDisabled) ec.artifactExecution.enableAuthz() }
             if (!ec.message.hasError()) message = ec.resource.expand(remove ? 'Order line ${orderId} ${orderItemSeqId} is no longer the project\'s'
                 : 'Order line ${orderId} ${orderItemSeqId} linked to the project', '', {orderId, orderItemSeqId})
         ]]></script></actions>
@@ -1579,7 +1612,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="get" noun="OrderAccess" allow-remote="false">
         <description>Whether the user may see an order in Projects: one who manages money and sees one of the projects it is linked to
-            (OrderItemWorkEffort to a project or one of its work efforts); else "not available" as an error, or with need none only the
+            (OrderItemWorkEffort to a project or one of its work efforts) by a line of an order part from that project's organization
+            (get#ProjectVendors: a link to another organization's order opens nothing, SEC-BOS-95); else "not available" as an error, or with need none only the
             answer. projectIds: those projects; canManage: the user manages one of them.</description>
         <in-parameters>
             <parameter name="orderId" required="true"/>
@@ -1597,10 +1631,20 @@ along with this software (see the LICENSE.md file). If not, see
                 const wasDisabled = ec.artifactExecution.disableAuthz()
                 try {
                     const ids = new Set()
+                    const vendorOfPart = {}
+                    for (const part of ec.entity.find('mantle.order.OrderPart').condition('orderId', orderId).list()) vendorOfPart[part.orderPartSeqId] = part.vendorPartyId
+                    const partOfItem = {}
+                    for (const item of ec.entity.find('mantle.order.OrderItem').condition('orderId', orderId).selectField('orderItemSeqId').selectField('orderPartSeqId').list())
+                        partOfItem[item.orderItemSeqId] = item.orderPartSeqId
+                    const vendorsOf = {}
                     for (const link of ec.entity.find('mantle.order.OrderItemWorkEffort').condition('orderId', orderId).list()) {
                         const effort = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', link.workEffortId).one()
                         if (!effort) continue
-                        ids.add(effort.workEffortTypeEnumId === 'WetProject' ? effort.workEffortId : effort.rootWorkEffortId)
+                        const projectId = effort.workEffortTypeEnumId === 'WetProject' ? effort.workEffortId : effort.rootWorkEffortId
+                        if (!projectId) continue
+                        if (!(projectId in vendorsOf)) vendorsOf[projectId] = Array.from(ec.service.sync().name('ironstone.projects.BillingServices.get#ProjectVendors')
+                                .parameter('workEffortId', projectId).call()?.vendorPartyIdList || [])
+                        if (vendorsOf[projectId].includes(vendorOfPart[partOfItem[link.orderItemSeqId]])) ids.add(projectId)
                     }
                     for (const id of ids) {
                         if (!id) continue
