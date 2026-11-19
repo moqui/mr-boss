@@ -174,19 +174,26 @@ feature("remove takes the file's row and the file away", {
     },
 })
 
-feature("a record type without a content entity takes no file, with a clear error", {
+feature("a record type without a content entity takes no file, with a clear error; an entity that is no record type shows none (SEC-BOS-87)", {
     allowMessageErrors: true,
     when() {
-        const record = { recordEntity: "moqui.basic.Enumeration", recordId: "RqtSupport" }
+        const record = { recordEntity: "moqui.security.UserGroup", recordId: "ADMIN" }
+        const notRecord = { recordEntity: "moqui.basic.Enumeration", recordId: "RqtSupport" }
         return { data: call_("filesData", record),
-            refused: call_("upload", Object.assign({ contentFile: uploadedFile("x.txt", "x") }, record), "post") }
+            refused: call_("upload", Object.assign({ contentFile: uploadedFile("x.txt", "x") }, record), "post"),
+            notRecord: call_("filesData", notRecord),
+            notRecordUpload: call_("upload", Object.assign({ contentFile: uploadedFile("x.txt", "x") }, notRecord), "post") }
     },
-    then({ data, refused }) {
+    then({ data, refused, notRecord, notRecordUpload }) {
         data.status == 200
         data.json.visible
         !data.json.hasContent
         refused.status == 500
         refused.json.errors.includes("has no files: its record type has no content entity")
+        notRecord.status == 200
+        !notRecord.json.visible
+        notRecordUpload.status == 500
+        notRecordUpload.json.errors.includes("is not a record type")
     },
 })
 
