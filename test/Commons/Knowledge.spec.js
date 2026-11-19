@@ -390,9 +390,19 @@ feature("Joe Developer may not read the restricted page or the members-only spac
             security: get("page", { wikiSpaceId: "BOSSKB", pagePath: "Policies/Security" }),
             lead: get("page", { wikiSpaceId: "BOSSLEAD", pagePath: "" }), leadTree: get("children", { wikiSpaceId: "BOSSLEAD", pagePath: "" }),
             search: get("search", { text: "Security" }),
-            release: page({ wikiSpaceId: "BOSSKB", pagePath: "Release process" }) }))
+            release: page({ wikiSpaceId: "BOSSKB", pagePath: "Release process" }),
+            // the restricted page's file named with its extension is no page past the page's own rules (SEC-BOS-85)
+            byFile: get("page", { wikiSpaceId: "BOSSKB", pagePath: "Policies/Security.md" }),
+            saveByFile: (() => {
+                const file = sys(() => call("org.moqui.resource.WikiServices.get#WikiPageFile", { wikiSpaceId: "BOSSKB", pagePath: "Policies/Security" }).pageReference)
+                const before = sys(() => file.getText())
+                const saved = post("savePage", { wikiSpaceId: "BOSSKB", pagePath: "Policies/Security.md", pageText: "Overwritten by Joe" })
+                const after = sys(() => file.getText())
+                if (after !== before) sys(() => file.putText(before))
+                return { errors: saved.errors, unchanged: after === before }
+            })() }))
     },
-    then({ setup, policies, security, lead, leadTree, search, release }) {
+    then({ setup, policies, security, lead, leadTree, search, release, byFile, saveByFile }) {
         !setup.json.spaceList.some((space) => space.wikiSpaceId === "BOSSLEAD")
         setup.json.spaceList.some((space) => space.wikiSpaceId === "BOSSKB" && space.canUpdate && !space.canAdmin)
         policies == ["Expenses", "Travel"]
@@ -401,6 +411,10 @@ feature("Joe Developer may not read the restricted page or the members-only spac
         lead.errors.includes("Page not found")
         !leadTree.json.childList
         !search.json.pageList.some((hit) => hit.pagePath === "Policies/Security")
+        byFile.errors.includes("Page not found")
+        !byFile.output.includes("door codes")
+        saveByFile.errors.includes("Page not found")
+        saveByFile.unchanged
         // a reader of the page who is not its reviewer may not decide its review
         release.reviews.length == 1
         !release.reviews[0].canDecide
