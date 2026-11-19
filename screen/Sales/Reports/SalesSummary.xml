@@ -129,24 +129,24 @@ along with this software (see the LICENSE.md file). If not, see
                             data: invoiceCostPercentList} : null,
             ].filter(Boolean)
 
-            // the summary charts, as Chart.js configs
+            // the summary charts, as Chart.js 4 configs (the framework's own, in every render mode: SEC-BAP-137)
             const lineConfig = (labels, datasets) => JSON.stringify({type:'line', data:{labels:labels, datasets:datasets},
-                    options:{scales:{yAxes:[{position:'left', id:'leftSide', ticks:{beginAtZero:true}},
-                        {position:'right', id:'rightSide', ticks:{beginAtZero:true}, gridLines:{drawOnChartArea:false}}]}, maintainAspectRatio:false}})
+                    options:{scales:{leftSide:{position:'left', beginAtZero:true},
+                        rightSide:{position:'right', beginAtZero:true, grid:{drawOnChartArea:false}}}, maintainAspectRatio:false}})
             summaryCharts = [
                 {id:'CountSummaryChart', config:lineConfig(orderLabelList, countSummaryDatasets)},
                 {id:'OrderAmountChart', config:lineConfig(orderLabelList, orderAmountsDatasets)},
                 {id:'InvoiceMarginChart', config:JSON.stringify({type:'bar', data:{labels:invoiceLabelList, datasets:invoiceMarginDatasets},
-                        options:{scales:{yAxes:[{ticks:{beginAtZero:true}}]}, maintainAspectRatio:false}})},
+                        options:{scales:{y:{beginAtZero:true}}, maintainAspectRatio:false}})},
                 {id:'DiscountCostChart', config:JSON.stringify({type:'line', data:{labels:invoiceLabelList, datasets:discountCostDatasets},
-                        options:{scales:{yAxes:[{ticks:{beginAtZero:true}}]}, maintainAspectRatio:false}})}
+                        options:{scales:{y:{beginAtZero:true}}, maintainAspectRatio:false}})}
             ]
 
             // the stats panels: this and last period, each against the one before and the average, and a trend chart
             const trendConfig = (labels, data, maData, big) => JSON.stringify({type:'line', data:{labels:labels, datasets:
                     [{backgroundColor:'rgba(49, 112, 143, 0.9)', borderColor:'rgba(49, 112, 143, 0.9)', fill:false, data:data}].concat(
                     maPeriods > 0 && maData && maData.length ? [{backgroundColor:null, borderColor:'rgba(240, 173, 78, 0.5)', fill:false, data:maData}] : [])},
-                    options:{legend:{display:false}, scales:{xAxes:[{display:big}]}, maintainAspectRatio:false}})
+                    options:{plugins:{legend:{display:false}}, scales:{x:{display:big}}, maintainAspectRatio:false}})
             const versus = (value, base, label, format) => ({down: value < base, label: label, base: ec.l10n.format(base, format),
                     percent: base != 0 ? ec.l10n.format(Math.abs(value - base) / base * 100, '00') : '0'})
             const statsPanel = (title, format, field, lines, list, labels, chartList, chartMaList) => {
