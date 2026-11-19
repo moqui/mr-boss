@@ -453,6 +453,12 @@ along with this software (see the LICENSE.md file). If not, see
             const found = links[type] || [null, 'sym_o_description']
             url = found[0]
             icon = found[1]
+            // a task, event, request or message opens in Commons or Comms only when the user may see it (SEC-BOS-86:
+            // get#RecordLinkInfo's rules, under the caller's filters)
+            const recordOf = {MantleTask: 'mantle.work.effort.WorkEffort', MantleEvent: 'mantle.work.effort.WorkEffort',
+                MantleRequest: 'mantle.request.Request', MantleCommunicationEvent: 'mantle.party.communication.CommunicationEvent'}
+            if (url && recordOf[type] && ec.service.sync().name('mantle.party.CommunicationServices.get#RecordLinkInfo')
+                    .parameters({recordEntityName: recordOf[type], recordId: id, checkOnly: true}).call()?.recordVisible !== true) url = null
         ]]></script></actions>
     </service>
 
@@ -600,7 +606,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="lookup" noun="Id">
         <description>The palette's id lookup: mantle.GeneralServices.lookup#ById on the text (an id, a pseudo id, an external
             id), each record found that Commons or Comms has a screen for as a row: a party, a task or event, a request, a
-            communication event. Under the Commons filters, as the lookup's own finds run.</description>
+            communication event. Under the Commons filters, as the lookup's own finds run, and only a record the user may see
+            (mantle.party.CommunicationServices.get#RecordLinkInfo with checkOnly, SEC-BOS-86): no row names another's.</description>
         <in-parameters>
             <parameter name="text" required="true"/>
             <parameter name="limit" type="Integer" default="5"/>
@@ -613,21 +620,24 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.GeneralServices.lookup#ById" in-map="{lookupId:text}" out-map="found"/>
             <script><![CDATA[
                 const link = (parameters) => ec.service.sync().name('ironstone.commons.PaletteServices.get#RecordLink').parameters(parameters).call()
+                // a hit is a row only when the user may see its record (SEC-BOS-86): its subject or name is never told otherwise
+                const sees = (recordEntityName, recordId) => ec.service.sync().name('mantle.party.CommunicationServices.get#RecordLinkInfo')
+                        .parameters({recordEntityName: recordEntityName, recordId: recordId, checkOnly: true}).call()?.recordVisible === true
                 const add = (title, kind, id, found) => { if (found.url) rows.push({title: title || id, subtitle: kind + ' · ' + id, icon: found.icon, url: found.url}) }
-                if (found.party) {
+                if (found.party && sees('mantle.party.Party', found.party.partyId)) {
                     const party = found.party
                     add(ec.resource.expand('PartyNameOnlyTemplate', '', party).trim(), ec.l10n.localize(party.partyTypeEnumId === 'PtyOrganization' ? 'Organization' : 'Person'),
                         party.pseudoId || party.partyId, link({docType: 'MantleParty', id: party.partyId, partyTypeEnumId: party.partyTypeEnumId}))
                 }
-                if (found.workEffort) {
+                if (found.workEffort && sees('mantle.work.effort.WorkEffort', found.workEffort.workEffortId)) {
                     const workEffort = found.workEffort
                     const kind = workEffort.workEffortTypeEnumId === 'WetEvent' ? 'Event' : workEffort.workEffortTypeEnumId === 'WetTask' ? 'Task' : 'Work'
                     add(workEffort.workEffortName, ec.l10n.localize(kind), workEffort.workEffortId,
                         link({docType: 'MantleWorkEffort', id: workEffort.workEffortId, workEffortTypeEnumId: workEffort.workEffortTypeEnumId}))
                 }
-                if (found.request) add(found.request.requestName, ec.l10n.localize('Request'), found.request.requestId,
+                if (found.request && sees('mantle.request.Request', found.request.requestId)) add(found.request.requestName, ec.l10n.localize('Request'), found.request.requestId,
                     link({docType: 'MantleRequest', id: found.request.requestId}))
-                if (found.communicationEvent) add(found.communicationEvent.subject, ec.l10n.localize('Message'), found.communicationEvent.communicationEventId,
+                if (found.communicationEvent && sees('mantle.party.communication.CommunicationEvent', found.communicationEvent.communicationEventId)) add(found.communicationEvent.subject, ec.l10n.localize('Message'), found.communicationEvent.communicationEventId,
                     link({docType: 'MantleCommunicationEvent', id: found.communicationEvent.communicationEventId}))
             ]]></script>
         </actions>
