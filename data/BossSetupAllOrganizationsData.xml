@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The every-organization permissions of the apps whose administrator group's authorizations carry MANTLE_ACTIVE_ORG
+    (SEC-BAP-86): such a grant reaches every organization (the active one when one is) only with the app's permission too, as
+    Accounting's ACCOUNTING_ALL_ORGANIZATIONS and Commerce's COMMERCE_ALL_ORGANIZATIONS; without it the administrator works in its
+    own organizations. Seeded on ADMIN only; an operator grants one to a group that must reach every organization. Warehouse
+    and Manufacturing ask Mantle's FACILITY_ALL_ORGANIZATIONS, which their administrators hold by design. Seed, so a database
+    made before it gets it too. -->
+<entity-facade-xml type="seed">
+    <moqui.security.UserPermission userPermissionId="PURCHASING_ALL_ORGANIZATIONS" description="Purchasing in every organization"/>
+    <moqui.security.UserPermission userPermissionId="INSIGHTS_ALL_ORGANIZATIONS" description="Insights of every organization"/>
+    <moqui.security.UserPermission userPermissionId="ADMIN_ALL_ORGANIZATIONS" description="Admin of every organization"/>
+    <moqui.security.UserPermission userPermissionId="SUPPORT_ALL_ORGANIZATIONS" description="Customer Service in every organization"/>
+    <moqui.security.UserPermission userPermissionId="COMMERCE_ALL_ORGANIZATIONS" description="Commerce in every organization"/>
+    <moqui.security.UserGroupPermission userGroupId="ADMIN" userPermissionId="PURCHASING_ALL_ORGANIZATIONS" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="ADMIN" userPermissionId="INSIGHTS_ALL_ORGANIZATIONS" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="ADMIN" userPermissionId="ADMIN_ALL_ORGANIZATIONS" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="ADMIN" userPermissionId="SUPPORT_ALL_ORGANIZATIONS" fromDate="0"/>
+</entity-facade-xml>

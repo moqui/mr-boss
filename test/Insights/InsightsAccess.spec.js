@@ -89,8 +89,9 @@ feature(
                 services.organizationPartyIds.includes(ids.organizationId)
             )
                 problems.push(`the Services reader's scope: ${services.organizationPartyId} ${services.organizationPartyIds}`)
-            if (asUser(users.admin, () => invoke(context, {})).allOrganizations !== true)
-                problems.push("the administrator is not in every organization")
+            // the administrator works in its own organizations: every one only with INSIGHTS_ALL_ORGANIZATIONS (SEC-BAP-86)
+            if (asUser(users.admin, () => invoke(context, {})).allOrganizations !== false)
+                problems.push("the administrator is in every organization")
             const otherRoot = asUser(users.reader, () => refusal(context, {appRoot: "Warehouse"}))
             if (!otherRoot.includes("INSIGHTS_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
             for (const user of [users.otherApp, users.client, users.pass]) {

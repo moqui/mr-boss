@@ -79,7 +79,8 @@ function screenGrants(location, authzRows) {
           : grants.filter(row => row.authzTypeEnumId === "AUTHZT_ALLOW")
     return {found: grants.length > 0, allowed}
 }
-// Only a system administrator reaches every organization (the active one when there is one). An authorization whose filter
+// Only a system administrator, or Customer Service's administrator holding SUPPORT_ALL_ORGANIZATIONS (seeded on ADMIN), reaches
+// every organization (the active one when there is one). An authorization whose filter
 // sets name MANTLE_ACTIVE_ORG (the administrator group's) makes the user Customer Service's administrator, in their own
 // organizations as any other user (SEC-BAP-86, as SEC-BOS-02's fix for Accounting): every grant is limited to the user's
 // organizations, so a grant set up without filters fails closed. A Projects client contact (PROJECT_CLIENT) never opens
@@ -97,7 +98,9 @@ function rootGrants() {
         rows("moqui.security.ArtifactAuthzFilter", {artifactAuthzId: authzId}).some(
             row => row.entityFilterSetId === "MANTLE_ACTIVE_ORG"
         )
-    return {read: true, unrestricted: false, administrator: root.allowed.some(row => activeOrg(row.artifactAuthzId)), authzRows}
+    const administrator = root.allowed.some(row => activeOrg(row.artifactAuthzId))
+    // every organization only with SUPPORT_ALL_ORGANIZATIONS too (seeded on ADMIN), as Accounting's and Commerce's
+    return {read: true, unrestricted: administrator && access.has("SUPPORT_ALL_ORGANIZATIONS"), administrator, authzRows}
 }
 function areaGrant(grants, area) {
     if (!grants.read) return false

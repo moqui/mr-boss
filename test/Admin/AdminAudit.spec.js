@@ -346,7 +346,8 @@ feature("the access log is the audit lines of the reader's own people and no oth
         // not another organization's person's line, and not a line of another log target
         !out.text.includes("spec-adm-aud-services-payroll") && !out.text.includes("ordinary line")
         out.bySubject.accessListCount === 0
-        out.adminLog.accessListCount === 1
+        // the administrator reads its own organizations' people's lines, not Services' (SEC-BAP-86)
+        out.adminLog.accessListCount === 0
         has(out.dataOperator.error, /ADMIN_AUDIT_VIEW is required/)
         // the engine: no telemetry dataset and no access log dataset for the audit reader or another group
         has(out.rawLogs.error, /otel_logs/)

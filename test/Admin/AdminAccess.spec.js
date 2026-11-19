@@ -291,7 +291,8 @@ feature("each group holds exactly the capabilities of its permissions and areas;
             if (shared.capabilities.read !== true) problems.push(`${user} does not read`)
         }
         const scope = user => asUser(user, () => invoke(context + "get#SharedContext", {}))
-        if (scope(users.admin).allOrganizations !== true) problems.push("the administrator is not in every organization")
+        // the administrator works in its own organizations: every one only with ADMIN_ALL_ORGANIZATIONS (SEC-BAP-86)
+        if (scope(users.admin).allOrganizations !== false) problems.push("the administrator is in every organization")
         const identity = scope(users.identity)
         // Retail and its own child organizations (Mantle's PrtOrgRollup: Retail's returns warehouse), not Services
         if (
@@ -484,7 +485,7 @@ feature(
             // the same record without ADMIN_IDENTITY_VIEW: the reader is refused for the permission
             const reader = check(users.reader, "user", ids.retailUserId)
             if (!reader.includes("PERMISSION_DENIED")) problems.push(`the reader reads an identity: ${reader || "accepted"}`)
-            // organizations: Retail's operator administers Retail, not Services; the administrator every one
+            // organizations: Retail's operator administers Retail, not Services; the administrator its own (SEC-BAP-86)
             if (check(users.identity, "organization", ids.organizationId) !== "")
                 problems.push("the identity operator is refused Retail")
             if (!check(users.identity, "organization", ids.otherOrganizationId).includes("RECORD_UNAVAILABLE"))
@@ -497,9 +498,9 @@ feature(
             if (!identityChoices.includes(ids.organizationId) || identityChoices.includes(ids.otherOrganizationId))
                 problems.push(`the identity operator's organizations: ${identityChoices}`)
             // the choice list is a page: other specs add organizations in a full run, so each is asked for by its selection
-            for (const organizationId of [ids.otherOrganizationId, ids.accountingOrganizationId])
-                if (!choices(users.admin, organizationId).includes(organizationId))
-                    problems.push(`the administrator's organizations lack ${organizationId}`)
+            // the administrator's are its own organizations, not Services' (SEC-BAP-86)
+            if (choices(users.admin, ids.otherOrganizationId).includes(ids.otherOrganizationId))
+                problems.push("the administrator's organizations include Services")
             return {problems}
         },
         then({problems}) {

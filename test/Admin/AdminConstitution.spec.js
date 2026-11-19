@@ -91,7 +91,7 @@ feature(
     }
 )
 
-feature("the administrator changes Services' document with no active organization, and is refused it with Retail active", {
+feature("the administrator is refused Services' document, with no active organization or with Retail active (SEC-BAP-86)", {
     when() {
         // Services has no document of its own, so it uses the instance's, at that hash
         const inherited = system(() => invoke(ADMIN + "get#Constitution", {scope: "global", includeDocument: true}).contentHash)
@@ -106,8 +106,9 @@ feature("the administrator changes Services' document with no active organizatio
         })
     },
     then({none, retail}) {
-        none.errors.length == 0
-        system(() => mantleTitle(ids.otherOrganizationId)) == "Services rules"
+        // the administrator works in its own organizations: another one's only with ADMIN_ALL_ORGANIZATIONS
+        none.errors.join(" ").includes("RECORD_UNAVAILABLE")
+        system(() => mantleTitle(ids.otherOrganizationId)) != "Services rules"
         retail.errors.join(" ").includes("RECORD_UNAVAILABLE")
     }
 })

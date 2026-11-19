@@ -49,7 +49,7 @@ const capabilityPermissions = {
 // ===== scope =====
 // The user's authorizations on the Manufacturing root, read directly so disabled or inherited artifact authorization cannot
 // widen them: whether they may open Manufacturing and whether they work in every plant. Only a system administrator, or an
-// authorization whose filter sets name MANTLE_ACTIVE_ORG and have no Facility filter (the admin group's), reaches every
+// authorization whose filter sets name MANTLE_ACTIVE_ORG and have no Facility filter, held with FACILITY_ALL_ORGANIZATIONS, reaches every
 // plant; any other grant is limited to the user's organizations (MANTLE_USER_ORG's ownerPartyId in filterOrgIds), so a
 // grant set up without filters fails closed. As Warehouse.js's rootGrants.
 function rootGrants() {
@@ -85,7 +85,12 @@ function rootGrants() {
                 .count() === 0
         )
     }
-    return {read: true, unrestricted: allowed.some(row => everyPlant(row.artifactAuthzId))}
+    // every plant only with FACILITY_ALL_ORGANIZATIONS too (Mantle's every-organization facility permission, the
+    // administrator's), as Commerce's COMMERCE_ALL_ORGANIZATIONS; else the user's own organizations (SEC-BAP-86)
+    return {
+        read: true,
+        unrestricted: allowed.some(row => everyPlant(row.artifactAuthzId)) && access.has("FACILITY_ALL_ORGANIZATIONS")
+    }
 }
 
 // The scope of the current user: their organizations (the owners of the runs, methods, routings and facilities they may work

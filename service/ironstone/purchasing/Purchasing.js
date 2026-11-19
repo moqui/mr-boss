@@ -120,7 +120,7 @@ function screenGrants(location, authzRows) {
           : grants.filter(row => row.authzTypeEnumId === "AUTHZT_ALLOW")
     return {found: grants.length > 0, allowed}
 }
-// Only a system administrator, or an authorization whose filter sets name MANTLE_ACTIVE_ORG (the administrator group's),
+// Only a system administrator, or an authorization whose filter sets name MANTLE_ACTIVE_ORG held with PURCHASING_ALL_ORGANIZATIONS,
 // reaches every organization (the active one when there is one); any other grant is limited to the user's organizations, so
 // a grant set up without filters fails closed.
 function rootGrants() {
@@ -136,7 +136,10 @@ function rootGrants() {
         rows("moqui.security.ArtifactAuthzFilter", {artifactAuthzId: authzId}).some(
             row => row.entityFilterSetId === "MANTLE_ACTIVE_ORG"
         )
-    return {read: true, unrestricted: root.allowed.some(row => activeOrg(row.artifactAuthzId)), authzRows}
+    // every organization only with PURCHASING_ALL_ORGANIZATIONS too (seeded on ADMIN), as Accounting's and Commerce's; else the user's own
+    // organizations, the active one when one is (SEC-BAP-86)
+    const unrestricted = root.allowed.some(row => activeOrg(row.artifactAuthzId)) && access.has("PURCHASING_ALL_ORGANIZATIONS")
+    return {read: true, unrestricted, authzRows}
 }
 function areaGrant(grants, area) {
     if (!grants.read) return false

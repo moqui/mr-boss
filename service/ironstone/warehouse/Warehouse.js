@@ -85,7 +85,7 @@ const kindNames = {
 
 // The user's authorizations on the Warehouse root, read directly so disabled or inherited artifact authorization cannot
 // widen them: whether they may open Warehouse and whether they work in every facility. Only a system administrator, or
-// an authorization whose filter sets name MANTLE_ACTIVE_ORG and have no Facility filter (the admin group's), reaches
+// an authorization whose filter sets name MANTLE_ACTIVE_ORG and have no Facility filter, held with FACILITY_ALL_ORGANIZATIONS, reaches
 // every facility; any other grant is limited to the user's organizations (MANTLE_USER_ORG's ownerPartyId in
 // filterOrgIds), so a grant set up without filters fails closed.
 function rootGrants() {
@@ -121,7 +121,12 @@ function rootGrants() {
                 .count() === 0
         )
     }
-    return {read: true, unrestricted: allowed.some(row => everyFacility(row.artifactAuthzId))}
+    // every facility only with FACILITY_ALL_ORGANIZATIONS too (Mantle's every-organization facility permission, the
+    // administrator's), as Commerce's COMMERCE_ALL_ORGANIZATIONS; else the user's own organizations (SEC-BAP-86)
+    return {
+        read: true,
+        unrestricted: allowed.some(row => everyFacility(row.artifactAuthzId)) && access.has("FACILITY_ALL_ORGANIZATIONS")
+    }
 }
 
 // The scope of the current user: their organizations, the owners of the facilities they may work in (null for every

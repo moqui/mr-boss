@@ -243,7 +243,8 @@ feature("each group holds exactly the capabilities of its permissions and areas,
             .filter(name => !["match", "receive"].includes(name))
             .filter(name => !admin.capabilities[name])
         if (missing.length) problems.push(`the administrator lacks ${missing}`)
-        if (admin.allOrganizations !== true) problems.push("the administrator is not in every organization")
+        // the administrator works in its own organizations: every one only with PURCHASING_ALL_ORGANIZATIONS (SEC-BAP-86)
+        if (admin.allOrganizations !== false) problems.push("the administrator is in every organization")
         return {problems}
     },
     then({problems}) {
