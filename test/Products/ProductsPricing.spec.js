@@ -102,10 +102,17 @@ feature("the list with no product chosen resolves the prices of at most boss@pri
         const filtered = withConf("boss@price-list-product-limit", "1", () =>
             as("catalog.price.read", () => call(C + "find#ProductPrices", {pageSize: 50, vendorPartyId: "ORG_ZIZI_SERVICES"}))
         )
-        return {limited: products(limited), limitedFlag: limited.productsLimited, filteredFlag: filtered.productsLimited}
+        // a value that is no number is taken as the default
+        const unset = withConf("boss@price-list-product-limit", "none", () =>
+            as("catalog.price.read", () => call(C + "find#ProductPrices", {pageSize: 50}))
+        )
+        return {limited: products(limited), limitedFlag: limited.productsLimited, filteredFlag: filtered.productsLimited,
+            unset: products(unset)}
     },
-    then({limited, limitedFlag, filteredFlag}) {
-        limited.length <= 1
+    then({limited, limitedFlag, filteredFlag, unset}) {
+        // the limit counts products whose rows are shown, not products read before the rows were filtered
+        limited.length == 1
+        unset.length > 1
         limitedFlag == true
         filteredFlag == true
     }
