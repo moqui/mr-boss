@@ -161,12 +161,15 @@ feature("the recipient search never offers another organization's party, by name
 const ACCTORG = "BOSS_TEST_COMPOSE_ACCTORG"
 const ACCTOTHER = "BOSS_TEST_COMPOSE_ACCTOTHER"
 const ACCTSHARED = "BOSS_TEST_COMPOSE_ACCTSHARED"
+// a staff member of the other organization whose party is shared (_NA_): reached through its employer alone (the owner's rule)
+const ACCTSTAFF = "BOSS_TEST_COMPOSE_ACCTSTAFF"
 function makeAccountParties() {
     sys(() => {
         store("mantle.party.Party", { partyId: ACCTORG, partyTypeEnumId: "PtyOrganization", ownerPartyId: ACCTORG })
         store("mantle.party.Organization", { partyId: ACCTORG, organizationName: "Acctreach Other Org" })
+        store("mantle.party.PartyRole", { partyId: ACCTORG, roleTypeId: "OrgInternal" })
         for (const [partyId, ownerPartyId, firstName, emailAddress] of [[ACCTOTHER, ACCTORG, "Otto", "otto.acctreach@other.example"],
-            [ACCTSHARED, "_NA_", "Sam", "sam.acctreach@shared.example"]]) {
+            [ACCTSHARED, "_NA_", "Sam", "sam.acctreach@shared.example"], [ACCTSTAFF, "_NA_", "Stan", "stan.acctreach@staff.example"]]) {
             store("mantle.party.Party", { partyId, partyTypeEnumId: "PtyPerson", ownerPartyId })
             store("mantle.party.Person", { partyId, firstName, lastName: "Acctreach" })
             if (ec.entity.find("moqui.security.UserAccount").condition("userId", partyId).count() == 0) {
@@ -176,11 +179,16 @@ function makeAccountParties() {
                 account.create()
             }
         }
+        if (ec.entity.find("mantle.party.PartyRelationship").condition("fromPartyId", ACCTSTAFF).count() == 0)
+            store("mantle.party.PartyRelationship", { partyRelationshipId: ACCTSTAFF, relationshipTypeEnumId: "PrtEmployee", fromPartyId: ACCTSTAFF,
+                toPartyId: ACCTORG, toRoleTypeId: "OrgInternal", fromDate: new Date(Date.now() - 60000) })
     })
 }
 function dropAccountParties() {
     sys(() => {
-        const ids = [ACCTOTHER, ACCTSHARED]
+        const ids = [ACCTOTHER, ACCTSHARED, ACCTSTAFF]
+        ec.entity.find("mantle.party.PartyRelationship").condition("fromPartyId", ACCTSTAFF).deleteAll()
+        ec.entity.find("mantle.party.PartyRole").condition("partyId", ACCTORG).deleteAll()
         ec.entity.find("moqui.security.UserAccount").condition("userId", "in", ids).deleteAll()
         ec.entity.find("mantle.party.Person").condition("partyId", "in", ids).deleteAll()
         ec.entity.find("mantle.party.Party").condition("partyId", "in", ids).deleteAll()
@@ -203,6 +211,7 @@ feature("the recipient search offers the address of a user account only when its
         Array.isArray(found.json)
         found.json.some((option) => option.value == '"Sam Acctreach" <sam.acctreach@shared.example>')
         !found.json.some((option) => String(option.value).includes("otto.acctreach@other.example"))
+        !found.json.some((option) => String(option.value).includes("stan.acctreach@staff.example"))
         Array.isArray(byAddress.json)
         !byAddress.json.some((option) => String(option.value).includes("otto.acctreach@other.example"))
     },

@@ -434,31 +434,39 @@ along with this software (see the LICENSE.md file). If not, see
             const addressParties = Array.from(new Set(byAddress.map((row) => row.partyId).filter((id) => !(id in names))))
             if (addressParties.length) for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', addressParties).condition(visible)
                     .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true)).list()) names[party.partyId] = nameOf(party)
-            const partyIds = Object.keys(names)
+            // another organization's staff only when the user may see that organization (filter#VisibleParties, SEC-BOS-99)
+            const partyIds = Object.keys(names).length ? Array.from(ec.service.sync().name('mantle.party.PartyServices.filter#VisibleParties')
+                    .parameter('partyIdList', Object.keys(names)).call()?.visiblePartyIdList || []) : []
             if (partyIds.length) for (const row of ec.entity.find('mantle.party.contact.PartyContactMechInfo').condition('partyId', 'in', partyIds)
                     .condition('contactMechTypeEnumId', 'CmtEmailAddress').condition(cf.makeConditionDate('fromDate', 'thruDate', null))
                     .selectField('partyId').selectField('infoString').disableAuthz().list()) {
                 if (optionList.length >= max) break
                 add(row.infoString, names[row.partyId])
             }
-            // users of this system, by name or address: only those whose party the user may see (read with authorization on, under
-            // the Comms app's entity filters, as the parties above) and whom the chat-target providers do not refuse (SEC-BOS-99);
-            // an account with no party is no one's to offer
+            // users of this system, by name or address: only those whose party the user may see, found in the query (the person's
+            // Party under the Comms app's filters, PersonWithUserAccount with authorization on, a page at a time so a visible colleague
+            // past others is still found), then filter#VisibleParties (another organization's staff) and the chat-target providers
+            // (SEC-BOS-99); an account with no party is no one's to offer
             if (optionList.length < max) {
-                const accounts = Array.from(ec.entity.find('moqui.security.UserAccount').condition(cf.makeCondition([like('username'), like('userFullName'),
-                        like('emailAddress')], 'or')).condition('emailAddress', 'not-equals', null).condition('partyId', 'not-equals', null)
-                        .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true))
-                        .selectField('userId').selectField('partyId').selectField('emailAddress').selectField('userFullName').limit(max * 3).disableAuthz().list())
-                const accountParties = Array.from(new Set(accounts.map((account) => account.partyId)))
-                const seenParties = new Set(accountParties.length ? Array.from(ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', accountParties)
-                        .condition(visible).condition(cf.makeCondition('disabled', 'not-equals', 'Y', true)).selectField('partyId').list()).map((party) => party.partyId) : [])
-                const shown = accounts.filter((account) => seenParties.has(account.partyId))
-                const checked = shown.length ? ec.service.sync().name('org.moqui.chat.ChatServices.get#RefusedUsers')
-                        .parameters({userIdList: shown.map((account) => account.userId), hook: 'chat-target'}).call() : null
-                const refused = new Set(checked ? Array.from(checked.refusedUserIdList || []) : shown.map((account) => account.userId))
-                for (const account of shown) {
-                    if (optionList.length >= max) break
-                    if (!refused.has(account.userId)) add(account.emailAddress, account.userFullName)
+                const pageSize = Math.max(max * 2, 20)
+                for (let pageIndex = 0; pageIndex < 5 && optionList.length < max; pageIndex++) {
+                    const accounts = Array.from(ec.entity.find('mantle.party.PersonWithUserAccount').condition(cf.makeCondition([like('username'), like('userFullName'),
+                            like('emailAddress')], 'or')).condition('emailAddress', 'not-equals', null).condition(visible)
+                            .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true))
+                            .selectField('userId').selectField('partyId').selectField('emailAddress').selectField('userFullName')
+                            .orderBy('username').offset(pageIndex * pageSize).limit(pageSize).list())
+                    if (!accounts.length) break
+                    const seenParties = new Set(Array.from(ec.service.sync().name('mantle.party.PartyServices.filter#VisibleParties')
+                            .parameter('partyIdList', accounts.map((account) => account.partyId)).call()?.visiblePartyIdList || []))
+                    const shown = accounts.filter((account) => seenParties.has(account.partyId))
+                    const checked = shown.length ? ec.service.sync().name('org.moqui.chat.ChatServices.get#RefusedUsers')
+                            .parameters({userIdList: shown.map((account) => account.userId), hook: 'chat-target'}).call() : null
+                    const refused = new Set(checked ? Array.from(checked.refusedUserIdList || []) : shown.map((account) => account.userId))
+                    for (const account of shown) {
+                        if (optionList.length >= max) break
+                        if (!refused.has(account.userId)) add(account.emailAddress, account.userFullName)
+                    }
+                    if (accounts.length < pageSize) break
                 }
             }
             // the user's recent correspondents: addresses of the latest mail in the accounts the user reaches
