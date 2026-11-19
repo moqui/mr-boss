@@ -270,14 +270,15 @@ feature("the settings reads: readiness, the queue tree and the teams, a team's c
 })
 
 // New claim (WarrantyClaims) asks NewCase for the warranty claim type alone: of the user's organizations NewCase starts in
-// one that service-enables it (Retail), the active one (Services, which enables none) left for it; a type it does
-// not name keeps the active organization
+// one that service-enables it (Retail), not one that enables none (Services); a type it does not name keeps the active
+// organization. The administrator is an agent of Services too while it runs, and works in its own organizations only, the
+// active one alone when one is (SEC-BAP-86)
 feature("NewCase asked for a type starts in an organization that service-enables it, else in the active one", {
     when() {
-        const prepare = parameters =>
+        const prepare = (activeOrganizationId, parameters) =>
             asUser(users.admin, () => {
                 const previous = ec.user.getPreference("ACTIVE_ORGANIZATION")
-                ec.user.setPreference("ACTIVE_ORGANIZATION", ids.otherOrganizationId)
+                ec.user.setPreference("ACTIVE_ORGANIZATION", activeOrganizationId)
                 for (const field of ["userOrgIds", "filterOrgIds", "activeOrgId"]) delete ec.user.context[field]
                 try {
                     return invoke(cases + "prepare#Case", parameters).prepared
@@ -286,13 +287,33 @@ feature("NewCase asked for a type starts in an organization that service-enables
                     for (const field of ["userOrgIds", "filterOrgIds", "activeOrgId"]) delete ec.user.context[field]
                 }
             })
-        return {warranty: prepare({requestTypeEnumId: "RqtWarranty"}), plain: prepare({})}
+        const agency = system(
+            () =>
+                invoke("create#mantle.party.PartyRelationship", {
+                    relationshipTypeEnumId: "PrtAgent",
+                    fromPartyId: "BOSS_CS_ADMIN",
+                    toPartyId: ids.otherOrganizationId,
+                    toRoleTypeId: "OrgInternal",
+                    fromDate: ec.user.nowTimestamp
+                }).partyRelationshipId
+        )
+        try {
+            return {
+                warranty: prepare(null, {requestTypeEnumId: "RqtWarranty"}),
+                plain: prepare(ids.otherOrganizationId, {})
+            }
+        } finally {
+            system(() =>
+                invoke("update#mantle.party.PartyRelationship", {partyRelationshipId: agency, thruDate: ec.user.nowTimestamp})
+            )
+        }
     },
     then({warranty, plain}) {
         warranty.organizations.map(row => row.value).includes(ids.otherOrganizationId)
         warranty.organizationPartyId == ids.organizationId
         warranty.requestTypeEnumId == "RqtWarranty"
         plain.organizationPartyId == ids.otherOrganizationId
+        plain.organizations.map(row => row.value).join() == ids.otherOrganizationId
     }
 })
 
@@ -300,7 +321,13 @@ feature("CaseDetail's Customer Service section and NewCase's duplicate warning r
     when() {
         // SEC-PSS-28: shown as a case a public form filed, its sender not verified
         const mark = senderVerified =>
-            system(() => ec.service.sync().name("update#mantle.request.Request").parameters({requestId: ids.thermostatCaseId, senderVerified}).call())
+            system(() =>
+                ec.service
+                    .sync()
+                    .name("update#mantle.request.Request")
+                    .parameters({requestId: ids.thermostatCaseId, senderVerified})
+                    .call()
+            )
         mark("N")
         const detail = asUser(users.agent, () => lib.page("Cases/CaseDetail", {requestId: ids.thermostatCaseId}))
         mark(null)

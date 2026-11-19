@@ -82,7 +82,7 @@ function reportQueues(userScope, organizationPartyIds) {
                 userScope.queueIds.includes(queue.requestCategoryId) &&
                 organizationPartyIds.includes(cs.queueOwner(queue.requestCategoryId))
         )
-    if (can.policyEdit || userScope.unrestricted) return seen
+    if (can.policyEdit || userScope.administrator) return seen
     const teams = can.caseManage && userScope.managedTeamIds.length ? userScope.managedTeamIds : userScope.teamIds
     return seen.filter(queue => !!queue.responsibleTeamPartyId && teams.includes(queue.responsibleTeamPartyId))
 }

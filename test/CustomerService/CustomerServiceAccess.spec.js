@@ -205,14 +205,15 @@ feature("each group holds exactly the capabilities of its permissions and areas,
         if (missing.length) problems.push(`the administrator lacks ${missing}`)
         const extra = borrowed.filter(name => admin.capabilities[name])
         if (extra.length) problems.push(`the administrator borrows ${extra}`)
-        if (admin.allOrganizations !== true) problems.push("the administrator is not in every organization")
-        // P2: the administrator sees the team queues of every organization and the restricted Privacy queue of its team; of
-        // the demo's queues, as other specs (Mantle's SupportCases) leave queues of their own organizations, which it sees too
+        // the administrator works in its own organizations, as any other user (SEC-BAP-86)
+        if (admin.allOrganizations !== false) problems.push("the administrator is in every organization")
+        // P2: the administrator sees the team queues of its organization and the restricted Privacy queue of its team, not
+        // another organization's; of the demo's queues only, as other specs (Mantle's SupportCases) leave queues of their own
         const adminQueues = Array.from(admin.queueIds)
             .filter(id => String(id).startsWith("BOSS_CS_Q_"))
             .sort()
             .join()
-        if (adminQueues !== [ids.privacyQueueId, ids.otherQueueId, ids.supportQueueId].sort().join())
+        if (adminQueues !== [ids.privacyQueueId, ids.supportQueueId].sort().join())
             problems.push(`the administrator's queues: ${adminQueues}`)
         return {problems}
     },
@@ -241,6 +242,17 @@ feature("a user's customers are their organization's and the shared ones, in the
         const selected = user => choices(user, "customers", {term: "zzz-none", selected: ids.customerId})
         if (!selected(users.read).includes(ids.customerId)) problems.push("the reader's selected customer is left out")
         if (selected(users.services).includes(ids.customerId)) problems.push("the other organization gets the selected customer")
+        // the administrator, with no organization active, is Retail's as any other user (SEC-BAP-86)
+        if (choices(users.admin, "customers", {term: "customer"}).includes(ids.otherCustomerId))
+            problems.push("the administrator is offered the other organization's customer")
+        if (!choices(users.admin, "customers", {term: "joe"}).includes(ids.customerId))
+            problems.push("the administrator lacks Retail's customer")
+        if (
+            asUser(users.admin, () => invoke(access + "search#Records", {text: "boss_cs_so", limit: 20}).rows).some(row =>
+                row.url.includes(ids.otherOrderId)
+            )
+        )
+            problems.push("the administrator's palette has the other organization's order")
         const organizations = choices(users.read, "organizations", {})
         if (!organizations.includes(ids.organizationId) || organizations.includes(ids.otherOrganizationId))
             problems.push(`the reader's organizations: ${organizations}`)
