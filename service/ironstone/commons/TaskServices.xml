@@ -1181,7 +1181,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="convert" noun="TaskToRequest">
         <description>Convert to request: a draft request filed by the user with the task's name, description and priority
-            (mantle.request.RequestServices.create#Request), its customer the party the task is on when it is on one, linked to
+            (mantle.request.RequestServices.create#Request), its customer the party the task is on when it is on one and the user
+            may reach it (PartyReach.js visibleParties), linked to
             the task by RequestWorkEffort. The task stays as it is; the request opens to be completed and submitted.</description>
         <in-parameters>
             <parameter name="app" default-value="commons"><description>commons or projects (get#TaskAccess)</description></parameter>
@@ -1194,9 +1195,13 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="ec.message.hasError()"><return/></if>
             <entity-find entity-name="mantle.work.effort.WorkEffortRecord" list="partyLinkList" limit="1">
                 <econdition field-name="workEffortId"/><econdition field-name="recordEntityName" value="mantle.party.Party"/></entity-find>
+            <!-- the task's party the customer only when the user may reach it (PartyReach.js visibleParties, SEC-BOS-113) -->
+            <set field="customerPartyId" from="partyLinkList?.[0]?.recordId || null"/>
+            <if condition="customerPartyId &amp;&amp; !Array.from(ec.resource.script(&apos;component://mr-mantle/service/mantle/party/PartyReach.js&apos;).visibleParties([customerPartyId], true) || []).includes(customerPartyId)">
+                <set field="customerPartyId" from="null"/></if>
             <service-call name="mantle.request.RequestServices.create#Request" out-map="requestOut" in-map="{requestName:(access.workEffort.workEffortName || workEffortId),
                     description:access.workEffort.description, priority:(access.workEffort.priority ?? 5), requestTypeEnumId:requestTypeEnumId,
-                    statusId:'ReqDraft', customerPartyId:(partyLinkList?.[0]?.recordId || null)}"/>
+                    statusId:'ReqDraft', customerPartyId:customerPartyId}"/>
             <if condition="ec.message.hasError()"><return/></if>
             <set field="requestId" from="requestOut.requestId"/>
             <service-call name="create#mantle.request.RequestWorkEffort" in-map="{requestId:requestId, workEffortId:workEffortId}"/>

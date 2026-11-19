@@ -296,6 +296,39 @@ feature("a request whose customer is another user's personal contact is refused 
     },
 })
 
+// SEC-BOS-113 (review): a task's or an activity's assignee and a request's customer are parties the user may reach
+// (PartyReach.js visibleParties): another top-level organization's staff is refused to joe, though the person's party is shared
+feature("another organization's staff is no assignee or customer for joe's quick create (SEC-BOS-113)", {
+    allowMessageErrors: true,
+    when() {
+        sys(() => {
+            if (one("mantle.party.Party", { partyId: "BOSS_TEST_OTHERCO" })) return
+            call("create#mantle.party.Party", { partyId: "BOSS_TEST_OTHERCO", partyTypeEnumId: "PtyOrganization", ownerPartyId: "BOSS_TEST_OTHERCO" })
+            call("create#mantle.party.Organization", { partyId: "BOSS_TEST_OTHERCO", organizationName: "BOSS_TEST Other Company" })
+            call("create#mantle.party.PartyRole", { partyId: "BOSS_TEST_OTHERCO", roleTypeId: "OrgInternal" })
+            call("create#mantle.party.Party", { partyId: "BOSS_TEST_OTHER_STAFF", partyTypeEnumId: "PtyPerson", ownerPartyId: "_NA_" })
+            call("create#mantle.party.Person", { partyId: "BOSS_TEST_OTHER_STAFF", firstName: "Olga", lastName: "Othercompany" })
+            call("create#mantle.party.PartyRelationship", { relationshipTypeEnumId: "PrtEmployee", fromPartyId: "BOSS_TEST_OTHER_STAFF", fromRoleTypeId: "Employee",
+                toPartyId: "BOSS_TEST_OTHERCO", toRoleTypeId: "OrgEmployer", fromDate: new Date(0) })
+        })
+        login("joe.developer")
+        try {
+            return {
+                task: post("createTask", { workEffortName: "BOSS_TEST Task for another company", assignToPartyId: "BOSS_TEST_OTHER_STAFF" }),
+                request: post("createRequest", { requestName: "BOSS_TEST Request for another company", customerPartyId: "BOSS_TEST_OTHER_STAFF" }),
+                tasks: list("mantle.work.effort.WorkEffort", { workEffortName: "BOSS_TEST Task for another company" }).length,
+                requests: list("mantle.request.Request", { requestName: "BOSS_TEST Request for another company" }).length,
+            }
+        } finally { login("john.doe") }
+    },
+    then({ task, request, tasks, requests }) {
+        task.errors.includes("Party BOSS_TEST_OTHER_STAFF not found")
+        request.errors.includes("Customer BOSS_TEST_OTHER_STAFF is not available")
+        tasks == 0
+        requests == 0
+    },
+})
+
 // SEC-BOS-87: a screen's context record of a registered type takes a quick create by its registration's rule (a store by its
 // organization, a container by its facility, a pay run by People's payroll read); another organization's store and an entity
 // that is no registered record type are refused

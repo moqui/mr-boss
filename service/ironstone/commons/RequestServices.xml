@@ -288,11 +288,10 @@ along with this software (see the LICENSE.md file). If not, see
         </in-parameters>
         <out-parameters><parameter name="requestId"/><parameter name="url"/><parameter name="message"/></out-parameters>
         <actions>
-            <if condition="customerPartyId">
-                <entity-find-one entity-name="mantle.party.PartyDetail" value-field="customer"><field-map field-name="partyId" from="customerPartyId"/></entity-find-one>
-                <if condition="customer == null || (customer.privateOwnerUserId &amp;&amp; customer.privateOwnerUserId != ec.user.userId)">
-                    <return error="true" message="Customer ${customerPartyId} is not available"/></if>
-            </if>
+            <!-- a customer the user may reach (Mantle's PartyReach.js visibleParties, SEC-BOS-113): under the user's filters, never
+                another user's personal contact or another top-level organization's staff -->
+            <if condition="customerPartyId &amp;&amp; !Array.from(ec.resource.script(&apos;component://mr-mantle/service/mantle/party/PartyReach.js&apos;).visibleParties([customerPartyId], true) || []).includes(customerPartyId)">
+                <return error="true" message="Customer ${customerPartyId} is not available"/></if>
             <!-- a request this makes a support case takes its due date from its service level (impl-customer-service P2, F64) -->
             <if condition="responseRequiredDate &amp;&amp; !draft &amp;&amp; ec.resource.script(&apos;component://mr-boss/service/ironstone/customerservice/CaseGuard.js&apos;).wouldBeCase({requestTypeEnumId:requestTypeEnumId,
                     customerPartyId:customerPartyId})">
@@ -491,11 +490,10 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="ec.message.hasError()"><return/></if>
             <if condition="!access.isRaiser || access.request.statusId != 'ReqDraft'"><return error="true" message="Only a draft you raised can be edited here"/></if>
             <if condition="requestName != null &amp;&amp; !String(requestName).trim()"><return error="true" message="A request needs a name"/></if>
-            <if condition="customerPartyId">
-                <entity-find-one entity-name="mantle.party.PartyDetail" value-field="customer"><field-map field-name="partyId" from="customerPartyId"/></entity-find-one>
-                <if condition="customer == null || (customer.privateOwnerUserId &amp;&amp; customer.privateOwnerUserId != ec.user.userId)">
-                    <return error="true" message="Customer ${customerPartyId} is not available"/></if>
-            </if>
+            <!-- a customer the user may reach (Mantle's PartyReach.js visibleParties, SEC-BOS-113): under the user's filters, never
+                another user's personal contact or another top-level organization's staff -->
+            <if condition="customerPartyId &amp;&amp; !Array.from(ec.resource.script(&apos;component://mr-mantle/service/mantle/party/PartyReach.js&apos;).visibleParties([customerPartyId], true) || []).includes(customerPartyId)">
+                <return error="true" message="Customer ${customerPartyId} is not available"/></if>
             <script><![CDATA[
                 // only what the form gave: an absent field is left as it is
                 const fields = {requestId: requestId}
