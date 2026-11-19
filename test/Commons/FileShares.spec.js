@@ -158,9 +158,27 @@ feature("a share with a group reaches its members", {
 feature("an Edit share holder shares with people only: no link, no every-user group and no group he is not in (SEC-BOS-106)", {
     allowMessageErrors: true,
     when() {
+        // two groups joe is in: one of Ziziwork's staff alone, one with a member of another top-level organization
+        sys(() => {
+            if (ec.entity.find("moqui.security.UserGroup").condition("userGroupId", "BOSS_TEST_FILES_ZIZI").count()) return
+            call("create#mantle.party.Party", { partyId: "BOSS_TEST_FILES_OTHERCO", partyTypeEnumId: "PtyOrganization", ownerPartyId: "BOSS_TEST_FILES_OTHERCO" })
+            call("create#mantle.party.Organization", { partyId: "BOSS_TEST_FILES_OTHERCO", organizationName: "BOSS_TEST Files Other Company" })
+            call("create#mantle.party.PartyRole", { partyId: "BOSS_TEST_FILES_OTHERCO", roleTypeId: "OrgInternal" })
+            const other = call("mantle.party.PartyServices.create#Person", { firstName: "Otto", lastName: "Othercompany" }).partyId
+            call("create#mantle.party.PartyRelationship", { relationshipTypeEnumId: "PrtEmployee", fromPartyId: other, fromRoleTypeId: "Employee",
+                toPartyId: "BOSS_TEST_FILES_OTHERCO", toRoleTypeId: "OrgEmployer", fromDate: new Date(0) })
+            const otherUser = call("mantle.party.PartyServices.create#PartyUserAccount", { partyId: other, emailAddress: "otto.other@example.com",
+                username: "otto.other", newPassword: "moqui1!!", newPasswordVerify: "moqui1!!" }).userId
+            for (const [userGroupId, members] of [["BOSS_TEST_FILES_ZIZI", ["ORG_ZIZI_JD", "ORG_ZIZI_BD"]], ["BOSS_TEST_FILES_MIXED", ["ORG_ZIZI_JD", otherUser]]]) {
+                call("create#moqui.security.UserGroup", { userGroupId, description: userGroupId })
+                for (const userId of members) call("create#moqui.security.UserGroupMember", { userGroupId, userId, fromDate: new Date(0) })
+            }
+        })
         login("joe.developer")
         try {
             return {
+                zizi: post("share", { driveId: personalDriveId, path: "Share spec", shareWith: "group:BOSS_TEST_FILES_ZIZI" }),
+                mixed: post("share", { driveId: personalDriveId, path: "Share spec", shareWith: "group:BOSS_TEST_FILES_MIXED" }),
                 detail: get("detail", { driveId: personalDriveId, path: "Share spec" }),
                 groups: get("shareTargets", { term: "Files spec", driveId: personalDriveId, path: "Share spec" }),
                 everyone: get("shareTargets", { term: "users", driveId: personalDriveId, path: "Share spec" }),
@@ -171,7 +189,9 @@ feature("an Edit share holder shares with people only: no link, no every-user gr
             }
         } finally { login("john.doe") }
     },
-    then({ detail, groups, everyone, link, bossUsers, otherGroup, person }) {
+    then({ zizi, mixed, detail, groups, everyone, link, bossUsers, otherGroup, person }) {
+        zizi.status == 200
+        mixed.errors.includes("Only a manager of the drive shares with that group")
         detail.json.access.level == 2
         !groups.json.some((option) => option.value === "group:BOSS_TEST_FILES_GROUP")
         !everyone.json.some((option) => ["group:BOSS_USERS", "group:ALL_USERS"].includes(option.value))

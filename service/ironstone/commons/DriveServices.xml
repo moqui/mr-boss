@@ -650,7 +650,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="share" noun="Item">
         <description>Share a file or folder (FileServices.share#Resource): with a user (shareWith user:userId) or a user group
-            (group:userGroupId: below the manage level only a group of the sharer's own, not every user or external users) with
+            (group:userGroupId: below the manage level only a group of the sharer's own, not every user or external users, whose
+            every member works for one of the sharer's top-level organizations) with
             RspView, RspEdit or RspUpload, or by link (isLink Y, a manager's) with a label, password and expiry,
             whose token comes back once (linkPath /s/token). A user or the members of a group are told on the FileShare
             topic, with a link to the item in Files; a notification that cannot be sent is logged and the share stays.</description>
@@ -741,7 +742,8 @@ along with this software (see the LICENSE.md file). If not, see
         <description>The people and groups of the share dialog: active users with a party whose name or username has the term
             (user:userId) and the user groups whose name or id has it (group:userGroupId), as [{value, label, kind}]. Below the
             manage level of the item (driveId and path; get#DriveAccess) only the groups share#Item takes from such a sharer: their
-            own, not every user (ALL_USERS, BOSS_USERS) and not a group of external users (SEC-BOS-106).</description>
+            own, not every user (ALL_USERS, BOSS_USERS), not a group of external users, and one whose every member works for one
+            of the sharer's top-level organizations (ShareGroups.js, SEC-BOS-106).</description>
         <in-parameters><parameter name="term"/><parameter name="driveId"/><parameter name="path"/></in-parameters>
         <out-parameters><parameter name="optionList" type="List"/></out-parameters>
         <actions><script><![CDATA[
