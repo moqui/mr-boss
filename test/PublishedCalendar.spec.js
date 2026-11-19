@@ -108,13 +108,17 @@ feature("a link with a password: nothing until the right one, and a wrong one is
         const shared = publish("CalpView", "family")
         logout()
         const token = shared.publishToken
+        const right = visit("events", token, Object.assign({ password: "family" }, range()))
         return { check: call(CHECK, { token, routeName: "cal" }), none: visit("events", token, range()),
-            wrong: visit("events", token, Object.assign({ password: "not it" }, range())),
-            right: visit("events", token, Object.assign({ password: "family" }, range())),
+            wrong: visit("events", token, Object.assign({ password: "not it" }, range())), right,
+            // the next month's load sends the grant the right password gave, not the password (SEC-BOS-102)
+            byGrant: visit("events", token, Object.assign({ grant: right.json.grant || "" }, range())),
             // the password never rides in an address: a GET of the events is refused (SEC-BOS-05)
             byGet: visit("events", token, Object.assign({ password: "family" }, range()), null) }
     },
-    then({ check, none, wrong, right, byGet }) {
+    then({ check, none, wrong, right, byGrant, byGet }) {
+        right.json.grant != null
+        titles(byGrant).includes("Mary's birthday")
         byGet.status != 200
         !byGet.output.includes("Mary")
         check.valid

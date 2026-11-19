@@ -29,10 +29,10 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="events" method="post" read-only="true" require-session-token="false">
         <actions><script><![CDATA[
             const out = ec.service.sync().name('ironstone.commons.CalendarServices.get#PublishedCalendar').parameters({token: token || '',
-                password: password || null, start: start || null, end: end || null}).call()
+                password: password || null, grant: grant || null, start: start || null, end: end || null}).call()
             if (ec.message.hasError()) { ec.web.sendJsonResponse({}); return }
-            ec.web.sendJsonResponse({needsPassword: !!out.needsPassword, calendarName: out.calendarName ?? null, color: out.color ?? null,
-                eventList: Array.from(out.eventList || [])})
+            ec.web.sendJsonResponse({needsPassword: !!out.needsPassword, grant: out.grant ?? null, calendarName: out.calendarName ?? null,
+                color: out.color ?? null, eventList: Array.from(out.eventList || [])})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>

@@ -1127,19 +1127,23 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="PublishedCalendar" authenticate="anonymous-view" allow-remote="false">
         <description>
             The events of a published calendar for its public page. The token is checked first. A current link with a
-            password and none given answers needsPassword and no events, without an error, so the page can ask. Otherwise
-            mantle.work.CalendarServices.get#PublishedCalendarEvents checks the password (each try counted first: "too many tries"
-            past 10 a link or 30 a requester in ten minutes, and "The password is not right" for a wrong one) and gives that
-            calendar's events for start and end (yyyy-MM-dd), as Busy when the link is free/busy only.
+            password answers needsPassword and no events, without an error, when neither a grant nor a password is given, so the
+            page can ask. A password is checked once, by mantle.work.CalendarServices.open#PublishedCalendar (only a wrong one
+            counts: "too many tries" past 10 a link or 30 a requester in ten minutes, and "The password is not right"), for a
+            grant of an hour that this answers and the page sends instead on its next loads (SEC-BOS-102).
+            mantle.work.CalendarServices.get#PublishedCalendarEvents then gives that calendar's events for start and end
+            (yyyy-MM-dd), as Busy when the link is free/busy only.
         </description>
         <in-parameters>
             <parameter name="token" required="true"/>
-            <parameter name="password"/>
+            <parameter name="password" allow-html="any"/>
+            <parameter name="grant"/>
             <parameter name="start"/>
             <parameter name="end"/>
         </in-parameters>
         <out-parameters>
             <parameter name="needsPassword" type="Boolean"/>
+            <parameter name="grant"/>
             <parameter name="calendarName"/>
             <parameter name="color"/>
             <parameter name="eventList" type="List"/>
@@ -1159,11 +1163,21 @@ along with this software (see the LICENSE.md file). If not, see
             const calendar = ec.entity.find('mantle.work.calendar.Calendar').condition('calendarId', share.calendarId).disableAuthz().one()
             calendarName = calendar?.calendarName ?? null
             color = calendar?.color ?? null
-            // the password is checked once, by Mantle's get#PublishedCalendarEvents, which counts each try first (SEC-BOS-102)
-            if (share.passwordHash && !(password == null ? '' : String(password))) { needsPassword = true; return }
-            if (!start || !end) { ec.message.addError(L('Choose the dates to show')); return }
+            grant = grant ? String(grant) : null
+            if (share.passwordHash && !grant) {
+                const given = password == null ? '' : String(password)
+                if (!given) { needsPassword = true; return }
+                // the password checked once, for a grant the page keeps (SEC-BOS-102)
+                grant = ec.service.sync().name('mantle.work.CalendarServices.open#PublishedCalendar').parameters({publishToken: tokenText,
+                    password: given}).call()?.grant || null
+                if (ec.message.hasError()) return
+            }
+            if (!start || !end) return
             const out = ec.service.sync().name('mantle.work.CalendarServices.get#PublishedCalendarEvents').parameters({publishToken: tokenText,
-                password: password || null, start: start, end: end}).call()
+                grant: grant, start: start, end: end}).call()
+            // an expired grant asks for the password again
+            if (ec.message.hasError() && share.passwordHash && /needs its password/.test(ec.message.getErrorsString())) {
+                ec.message.clearErrors(); needsPassword = true; grant = null; return }
             if (ec.message.hasError()) return
             eventList = out?.eventList || []
         ]]></script></actions>
