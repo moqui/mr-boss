@@ -130,19 +130,13 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."/>
     </transition>
-    <!-- the estimate a request asks to approve (a WorkEffortContent of the milestone), for those who may decide it or who manage money;
-        the approver who does not manage money gets only a file an approval request of the milestone names (SEC-BOS-96), never
-        another file filed on it -->
+    <!-- the estimate a request asks to approve (PlanningServices.get#MilestoneEstimateFile: SEC-BOS-96) -->
     <transition name="estimateFile" read-only="true">
         <actions><script><![CDATA[
-            const gate = ec.service.sync().name('mantle.work.ProjectServices.get#MilestoneApprovalAccess').parameters({workEffortId: workEffortId || '', need: 'none'}).call() || {}
-            const money = ec.service.sync().name('ironstone.projects.BillingServices.check#Money').parameters({need: 'none'}).call()?.managesMoney
-            const named = !money && gate.canView && gate.isApprover && ec.entity.find('mantle.work.effort.WorkEffortApproval').condition('workEffortId', workEffortId || '')
-                    .condition('workEffortContentId', workEffortContentId || '').disableAuthz().count() > 0
-            const content = gate.canView && (money || named) ? ec.entity.find('mantle.work.effort.WorkEffortContent').condition('workEffortContentId', workEffortContentId || '')
-                    .condition('workEffortId', workEffortId || '').disableAuthz().one() : null
+            const found = ec.service.sync().name('ironstone.projects.PlanningServices.get#MilestoneEstimateFile').parameters({workEffortId: workEffortId || '',
+                workEffortContentId: workEffortContentId || ''}).call() || {}
             ec.message.clearErrors()
-            if (content?.contentLocation) ec.web.sendResourceResponse(content.contentLocation, true)
+            if (found.contentLocation) ec.web.sendResourceResponse(found.contentLocation, true)
             else ec.web.sendJsonResponse({errors: ec.l10n.localize('The file is not available')})
         ]]></script></actions>
         <default-response type="none"/>

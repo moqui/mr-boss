@@ -1167,7 +1167,7 @@ feature("shared repositories: a client reads its project's, read only and withou
     },
 })
 
-feature("a client approver downloads from a milestone only the estimate an approval request names, never the team's other files on it (SEC-BOS-96)", {
+feature("a client approver downloads from a milestone only the estimate a live approval request to them names, never another file on it (SEC-BOS-96)", {
     when() {
         const file = (suffix, text) => {
             const location = "dbresource://test/projects-milestone-" + suffix + ".txt"
@@ -1177,21 +1177,24 @@ feature("a client approver downloads from a milestone only the estimate an appro
         }
         const estimate = file("estimate", "ZQX-ESTIMATE the figures to approve")
         const internal = file("internal", "ZQX-MILESTONE-INTERNAL our margin notes")
-        sys(() => ec.service.sync().name("create#mantle.work.effort.WorkEffortApproval").parameters({ workEffortApprovalId: "BOSS_TEST_EST_AP",
-            workEffortId: "ACME-MS-1", approverPartyId: SHELDON_ID, statusId: "WeaCancelled", workEffortContentId: estimate,
-            requestedDate: ec.user.nowTimestamp }).call())
+        // the estimate asked of Sheldon; the internal file named by a cancelled request to him, and by one to another approver
+        const cancelled = file("cancelled", "ZQX-MILESTONE-CANCELLED withdrawn")
+        const approval = (id, approverPartyId, statusId, workEffortContentId) => sys(() => ec.service.sync().name("create#mantle.work.effort.WorkEffortApproval")
+            .parameters({ workEffortApprovalId: id, workEffortId: "ACME-MS-1", approverPartyId, statusId, workEffortContentId, requestedDate: ec.user.nowTimestamp }).call())
+        approval("BOSS_TEST_EST_AP", SHELDON_ID, "WeaRequested", estimate)
+        approval("BOSS_TEST_EST_AP2", SHELDON_ID, "WeaCancelled", cancelled)
+        approval("BOSS_TEST_EST_AP3", JOHN_ID, "WeaRequested", internal)
         try {
-            return as(SHELDON, () => ({
-                named: hit("Projects/Projects/MilestoneDetail/estimateFile", { workEffortId: "ACME-MS-1", workEffortContentId: estimate }),
-                other: hit("Projects/Projects/MilestoneDetail/estimateFile", { workEffortId: "ACME-MS-1", workEffortContentId: internal })
-            }))
+            const get = (workEffortContentId) => hit("Projects/Projects/MilestoneDetail/estimateFile", { workEffortId: "ACME-MS-1", workEffortContentId })
+            return as(SHELDON, () => ({ named: get(estimate), other: get(internal), withdrawn: get(cancelled) }))
         } finally {
-            sys(() => ec.entity.find("mantle.work.effort.WorkEffortApproval").condition("workEffortApprovalId", "BOSS_TEST_EST_AP").deleteAll())
+            sys(() => ec.entity.find("mantle.work.effort.WorkEffortApproval").condition("workEffortApprovalId", "in", ["BOSS_TEST_EST_AP", "BOSS_TEST_EST_AP2", "BOSS_TEST_EST_AP3"]).deleteAll())
         }
     },
-    then({ named, other }) {
+    then({ named, other, withdrawn }) {
         named.output.includes("ZQX-ESTIMATE")
         !other.output.includes("ZQX-MILESTONE-INTERNAL")
         other.output.includes("The file is not available")
+        !withdrawn.output.includes("ZQX-MILESTONE-CANCELLED")
     },
 })

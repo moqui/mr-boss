@@ -24,6 +24,38 @@ along with this software (see the LICENSE.md file). If not, see
     is logged and named, the rest go on. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
 
+    <service verb="get" noun="MilestoneEstimateFile" allow-remote="false">
+        <description>A file of a milestone for MilestoneDetail's estimateFile (SEC-BOS-96): for a viewer of the milestone's gate
+            (mantle.work.ProjectServices.get#MilestoneApprovalAccess) who manages money (check#Money), any file of the milestone; for
+            one who does not, only a file an approval request of the milestone names that is addressed to them (approverPartyId
+            their party) and not cancelled: the estimate they decide or decided, never another file filed on the milestone. Any
+            other answers no contentLocation, never an error.</description>
+        <in-parameters>
+            <parameter name="workEffortId" required="true"/>
+            <parameter name="workEffortContentId" required="true"/>
+        </in-parameters>
+        <out-parameters><parameter name="contentLocation"/></out-parameters>
+        <actions><script><![CDATA[
+            contentLocation = null
+            ec.message.pushErrors()
+            try {
+                const gate = ec.service.sync().name('mantle.work.ProjectServices.get#MilestoneApprovalAccess').parameters({workEffortId: workEffortId, need: 'none'}).call() || {}
+                if (!gate.canView) return
+                const money = !!ec.service.sync().name('ironstone.projects.BillingServices.check#Money').parameters({need: 'none'}).call()?.managesMoney
+                const me = ec.user.userAccount?.partyId || null
+                const named = !money && !!me && ec.entity.find('mantle.work.effort.WorkEffortApproval').condition({workEffortId: workEffortId,
+                        workEffortContentId: workEffortContentId, approverPartyId: me}).condition('statusId', 'not-equals', 'WeaCancelled')
+                        .disableAuthz().count() > 0
+                if (!money && !named) return
+                contentLocation = ec.entity.find('mantle.work.effort.WorkEffortContent').condition({workEffortContentId: workEffortContentId,
+                        workEffortId: workEffortId}).disableAuthz().one()?.contentLocation || null
+            } finally {
+                ec.message.clearErrors()
+                ec.message.popErrors()
+            }
+        ]]></script></actions>
+    </service>
+
     <service verb="get" noun="ProjectSprints" allow-remote="false">
         <description>The sprints of a project: the open ones (in progress first, then the planned by start) and, with
             includeClosed, the completed ones (the latest first), each with its dates as text, goal, capacity and status label; none for a
