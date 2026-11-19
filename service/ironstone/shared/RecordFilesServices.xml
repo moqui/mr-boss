@@ -147,6 +147,8 @@ along with this software (see the LICENSE.md file). If not, see
                         .parameters({workEffortId: info.recordId}).disableAuthz().call()
                     if (evidence?.managed) {
                         contentType.recordRule = true
+                        // who changes another person's file on it: its people and maintenance managers (SEC-BAP-95)
+                        contentType.changeOthers = !!evidence.canChangeOthers
                         if (!evidence.canChange) contentType.catalogCanChange = false
                         contentType.protectedContentIds = Array.from(evidence.protectedContentIds || [])
                     }
@@ -264,8 +266,9 @@ along with this software (see the LICENSE.md file). If not, see
                 canUpload = hasContent && content.catalogCanChange !== false && ec.artifactExecution.isPermitted(content.entityName, 'AT_ENTITY', 'create')
                 if (!content) return
                 const entityName = recordOut.info.recordEntityName
-                // SEC-BAP-95: the owning app's rule, else the user's own grant on the entity (not the root's inherited one)
-                const mayChangeRecord = (rule, name) => rule?.recordRule ? rule.catalogCanChange !== false : ec.resource.script('component://mr-mantle/service/mantle/ledger/EntityLib.js').access.systemAdmin() || ec.artifactExecution.isPermittedOwn(name, 'AT_ENTITY', 'update')
+                // SEC-BAP-95: check#MayChangeRecord (the owning app's rule, the record's owners and managers, else the user's own grant)
+                const mayChangeRecord = (rule, name) => !!ec.service.sync().name('ironstone.shared.ChatterServices.check#MayChangeRecord')
+                    .parameters({recordEntityName: name, recordId: recordId, contentType: rule}).call()?.mayChange
                 const mayUpdate = content.catalogCanChange !== false && mayChangeRecord(content, entityName)
                 const L = (text) => ec.l10n.localize(text)
                 const toMillis = (value) => {
@@ -611,8 +614,9 @@ along with this software (see the LICENSE.md file). If not, see
                 const entityName = ec.entity.makeValue(recordEntityName).getEntityName()
                 const mine = !!row.userId && row.userId === ec.user.userId
                 const instruction = entityName === 'mantle.work.effort.WorkEffort' && row.contentTypeEnumId === 'WectInstruction'
-                // SEC-BAP-95: the owning app's rule, else the user's own grant on the entity (not the root's inherited one)
-                const mayChangeRecord = (rule, name) => rule?.recordRule ? rule.catalogCanChange !== false : ec.resource.script('component://mr-mantle/service/mantle/ledger/EntityLib.js').access.systemAdmin() || ec.artifactExecution.isPermittedOwn(name, 'AT_ENTITY', 'update')
+                // SEC-BAP-95: check#MayChangeRecord (the owning app's rule, the record's owners and managers, else the user's own grant)
+                const mayChangeRecord = (rule, name) => !!ec.service.sync().name('ironstone.shared.ChatterServices.check#MayChangeRecord')
+                    .parameters({recordEntityName: name, recordId: recordId, contentType: rule}).call()?.mayChange
                 if (instruction || content.catalogCanChange === false || (!mine && !mayChangeRecord(content, entityName))) {
                     ec.message.addError(ec.resource.expand('You may not remove ${fileName}', '', {fileName: fileName})); return }
                 const keys = {}
@@ -692,8 +696,9 @@ along with this software (see the LICENSE.md file). If not, see
                 const protectedIds = content?.protectedContentIds || []
                 const immutablePath = rows.some((item) => (item.getMap().isImmutable === 'Y' || protectedIds.includes(String(item.workEffortContentId))) &&
                     (item.contentLocation === location || String(item.contentLocation || '').startsWith(location + '/')))
-                // SEC-BAP-95: the owning app's rule, else the user's own grant on the entity (not the root's inherited one)
-                const mayChangeRecord = (rule, name) => rule?.recordRule ? rule.catalogCanChange !== false : ec.resource.script('component://mr-mantle/service/mantle/ledger/EntityLib.js').access.systemAdmin() || ec.artifactExecution.isPermittedOwn(name, 'AT_ENTITY', 'update')
+                // SEC-BAP-95: check#MayChangeRecord (the owning app's rule, the record's owners and managers, else the user's own grant)
+                const mayChangeRecord = (rule, name) => !!ec.service.sync().name('ironstone.shared.ChatterServices.check#MayChangeRecord')
+                    .parameters({recordEntityName: name, recordId: recordId, contentType: rule}).call()?.mayChange
                 canChange = !immutablePath && content?.catalogCanChange !== false && ((!!contentRow && !!contentRow.userId && contentRow.userId === ec.user.userId) || mayChangeRecord(content, entityName))
                 if (requireChange && !canChange) ec.message.addError(ec.resource.expand('You may not change the files of ${recordName}', '', {recordName: recordName}))
             ]]></script>

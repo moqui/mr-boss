@@ -526,6 +526,22 @@ feature("joe.developer, who sees the request, takes off no one else's message, f
     },
 })
 
+// SEC-BAP-95 review: the request's assignee manages what is on it, another user's message included
+feature("joe.developer as the request's assignee takes john.doe's message off it", {
+    allowMessageErrors: true,
+    when() {
+        const johnNote = post("logNote", { body: "<p>John's note for the assignee.</p>" }, shared).json.communicationEventId
+        sys(() => call("create#mantle.request.RequestParty", { requestId: "BOSS_TEST_CHATTER_SHARED", partyId: "ORG_ZIZI_JD", roleTypeId: "Assignee",
+            fromDate: ec.user.nowTimestamp }))
+        const unlink = as("joe.developer", () => post("unlink", { communicationEventId: johnNote }, shared))
+        return { unlink, link: one("mantle.request.RequestCommEvent", { requestId: "BOSS_TEST_CHATTER_SHARED", communicationEventId: johnNote }) }
+    },
+    then({ unlink, link }) {
+        unlink.status == 200
+        link == null
+    },
+})
+
 feature("a note with a reply is not deleted until the reply is", {
     allowMessageErrors: true,
     when() {

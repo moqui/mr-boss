@@ -133,9 +133,21 @@ feature("RecordFiles keeps a check's evidence and removes a file no check names"
                     })
                 )
             )
-        return {evidence: remove(state.photo), loose: remove(state.loose)}
+        // a reader of the work order who is not on it and manages no maintenance removes no one else's file (SEC-BAP-95)
+        const others = file("others.jpg", "maint.tech.user")
+        const byReader = asUser(users.reader, () =>
+            system(() =>
+                refusal("ironstone.shared.RecordFilesServices.remove#RecordFile", {
+                    recordEntityName: "mantle.work.effort.WorkEffort",
+                    recordId: state.workOrder,
+                    contentKey: JSON.stringify({workEffortContentId: others})
+                })
+            )
+        )
+        return {evidence: remove(state.photo), loose: remove(state.loose), byReader, othersLeft: rows("mantle.work.effort.WorkEffortContent", {workEffortContentId: others}).length}
     },
-    then({evidence, loose}) {
+    then({evidence, loose, byReader, othersLeft}) {
+        byReader.includes("You may not remove") && othersLeft == 1
         evidence.includes("You may not remove")
         loose == ""
         rows("mantle.work.effort.WorkEffortContent", {workEffortContentId: state.photo}).length == 1
