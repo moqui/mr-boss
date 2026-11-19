@@ -1663,7 +1663,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="get" noun="OrderDetail">
         <description>OrderDetail in the Projects context (design-projects.md §10 OrderDetail): for one who may see the order (get#OrderAccess),
-            else detail is null. The header (customer, vendor, status, dates, total, the order's name), the lines (each with its total, the
+            else detail is null. Only the parts its projects' organizations sell (get#ProjectVendors, SEC-BOS-95). The header (customer,
+            vendor, status, dates, total, the order's name), the lines (each with its total, the
             projects and milestones it is linked to and their shares, billed), the milestone shares (get#MilestoneBilling), the invoices that
             bill it (OrderItemBilling), the projects; the actions: Send estimate for approval (one project, the user manages it, the order
             open or proposed), Print (the estimate of its project), link a line to the project.</description>
@@ -1687,15 +1688,27 @@ along with this software (see the LICENSE.md file). If not, see
                     return party ? (party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ') || party.pseudoId || id) : id
                 }
                 const statusText = (id) => id ? (ec.entity.find('moqui.basic.StatusItem').condition('statusId', id).useCache(true).one()?.description || id) : ''
-                const part = Array.from(ec.entity.find('mantle.order.OrderPart').condition('orderId', orderId).orderBy('orderPartSeqId').list())[0]
+                // only the order's parts the projects' organizations sell (SEC-BOS-95): another organization's part of the same order,
+                // its lines, shares and invoices are not shown through a project
+                const vendors = new Set()
+                for (const id of access.projectIds) for (const vendorId of Array.from(ec.service.sync().name('ironstone.projects.BillingServices.get#ProjectVendors')
+                        .parameter('workEffortId', id).call()?.vendorPartyIdList || [])) vendors.add(vendorId)
+                const parts = Array.from(ec.entity.find('mantle.order.OrderPart').condition('orderId', orderId).orderBy('orderPartSeqId').list())
+                    .filter((row) => vendors.has(row.vendorPartyId))
+                const part = parts[0]
+                const partSeqs = new Set(parts.map((row) => row.orderPartSeqId))
+                const items = Array.from(ec.entity.find('mantle.order.OrderItem').condition('orderId', orderId).orderBy('orderItemSeqId').list())
+                    .filter((item) => partSeqs.has(item.orderPartSeqId))
+                const itemSeqs = new Set(items.map((item) => item.orderItemSeqId))
+                const wholeOrder = items.length === Array.from(ec.entity.find('mantle.order.OrderItem').condition('orderId', orderId).selectField('orderItemSeqId').list()).length
                 const billing = ec.service.sync().name('mantle.work.ProjectServices.get#MilestoneBilling').parameters({orderId: orderId}).call() || {}
                 ec.message.clearErrors()
-                const shares = Array.from(billing.shareList || [])
+                const shares = Array.from(billing.shareList || []).filter((share) => itemSeqs.has(share.orderItemSeqId))
                 const projectNames = {}
                 for (const id of access.projectIds) projectNames[id] = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', id).one()?.workEffortName || id
                 const links = Array.from(ec.entity.find('mantle.order.OrderItemWorkEffort').condition('orderId', orderId).list())
                 let total = toDecimal(0)
-                const lineRows = Array.from(ec.entity.find('mantle.order.OrderItem').condition('orderId', orderId).orderBy('orderItemSeqId').list()).map((item) => {
+                const lineRows = items.map((item) => {
                     const lineTotal = toDecimal(item.quantity ?? 1).multiply(toDecimal(item.unitAmount ?? 0)).setScale(2, 'HALF_UP')
                     total = total.add(lineTotal)
                     const lineShares = shares.filter((share) => share.orderItemSeqId === item.orderItemSeqId)
@@ -1715,7 +1728,8 @@ along with this software (see the LICENSE.md file). If not, see
                     statusText: share.billed ? ec.resource.expand('Billed on ${invoiceId}', '', {invoiceId: share.invoiceId}) : share.due ? L('Due') : share.awaiting ? L('Waiting for approval')
                         : share.milestoneStatusText, statusColor: share.billed ? 'positive' : share.due ? 'warning' : share.awaiting ? 'info' : 'grey-7',
                     invoiceUrl: share.invoiceId ? '/qapps/Projects/Billing/InvoiceDetail?invoiceId=' + encodeURIComponent(share.invoiceId) : null}))
-                const invoiceIds = Array.from(new Set(Array.from(ec.entity.find('mantle.order.OrderItemBilling').condition('orderId', orderId).list()).map((row) => row.invoiceId).filter((id) => id)))
+                const invoiceIds = Array.from(new Set(Array.from(ec.entity.find('mantle.order.OrderItemBilling').condition('orderId', orderId).list())
+                        .filter((row) => itemSeqs.has(row.orderItemSeqId)).map((row) => row.invoiceId).filter((id) => id)))
                 const invoiceDays = ec.resource.script('component://mr-mantle/service/mantle/account/InvoiceWorkflowLib.js').invoiceCalendarDays(invoiceIds)
                 const invoiceRows = invoiceIds.length ? Array.from(ec.entity.find('mantle.account.invoice.Invoice').condition('invoiceId', 'in', invoiceIds).orderBy('-invoiceDate').list()).map((inv) => ({
                     invoiceId: inv.invoiceId, url: '/qapps/Projects/Billing/InvoiceDetail?invoiceId=' + encodeURIComponent(inv.invoiceId), dateText: invoiceDays[inv.invoiceId]?.invoiceDay || day(inv.invoiceDate),
@@ -1727,7 +1741,7 @@ along with this software (see the LICENSE.md file). If not, see
                 detail = {orderId: orderId, orderName: header.orderName || '', statusId: header.statusId, statusText: statusText(header.statusId),
                     customerName: nameOf(part?.customerPartyId), vendorName: nameOf(part?.vendorPartyId), customerPartyId: part?.customerPartyId || null,
                     entryDateText: day(header.entryDate), placedDateText: day(header.placedDate), approvedDateText: day(header.approvedDate),
-                    totalText: cash(header.grandTotal ?? total), currencyUomId: uom, lineRows: lineRows, shareRows: shareRows, invoiceRows: invoiceRows, projectRows: projectRows,
+                    totalText: cash(wholeOrder ? (header.grandTotal ?? total) : total), currencyUomId: uom, lineRows: lineRows, shareRows: shareRows, invoiceRows: invoiceRows, projectRows: projectRows,
                     projectId: single, projectName: single ? projectNames[single] : '', canManage: !!access.canManage,
                     canSendEstimate: !!single && !!access.canManage && ['OrderOpen', 'OrderProposed'].includes(header.statusId),
                     estimateText: estimate?.awaiting ? L('The estimate waits for the client\'s approval') : estimate?.approved ? L('The client approved the estimate') : '',

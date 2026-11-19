@@ -46,6 +46,11 @@ spec({
             call("mantle.work.WorkEffortServices.add#WorkEffortParty", { workEffortId: PROJECT, partyId: "EX_JOHN_DOE", roleTypeId: "ProjectManager", statusId: "WeptAssigned" })
             made.own = order(VENDOR, "Own " + RUN)
             made.other = order(OTHERORG, "Other " + RUN)
+            // a second part of the own order, sold by the other organization: not shown through the project
+            call("create#mantle.order.OrderPart", { orderId: made.own.orderId, orderPartSeqId: "99", vendorPartyId: OTHERORG, customerPartyId: CLIENT,
+                statusId: "OrderOpen" })
+            made.foreignSeq = call("mantle.order.OrderServices.create#OrderItem", { orderId: made.own.orderId, orderPartSeqId: "99",
+                itemTypeEnumId: "ItemServiceProduct", itemDescription: "Foreign part work " + RUN, quantity: 1, unitAmount: 7777 }).orderItemSeqId
         })
     },
     cleanupSpec() {
@@ -69,8 +74,8 @@ feature("a project offers and links only its organization's order lines to a sha
         const search = answer(B + "search#OrderLines", { workEffortId: PROJECT, term: RUN })
         const linkOther = answer(B + "link#OrderLine", { workEffortId: PROJECT, orderLine: made.other.line })
         const linkOwn = answer(B + "link#OrderLine", { workEffortId: PROJECT, orderLine: made.own.line })
-        // Mantle's link takes any line of an order to the project's client
-        sys(() => call("mantle.work.ProjectServices.link#ProjectOrderItem", { workEffortId: PROJECT, orderId: made.other.orderId, orderItemSeqId: made.other.seq }))
+        // a link to the other's line made before the rule (Mantle's link#ProjectOrderItem now refuses it too), written as a row
+        sys(() => call("create#mantle.order.OrderItemWorkEffort", { orderId: made.other.orderId, orderItemSeqId: made.other.seq, workEffortId: PROJECT }))
         const ownDetail = answer(B + "get#OrderDetail", { orderId: made.own.orderId })
         const otherDetail = answer(B + "get#OrderDetail", { orderId: made.other.orderId })
         const otherAccess = answer(B + "get#OrderAccess", { orderId: made.other.orderId, need: "none" })
@@ -82,6 +87,9 @@ feature("a project offers and links only its organization's order lines to a sha
         linkOther.errors.includes("not found")
         linkOwn.errors == ""
         ownDetail.detail != null
+        ownDetail.detail.lineRows.some((row) => row.orderItemSeqId == made.own.seq)
+        !ownDetail.detail.lineRows.some((row) => row.orderItemSeqId == made.foreignSeq)
+        !JSON.stringify(ownDetail.detail).includes("Foreign part work")
         otherDetail.detail == null
         otherAccess.canView == false
     },
