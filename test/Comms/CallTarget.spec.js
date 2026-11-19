@@ -11,6 +11,8 @@ const ORG = "BOSS_TEST_CT_ORG"
 const SAME = "BOSS_TEST_CT_SAME"
 const OTHER = "BOSS_TEST_CT_OTHER"
 const NOPARTY = "BOSS_TEST_CT_NOPARTY"
+// a staff member of the other organization whose party is shared (_NA_): reached through its employer alone (the owner's rule)
+const STAFF = "BOSS_TEST_CT_STAFF"
 const REQUEST = "BOSS_TEST_CT_REQUEST"
 const CALLS = "org.moqui.call.CallServices."
 const TRANSFERS = "org.moqui.call.CallTransferServices."
@@ -71,23 +73,32 @@ spec({
             store("mantle.party.Organization", { partyId: ORG, organizationName: "Calltarget Other Org" })
             store("mantle.party.Party", { partyId: OTHER, partyTypeEnumId: "PtyPerson", ownerPartyId: ORG })
             store("mantle.party.Person", { partyId: OTHER, firstName: "Otto", lastName: "Calltarget" })
+            store("mantle.party.PartyRole", { partyId: ORG, roleTypeId: "OrgInternal" })
+            store("mantle.party.Party", { partyId: STAFF, partyTypeEnumId: "PtyPerson", ownerPartyId: "_NA_" })
+            store("mantle.party.Person", { partyId: STAFF, firstName: "Stu", lastName: "Calltarget" })
+            if (ec.entity.find("mantle.party.PartyRelationship").condition("partyRelationshipId", STAFF).count() == 0)
+                store("mantle.party.PartyRelationship", { partyRelationshipId: STAFF, relationshipTypeEnumId: "PrtEmployee", fromPartyId: STAFF,
+                    toPartyId: ORG, toRoleTypeId: "OrgInternal", fromDate: new Date(Date.now() - 60000) })
             call(CALLS + "register#MediaNode", { instanceId: NODE, mediaAddress: "127.0.0.1:10000" })
         })
         makeUser(SAME, SAME)
         makeUser(OTHER, OTHER)
+        makeUser(STAFF, STAFF)
         makeUser(NOPARTY, null)
     },
     cleanupSpec() {
         endCalls()
         sys(() => {
             ec.entity.find("moqui.call.CallMediaNode").condition("instanceId", NODE).deleteAll()
-            ec.entity.find("moqui.security.UserGroupMember").condition("userId", "in", [SAME, OTHER, NOPARTY]).deleteAll()
+            ec.entity.find("moqui.security.UserGroupMember").condition("userId", "in", [SAME, OTHER, STAFF, NOPARTY]).deleteAll()
             // the Forum's tracking mode a group membership makes (mantle.forum.TrackingServices.refresh#Mode)
-            ec.entity.find("mantle.forum.ForumTrackingMode").condition("partyId", "in", [SAME, OTHER]).deleteAll()
-            ec.entity.find("moqui.security.UserAccount").condition("userId", "in", [SAME, OTHER, NOPARTY]).deleteAll()
-            ec.entity.find("mantle.party.Person").condition("partyId", "in", [SAME, OTHER]).deleteAll()
+            ec.entity.find("mantle.forum.ForumTrackingMode").condition("partyId", "in", [SAME, OTHER, STAFF]).deleteAll()
+            ec.entity.find("moqui.security.UserAccount").condition("userId", "in", [SAME, OTHER, STAFF, NOPARTY]).deleteAll()
+            ec.entity.find("mantle.party.PartyRelationship").condition("partyRelationshipId", STAFF).deleteAll()
+            ec.entity.find("mantle.party.PartyRole").condition("partyId", ORG).condition("roleTypeId", "OrgInternal").deleteAll()
+            ec.entity.find("mantle.party.Person").condition("partyId", "in", [SAME, OTHER, STAFF]).deleteAll()
             ec.entity.find("mantle.party.Organization").condition("partyId", ORG).deleteAll()
-            ec.entity.find("mantle.party.Party").condition("partyId", "in", [SAME, OTHER]).deleteAll()
+            ec.entity.find("mantle.party.Party").condition("partyId", "in", [SAME, OTHER, STAFF]).deleteAll()
             ec.entity.find("mantle.party.Party").condition("partyId", ORG).deleteAll()
         })
     },
@@ -97,14 +108,14 @@ feature("the provider answers which users joe.developer may not reach: another o
     when() {
         ec.user.internalLoginUser("joe.developer")
         const out = sys(() => call("org.moqui.ui.ShellServices.call#Providers", { hook: "call-target",
-            parameters: { userIdList: [SAME, OTHER, NOPARTY, userIdOf("john.doe")] } })) || {}
+            parameters: { userIdList: [SAME, OTHER, STAFF, NOPARTY, userIdOf("john.doe")] } })) || {}
         return { out, mine: (out.results || []).filter((r) => r.sourceId == "boss.parties") }
     },
     then({ out, mine }) {
         out.unavailable == false
         out.failedParts.length == 0
         mine.length == 1
-        mine[0].refusedUserIdList.join() == OTHER
+        Array.from(mine[0].refusedUserIdList).sort().join() == [OTHER, STAFF].sort().join()
     },
 })
 
@@ -216,6 +227,7 @@ feature("chat reaches only the users joe.developer may see: search, a direct mes
         const searchOther = found("Otto")
         const searchSame = found("Sam")
         const directOther = chat("createDirect", {userIds: OTHER}, "post")
+        const directStaff = chat("createDirect", {userIds: STAFF}, "post")
         const directSame = chat("createDirect", {userIds: SAME}, "post")
         const room = chat("createRoom", {roomTypeEnumId: "private", roomName: "Chat target spec room"}, "post")
         const roomId = room.json.chatRoomId
@@ -226,12 +238,13 @@ feature("chat reaches only the users joe.developer may see: search, a direct mes
                 .filter(row => !row.leftDate)
                 .map(row => row.userId)
         )
-        return {searchOther, searchSame, directOther, directSame, roomId, addOther, addSame, members}
+        return {searchOther, searchSame, directOther, directStaff, directSame, roomId, addOther, addSame, members}
     },
     then(v) {
         !v.searchOther.includes(OTHER)
         v.searchSame.includes(SAME)
         v.directOther.errors.includes("not found")
+        v.directStaff.errors.includes("not found")
         v.directSame.errors == ""
         v.roomId != null
         v.addOther.errors.includes("not found")
@@ -280,6 +293,7 @@ feature("the Chatter people search and a note's mentions leave out a user joe.de
         found.status == 200
         Array.isArray(found.json)
         found.json.some((user) => user.id == SAME) && !found.json.some((user) => user.id == OTHER)
+        !found.json.some((user) => user.id == STAFF)
         logged.status == 200 && logged.errors == ""
         same == 1
         other == 0
