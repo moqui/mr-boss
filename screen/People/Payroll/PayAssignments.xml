@@ -21,8 +21,9 @@ along with this software (see the LICENSE.md file). If not, see
     going on); an employment opened (partyRelationshipId) shows its assignments, each ended from a date, and TaxAndBenefits: the
     tax profile of its group's localization, whose fields are only those the installed localization declares (Edit tax profile,
     store#PayrollProfile), its benefits (Add benefit, End), and its bank accounts as masked references, a payroll account added
-    or changed here by a payroll editor (Add payroll bank account, Change: store#PayrollBankAccount; SEC-BOS-82, Accounting's
-    finance details refuse employees). Assigning a structure changes no salary: the salary is changed on Employee360's
+    or a payroll account changed here by a payroll editor (Add payroll bank account, Change: store#PayrollBankAccount, which
+    refuses a person another internal employer pays and an ended employment with no pay left, and tells the person;
+    SEC-BOS-82, Accounting's finance details refuse employees). Assigning a structure changes no salary: the salary is changed on Employee360's
     Compensation as a pay change. Under Payroll, payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read and change. Salaries,
     pay rates, an assignment's inputs and a benefit's cost are opted out of AI (the user's call of Nov 12, 2026, PE-21). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -535,7 +536,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="actions">
                                                 <default-field title="">
                                                     <container-dialog id="ChangePayrollBank_${paymentMethodId}" button-text="Change" icon="sym_o_edit"
-                                                            width="560" title="Change ${referenceText}" condition="canEdit">
+                                                            width="560" title="Change ${referenceText}" condition="canEdit &amp;&amp; payroll">
                                                         <label type="p" text="The account ends and its successor takes the pay from now. An empty number keeps the stored one."/>
                                                         <form-single name="ChangePayrollBank" transition="storePayrollBank"
                                                                 map="{partyRelationshipId:partyRelationshipId, paymentMethodId:paymentMethodId,

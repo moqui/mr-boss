@@ -236,6 +236,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P26: the person's payslip issued (PayslipIssued: direct only, no amount), opening their own slip; "Explain this payslip" on
             it (the people-payslip-explain skill, answered from the user's own people_my_payslip tool) -->
         <notification-topic topic="PayslipIssued"/>
+        <!-- SEC-BOS-82: payroll's change of the person's payroll bank account, told to them alone -->
+        <notification-topic topic="PayrollBankAccountChanged"/>
         <assist-prompt label="Explain this payslip" text="Explain this payslip: each line, how it was worked out, what changed from my last one, and what the year to date counts"
                 screen="People/MyPayslip" sequence="44"/>
     </shell-providers>
