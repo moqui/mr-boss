@@ -95,6 +95,59 @@ feature("a link with a password: nothing without the grant, a wrong password ref
     },
 })
 
+// SEC-BOS-83: a folder's zip is made once for the link while its files are unchanged, and asked for too often it is refused.
+// A link of its own (no password) and a requester of its own, so the counts start at nothing on every run.
+feature("a folder link's zip is kept and sent again, and more than 20 in ten minutes are refused", {
+    allowMessageErrors: true,
+    when() {
+        const run = ec.user.randomString(12)
+        const token = "BossSpecZipLink" + run
+        const shareId = "BOSS_SPEC_ZIP_" + run
+        sys(() => {
+            const photos = ec.entity.find("moqui.resource.ResourceShare").condition("shareId", "BOSS_DEMO_LINK_PHOTOS").one()
+            const row = ec.entity.makeValue("moqui.resource.ResourceShare")
+            row.setFields({ shareId, driveId: photos.driveId, path: photos.path, isDirectory: "Y", isLink: "Y", permissionEnumId: "RspView",
+                linkTokenHash: ec.user.singleUseCodeHash(token), linkLabel: "Spec zip", createdByUserId: photos.createdByUserId,
+                createdDate: ec.user.nowTimestamp }, true, null, null)
+            row.create()
+        })
+        ec.user.context.passRequester = "spec-zip-" + run
+        try {
+            const download = () => {
+                try {
+                    return { location: call(`${FILES}.download#PublicShare`, { token, path: "" })?.location || null, errors: "" }
+                } catch (err) {
+                    return { location: null, errors: String(err.message || err) }
+                } finally {
+                    ec.message.clearErrors()
+                }
+            }
+            const first = download()
+            const second = download()
+            const head = first.location ? sys(() => String(ec.resource.getLocationText(first.location, "ISO-8859-1")).substring(0, 2)) : ""
+            let refused = null
+            let allowed = 2
+            for (let i = 0; i < 25 && !refused; i++) {
+                const next = download()
+                if (next.errors) refused = next
+                else allowed++
+            }
+            return { first, second, magic: head, allowed, refused }
+        } finally {
+            ec.user.context.passRequester = null
+            sys(() => ec.entity.find("moqui.resource.ResourceShare").condition("shareId", shareId).deleteAll())
+        }
+    },
+    then({ first, second, magic, allowed, refused }) {
+        first.errors == ""
+        first.location.startsWith("runtime://tmp/drive-zip/share-")
+        second.location == first.location
+        magic == "PK"
+        allowed == 20
+        refused.errors.includes("Too many downloads of this folder")
+    },
+})
+
 feature("a link without a password to one file: open, list, download", {
     when() {
         const opened = visit("open", PLAN, {}, "post")
