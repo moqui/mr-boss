@@ -1257,8 +1257,9 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
     <service verb="change" noun="WorkTypes">
-        <description>TimeSettings' work types: offer or stop offering one, move it up or down, or rename one of the organization's
-            own (change rename with label); for the Projects managers.</description>
+        <description>TimeSettings' work types: offer or stop offering one (a shared type or one of the organization's own), move it
+            up or down, or rename one of the organization's own (change rename with label; the one its managers made, its organization
+            on the type, never another organization's); for the Projects managers.</description>
         <in-parameters>
             <parameter name="enumId" required="true"/>
             <parameter name="change" required="true"/>
@@ -1271,15 +1272,17 @@ along with this software (see the LICENSE.md file). If not, see
             if (ec.message.hasError()) return
             const org = ec.service.sync().name('ironstone.projects.ProjectServices.get#SettingsOrganization').call()?.organizationPartyId
             if (!org) { ec.message.addError(L('You belong to no organization, so there is nowhere to keep the setting')); return }
+            // the settings organization's own types and the shared ones (another organization's own is in no list, SEC-BOS-131)
+            const info = ec.service.sync().name('mantle.work.TimesheetServices.get#WorkTypes').parameters({organizationPartyId: org}).call() || {}
+            const listed = Array.from(info.typeList || []).find((row) => row.enumId === enumId)
             if (change === 'rename') {
-                const type = ec.entity.find('moqui.basic.Enumeration').condition('enumId', enumId).one()
-                if (!type || type.enumTypeId !== 'WorkType' || !String(enumId).startsWith('WktpOrg')) { ec.message.addError(L('Only your own work types are renamed')); return }
+                if (!listed?.isOwn) { ec.message.addError(L('Only your own work types are renamed')); return }
                 if (!String(label || '').trim()) { ec.message.addError(L('A work type needs a label')); return }
                 ec.service.sync().name('update#moqui.basic.Enumeration').parameters({enumId: enumId, description: String(label).trim()}).call()
                 if (!ec.message.hasError()) message = L('Work type renamed')
                 return
             }
-            const info = ec.service.sync().name('mantle.work.TimesheetServices.get#WorkTypes').parameters({organizationPartyId: org}).call() || {}
+            if (change === 'offer' && !listed) { ec.message.addError(ec.resource.expand('Work type ${enumId} is not available', '', {enumId})); return }
             const offered = Array.from(info.offeredList || []).map((row) => row.enumId)
             const at = offered.indexOf(enumId)
             if (change === 'offer' && at < 0) offered.push(enumId)
@@ -1307,7 +1310,8 @@ along with this software (see the LICENSE.md file). If not, see
             if (Array.from(info.typeList || []).some((row) => String(row.label).toLowerCase() === name.toLowerCase())) {
                 ec.message.addError(ec.resource.expand('There is a work type ${name} already', '', {name})); return }
             enumId = 'WktpOrg' + ec.entity.sequencedIdPrimary('moqui.basic.Enumeration.WktpOrg', null, null)
-            ec.service.sync().name('create#moqui.basic.Enumeration').parameters({enumId: enumId, enumTypeId: 'WorkType', description: name}).call()
+            // the organization kept on the type (enumCode): its own, which only its managers rename (SEC-BOS-131)
+            ec.service.sync().name('create#moqui.basic.Enumeration').parameters({enumId: enumId, enumTypeId: 'WorkType', enumCode: org, description: name}).call()
             if (ec.message.hasError()) return
             ec.service.sync().name('mantle.work.TimesheetServices.store#WorkTypes').parameters({organizationPartyId: org,
                 offered: Array.from(info.offeredList || []).map((row) => row.enumId).concat([enumId])}).call()
