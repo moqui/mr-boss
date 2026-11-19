@@ -224,3 +224,27 @@ feature("a price import sends its aggregate notice while suppressing per-row pri
         !summaries.some(r => r.userId === importerUserId)
     }
 })
+feature("an import applied in two parts sends the pricing staff a summary for each part (SEC-BAP-107 review)", {
+    when() {
+        return as("catalog.price.edit", () => {
+            const staged = call(S + "stage#CatalogImport", {
+                    kindId: "prices",
+                    organizationPartyId: "ORG_ZIZI_SERVICES",
+                    sourceText: "productId,price,priceUomId,minQuantity\nBOSS_IMPORT_PRICE_TARGET,30,USD,50\nBOSS_IMPORT_PRICE_TARGET,25,USD,100\n"
+                }),
+                valid = call(S + "validate#CatalogImport", {operationKey: staged.operationKey, mappingRevision: staged.mappingRevision})
+            const summaries = () =>
+                Array.from(ec.entity.find("mantle.product.ProductCatalogOperation").disableAuthz().list())
+                    .filter(r => r.operationType === "price-import-notice" && JSON.parse(r.requestJson).operationKey === staged.operationKey)
+                    .length
+            call(S + "apply#CatalogImport", {operationKey: staged.operationKey, inputFingerprint: valid.inputFingerprint, selectedRowIds: "1"})
+            const afterFirst = summaries()
+            call(S + "apply#CatalogImport", {operationKey: staged.operationKey, inputFingerprint: valid.inputFingerprint, selectedRowIds: "2"})
+            return {afterFirst, afterSecond: summaries()}
+        })
+    },
+    then({afterFirst, afterSecond}) {
+        afterFirst >= 1
+        afterSecond > afterFirst
+    }
+})

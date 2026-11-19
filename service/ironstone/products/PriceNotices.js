@@ -202,10 +202,20 @@ function importChanged(p) {
         item => item.result === "applied" && item.resultEntityName === E && item.resultRecordId
     )
     const byRecipient = new Map()
+    // the recipients of rows alike are the same: kept by direction, organization, product owner, vendor and customer
+    const recipientMemo = new Map()
+    const recipientsOf = r => {
+        const product = one(P + "Product", {productId: r.productId})
+        const key = [direction(r), r.vendorPartyId, r.customerPartyId, product?.ownerPartyId].join("|")
+        if (!recipientMemo.has(key)) recipientMemo.set(key, recipients(r))
+        return recipientMemo.get(key)
+    }
+    const appliedIds = []
     for (const item of items) {
         const r = one(E, {productPriceId: item.resultRecordId})
         if (!r || r.priceTypeEnumId === "PptAverage") continue
-        for (const userId of recipients(r)) {
+        appliedIds.push(r.productPriceId + "@" + ms(r.lastUpdatedStamp))
+        for (const userId of recipientsOf(r)) {
             if (userId === p.importerUserId) continue
             if (!byRecipient.has(userId)) byRecipient.set(userId, new Set())
             byRecipient.get(userId).add(r.productId)
@@ -213,7 +223,10 @@ function importChanged(p) {
     }
     const sentTo = []
     for (const [userId, productIds] of byRecipient) {
-        const marker = ec.user.singleUseCodeHash("import-prices|" + p.operationKey + "|" + userId).slice(0, 40)
+        // one notice for each set of rows changed, so a second apply that changes rows again tells again (SEC-BAP-107 review)
+        const marker = ec.user
+            .singleUseCodeHash("import-prices|" + p.operationKey + "|" + userId + "|" + appliedIds.sort().join(","))
+            .slice(0, 40)
         if (one(P + "ProductCatalogOperation", {operationKey: marker})) continue
         try {
             const names = [...productIds]
