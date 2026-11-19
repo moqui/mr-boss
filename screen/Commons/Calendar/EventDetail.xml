@@ -272,7 +272,7 @@ along with this software (see the LICENSE.md file). If not, see
             notifyDefault = hasAttendees ? 'Y' : 'N'
             myStatusId = event.myStatusId || ''
             visibilityOptions = [{key: '', text: L('Its people and calendars')}, {key: 'WevAllUsers', text: L('Everyone')}, {key: 'WevWorkGroup', text: L('Its work group')},
-                {key: 'WevRestricted', text: L('Only the people on it')}]
+                {key: 'WevRestricted', text: L("Private: the people on it and its calendar's editors")}]
             scopeOptions = [{key: 'this', text: L('This event')}, {key: 'following', text: L('This and following')}, {key: 'all', text: L('All events')}]
             // the header: the calendar's color chip, the status, when and the facts
             const color = event.calendar?.color && /^#[0-9a-fA-F]{3,8}$/.test(event.calendar.color) ? event.calendar.color : null

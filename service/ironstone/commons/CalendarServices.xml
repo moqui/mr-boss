@@ -621,7 +621,7 @@ along with this software (see the LICENSE.md file). If not, see
                 }
             }
             const status = excluded ? statusLabels.WeCancelled : (statusLabels[row.statusId] || [row.statusId || '', 'grey-7'])
-            const visibilityLabels = {WevAllUsers: 'Everyone', WevWorkGroup: 'Work group', WevRestricted: 'Only the people on it'}
+            const visibilityLabels = {WevAllUsers: 'Everyone', WevWorkGroup: 'Work group', WevRestricted: "Private: the people on it and its calendar's editors"}
             event = {workEffortId: workEffortId, seriesId: seriesId, isInstance: !!instanceLink, instanceStart: instanceLink ? fmt(toMillis(instanceLink.fromDate), allDay ? 'yyyy-MM-dd' : 'yyyy-MM-dd HH:mm')
                     : (instanceText ? instanceText.substring(0, allDay ? 10 : 16) : null),
                 name: row.workEffortName || L('(no title)'), statusId: excluded ? 'WeCancelled' : (row.statusId || null), statusLabel: L(status[0]), statusColor: status[1],
