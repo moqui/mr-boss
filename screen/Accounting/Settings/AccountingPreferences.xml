@@ -207,6 +207,12 @@ along with this software (see the LICENSE.md file). If not, see
                             </radio>
                         </default-field>
                     </field>
+                    <field name="writeOffToleranceAmount">
+                        <default-field title="Write-off tolerance"
+                                tooltip="The largest residual, in the base currency, a receivables or payables user writes off or credits without an approver; empty or 0, every write-off needs one">
+                            <text-line size="12"/>
+                        </default-field>
+                    </field>
                     <field name="rateProviderServiceName">
                         <default-field title="Exchange rate provider"
                                 tooltip="Fetch rates proposes the day's rates from it on Currencies; none, rates are entered or
@@ -331,6 +337,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </field-row>
                         <field-row>
                             <field-ref name="allowAccountingSelfApproval"/>
+                            <field-ref name="writeOffToleranceAmount"/>
                         </field-row>
                         <field-row>
                             <field-ref name="rateProviderServiceName"/>

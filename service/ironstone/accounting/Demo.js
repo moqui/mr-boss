@@ -369,6 +369,8 @@ function settlementDocuments(currency) {
         direction: "O"
     }).glAccountId
     if (!sourceAccount) throw new Error("The settlement demo needs a services revenue account")
+    // the linked credit is drafted by the receivables clerk and issued by an approver who did not draft it (SEC-BOS-127)
+    const clerkUserId = policy.one("moqui.security.UserAccount", {username: "finance.ar"})?.userId || null
     for (const [invoiceId, amount, description, creditForInvoiceId] of [
         ["BOSS_ACCT_STL_INV100", "100", "Settlement services invoice", null],
         ["BOSS_ACCT_STL_SPLIT100", "100", "Split receipt services invoice", null],
@@ -385,7 +387,7 @@ function settlementDocuments(currency) {
             financeOrganizationPartyId: organizationPartyId,
             financeDirection: "receivable",
             creditForInvoiceId,
-            draftedByUserId: ec.user.userId,
+            draftedByUserId: creditForInvoiceId ? clerkUserId : ec.user.userId,
             statusId: "InvoiceInProcess",
             invoiceDate: at,
             accountingDate: day,
@@ -404,7 +406,7 @@ function settlementDocuments(currency) {
         policy.call("mantle.account.InvoiceServices.change#InvoiceState", {
             invoiceId,
             organizationPartyId,
-            action: "finalize",
+            action: creditForInvoiceId ? "approve" : "finalize",
             lastUpdatedStamp: invoice.lastUpdatedStamp,
             operationKey: "demo-final-" + invoiceId
         })

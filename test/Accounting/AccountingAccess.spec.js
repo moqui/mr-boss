@@ -1335,7 +1335,14 @@ function choicesFeature() {
                 description: "Choice customer credit",
                 operationKey: "choice-credit-" + ec.user.randomString(20)
             })
-            finalize(credit.invoiceId)
+            // a linked customer credit is issued by an approver who did not draft it (SEC-BOS-127)
+            lib.asUser("finance.approve", () => lib.call(service + "change#InvoiceState", {
+                organizationPartyId: org,
+                invoiceId: credit.invoiceId,
+                action: "approve",
+                lastUpdatedStamp: ec.entity.find(INVOICE).condition("invoiceId", credit.invoiceId).disableAuthz().one().lastUpdatedStamp,
+                operationKey: "choice-approve-" + ec.user.randomString(20)
+            }), false)
             const bill = lib.call("mantle.ledger.AccountingServices.create#DraftDocument", {
                 kind: "bills",
                 organizationPartyId: org,
