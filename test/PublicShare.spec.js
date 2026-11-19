@@ -95,56 +95,85 @@ feature("a link with a password: nothing without the grant, a wrong password ref
     },
 })
 
-// SEC-BOS-83: a folder's zip is made once for the link while its files are unchanged, and asked for too often it is refused.
-// A link of its own (no password) and a requester of its own, so the counts start at nothing on every run.
-feature("a folder link's zip is kept and sent again, and more than 20 in ten minutes are refused", {
+// SEC-BOS-83: a folder's zip is made once for the link while its files are unchanged (the same file, not made again), a
+// changed folder's zip replaces it, a zip made counts against the link and a download against the requester, and a folder
+// past the size setting is refused. A link of its own (no password) and requesters of its own, so the counts start at
+// nothing on every run; a file put in the shared folder for the change is removed after.
+feature("a folder link's zip is kept and sent again, replaced when the folder changes, and the counts and size refuse", {
     allowMessageErrors: true,
     when() {
         const run = ec.user.randomString(12)
         const token = "BossSpecZipLink" + run
         const shareId = "BOSS_SPEC_ZIP_" + run
+        let folder = null
         sys(() => {
             const photos = ec.entity.find("moqui.resource.ResourceShare").condition("shareId", "BOSS_DEMO_LINK_PHOTOS").one()
+            const drive = ec.entity.find("moqui.resource.ResourceDrive").condition("driveId", photos.driveId).one()
+            folder = String(drive.rootLocation).replace(/\/+$/, "") + "/" + photos.path
             const row = ec.entity.makeValue("moqui.resource.ResourceShare")
             row.setFields({ shareId, driveId: photos.driveId, path: photos.path, isDirectory: "Y", isLink: "Y", permissionEnumId: "RspView",
                 linkTokenHash: ec.user.singleUseCodeHash(token), linkLabel: "Spec zip", createdByUserId: photos.createdByUserId,
                 createdDate: ec.user.nowTimestamp }, true, null, null)
             row.create()
         })
-        ec.user.context.passRequester = "spec-zip-" + run
-        try {
-            const download = () => {
-                try {
-                    return { location: call(`${FILES}.download#PublicShare`, { token, path: "" })?.location || null, errors: "" }
-                } catch (err) {
-                    return { location: null, errors: String(err.message || err) }
-                } finally {
-                    ec.message.clearErrors()
-                }
+        const download = () => {
+            try {
+                return { location: call(`${FILES}.download#PublicShare`, { token, path: "" })?.location || null, errors: "" }
+            } catch (err) {
+                return { location: null, errors: String(err.message || err) }
+            } finally {
+                ec.message.clearErrors()
             }
+        }
+        const modified = (location) => sys(() => location ? ec.resource.getLocationReference(location).getLastModified() : null)
+        const exists = (location) => sys(() => !!location && ec.resource.getLocationReference(location).getExists())
+        const added = []
+        const addFile = (name) => sys(() => { ec.resource.getLocationReference(`${folder}/${name}`).putText("spec " + name); added.push(name) })
+        try {
+            ec.user.context.passRequester = "spec-zip-a-" + run
             const first = download()
-            const second = download()
+            const firstModified = modified(first.location)
             const head = first.location ? sys(() => String(ec.resource.getLocationText(first.location, "ISO-8859-1")).substring(0, 2)) : ""
+            const second = download()
+            const secondModified = modified(second.location)
+            // a kept zip sent again counts only against the requester: 30 in ten minutes
             let refused = null
             let allowed = 2
-            for (let i = 0; i < 25 && !refused; i++) {
+            for (let i = 0; i < 35 && !refused; i++) {
                 const next = download()
                 if (next.errors) refused = next
                 else allowed++
             }
-            return { first, second, magic: head, allowed, refused }
+            // another requester: a changed folder's zip replaces the link's earlier one; the second build past the setting is refused
+            ec.user.context.passRequester = "spec-zip-b-" + run
+            addFile(`spec-zip-${run}-1.txt`)
+            const changed = download()
+            const firstGone = !exists(first.location)
+            addFile(`spec-zip-${run}-2.txt`)
+            const pastBuilds = withConf("resource-facade/drive-share@folder-zip-builds-per-link", "2", () => download())
+            const tooLarge = withConf("resource-facade/drive-share@folder-zip-max-bytes", "10", () => download())
+            return { first, firstModified, head, second, secondModified, allowed, refused, changed, firstGone, pastBuilds, tooLarge }
         } finally {
             ec.user.context.passRequester = null
-            sys(() => ec.entity.find("moqui.resource.ResourceShare").condition("shareId", shareId).deleteAll())
+            sys(() => {
+                for (const name of added) ec.resource.getLocationReference(`${folder}/${name}`).delete()
+                ec.entity.find("moqui.resource.ResourceShare").condition("shareId", shareId).deleteAll()
+            })
         }
     },
-    then({ first, second, magic, allowed, refused }) {
-        first.errors == ""
-        first.location.startsWith("runtime://tmp/drive-zip/share-")
-        second.location == first.location
-        magic == "PK"
-        allowed == 20
-        refused.errors.includes("Too many downloads of this folder")
+    then(r) {
+        r.first.errors == ""
+        r.first.location.startsWith("runtime://tmp/drive-zip/share-")
+        r.head == "PK"
+        // the same file, not made again
+        r.second.location == r.first.location
+        r.secondModified == r.firstModified
+        r.allowed == 30
+        r.refused.errors.includes("Too many downloads of this folder")
+        r.changed.errors == "" && r.changed.location != r.first.location
+        r.firstGone
+        r.pastBuilds.errors.includes("Too many downloads of this folder")
+        r.tooLarge.errors.includes("too large to download as one zip")
     },
 })
 
