@@ -24,3 +24,6 @@ server = 405
 # Nov 15, 2026: raised to the final ./moq test-apps of the Sales and Marketing build after its fixes (the user's agreement,
 # impl-marketing §4): 93.4 s measured, MarketingSendWalk 8.0 s of it, rounded up.
 client = 94
+# Nov 19, 2026: proofs, BOSS's security proofs (test/proofs, mr-moqui plans/Proofs-Initial.md P7), set with the user's
+# agreement: 8.1 s measured, set to 10.
+proofs = 10

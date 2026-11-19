@@ -9,11 +9,17 @@ a browser), with no Node. They are in two suites, described in mr-moqui's
 | Regression | `test/`, `test/client/` | Rules and fixed bugs, and one golden-path client walk for each app, within the budget in `test/budget` | The specs you touch while working; all of it before a commit |
 | Acceptance | `test/acceptance/`, `test/acceptance/client/` | Scenario walks, access and isolation walks, phone walks, and one screen sweep for each app in each mode | On a schedule, before a release, or when asked; and a test you added or changed |
 
+The security proofs run with the regression suite: `test/proofs/` holds client specs filed by OWASP ASVS requirement, one
+file a chapter, for the rows of [docs/ASVS-Matrix.md](../docs/ASVS-Matrix.md) that BOSS meets, and `InProcessProofs` the
+proofs only the server can show. They run alone against any server, a certifier's deployment included
+([security proofs](https://github.com/moqui/mr-moqui/blob/master/docs/security/proofs/README.md)).
+
 ```sh
 ./moq test mr-boss --spec SalesOpportunities,SalesQuotes   # regression specs by name
 ./moq test-apps                                            # every app component's regression suite
 ./moq accept mr-boss                                       # the acceptance suite
 ./moq accept mr-boss --spec SalesTui                       # one acceptance spec
+./moq test-client --nobuild -- --serve --proofs mr-boss    # the security proofs, with proofs.md by requirement
 ```
 
 A regression spec over 15 seconds fails the run: move it to acceptance or delete it. Do not raise `test/budget`
@@ -26,9 +32,10 @@ regression suite; a screen sweep belongs only in `test/acceptance/`
 In each of the four directories the specs are in a subdirectory named for the `screen/` directory of the app they
 cover. Specs that cover the whole suite stay at the top: `AppOrganizationFilters` and the public pages (`PublicShare`,
 `PublishedCalendar`, `Unsubscribe`) in `test/`, `Shared/` for the conversation and files on a record, and
-`AppStructure`, `ServerStatic` and `TuiRender` in `test/acceptance/`. `client/suite.js` and
-`acceptance/client/suite.js` list the client specs in order and declare the server and fixtures each suite starts
-with `--serve`.
+`AppStructure`, `ServerStatic` and `TuiRender` in `test/acceptance/`. `client/suite.js`,
+`acceptance/client/suite.js` and `proofs/suite.js` list the client specs in order and declare the server and fixtures
+each suite starts with `--serve`; the proofs' fixtures are `ProofFixtures`, which sets again on every run the password and
+factors the proofs change.
 
 | App | Regression | Golden-path client walk (`test/client/`) | Acceptance sweeps and named walks |
 |---|---|---|---|
