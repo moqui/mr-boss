@@ -178,7 +178,9 @@ feature("Log note with a mention: a Comment on the request, first in the timelin
     when() {
         const mentions = () => list("moqui.security.user.NotificationMessageByUser", { userId: "ORG_ZIZI_JD", topic: "ChatterMention" })
         const before = mentions().length
-        const body = '<p>The rooms are booked, <span data-mention-id="ORG_ZIZI_JD">@Joe Developer</span>.</p><script>alert(1)</script>'
+        // an outside image would tell its host who read the note and when: only this server's stays (SEC-CLI-82, allow-html="app")
+        const body = '<p>The rooms are booked, <span data-mention-id="ORG_ZIZI_JD">@Joe Developer</span>.</p><script>alert(1)</script>' +
+            '<p><img src="https://tracker.example/pixel.png" alt="t"><img src="/rest/s1/static/rooms.png" alt="rooms"></p>'
         const logged = post("logNote", { body, recordUrl: requestUrl })
         const id = logged.json.communicationEventId
         const after = mentions()
@@ -196,6 +198,8 @@ feature("Log note with a mention: a Comment on the request, first in the timelin
         comm.contentType == "text/html"
         comm.body.includes('data-mention-id="ORG_ZIZI_JD"')
         !comm.body.includes("<script")
+        !comm.body.includes("tracker.example")
+        comm.body.includes("/rest/s1/static/rooms.png")
         link != null
         after == before + 1
         notice.linkText == requestUrl

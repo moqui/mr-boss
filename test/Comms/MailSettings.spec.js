@@ -138,7 +138,8 @@ feature("identities: listed per account; add one with a signature cleaned of scr
         const shown = render("Comms/Settings/Identities", {})
         const bad = settings("Identities/storeIdentity", { emailAccountId: ownId, emailAddress: "not-an-address", displayName: "X" })
         const added = settings("Identities/storeIdentity", { emailAccountId: ownId, emailAddress: "sales@acme.example", displayName: "Acme Sales",
-            replyToAddress: "team@acme.example", signatureHtml: '<p>Acme Sales</p><script>alert(1)</script><p onclick="x()">Call us</p>',
+            replyToAddress: "team@acme.example", signatureHtml: '<p>Acme Sales</p><script>alert(1)</script><p onclick="x()">Call us</p>' +
+                '<p><img src="https://cdn.acme.example/logo.png" alt="Acme"></p>',
             signaturePlacementEnumId: "EspAboveQuote", useForReplies: "Y", isDefault: "Y" })
         const identity = rows("moqui.basic.email.EmailIdentity", { emailAccountId: ownId }).find((row) => row.emailAddress == "sales@acme.example")
         identityId = identity ? identity.emailIdentityId : null
@@ -163,6 +164,8 @@ feature("identities: listed per account; add one with a signature cleaned of scr
         identity.signatureHtml.includes("Acme Sales")
         !identity.signatureHtml.includes("script")
         !identity.signatureHtml.includes("onclick")
+        // a signature goes out in mail, where its outside images are the sender's own: kept (safe, not app; SEC-CLI-82)
+        identity.signatureHtml.includes("https://cdn.acme.example/logo.png")
         identity.signaturePlacementEnumId == "EspAboveQuote"
         identity.replyToAddress == "team@acme.example"
         defaults == ["sales@acme.example"]

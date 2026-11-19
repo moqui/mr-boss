@@ -333,7 +333,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="recordEntityName" required="true"/>
             <parameter name="recordId" required="true"/>
             <parameter name="subject"/>
-            <parameter name="body" required="true" allow-html="safe"/>
+            <parameter name="body" required="true" allow-html="app"/>
             <parameter name="recordUrl"/>
         </in-parameters>
         <out-parameters><parameter name="communicationEventId"/><parameter name="message"/></out-parameters>
@@ -371,7 +371,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="recordEntityName" required="true"/>
             <parameter name="recordId" required="true"/>
             <parameter name="parentCommEventId" required="true"/>
-            <parameter name="body" required="true" allow-html="safe"/>
+            <parameter name="body" required="true" allow-html="app"/>
             <parameter name="recordUrl"/>
         </in-parameters>
         <out-parameters><parameter name="communicationEventId"/><parameter name="message"/></out-parameters>

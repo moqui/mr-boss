@@ -1663,7 +1663,7 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters>
             <parameter name="mergeRequestId" required="true"/>
             <parameter name="decision" required="true"/>
-            <parameter name="note" allow-html="safe"/>
+            <parameter name="note" allow-html="app"/>
         </in-parameters>
         <out-parameters><parameter name="message"/><parameter name="statusId"/></out-parameters>
         <actions><script><![CDATA[
@@ -1760,7 +1760,7 @@ along with this software (see the LICENSE.md file). If not, see
             no thread until it is approved.</description>
         <in-parameters>
             <parameter name="mergeRequestId" required="true"/>
-            <parameter name="body" required="true" allow-html="safe"/>
+            <parameter name="body" required="true" allow-html="app"/>
             <parameter name="path"/>
             <parameter name="oldLine" type="Integer"/>
             <parameter name="newLine" type="Integer"/>
