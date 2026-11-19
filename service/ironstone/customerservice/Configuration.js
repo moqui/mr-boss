@@ -25,11 +25,11 @@ function datedRows(entity, conditions) {
 }
 
 // The organizations whose settings the user works on: of the user's service organizations, those Mantle's saves take
-// (FacilityScope, as mantle.request.SupportCaseServices and SlaServices check them), so the choice never offers one whose
-// saves are refused (F-P4-6: the administrator's every internal organization).
+// (FacilityScope requestScope, as mantle.request.SupportCaseServices and SlaServices check them; SEC-BAP-99), so the
+// choice never offers one whose saves are refused (F-P4-6: the administrator's every internal organization).
 function settingsIds(userScope) {
     if (!userScope.settingsIds) {
-        const mantleScope = facilityScope.scope()
+        const mantleScope = facilityScope.requestScope()
         userScope.settingsIds = cs.vendorIds(userScope).filter(partyId => facilityScope.owns(mantleScope, partyId))
     }
     return userScope.settingsIds

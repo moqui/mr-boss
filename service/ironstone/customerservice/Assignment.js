@@ -24,7 +24,7 @@ const nowMs = () => Number(ms(ec.user.nowTimestamp))
 
 // The organizations whose settings the user works on (as Configuration.js: those Mantle's saves take), and the one chosen.
 function organizationOf(userScope, organizationPartyId) {
-    const mantleScope = facilityScope.scope()
+    const mantleScope = facilityScope.requestScope()
     const ids = cs.vendorIds(userScope).filter(partyId => facilityScope.owns(mantleScope, partyId))
     const active = ids.includes(userScope.activeOrganizationPartyId) ? userScope.activeOrganizationPartyId : null
     const chosen = organizationPartyId || active || ids[0] || null
