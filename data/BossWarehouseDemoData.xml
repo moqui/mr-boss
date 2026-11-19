@@ -574,6 +574,9 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.shipment.Shipment shipmentId="BOSS_WH_SHIP_SHIP" shipmentTypeEnumId="ShpTpSales" statusId="ShipPacked"
             fromPartyId="ORG_ZIZI_RETAIL" toPartyId="CustJqp" estimatedShipDate="2026-10-30 00:00:00"
             packedDate="2026-10-29 00:00:00"/>
+    <!-- the retail organization ships through the test gateway by default, which makes the gateway its to configure in
+        Warehouse's Carriers (a gateway's carrier accounts are its using organizations', SEC-BAP-101) -->
+    <mantle.party.PartySetting partyId="ORG_ZIZI_RETAIL" partySettingTypeId="DefaultShipmentGatewayConfigId" settingValue="TEST_SHIPPING"/>
     <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_WH_SHIP_SHIP" shipmentRouteSegmentSeqId="01"
             originFacilityId="ZIRET_WH" originPostalContactMechId="ORG_ZIZI_RTL_SA" destPostalContactMechId="CustJqpAddr"
             carrierPartyId="TEST_CARRIER" shipmentMethodEnumId="ShMthGround" shippingGatewayConfigId="TEST_SHIPPING"/>

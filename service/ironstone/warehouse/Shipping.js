@@ -407,9 +407,19 @@ const mask = value => (blank(value) ? "" : String(value).length <= 4 ? "••�
 function carrierSetup(p) {
     const userScope = warehouse.required(warehouse.scope())
     const methods = Array.from(find(METHOD).orderBy("carrierPartyId,sequenceNum").list())
-    const gateways = Array.from(find(GATEWAY).orderBy("shippingGatewayConfigId").list())
-    const gatewayCarriers = rows("mantle.shipment.carrier.ShippingGatewayCarrier", {})
-    const options = rows("mantle.shipment.carrier.ShippingGatewayOption", {})
+    // only the gateways the user's organizations hold every use of (Mantle Shipping.js gatewayManaged, SEC-BAP-101): another
+    // organization's gateway, its carrier accounts and its credentials' state are not listed, tested or changed here
+    const mantleShipping = ec.resource.script("component://mr-mantle/service/mantle/shipment/Shipping.js")
+    const gateways = Array.from(find(GATEWAY).orderBy("shippingGatewayConfigId").list()).filter(g =>
+        mantleShipping.gatewayManaged(g.shippingGatewayConfigId)
+    )
+    const gatewayIds = gateways.map(g => g.shippingGatewayConfigId)
+    const gatewayCarriers = rows("mantle.shipment.carrier.ShippingGatewayCarrier", {}).filter(row =>
+        gatewayIds.includes(row.shippingGatewayConfigId)
+    )
+    const options = rows("mantle.shipment.carrier.ShippingGatewayOption", {}).filter(row =>
+        gatewayIds.includes(row.shippingGatewayConfigId)
+    )
     const carrierIds = unique(Array.from(find("mantle.party.PartyRole", {roleTypeId: "Carrier"}).list()).map(row => row.partyId))
     const names = lib.partyNames(carrierIds.concat(methods.map(row => row.carrierPartyId)))
     const methodTexts = enumTexts(methods.map(row => row.shipmentMethodEnumId))

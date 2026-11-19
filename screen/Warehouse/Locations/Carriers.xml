@@ -64,17 +64,27 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- CarrierTest: one gateway's rates of a packed shipment -->
         <set field="testRows" from="[]"/>
         <set field="testErrors" from="[]"/>
+        <set field="testRefusal" from="null"/>
         <if condition="canTest &amp;&amp; testShipmentId &amp;&amp; testGatewayId">
             <service-call name="ironstone.warehouse.AccessServices.check#Record" transaction="force-new" ignore-error="true"
                     out-map="testRecord" in-map="{recordType:'shipment', recordId:testShipmentId}"/>
             <if condition="testRecord?.recordId">
-                <service-call name="mantle.shipment.WarehouseTaskServices.get#ShipmentRates" out-map="testRates"
-                        transaction="force-new" ignore-error="true"
-                        in-map="{shipmentId:testShipmentId, shippingGatewayConfigId:testGatewayId}"/>
+                <!-- a gateway the shipment does not offer is refused (SEC-BAP-101): the refusal is shown, not a silent "no rate" -->
+                <script><![CDATA[
+                    ec.message.pushErrors()
+                    try {
+                        testRates = ec.service.sync().name('mantle.shipment.WarehouseTaskServices.get#ShipmentRates')
+                            .parameters({shipmentId: testShipmentId, shippingGatewayConfigId: testGatewayId}).requireNewTransaction(true).call()
+                        if (ec.message.hasError()) { testRefusal = ec.message.getErrorsString(); testRates = null }
+                    } catch (error) {
+                        testRefusal = String(error.message || error); testRates = null
+                    } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                ]]></script>
                 <set field="testRows" from="(testRates?.rateRows || []).filter(row =&gt; row.rateSource == 'gateway')
                         .map(row =&gt; Object.assign({}, row, {rateText: row.shippingTotal + ' ' + (row.currency || ''),
                             modeText: row.testMode ? 'Test' : 'Live'}))"/>
-                <set field="testErrors" from="testRates?.providerErrors || []"/>
+                <set field="testErrors" from="(testRates?.providerErrors || []).concat(testRefusal ? [{provider: testGatewayId,
+                        message: String(testRefusal).replace(/^(Error: )*[A-Z_]+: /, '')}] : [])"/>
             </if>
             <set field="testDone" from="true"/>
         </if>

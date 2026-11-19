@@ -112,15 +112,29 @@ function refusalOrResult(service, parameters) {
 
 feature("Carriers shows the test gateway with its account masked, edits for the Warehouse admin, and rates in CarrierTest", {
     when() {
+        // a gateway another organization uses (its default): not listed, tested or rebound here (SEC-BAP-101)
+        asUser("john.doe", () => {
+            const make = (entity, values) => ec.service.sync().name("store#" + entity).parameters(values).call()
+            make("mantle.shipment.carrier.ShippingGatewayConfig", {shippingGatewayConfigId: "BOSS_WH_OTHER_GW",
+                description: "Services' gateway", testMode: "Y"})
+            make("mantle.party.PartySetting", {partyId: "ORG_ZIZI_SERVICES", partySettingTypeId: "DefaultShipmentGatewayConfigId",
+                settingValue: "BOSS_WH_OTHER_GW"})
+        }, false)
         return {
             setup: asUser("warehouse.read", () => invoke(shipping + "get#CarrierSetup", {})),
             reader: asUser("warehouse.read", () => lib.page("Locations/Carriers", {}, "html")),
             manager: asUser("warehouse.admin", () =>
-                lib.page("Locations/Carriers", {testShipmentId: "BOSS_WH_SHIP_SHIP", testGatewayId: "TEST_SHIPPING"}, "html")
-            )
+                lib.page("Locations/Carriers", {testShipmentId: "BOSS_WH_SHIP_SHIP", testGatewayId: "BOSS_WH_OTHER_GW"}, "html")
+            ),
+            rebind: asUser("warehouse.admin", () => refusal("mantle.shipment.carrier.CarrierSetupServices.store#ShippingGatewayCarrier",
+                {shippingGatewayConfigId: "BOSS_WH_OTHER_GW", carrierPartyId: "TEST_CARRIER", gatewayAccountId: "THEIRS"}), false)
         }
     },
-    then({setup, reader, manager}) {
+    then({setup, reader, manager, rebind}) {
+        !setup.gatewayRows.some(row => row.shippingGatewayConfigId == "BOSS_WH_OTHER_GW")
+        rebind.includes("GATEWAY_INVALID")
+        // CarrierTest says why another gateway gives no rate, rather than showing none
+        manager.output.includes("is not one this shipment may use")
         setup.gatewayRows.some(row => row.shippingGatewayConfigId == "TEST_SHIPPING" && row.modeText == "Test")
         setup.bindingRows.some(row => row.carrierPartyId == "TEST_CARRIER" && row.accountText == "••••0001")
         !JSON.stringify(setup).includes("TEST-ACCOUNT-0001")
