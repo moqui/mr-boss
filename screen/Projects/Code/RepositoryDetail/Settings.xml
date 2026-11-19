@@ -110,8 +110,14 @@ along with this software (see the LICENSE.md file). If not, see
             const row = ec.entity.find('moqui.resource.GitRepository').condition('repositoryId', repositoryId).one()
             if (row == null || row.repositoryKind !== 'remote') { ec.message.addError(ec.l10n.localize('Not a mirror')); return }
             if (!/^(https?|ssh|file):\/\//.test(String(remoteUrl || '').trim())) { ec.message.addError(ec.l10n.localize('A mirror URL is https, ssh or file')); return }
+            // a credential in the URL is kept in clear: it goes in the username and access token (as create#Drive has it)
+            const userinfo = (/^[a-z][a-z0-9+.-]*:\/\/([^\/?#]*)@/i.exec(String(remoteUrl).trim()) || [])[1]
+            if (userinfo != null && (userinfo.includes(':') || /^https?:/i.test(String(remoteUrl).trim()))) {
+                ec.message.addError(ec.l10n.localize('A mirror URL has no user or password in it: give them as the username and access token')); return }
             const fields = {repositoryId: repositoryId, remoteUrl: String(remoteUrl).trim(), username: username || null,
                 fetchIntervalMinutes: fetchIntervalMinutes ? Number(fetchIntervalMinutes) : null}
+            // the endpoint-change rule (SEC-BOS-90): the stored token goes to a new URL or as a new user only when given again
+            if ((fields.remoteUrl !== row.remoteUrl || (fields.username || null) !== (row.username || null)) && !accessToken) fields.accessToken = null
             if (accessToken) fields.accessToken = accessToken
             ec.service.sync().name('update#moqui.resource.GitRepository').parameters(fields).call()
             if (!ec.message.hasError()) ec.message.addMessage(ec.l10n.localize('Mirror saved'), 'success')

@@ -383,3 +383,30 @@ feature("ProjectCode: IRON's repositories, open merge request, recent commits an
         !rawBobText.includes("Acme customer portal")
     },
 })
+
+// SEC-BOS-90 (Projects' mirror settings, an administrator's): a new URL needs the access token again, else the stored one is
+// cleared (the connections' endpoint-change rule), and a URL with a user and password in it is refused
+feature("a mirror's new URL clears its stored token unless given again, and a URL with a password in it is refused (SEC-BOS-90)", {
+    allowMessageErrors: true,
+    when() {
+        sys(() => call("store#moqui.resource.GitRepository", { repositoryId: "bt-mirror", description: "Spec mirror", branch: "main", repositoryKind: "remote",
+            remoteUrl: "https://git.example.com/team/docs.git", username: "bot", accessToken: "spec-secret-token", fetchIntervalMinutes: 60 }))
+        const repo = () => sys(() => ec.entity.find("moqui.resource.GitRepository").condition("repositoryId", "bt-mirror").one())
+        const withPassword = post("Code/RepositoryDetail/Settings/saveMirror", { repositoryId: "bt-mirror", remoteUrl: "https://bot:pw@git.example.org/docs.git", username: "bot" })
+        const same = post("Code/RepositoryDetail/Settings/saveMirror", { repositoryId: "bt-mirror", remoteUrl: "https://git.example.com/team/docs.git", username: "bot",
+            fetchIntervalMinutes: "30" })
+        const kept = repo().accessToken
+        const moved = post("Code/RepositoryDetail/Settings/saveMirror", { repositoryId: "bt-mirror", remoteUrl: "https://git.example.org/docs.git", username: "bot" })
+        const after = repo()
+        sys(() => ec.entity.find("moqui.resource.GitRepository").condition("repositoryId", "bt-mirror").deleteAll())
+        return { withPassword, same, kept, moved, after }
+    },
+    then({ withPassword, same, kept, moved, after }) {
+        withPassword.errors.includes("has no user or password in it")
+        same.errors == ""
+        kept == "spec-secret-token"
+        moved.errors == ""
+        after.remoteUrl == "https://git.example.org/docs.git"
+        after.accessToken == null
+    },
+})
