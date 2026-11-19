@@ -29,6 +29,29 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- ========== The record ========== -->
 
+    <service verb="check" noun="MayChangeRecord" allow-remote="false">
+        <description>Whether the user may change what others put on a record through the panels (remove or replace another
+            user's file, take another user's message off it, remove another follower; SEC-BAP-95): the owning app's rule when
+            get#ContentType has one for the record type (its recordRule and catalogCanChange), else a grant the user holds on
+            the record's entity themselves (ec.artifactExecution.isPermittedOwn, never the app root's inherited grant every user of
+            the root has) or a system administrator.</description>
+        <in-parameters><parameter name="info" type="Map" required="true"/></in-parameters>
+        <out-parameters><parameter name="mayChange" type="Boolean"/></out-parameters>
+        <actions><script><![CDATA[
+            mayChange = false
+            let rule = null
+            ec.message.pushErrors()
+            try {
+                rule = ec.service.sync().name('ironstone.shared.RecordFilesServices.get#ContentType').parameters({info: info}).call()?.contentType
+                if (ec.message.hasError()) rule = {recordRule: true, catalogCanChange: false}
+            } catch (error) {
+                rule = {recordRule: true, catalogCanChange: false}
+            } finally { ec.message.clearErrors(); ec.message.popErrors() }
+            mayChange = rule?.recordRule ? rule.catalogCanChange !== false
+                : ec.resource.script('component://mr-mantle/service/mantle/ledger/EntityLib.js').access.systemAdmin()
+                    || ec.artifactExecution.isPermittedOwn(info.recordEntityName, 'AT_ENTITY', 'update')
+        ]]></script></actions>
+    </service>
     <service verb="get" noun="RecordInfo" allow-remote="false">
         <description>The record of a Chatter or RecordFiles panel, found under the user's filters
             (mantle.party.CommunicationServices.get#RecordLinkInfo with checkOnly, which answers recordVisible without an error):
@@ -338,7 +361,7 @@ along with this software (see the LICENSE.md file). If not, see
                     subject: info.isParty || recordOut.title === String(recordId) ? recordOut.title : `${recordOut.title} (${recordId})`}
                 canMessage = ec.artifactExecution.isPermitted('mantle.party.communication.CommunicationEvent', 'AT_ENTITY', 'create')
                 canSchedule = ec.artifactExecution.isPermitted('mantle.work.effort.WorkEffort', 'AT_ENTITY', 'create')
-                mayUpdate = ec.artifactExecution.isPermitted(entityName, 'AT_ENTITY', 'update')
+                mayUpdate = !!ec.service.sync().name('ironstone.shared.ChatterServices.check#MayChangeRecord').parameters({info: info}).call()?.mayChange
 
                 const toMillis = (value) => {
                     if (value == null || value === '') return null
@@ -651,7 +674,9 @@ along with this software (see the LICENSE.md file). If not, see
                 const myPartyId = ec.user.userAccount?.partyId || null
                 // a client contact (impl-projects.md P10b) replies to a message for it, and nothing else: no unlink, no Inbox thread, no chat room
                 const forClient = !!recordOut.isClient
-                const mayUpdate = !forClient && ec.artifactExecution.isPermitted(entityName, 'AT_ENTITY', 'update')
+                // SEC-BAP-95: the owning app's rule, else the user's own grant on the entity
+                const mayUpdate = !forClient && !!ec.service.sync().name('ironstone.shared.ChatterServices.check#MayChangeRecord')
+                        .parameters({info: recordOut.info}).call()?.mayChange
                 const canMessage = forClient ? !!ec.service.sync().name('ironstone.client.ClientServices.get#ClientRecordWrites')
                         .parameters({recordEntityName: entityName, recordId: recordId}).call()?.canMessage
                     : ec.artifactExecution.isPermitted('mantle.party.communication.CommunicationEvent', 'AT_ENTITY', 'create')
@@ -967,7 +992,12 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{info:recordOut.info, recordId:recordId, communicationEventId:communicationEventId}"/>
             <if condition="ec.message.hasError()"><return/></if>
             <set field="myPartyId" from="ec.user.userAccount?.partyId"/>
-            <if condition="!(myPartyId &amp;&amp; eventOut.commEvent.fromPartyId == myPartyId) &amp;&amp; !ec.artifactExecution.isPermitted(recordOut.info.recordEntityName, 'AT_ENTITY', 'update')">
+            <!-- another user's message stays unless the owning app's rule, or the user's own grant, lets them change the record (SEC-BAP-95) -->
+            <set field="mayChange" from="false"/>
+            <if condition="!(myPartyId &amp;&amp; eventOut.commEvent.fromPartyId == myPartyId)">
+                <service-call name="ironstone.shared.ChatterServices.check#MayChangeRecord" out-map="changeOut" in-map="{info:recordOut.info}"/>
+                <set field="mayChange" from="!!changeOut.mayChange"/></if>
+            <if condition="!(myPartyId &amp;&amp; eventOut.commEvent.fromPartyId == myPartyId) &amp;&amp; !mayChange">
                 <return error="true" message="You may not take this message off ${recordOut.typeLabel} ${recordOut.title}"/></if>
             <service-call name="mantle.party.CommunicationServices.unlink#CommunicationEventRecord" out-map="unlinkOut"
                     in-map="{communicationEventId:communicationEventId, recordEntityName:recordOut.info.recordEntityName, recordId:recordId}"/>
@@ -1269,7 +1299,12 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{recordEntityName:recordEntityName, recordId:recordId, requireVisible:true}"/>
             <if condition="ec.message.hasError()"><return/></if>
             <set field="followerUserId" from="userId || ec.user.userId"/>
-            <if condition="followerUserId != ec.user.userId &amp;&amp; !ec.artifactExecution.isPermitted(recordOut.info.recordEntityName, 'AT_ENTITY', 'update')">
+            <!-- another follower is removed only under the owning app's rule, or the user's own grant (SEC-BAP-95) -->
+            <set field="mayChange" from="false"/>
+            <if condition="followerUserId != ec.user.userId">
+                <service-call name="ironstone.shared.ChatterServices.check#MayChangeRecord" out-map="changeOut" in-map="{info:recordOut.info}"/>
+                <set field="mayChange" from="!!changeOut.mayChange"/></if>
+            <if condition="followerUserId != ec.user.userId &amp;&amp; !mayChange">
                 <return error="true" message="You may not remove followers of ${recordOut.title}"/></if>
             <service-call name="mantle.party.CommunicationServices.unfollow#Record" in-map="{recordEntityName:recordOut.info.recordEntityName,
                     recordId:recordId, userId:followerUserId}"/>

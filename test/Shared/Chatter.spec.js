@@ -488,6 +488,44 @@ feature("joe.developer, who sees the request, may neither edit nor delete john.d
     },
 })
 
+// SEC-BAP-95: a user who sees a record, with no rule of its owning app and no grant of their own on it, takes nobody else's
+// message off it, removes no other follower and removes or replaces no other user's file (the Commons root's inherited grant is
+// every Commons user's)
+feature("joe.developer, who sees the request, takes off no one else's message, follower or file", {
+    allowMessageErrors: true,
+    when() {
+        const johnNote = post("logNote", { body: "<p>John's note to keep.</p>" }, shared).json.communicationEventId
+        post("follow", {}, shared)
+        const files = (name, parameters, method) => {
+            const str = ec.screen.makeTest().rootScreen(commons).render(`RecordFiles/${name}`, Object.assign({}, shared, parameters || {}), method || null)
+            let json = null
+            try { json = JSON.parse(str.output) } catch (err) { json = null }
+            ec.message.clearErrors()
+            return { status: str.status, json: json || {}, errors: Array.from(str.errorMessages || []).join(" | ") }
+        }
+        files("upload", { contentTypeEnumId: "RqCntInternal", contentFile: [uploadedFile("john-keeps.txt", "John's file.")] }, "post")
+        const johnFile = (files("filesData").json.fileList || []).find((file) => file.fileName === "john-keeps.txt") || {}
+        const joe = as("joe.developer", () => ({
+            unlink: post("unlink", { communicationEventId: johnNote }, shared),
+            unfollow: post("unfollow", { userId: "EX_JOHN_DOE" }, shared),
+            listed: (files("filesData").json.fileList || []).find((file) => file.fileName === "john-keeps.txt") || {},
+            remove: files("remove", { contentKey: johnFile.contentKey }, "post")
+        }))
+        return { joe, johnFile, link: one("mantle.request.RequestCommEvent", { requestId: "BOSS_TEST_CHATTER_SHARED", communicationEventId: johnNote }),
+            follower: one("mantle.party.communication.RecordFollower", { recordEntityName: "mantle.request.Request", recordId: "BOSS_TEST_CHATTER_SHARED",
+                userId: "EX_JOHN_DOE" }),
+            fileRows: list("mantle.request.RequestContent", { requestId: "BOSS_TEST_CHATTER_SHARED" }).filter((row) =>
+                String(row.contentLocation || "").endsWith("/john-keeps.txt")).length }
+    },
+    then({ joe, johnFile, link, follower, fileRows }) {
+        johnFile.contentKey != null
+        joe.unlink.status == 500 && link != null
+        joe.unfollow.status == 500 && follower != null
+        !joe.listed.canRemove
+        joe.remove.errors.includes("You may not remove") && fileRows == 1
+    },
+})
+
 feature("a note with a reply is not deleted until the reply is", {
     allowMessageErrors: true,
     when() {

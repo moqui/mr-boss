@@ -19,8 +19,9 @@ along with this software (see the LICENSE.md file). If not, see
     may not see. A file is named by its contentKey, the JSON of its content row's primary key, and must be a row of that
     record. Upload dispatches to the record type's Mantle create#<X>Content service, which saves the file through its
     save#<X>ContentFile; a record type without a content entity is refused with a clear error. Who may remove a file: the user
-    who added it, or one the record's own authorization lets update it (ec.artifactExecution.isPermitted on the record's entity,
-    which the host app's authz decides). -->
+    who added it, or one the owning app's rule lets change the record's files (get#ContentType's recordRule, catalogCanChange),
+    else one holding a grant on the record's entity themselves (ec.artifactExecution.isPermittedOwn, never the app root's
+    inherited grant every user of the root has) or a system administrator (SEC-BAP-95). -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="ContentType" allow-remote="false">
         <description>How a record type keeps its files: the content entity of get#RecordLinkInfo (info, its contentEntity map)
@@ -94,7 +95,10 @@ along with this software (see the LICENSE.md file). If not, see
             const found = services[info.recordEntityName] || [null, null, null]
             const pkFields = Object.keys(ec.entity.makeValue(content.entityName).getPrimaryKeys())
             contentType = {entityName: content.entityName, keyField: content.keyField, typeField: content.typeField, dateField: content.dateField,
-                pkFields: pkFields, createService: found[0], idField: found[1], enumTypeId: found[2], catalogCanChange: true}
+                pkFields: pkFields, createService: found[0], idField: found[1], enumTypeId: found[2], catalogCanChange: true, recordRule: false}
+            // recordRule: an owning app's rule decided catalogCanChange (SEC-BAP-95); with none, only a grant the user holds on the
+            // record's entity themselves (mayChangeRecord) lets them change or remove another user's file
+            const ruled = (allowed) => { contentType.recordRule = true; return allowed }
             // A visible request is not permission to read the team's internal or unclassified attachments.
             contentType.clientRequest = info.recordEntityName === 'mantle.request.Request' && ec.user.hasPermission('PROJECT_CLIENT')
             if (contentType.clientRequest) {
@@ -102,11 +106,13 @@ along with this software (see the LICENSE.md file). If not, see
                 contentType.clientContentTypeIds = Array.from(ec.resource
                     .script('component://mr-mantle/service/mantle/request/RequestContent.js').customerContentTypeIds)
                 contentType.catalogCanChange = false
+                contentType.recordRule = true
             }
             // A journal entry's, invoice's or payment's files: Mantle says who may change them, whether a payment's are kept
             // as issued and who reads its checks (catalogCanChange is this service's may-change flag for every kind of record).
             if (['mantle.ledger.transaction.AcctgTrans', 'mantle.account.invoice.Invoice', 'mantle.account.payment.Payment']
                     .includes(info.recordEntityName)) {
+                contentType.recordRule = true
                 const finance = ec.service.sync().name('mantle.ledger.AccountingServices.get#RecordContentPolicy')
                     .parameters({recordEntityName: info.recordEntityName, recordId: info.recordId}).call()
                 // a payment the user may not read has no files to show (Mantle's reason, not its wording)
@@ -124,22 +130,23 @@ along with this software (see the LICENSE.md file). If not, see
                 const access = info.recordId ? ec.service.sync().name('ironstone.products.CatalogServices.get#CatalogRecord')
                     .parameters({recordEntityName: info.recordEntityName, recordId: info.recordId, need: 'catalogEdit', checkOnly: true})
                     .disableAuthz().call() : null
-                contentType.catalogCanChange = !!access?.record
+                contentType.catalogCanChange = ruled(!!access?.record)
             }
             if (info.recordEntityName === 'mantle.product.bom.ProductBom') {
-                contentType.catalogCanChange = !!ec.service.sync().name('mantle.product.BomServices.get#BomAccess')
-                    .parameters({productBomId:info.recordId,need:'edit'}).disableAuthz().call()?.recordVisible
+                contentType.catalogCanChange = ruled(!!ec.service.sync().name('mantle.product.BomServices.get#BomAccess')
+                    .parameters({productBomId:info.recordId,need:'edit'}).disableAuthz().call()?.recordVisible)
             }
             if (info.recordEntityName === 'mantle.work.effort.WorkEffort') {
                 const row = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId',info.recordId).one()
-                if (row && ['WepRouting','WepRoutingTask'].includes(row.purposeEnumId)) contentType.catalogCanChange = !!ec.service.sync()
-                    .name('mantle.work.RoutingServices.get#RoutingAccess').parameters({workEffortId:info.recordId,need:'edit'}).disableAuthz().call()?.recordVisible
+                if (row && ['WepRouting','WepRoutingTask'].includes(row.purposeEnumId)) contentType.catalogCanChange = ruled(!!ec.service.sync()
+                    .name('mantle.work.RoutingServices.get#RoutingAccess').parameters({workEffortId:info.recordId,need:'edit'}).disableAuthz().call()?.recordVisible)
                 // managed maintenance work (impl-maintenance P7, F69): Mantle's evidence policy says whether its files change (not
                 // on closed or cancelled work) and which a check names as evidence, which are never removed or replaced
                 if (row) {
                     const evidence = ec.service.sync().name('mantle.work.ProcessServices.get#EvidencePolicy')
                         .parameters({workEffortId: info.recordId}).disableAuthz().call()
                     if (evidence?.managed) {
+                        contentType.recordRule = true
                         if (!evidence.canChange) contentType.catalogCanChange = false
                         contentType.protectedContentIds = Array.from(evidence.protectedContentIds || [])
                     }
@@ -149,63 +156,63 @@ along with this software (see the LICENSE.md file). If not, see
             if (info.recordEntityName === 'mantle.humanres.employment.Employment') {
                 const access = ec.service.sync().name('mantle.humanres.PeopleServices.check#EmploymentAccess')
                     .parameters({partyRelationshipId:info.recordId}).disableAuthz().call()
-                contentType.catalogCanChange = !!access?.canEdit
+                contentType.catalogCanChange = ruled(!!access?.canEdit)
             }
             // P16: an application's files: a recruiter of its employer adds them, its interviewers read them
             // (mantle.humanres.RecruitingServices.check#ApplicationAccess)
             if (info.recordEntityName === 'mantle.humanres.employment.EmploymentApplication') {
                 const access = ec.service.sync().name('mantle.humanres.RecruitingServices.check#ApplicationAccess')
                     .parameters({employmentApplicationId:info.recordId}).disableAuthz().call()
-                contentType.catalogCanChange = !!access?.canEdit
+                contentType.catalogCanChange = ruled(!!access?.canEdit)
             }
             // P18: a qualification's files: the person while it waits or was rejected, and an HR editor of an employer of theirs, change
             // them (Mantle's check#QualificationAccess)
             if (info.recordEntityName === 'mantle.humanres.ability.PartyQualification') {
                 const access = ec.service.sync().name('mantle.humanres.DevelopmentServices.check#QualificationAccess')
                     .parameters({partyQualificationId:info.recordId}).disableAuthz().call()
-                contentType.catalogCanChange = !!access?.canEdit
+                contentType.catalogCanChange = ruled(!!access?.canEdit)
             }
             // P20: a review's files: its reviewer and development editors of its employer add them (Mantle's check#ReviewAccess)
             if (info.recordEntityName === 'mantle.humanres.ability.PerformanceReview') {
                 const access = ec.service.sync().name('mantle.humanres.ReviewServices.check#ReviewAccess')
                     .parameters({performanceReviewId:info.recordId}).disableAuthz().call()
-                contentType.catalogCanChange = !!access?.canEdit
+                contentType.catalogCanChange = ruled(!!access?.canEdit)
             }
             // P26: a payslip's files: payroll editors of its employer add them (Mantle's check#PayslipAccess)
             if (info.recordEntityName === 'mantle.humanres.payroll.Payslip') {
                 const access = ec.service.sync().name('mantle.humanres.PayrollResultServices.check#PayslipAccess')
                     .parameters({payslipId:info.recordId}).disableAuthz().call()
-                contentType.catalogCanChange = !!access?.canEdit
+                contentType.catalogCanChange = ruled(!!access?.canEdit)
             }
             // P21: a confidential case's files: its people add them while it is open, nobody else (Mantle's check#PeopleCaseAccess)
             if (info.recordEntityName === 'mantle.request.Request' && info.recordId
                     && ec.resource.script('component://mr-mantle/service/mantle/request/PeopleCases.js').isCase(info.recordId)) {
                 const access = ec.service.sync().name('mantle.request.RequestServices.check#PeopleCaseAccess')
                     .parameters({requestId:info.recordId}).disableAuthz().call()
-                contentType.catalogCanChange = !!access?.canEdit
+                contentType.catalogCanChange = ruled(!!access?.canEdit)
             }
             // Sales P4: a lead's or opportunity's files: its editors add them (Mantle's check#OpportunityAccess, Sales' scope)
             if (info.recordEntityName === 'mantle.sales.opportunity.SalesOpportunity') {
                 const access = ec.service.sync().name('mantle.sales.OpportunityServices.check#OpportunityAccess')
                     .parameters({salesOpportunityId:info.recordId}).disableAuthz().call()
-                contentType.catalogCanChange = !!access?.canEdit
+                contentType.catalogCanChange = ruled(!!access?.canEdit)
             }
             // Marketing P2: a campaign's files: its editors add them while it is open (Mantle's check#CampaignAccess, Marketing's scope)
             if (info.recordEntityName === 'mantle.marketing.campaign.MarketingCampaign') {
                 const access = ec.service.sync().name('mantle.marketing.CampaignServices.check#CampaignAccess')
                     .parameters({marketingCampaignId:info.recordId}).disableAuthz().call()
-                contentType.catalogCanChange = !!access?.canEdit
+                contentType.catalogCanChange = ruled(!!access?.canEdit)
             }
             // Marketing P8: a send's files: its authors add and change them while it is a draft (Mantle's check#SendAccess)
             if (info.recordEntityName === 'mantle.marketing.campaign.CampaignSend') {
                 const access = ec.service.sync().name('mantle.marketing.CampaignSendServices.check#SendAccess')
                     .parameters({campaignSendId:info.recordId}).disableAuthz().call()
-                contentType.catalogCanChange = !!access?.canEdit
+                contentType.catalogCanChange = ruled(!!access?.canEdit)
             }
             if (info.recordEntityName === 'mantle.party.Party') {
                 const access = ec.service.sync().name('ironstone.commons.ContactServices.check#ContactAccess')
                     .parameters({partyId:info.recordId}).disableAuthz().call()
-                contentType.catalogCanChange = !!access?.canEdit
+                contentType.catalogCanChange = ruled(!!access?.canEdit)
             }
         ]]></script>
         </actions>
@@ -257,7 +264,9 @@ along with this software (see the LICENSE.md file). If not, see
                 canUpload = hasContent && content.catalogCanChange !== false && ec.artifactExecution.isPermitted(content.entityName, 'AT_ENTITY', 'create')
                 if (!content) return
                 const entityName = recordOut.info.recordEntityName
-                const mayUpdate = content.catalogCanChange !== false && ec.artifactExecution.isPermitted(entityName, 'AT_ENTITY', 'update')
+                // SEC-BAP-95: the owning app's rule, else the user's own grant on the entity (not the root's inherited one)
+                const mayChangeRecord = (rule, name) => rule?.recordRule ? rule.catalogCanChange !== false : ec.resource.script('component://mr-mantle/service/mantle/ledger/EntityLib.js').access.systemAdmin() || ec.artifactExecution.isPermittedOwn(name, 'AT_ENTITY', 'update')
+                const mayUpdate = content.catalogCanChange !== false && mayChangeRecord(content, entityName)
                 const L = (text) => ec.l10n.localize(text)
                 const toMillis = (value) => {
                     if (value == null || value === '') return null
@@ -592,7 +601,9 @@ along with this software (see the LICENSE.md file). If not, see
                 const entityName = ec.entity.makeValue(recordEntityName).getEntityName()
                 const mine = !!row.userId && row.userId === ec.user.userId
                 const instruction = entityName === 'mantle.work.effort.WorkEffort' && row.contentTypeEnumId === 'WectInstruction'
-                if (instruction || content.catalogCanChange === false || (!mine && !ec.artifactExecution.isPermitted(entityName, 'AT_ENTITY', 'update'))) {
+                // SEC-BAP-95: the owning app's rule, else the user's own grant on the entity (not the root's inherited one)
+                const mayChangeRecord = (rule, name) => rule?.recordRule ? rule.catalogCanChange !== false : ec.resource.script('component://mr-mantle/service/mantle/ledger/EntityLib.js').access.systemAdmin() || ec.artifactExecution.isPermittedOwn(name, 'AT_ENTITY', 'update')
+                if (instruction || content.catalogCanChange === false || (!mine && !mayChangeRecord(content, entityName))) {
                     ec.message.addError(ec.resource.expand('You may not remove ${fileName}', '', {fileName: fileName})); return }
                 const keys = {}
                 for (const field of content.pkFields) keys[field] = row[field]
@@ -671,7 +682,9 @@ along with this software (see the LICENSE.md file). If not, see
                 const protectedIds = content?.protectedContentIds || []
                 const immutablePath = rows.some((item) => (item.getMap().isImmutable === 'Y' || protectedIds.includes(String(item.workEffortContentId))) &&
                     (item.contentLocation === location || String(item.contentLocation || '').startsWith(location + '/')))
-                canChange = !immutablePath && content?.catalogCanChange !== false && ((!!contentRow && !!contentRow.userId && contentRow.userId === ec.user.userId) || ec.artifactExecution.isPermitted(entityName, 'AT_ENTITY', 'update'))
+                // SEC-BAP-95: the owning app's rule, else the user's own grant on the entity (not the root's inherited one)
+                const mayChangeRecord = (rule, name) => rule?.recordRule ? rule.catalogCanChange !== false : ec.resource.script('component://mr-mantle/service/mantle/ledger/EntityLib.js').access.systemAdmin() || ec.artifactExecution.isPermittedOwn(name, 'AT_ENTITY', 'update')
+                canChange = !immutablePath && content?.catalogCanChange !== false && ((!!contentRow && !!contentRow.userId && contentRow.userId === ec.user.userId) || mayChangeRecord(content, entityName))
                 if (requireChange && !canChange) ec.message.addError(ec.resource.expand('You may not change the files of ${recordName}', '', {recordName: recordName}))
             ]]></script>
         </actions>
