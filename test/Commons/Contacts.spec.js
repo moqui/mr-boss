@@ -672,6 +672,10 @@ feature("a contact admin neither makes nor ends a staff relationship of an inter
                 staffAdd: post("Contacts/ContactDetail/contactRelationshipAdd", { partyId: "ORG_ACME_BA", otherPartyId: "ORG_ZIZI_SERVICES",
                     relationshipTypeEnumId: "PrtEmployee", direction: "to" }),
                 staffEnd: post("Contacts/ContactDetail/contactOrganization", { partyId: "ORG_ZIZI_JD", partyRelationshipId: "ORG_ZIZI_JD_EMP", thruNow: "true" }),
+                // the title of an employee of an internal organization, by the organization, and the organization structure
+                staffTitle: post("Contacts/ContactDetail/contactOrganization", { partyId: "ORG_ZIZI_JD", organizationPartyId: "ORG_ZIZI_SERVICES", jobTitle: "Renamed" }),
+                rollup: post("Contacts/ContactDetail/contactRelationshipAdd", { partyId: "ORG_ACME", otherPartyId: "ORG_ZIZI_SERVICES",
+                    relationshipTypeEnumId: "PrtOrgRollup", direction: "to" }),
                 orgUpdate: post("Contacts/ContactDetail/contactUpdate", { partyId: "ORG_ZIZI_SERVICES", organizationName: "Ziziwork Renamed" }),
                 // an ordinary relationship stays the contact admin's
                 friend: post("Contacts/ContactDetail/contactRelationshipAdd", { partyId: "ORG_ACME_BA", otherPartyId: "ORG_ZIZI_JD",
@@ -687,8 +691,11 @@ feature("a contact admin neither makes nor ends a staff relationship of an inter
             })
         }
     },
-    then({ staffAdd, staffEnd, orgUpdate, friend, employment, madeStaff, name }) {
+    then({ staffAdd, staffEnd, staffTitle, rollup, orgUpdate, friend, employment, madeStaff, name }) {
         staffAdd.errors.includes("made in Admin")
+        staffTitle.errors.includes("changed in Admin")
+        employment.relationshipName != "Renamed"
+        rollup.errors.includes("made in Admin")
         madeStaff == 0
         staffEnd.errors.includes("changed in Admin")
         employment.thruDate == null
@@ -698,7 +705,32 @@ feature("a contact admin neither makes nor ends a staff relationship of an inter
     },
 })
 
-feature("john.doe, who manages the settings of every organization, changes an internal organization's record in Commons (SEC-BOS-89)", {
-    when() { return post("Contacts/ContactDetail/contactUpdate", { partyId: "ORG_ZIZI_SERVICES", organizationName: "Ziziwork Services" }) },
-    then(updated) { updated.errors == "" },
+feature("a settings manager of the organization, not ADMIN, changes an internal organization's record in Commons; of another organization not (SEC-BOS-89)", {
+    allowMessageErrors: true,
+    when() {
+        // Joe Developer (of Ziziwork Services) as a contact admin and a configuration administrator for the moment
+        sys(() => {
+            call("create#moqui.security.UserGroup", { userGroupId: "BOSS_TEST_SETTINGS", description: "Spec settings managers" })
+            call("create#moqui.security.UserGroupPermission", { userGroupId: "BOSS_TEST_SETTINGS", userPermissionId: "ADMIN_SETTINGS_MANAGE", fromDate: 0 })
+            for (const userGroupId of ["BOSS_TEST_SETTINGS", "BOSS_CONTACT_ADMIN"])
+                call("create#moqui.security.UserGroupMember", { userGroupId, userId: "ORG_ZIZI_JD", fromDate: 0 })
+        })
+        try {
+            return as("joe.developer", () => ({
+                own: post("Contacts/ContactDetail/contactUpdate", { partyId: "ORG_ZIZI_SERVICES", organizationName: "Ziziwork Services" }),
+                other: post("Contacts/ContactDetail/contactUpdate", { partyId: "ORG_ZIZI_HR", organizationName: "Ziziwork HR renamed" })
+            }))
+        } finally {
+            sys(() => {
+                ec.entity.find("moqui.security.UserGroupMember").condition("userId", "ORG_ZIZI_JD").condition("userGroupId", "in", ["BOSS_TEST_SETTINGS", "BOSS_CONTACT_ADMIN"]).deleteAll()
+                ec.entity.find("moqui.security.UserGroupPermission").condition("userGroupId", "BOSS_TEST_SETTINGS").deleteAll()
+                ec.entity.find("moqui.security.UserGroup").condition("userGroupId", "BOSS_TEST_SETTINGS").deleteAll()
+            })
+        }
+    },
+    then({ own, other }) {
+        own.errors == ""
+        other.errors != ""
+        one("mantle.party.Organization", { partyId: "ORG_ZIZI_HR" }).organizationName != "Ziziwork HR renamed"
+    },
 })
