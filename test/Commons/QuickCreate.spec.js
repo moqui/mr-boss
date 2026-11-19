@@ -346,3 +346,30 @@ feature("a Retail user who is no Commerce staff is refused a store's card and qu
         agentTasks == 0
     },
 })
+
+// a site is its organizations' (the internal organizations its apps mount, its shop's stores'), not public content every user
+// files notes on (SEC-BOS-87 review)
+feature("a site's card and notes are its organizations' users': Retail's shop site for Retail's agent, not Services' (SEC-BOS-87)", {
+    allowMessageErrors: true,
+    when() {
+        const card = (user) => {
+            login(user)
+            try {
+                const str = ec.screen.makeTest().rootScreen(commons).render("Chatter/recordCard", { recordEntity: "mantle.public.PublicSite", recordId: "ZIZI_SHOP" }, null)
+                let json = null
+                try { json = JSON.parse(str.output) } catch (err) { json = null }
+                ec.message.clearErrors()
+                return json || {}
+            } finally { login("john.doe") }
+        }
+        const servicesTask = (() => { login("customerservice.services"); try {
+            return post("createTask", { workEffortName: "Services on Retail's site", estimatedCompletionDate: "2026-11-02", recordEntity: "mantle.public.PublicSite", recordId: "ZIZI_SHOP" })
+        } finally { login("john.doe") } })()
+        return { retail: card("customerservice.agent"), services: card("customerservice.services"), servicesTask }
+    },
+    then({ retail, services, servicesTask }) {
+        !!retail.typeLabel
+        !services.typeLabel
+        servicesTask.status == 500
+    },
+})

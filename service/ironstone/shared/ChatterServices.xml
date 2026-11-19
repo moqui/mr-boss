@@ -34,7 +34,7 @@ along with this software (see the LICENSE.md file). If not, see
             visibility service of the types data/BossSetupRecordTypesData.xml names it for, SEC-BOS-87): the owning app's own record
             check with its read capability, which is narrower than the record's organization: Commerce's check#Record of a store
             (a store-limited staff member's assigned stores only), Marketing's of a segment and a list (audienceRead) and of a
-            content item. Never an error: a record the check refuses, or a failure, is false.</description>
+            content item; a site its organizations' users. Never an error: a record the check refuses, or a failure, is false.</description>
         <implements service="mantle.party.CommunicationServices.check#RecordTypeVisible"/>
         <actions><script><![CDATA[
             recordVisible = false
@@ -43,6 +43,24 @@ along with this software (see the LICENSE.md file). If not, see
                 'mantle.marketing.segment.MarketSegment': ['ironstone.marketing.ContextServices.check#Record', 'Marketing', 'segment', 'audienceRead'],
                 'mantle.marketing.contact.ContactList': ['ironstone.marketing.ContextServices.check#Record', 'Marketing', 'list', 'audienceRead'],
                 'mantle.marketing.campaign.CampaignContent': ['ironstone.marketing.ContextServices.check#Record', 'Marketing', 'content', null]
+            }
+            // a site: its organizations' users (the internal organizations its apps mount and the organizations of the stores its
+            // shop mounts), every one for a system administrator; not public content, whose notes any user could file
+            if (recordEntityName === 'mantle.public.PublicSite') {
+                if (!recordId || !ec.user.userId) return
+                const lib = ec.resource.script('component://mr-mantle/service/mantle/ledger/EntityLib.js')
+                if (lib.access.systemAdmin()) { recordVisible = !!ec.entity.find('mantle.public.PublicSite').condition('siteId', recordId).disableAuthz().one(); return }
+                const organizations = new Set()
+                for (const mount of ec.entity.find('mantle.public.PublicSiteApp').condition('siteId', recordId).disableAuthz().list()) {
+                    if (!mount.targetId) continue
+                    const store = mount.app === 'shop' ? ec.entity.find('mantle.product.store.ProductStore').condition('productStoreId', mount.targetId)
+                            .disableAuthz().one() : null
+                    if (store?.organizationPartyId) organizations.add(store.organizationPartyId)
+                    else organizations.add(mount.targetId)
+                }
+                const info = ec.service.sync().name('mantle.party.PartyServices.get#PartyOrganizationInfo').disableAuthz().call() || {}
+                recordVisible = Array.from(info.userOrgIds || []).some((partyId) => organizations.has(partyId))
+                return
             }
             const check = Object.hasOwn(checks, recordEntityName) ? checks[recordEntityName] : null
             if (!check || !recordId || !ec.user.userId) return
