@@ -407,6 +407,8 @@ feature("a message is linked to a record and taken off it, a task starts from a 
 // another organization's person with an address: the card names them to no one outside it, by partyId or by address
 const CARDORG = "BOSS_TEST_INBOX_CARDORG"
 const CARDOTHER = "BOSS_TEST_INBOX_CARDOTHER"
+// the other organization's staff member whose party is shared (_NA_): seen only by those who see the organization
+const CARDSTAFF = "BOSS_TEST_INBOX_CARDSTAFF"
 feature("the contact card names no party the user may not see, by partyId or by address (SEC-BOS-100)", {
     when() {
         const store = (entityName, fields) => ec.service.sync().name("store#" + entityName).parameters(fields).call()
@@ -418,15 +420,25 @@ feature("the contact card names no party the user may not see, by partyId or by 
             store("mantle.party.contact.ContactMech", { contactMechId: CARDOTHER, contactMechTypeEnumId: "CmtEmailAddress", infoString: "cora.cardtest@other.example" })
             store("mantle.party.contact.PartyContactMech", { partyId: CARDOTHER, contactMechId: CARDOTHER, contactMechPurposeId: "EmailPrimary",
                 fromDate: new Date(Date.now() - 60000) })
+            store("mantle.party.PartyRole", { partyId: CARDORG, roleTypeId: "OrgInternal" })
+            store("mantle.party.Party", { partyId: CARDSTAFF, partyTypeEnumId: "PtyPerson", ownerPartyId: "_NA_" })
+            store("mantle.party.Person", { partyId: CARDSTAFF, firstName: "Stella", lastName: "Cardtest" })
+            store("mantle.party.PartyRelationship", { partyRelationshipId: CARDSTAFF, relationshipTypeEnumId: "PrtEmployee", fromPartyId: CARDSTAFF,
+                toPartyId: CARDORG, toRoleTypeId: "OrgInternal", fromDate: new Date(Date.now() - 60000) })
         })
         // as an ordinary user (BOSS_USERS' own-organization filter), with the same call that names a party of his own
         login("joe.developer")
         try {
             return { own: get("contactCard", { partyId: "ORG_ACME_BA" }), byId: get("contactCard", { partyId: CARDOTHER }),
+                staff: get("contactCard", { partyId: CARDSTAFF }),
                 byAddress: get("contactCard", { emailAddress: "cora.cardtest@other.example", name: "Cora" }) }
         } finally {
             login("john.doe")
             sys(() => {
+                ec.entity.find("mantle.party.PartyRelationship").condition("fromPartyId", CARDSTAFF).deleteAll()
+                ec.entity.find("mantle.party.Person").condition("partyId", CARDSTAFF).deleteAll()
+                ec.entity.find("mantle.party.Party").condition("partyId", CARDSTAFF).deleteAll()
+                ec.entity.find("mantle.party.PartyRole").condition("partyId", CARDORG).deleteAll()
                 ec.entity.find("mantle.party.contact.PartyContactMech").condition("partyId", CARDOTHER).deleteAll()
                 ec.entity.find("mantle.party.contact.ContactMech").condition("contactMechId", CARDOTHER).deleteAll()
                 ec.entity.find("mantle.party.Person").condition("partyId", CARDOTHER).deleteAll()
@@ -436,13 +448,15 @@ feature("the contact card names no party the user may not see, by partyId or by 
             })
         }
     },
-    then({ own, byId, byAddress }) {
+    then({ own, byId, staff, byAddress }) {
         own.json.card.partyId == "ORG_ACME_BA"
         own.json.card.name == "Bob Acme"
         byId.status == 200
         byId.json.card.partyId == null
         byId.json.card.name == null
         byId.json.card.emailList.length == 0
+        staff.json.card.partyId == null
+        staff.json.card.name == null
         byAddress.json.card.partyId == null
         byAddress.json.card.name == "Cora"
         byAddress.json.card.url == null
