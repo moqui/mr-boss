@@ -898,7 +898,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="search" noun="LinkRecords">
         <description>The records a message may be filed on, for the LinkToRecord dialog's drop-down: an id (lookup#ById: a
             party, order, request, task or event, invoice, shipment) and the search index (search#Universal over parties,
-            requests, tasks, events and projects), each one the user may see, as options {value (entity|id), label}.</description>
+            requests, tasks, events and projects), each one the user may see (get#RecordLinkInfo with checkOnly, as the palette's
+            lookup#Id: SEC-BOS-86), as options {value (entity|id), label}.</description>
         <in-parameters><parameter name="term"/></in-parameters>
         <out-parameters><parameter name="optionList" type="List"/></out-parameters>
         <actions><script><![CDATA[
@@ -907,10 +908,14 @@ along with this software (see the LICENSE.md file). If not, see
             if (text.length < 2) return
             const L = (word) => ec.l10n.localize(word)
             const seen = new Set()
+            // a record the user may see, by get#RecordLinkInfo's rules (SEC-BOS-86): its name is never offered otherwise
+            const sees = (entityName, id) => ec.service.sync().name('mantle.party.CommunicationServices.get#RecordLinkInfo')
+                    .parameters({recordEntityName: entityName, recordId: id, checkOnly: true}).call()?.recordVisible === true
             const add = (entityName, id, kind, title) => {
                 const value = entityName + '|' + id
                 if (!id || seen.has(value)) return
                 seen.add(value)
+                if (!sees(entityName, id)) return
                 optionList.push({value: value, label: `${L(kind)} · ${title || id}${title && title !== id ? ' (' + id + ')' : ''}`, recordEntityName: entityName, recordId: id})
             }
             const hiddenItems = ec.resource.script('component://mr-boss/service/ironstone/projects/HiddenItems.js')
