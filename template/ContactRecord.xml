@@ -259,7 +259,7 @@ along with this software (see the LICENSE.md file). If not, see
                             {books: record.personalBookText}) : null
                     roleText = (rec.roleList || []).map((role) => role.description).join(', ')
                     captionText = [record.kindLabel, record.pseudoId, roleText].filter((part) => part).join(' · ')
-                    eventList = (act.eventList || []).map((event) => Object.assign({}, event, {linkHtml: mLink(event.url, event.title)}))
+                    eventList = (act.eventList || []).map((event) => Object.assign({}, event, {linkHtml: event.url ? mLink(event.url, event.title) : enc(event.title)}))
                     taskList = (act.taskList || []).map((task) => Object.assign({}, task, {linkHtml: mLink(task.url, task.workEffortName, task.closed ? 'm-muted' : '')}))
                     requestList = (act.requestList || []).map((request) => Object.assign({}, request, {linkHtml: mLink(request.url, request.requestName)}))
                     isConsentAdmin = !!access.isContactAdmin

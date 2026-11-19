@@ -638,7 +638,9 @@ along with this software (see the LICENSE.md file). If not, see
                 eventList = Array.from(out?.eventList || []).map((event) => ({workEffortId: event.workEffortId, title: String(event.title || '').replace(/ \[[^\]]*\]$/, ''),
                     whenText: event.allDay ? String(event.start || '').substring(0, 10) : String(event.start || '').replace('T', ' ').substring(0, 16),
                     startMillis: event.startMillis, statusText: status(event.statusId), statusId: event.statusId,
-                    upcoming: Number(event.startMillis || 0) >= now, url: '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(event.workEffortId)}))
+                    upcoming: Number(event.startMillis || 0) >= now, freeBusyOnly: !!event.freeBusyOnly,
+                    // an event the user may not open is Busy (get#FullCalendarData) and opens nothing
+                    url: event.freeBusyOnly ? null : '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(event.workEffortId)}))
                 eventList.sort((a, b) => Number(b.startMillis || 0) - Number(a.startMillis || 0))
             } else if (tab === 'tasks') {
                 const closedIds = ['WeComplete', 'WeClosed', 'WeCancelled']
