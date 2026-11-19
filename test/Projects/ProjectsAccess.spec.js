@@ -362,6 +362,13 @@ feature("internal users are unchanged by client access: Commons and Comms as und
 
 feature("the client's own project: its lists, timeline and services hold its project, shared items and requests, nothing internal or of another client", {
     when() {
+        // a public form's request matched to sheldon by a typed address, not confirmed: staff's alone (SEC-BOS-103)
+        sys(() => {
+            if (ec.entity.find("mantle.request.Request").condition("requestId", "BOSS_TEST_PREQ_FORM").count()) return
+            call("create#mantle.request.Request", { requestId: "BOSS_TEST_PREQ_FORM", requestName: "ZQW unverified form request", requestTypeEnumId: "RqtSupport",
+                statusId: "ReqSubmitted", rootWorkEffortId: "ACME", filedByPartyId: "ORG_ACME_SA", senderVerified: "N", requestDate: ec.user.nowTimestamp })
+            call("create#mantle.request.RequestParty", { requestId: "BOSS_TEST_PREQ_FORM", partyId: "ORG_ACME_SA", roleTypeId: "Reporter", fromDate: new Date(0) })
+        })
         const sheldon = as(SHELDON, () => {
             // a record as Chatter finds it (get#RecordLinkInfo under the client's authorization)
             const seen = (entityName, id) => hit("Projects/Chatter/chatterData", { recordEntity: entityName, recordId: id }).json?.visible === true
@@ -377,6 +384,7 @@ feature("the client's own project: its lists, timeline and services hold its pro
                 records: { acme: seen("mantle.work.effort.WorkEffort", "ACME"), acme1: seen("mantle.work.effort.WorkEffort", "ACME-1"),
                     acme3: seen("mantle.work.effort.WorkEffort", "ACME-3"), milestone: seen("mantle.work.effort.WorkEffort", "ACME-MS-1"),
                     request1: seen("mantle.request.Request", "BOSS_DEMO_PREQ_ACME1"), request2: seen("mantle.request.Request", "BOSS_DEMO_PREQ_ACME2"),
+                    formRequest: seen("mantle.request.Request", "BOSS_TEST_PREQ_FORM"),
                     note: seen("mantle.party.communication.CommunicationEvent", made.notes[0]),
                     message: seen("mantle.party.communication.CommunicationEvent", "BOSS_DEMO_ACME_MSG1"),
                     demoNote: seen("mantle.party.communication.CommunicationEvent", "BOSS_DEMO_ACME_NOTE1"),
@@ -417,7 +425,8 @@ feature("the client's own project: its lists, timeline and services hold its pro
         gob.workItems.output.includes("Frozen banana menu page")
         !gob.workItems.output.includes("Price the stand")
         leaksOf(gob.projects.output + gob.workItems.output, BLUTH_SECRETS) == []
-        sheldon.records == { acme: true, acme1: true, acme3: false, milestone: true, request1: true, request2: true, note: false, message: true,
+        !sheldon.requests.output.includes("ZQW unverified form request")
+        sheldon.records == { acme: true, acme1: true, acme3: false, milestone: true, request1: true, request2: true, formRequest: false, note: false, message: true,
             demoNote: false, update: true, internalUpdate: false, party: false, rate: false }
         sheldon.direct.vis.isClient == true
         sheldon.direct.vis.allProjects == false

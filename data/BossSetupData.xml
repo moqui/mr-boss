@@ -386,10 +386,12 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- the people and organizations on a client project (not on its items) -->
         <filters entityFilterId="BOSS_PROJECT_CLIENT_WEP" entityName="mantle.work.effort.WorkEffortParty"
                 filterMap="({workEffortId: ec.user.context.clientProjectIds || ['_NA_']})"/>
-        <!-- a request the user filed, or one of a client project filed by a contact of the user's organization -->
+        <!-- a request the user filed, or one of a client project filed by a contact of the user's organization; never a public form's
+            request whose typed address is not confirmed (senderVerified N, SEC-BOS-103), which is staff's alone -->
         <filters entityFilterId="BOSS_PROJECT_CLIENT_REQ" entityName="mantle.request.Request"
-                filterMap="({_join: 'or', _list: [{filedByPartyId: (ec.user.userAccount &amp;&amp; ec.user.userAccount.partyId) || '_NA_'},
-                    {rootWorkEffortId: ec.user.context.clientProjectIds || ['_NA_'], filedByPartyId: ec.user.context.clientContactPartyIds || ['_NA_']}]})"/>
+                filterMap="({_join: 'and', _list: [{_join: 'or', _list: [{filedByPartyId: (ec.user.userAccount &amp;&amp; ec.user.userAccount.partyId) || '_NA_'},
+                    {rootWorkEffortId: ec.user.context.clientProjectIds || ['_NA_'], filedByPartyId: ec.user.context.clientContactPartyIds || ['_NA_']}]},
+                    {_join: 'or', _list: [{senderVerified: null}, {senderVerified: 'Y'}]}]})"/>
         <!-- a message from or to the user or its organization, or a status update posted for the client; never a note -->
         <filters entityFilterId="BOSS_PROJECT_CLIENT_CE" entityName="mantle.party.communication.CommunicationEvent"
                 filterMap="({_join: 'or', _list: [{fromPartyId: ec.user.context.clientPartyIds || ['_NA_']},

@@ -150,12 +150,20 @@ feature("the project's Requests tab (ProjectDetail tab 6): IRON's requests only,
 
 feature("RequestDetail in Projects: the facts, the triage moves, the Work tab with its item, Chatter on Send message for an outside customer", {
     when() {
-        return { detail: render("apps/Projects/Requests/RequestDetail", { requestId: "BOSS_DEMO_PREQ_ACME1" }),
-            work: render("apps/Projects/Requests/RequestDetail", { requestId: "BOSS_DEMO_PREQ_IRON1", tab: "work" }),
-            email: render("apps/Projects/Requests/RequestDetail", { requestId: byName("Timesheet export drops the last day of the month").requestId }),
-            commons: render("apps/Commons/Requests/RequestDetail", { requestId: "BOSS_DEMO_PREQ_ACME1" }) }
+        // the request as a public form files it, its sender not verified (SEC-BOS-103): both apps say so on the one render each
+        const mark = (senderVerified) => sys(() => call("update#mantle.request.Request", { requestId: "BOSS_DEMO_PREQ_ACME1", senderVerified }))
+        mark("N")
+        try {
+            return { detail: render("apps/Projects/Requests/RequestDetail", { requestId: "BOSS_DEMO_PREQ_ACME1" }),
+                work: render("apps/Projects/Requests/RequestDetail", { requestId: "BOSS_DEMO_PREQ_IRON1", tab: "work" }),
+                email: render("apps/Projects/Requests/RequestDetail", { requestId: byName("Timesheet export drops the last day of the month").requestId }),
+                commons: render("apps/Commons/Requests/RequestDetail", { requestId: "BOSS_DEMO_PREQ_ACME1" }) }
+        } finally { mark(null) }
     },
     then({ detail, work, email, commons }) {
+        detail.output.includes("Sender not verified: the address was typed into a public form")
+        commons.output.includes("Sender not verified: the address was typed into a public form")
+        !work.output.includes("Sender not verified")
         detail.status == 200
         detail.errors == ""
         !detail.broken

@@ -724,8 +724,8 @@ along with this software (see the LICENSE.md file). If not, see
         <description>What RequestDetail shows in Projects (design-projects.md §6, on Commons' get#RequestDetail for the record,
             its people and linked records): the triage the user may do (canTriage), the status-bar's moves (Accept, Start,
             Complete, Cancel, back to Submitted, Re-open), the facts (customer, project, priority, due, assignee, filed by,
-            date, channel, and senderUnverified for a public form's requester not yet confirmed), the work (its linked work items
-            decorated as WorkItems shows them, with the done count), the
+            date, channel; a public form's requester not yet confirmed is the base request's senderUnverified), the work (its linked
+            work items decorated as WorkItems shows them, with the done count), the
             items (RequestItem rows, for purchase, quote and inventory requests or when it has some), whether the customer is
             outside the organization (Chatter opens on Send message), and the options of the dialogs.</description>
         <in-parameters><parameter name="requestId" required="true"/></in-parameters>
@@ -775,8 +775,7 @@ along with this software (see the LICENSE.md file). If not, see
                 stageStatusIds: ['ReqDraft', 'ReqSubmitted', 'ReqReviewed', 'ReqInProgress', 'ReqCompleted'], allowedStatusIds: allowed,
                 workList: workList, workDoneCount: doneCount, itemList: requestItems.map((row) => row.getMap()), itemsShown: itemsShown,
                 channelLabel: channel, customerOutside: customerOutside, noteList: notes,
-                // a public form's requester, found by the typed address and name, not yet confirmed (SEC-BOS-103)
-                senderUnverified: ec.entity.find('mantle.request.Request').condition('requestId', requestId).disableAuthz().one()?.senderVerified === 'N',
+
                 canConvert: canTriage && open && (ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')),
                 projectName: project ? (project.workEffortName || project.workEffortId) : ''}
         ]]></script></actions>

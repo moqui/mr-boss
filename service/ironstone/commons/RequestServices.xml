@@ -399,6 +399,8 @@ along with this software (see the LICENSE.md file). If not, see
                     assigneePartyId: assignee?.partyId || null, assigneeName: assignee ? nameOf(assignee.partyId) : '',
                     assigneeUserId: assignee ? (userIds[assignee.partyId] || null) : null,
                     filedByName: row.filedByPartyId ? nameOf(row.filedByPartyId) : '',
+                    // a public form's requester, found by the typed address and name, not yet confirmed (SEC-PSS-28, SEC-BOS-103)
+                    senderUnverified: row.senderVerified === 'N',
                     requestDateText: fmt(toMillis(row.requestDate), 'MMM d, yyyy h:mm a'), responseRequiredText: fmt(toMillis(row.responseRequiredDate), 'MMM d, yyyy h:mm a'),
                     responseRequiredEdit: fmt(toMillis(row.responseRequiredDate), 'yyyy-MM-dd HH:mm'),
                     updatedText: fmt(toMillis(row.lastUpdatedStamp), 'MMM d, yyyy h:mm a'), description: row.description || '',
