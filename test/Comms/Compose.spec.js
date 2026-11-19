@@ -208,6 +208,34 @@ feature("the recipient search offers the address of a user account only when its
     },
 })
 
+// joe.developer reaches john.doe, of his organization, and with the same send no party of another organization
+feature("an internal message goes to no party the user may not see, by a party chip or an address chip (SEC-BOS-98)", {
+    when() {
+        makeAccountParties()
+        login("joe.developer")
+        try {
+            const send = (value) => post("send", { fromValue: "internal", toJson: chips([value]), subject: "Reach check", body: "<p>x</p>" })
+            const shared = send("party:EX_JOHN_DOE")
+            const sharedRows = shared.json.communicationEventIdList ? list("mantle.party.communication.CommunicationEventParty",
+                { communicationEventId: shared.json.communicationEventIdList[0] }) : []
+            const forged = send("party:" + ACCTOTHER)
+            const byAddress = send("otto.acctreach@other.example")
+            const reached = sys(() => ec.entity.find("mantle.party.communication.CommunicationEventParty").condition("partyId", ACCTOTHER).count())
+            return { shared, sharedRows, forged, byAddress, reached }
+        } finally {
+            login("john.doe")
+            dropAccountParties()
+        }
+    },
+    then({ shared, sharedRows, forged, byAddress, reached }) {
+        shared.errors == ""
+        sharedRows.some((row) => row.partyId == "EX_JOHN_DOE" && row.roleTypeId == "MessageTo")
+        forged.errors.includes("not found")
+        byAddress.errors.includes("is not someone here")
+        reached == 0
+    },
+})
+
 feature("a contact group in the recipients expands to its members on send", {
     when() {
         capture.clear()

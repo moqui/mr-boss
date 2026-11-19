@@ -695,7 +695,9 @@ along with this software (see the LICENSE.md file). If not, see
             (an address as given; a party:id chip by its primary email address, for a party the user may see; a group:id
             chip by the current members of that contact group who have an email address), for an internal message the
             party ids (party:id; an address chip by the party with it, match#Addresses; a group:id chip by its members)
-            and the mailboxes (list:id). A group the user may not see is not found. A member with no email address is
+            and the mailboxes (list:id). A party a party:id or address chip names is one the user may see under the Comms
+            app's entity filters, and for an internal message one whose users the chat-target providers do not refuse
+            (SEC-BOS-98); any other is not found. A group the user may not see is not found. A member with no email address is
             skipped; a group with none is an error naming it. An entry that cannot be resolved is an error naming it.</description>
         <in-parameters>
             <parameter name="chipList" type="List"/>
@@ -717,6 +719,23 @@ along with this software (see the LICENSE.md file). If not, see
             contactListIdList = []
             const visibleParty = (id) => ec.entity.find('mantle.party.Party').condition('partyId', id).condition(cf.makeCondition([
                 cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', ec.user.userId)], 'or')).disableAuthz().count() > 0
+            // a party a chip names (party:id, or an address matched to a party for an internal message) is one the user may reach
+            // (SEC-BOS-98): read with authorization on, so the Comms app's entity filters keep another organization's parties out
+            // as search#Recipients does, not another user's private contact; for an internal message none of its users is one the
+            // chat-target providers refuse (as the people search, ChatterServices.search#Users). Otherwise it is not found.
+            const reachableParty = (id) => {
+                if (!id) return false
+                const seen = Array.from(ec.entity.find('mantle.party.PartyDetail').condition('partyId', id).condition(cf.makeCondition([
+                    cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', ec.user.userId)], 'or'))
+                    .selectField('partyId').limit(1).list()).length > 0
+                if (!seen || mode !== 'internal') return seen
+                const userIds = Array.from(ec.entity.find('moqui.security.UserAccount').condition('partyId', id).selectField('userId').disableAuthz().list())
+                    .map((account) => account.userId)
+                if (!userIds.length) return true
+                const checked = ec.service.sync().name('org.moqui.chat.ChatServices.get#RefusedUsers').parameters({userIdList: userIds, hook: 'chat-target'}).call()
+                const refused = new Set(checked ? Array.from(checked.refusedUserIdList || []) : userIds)
+                return !userIds.some((userId) => refused.has(userId))
+            }
             const seenAddress = new Set()
             const expandGroup = (groupId, label) => {
                 const group = ec.entity.find('mantle.party.contact.ContactBookGroup').condition('contactBookGroupId', groupId).one()
@@ -771,7 +790,7 @@ along with this software (see the LICENSE.md file). If not, see
                     }
                 } else if (value.startsWith('party:')) {
                     const id = value.substring(6)
-                    if (!visibleParty(id)) { ec.message.addError(ec.resource.expand('Recipient ${name} not found', '', {name: label})); return }
+                    if (!reachableParty(id)) { ec.message.addError(ec.resource.expand('Recipient ${name} not found', '', {name: label})); return }
                     if (mode === 'internal') { if (!partyIdList.includes(id)) partyIdList.push(id) }
                     else {
                         const address = ec.service.sync().name('mantle.party.ContactServices.get#PrimaryEmailAddress').parameter('partyId', id).call()?.emailAddress
@@ -784,7 +803,7 @@ along with this software (see the LICENSE.md file). If not, see
                     const match = /<([^>]+)>/.exec(value)
                     const address = (match ? match[1] : value).trim().toLowerCase()
                     const map = ec.service.sync().name('ironstone.comms.InboxServices.match#Addresses').parameter('addressList', [address]).call().partyMap || {}
-                    if (!map[address]) { ec.message.addError(ec.resource.expand('${name} is not someone here; send email from a mail account', '', {name: label})); return }
+                    if (!map[address] || !reachableParty(map[address].partyId)) { ec.message.addError(ec.resource.expand('${name} is not someone here; send email from a mail account', '', {name: label})); return }
                     if (!partyIdList.includes(map[address].partyId)) partyIdList.push(map[address].partyId)
                 } else {
                     const match = /<([^>]+)>/.exec(value)
