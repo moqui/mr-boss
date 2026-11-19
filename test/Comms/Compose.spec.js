@@ -187,6 +187,18 @@ function makeAccountParties() {
 function dropAccountParties() {
     sys(() => {
         const ids = [ACCTOTHER, ACCTSHARED, ACCTSTAFF]
+        // the messages a reply spec wrote with these parties
+        const cf = ec.entity.conditionFactory
+        const eventIds = Array.from(ec.entity.find("mantle.party.communication.CommunicationEvent").condition(cf.makeCondition([
+            cf.makeCondition("fromPartyId", "in", ids), cf.makeCondition("toPartyId", "in", ids)], "or")).list()).map((row) => row.communicationEventId)
+        const rowIds = Array.from(ec.entity.find("mantle.party.communication.CommunicationEventParty").condition("partyId", "in", ids).list())
+            .map((row) => row.communicationEventId)
+        const allIds = Array.from(new Set(eventIds.concat(rowIds)))
+        if (allIds.length) {
+            ec.entity.find("mantle.party.communication.CommunicationEventParty").condition("communicationEventId", "in", allIds).deleteAll()
+            ec.entity.find("mantle.party.communication.CommunicationEvent").condition("rootCommEventId", "in", allIds).deleteAll()
+            ec.entity.find("mantle.party.communication.CommunicationEvent").condition("communicationEventId", "in", allIds).deleteAll()
+        }
         ec.entity.find("mantle.party.PartyRelationship").condition("fromPartyId", ACCTSTAFF).deleteAll()
         ec.entity.find("mantle.party.PartyRole").condition("partyId", ACCTORG).deleteAll()
         ec.entity.find("moqui.security.UserAccount").condition("userId", "in", ids).deleteAll()
@@ -232,13 +244,20 @@ feature("an internal message goes to no party the user may not see, by a party c
             const staff = send("party:" + ACCTSTAFF)
             const staffByAddress = send("stan.acctreach@staff.example")
             const reached = sys(() => ec.entity.find("mantle.party.communication.CommunicationEventParty").condition("partyId", "in", [ACCTOTHER, ACCTSTAFF]).count())
-            return { shared, sharedRows, forged, byAddress, staff, staffByAddress, reached }
+            // a reply all keeps the thread's people: the staff member wrote to joe, and joe's reply reaches them
+            const parentId = sys(() => call("mantle.party.CommunicationServices.create#Message", { fromPartyId: ACCTSTAFF, toPartyId: "ORG_ZIZI_JD",
+                subject: "From the other organization", body: "<p>Hi</p>" }).communicationEventId)
+            const replied = post("send", { fromValue: "internal", parentCommEventId: parentId, toJson: chips(["party:" + ACCTSTAFF]), subject: "Re: x",
+                body: "<p>Thanks</p>" })
+            const replyRows = replied.json.communicationEventIdList ? list("mantle.party.communication.CommunicationEventParty",
+                { communicationEventId: replied.json.communicationEventIdList[0] }) : []
+            return { shared, sharedRows, forged, byAddress, staff, staffByAddress, reached, replied, replyRows }
         } finally {
             login("john.doe")
             dropAccountParties()
         }
     },
-    then({ shared, sharedRows, forged, byAddress, staff, staffByAddress, reached }) {
+    then({ shared, sharedRows, forged, byAddress, staff, staffByAddress, reached, replied, replyRows }) {
         shared.errors == ""
         sharedRows.some((row) => row.partyId == "EX_JOHN_DOE" && row.roleTypeId == "MessageTo")
         forged.errors.includes("not found")
@@ -246,6 +265,8 @@ feature("an internal message goes to no party the user may not see, by a party c
         staff.errors.includes("not found")
         staffByAddress.errors.includes("is not someone here")
         reached == 0
+        replied.errors == ""
+        replyRows.some((row) => row.partyId == ACCTSTAFF)
     },
 })
 

@@ -711,6 +711,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="chipList" type="List"/>
             <parameter name="chipsJson" allow-html="any"/>
             <parameter name="mode" required="true"/>
+            <parameter name="keepPartyIdList" type="List"><description>Internal: an internal reply's thread participants (send#Compose,
+                when the user is one of them), whom a party or address chip keeps without the reach check, as create#Message keeps
+                them (SEC-BOS-98)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="addressText"/>
@@ -731,8 +734,10 @@ along with this software (see the LICENSE.md file). If not, see
             // (SEC-BOS-98): read with authorization on, so the Comms app's entity filters keep another organization's parties out
             // as search#Recipients does, not another user's private contact; for an internal message none of its users is one the
             // chat-target providers refuse (as the people search, ChatterServices.search#Users). Otherwise it is not found.
+            const kept = new Set(Array.from(keepPartyIdList || []).map((id) => String(id)))
             const reachableParty = (id) => {
                 if (!id) return false
+                if (mode === 'internal' && kept.has(String(id))) return true
                 // another organization's staff too, unless the user may see that organization (filter#VisibleParties)
                 const seen = Array.from(ec.service.sync().name('mantle.party.PartyServices.filter#VisibleParties')
                     .parameters({partyIdList: [id], includeDisabled: true}).call()?.visiblePartyIdList || []).includes(id)
@@ -1248,8 +1253,16 @@ along with this software (see the LICENSE.md file). If not, see
                         // every message of the first send was taken back (Undo) or is gone: this send goes, and its answer replaces the ref's
                     }
                 }
+                // a reply keeps its thread's people when the user is one of them, as create#Message does (SEC-BOS-98)
+                let keepPartyIdList = []
+                if (parentCommEventId) {
+                    const participants = Array.from(ec.service.sync().name('mantle.party.CommunicationServices.get#ThreadParticipants')
+                            .parameter('communicationEventId', parentCommEventId).call()?.partyIdList || [])
+                    if (participants.includes(partyId)) keepPartyIdList = participants
+                }
                 const resolve = (json) => {
-                    const out = ec.service.sync().name('ironstone.comms.ComposeServices.resolve#Recipients').parameters({chipsJson: json || '[]', mode: 'internal'}).call()
+                    const out = ec.service.sync().name('ironstone.comms.ComposeServices.resolve#Recipients').parameters({chipsJson: json || '[]', mode: 'internal',
+                        keepPartyIdList: keepPartyIdList}).call()
                     return ec.message.hasError() ? null : out
                 }
                 const toOut = resolve(toJson)
