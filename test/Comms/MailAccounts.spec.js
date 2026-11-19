@@ -343,8 +343,9 @@ feature("the account's page: pause and resume, servers, and members", {
         const pausedStatus = accountOf("pat@acme.example").statusId
         const resumed = post("Account/resume", { emailAccountId: personalId })
         const resumedStatus = accountOf("pat@acme.example").statusId
+        // IMAP to POP moves the incoming server, so its password is given again (SEC-MAIL-84)
         const servers = post("Account/saveServers", Object.assign({ emailAccountId: personalId, emailAddress: "pat@acme.example", accountKindEnumId: "EakExternal",
-            mailUsername: "pat" }, local, { storeKind: "pop", storeSecurity: "ssl" }))
+            mailUsername: "pat", mailPassword: PASSWORD }, local, { storeKind: "pop", storeSecurity: "ssl" }))
         const server = serverOf(accountOf("pat@acme.example"))
         const permission = post("Account/setMemberPermission", { emailAccountId: sharedId, userId: "ORG_ZIZI_JD", permissionEnumId: "EapRead" })
         const memberRow = sys(() => ec.entity.find("moqui.basic.email.EmailAccountUser").condition("emailAccountId", sharedId).condition("userId", "ORG_ZIZI_JD").list()[0])
@@ -436,7 +437,8 @@ feature("an .eml imported once into a folder", {
 feature("the outgoing server's own sign-in: tried before it is saved and refused when the server does not take it; emptied, SMTP signs in as the incoming again", {
     when() {
         const base = Object.assign({ emailAccountId: personalId, emailAddress: "pat@acme.example", mailUsername: "pat" }, local, { storeKind: "pop", storeSecurity: "ssl" })
-        const refused = post("Account/saveServers", Object.assign({}, base, { mailUsername: "pat2", smtpUsername: "pat-out", smtpPassword: "out-pass" }))
+        // a new incoming user gives its password again (SEC-MAIL-84), so what refuses is the outgoing server
+        const refused = post("Account/saveServers", Object.assign({}, base, { mailUsername: "pat2", mailPassword: PASSWORD, smtpUsername: "pat-out", smtpPassword: "out-pass" }))
         const afterRefused = serverOf(accountOf("pat@acme.example"))
         const smtpOnly = sys(() => call(`${SETTINGS}.test#MailAccount`, { emailAccountId: personalId, testStore: false, smtpUsername: "pat-out", smtpPassword: "out-pass" }))
         // one stored apart, as when a server took it: the page says so, the same user with no password keeps it, an empty user takes it back
@@ -444,7 +446,8 @@ feature("the outgoing server's own sign-in: tried before it is saved and refused
         const page = render("Account", { emailAccountId: personalId })
         const kept = post("Account/saveServers", Object.assign({}, base, { smtpUsername: "pat-out", smtpPassword: "" }))
         const afterKept = serverOf(accountOf("pat@acme.example"))
-        const cleared = post("Account/saveServers", Object.assign({}, base, { smtpUsername: "" }))
+        // SMTP then signs in with the incoming password, so it is given again (SEC-MAIL-84)
+        const cleared = post("Account/saveServers", Object.assign({}, base, { smtpUsername: "", mailPassword: PASSWORD }))
         const afterCleared = serverOf(accountOf("pat@acme.example"))
         // the wizard: the user the lookup found prefilled
         const connect = render("Add/Connect", Object.assign({ emailAddress: "jo@acme.example", accountKindEnumId: "EakExternal", mailUsername: "jo@acme.example",
@@ -469,6 +472,7 @@ feature("the outgoing server's own sign-in: tried before it is saved and refused
         v.cleared.errors == ""
         v.afterCleared.smtpUsername == null
         v.afterCleared.smtpPassword == null
+        v.afterCleared.mailPassword == PASSWORD
         v.connect.errors == ""
         v.connect.output.includes("jo-smtp@acme.example")
         v.connect.output.includes("signs in as another user: check it and enter its password")
