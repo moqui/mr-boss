@@ -321,6 +321,35 @@ feature("successful dated policy saves return to current settings so the next sa
     }
 })
 
+// the settings form offers cost self approval only to a PRODUCT_COST_SELF_APPROVAL holder (SEC-BAP-106 review): a save that
+// posts no value of it, as everyone else's does, keeps the stored one rather than turning it off
+feature("a catalog settings save that posts no cost self approval keeps the stored value (SEC-BAP-106)", {
+    when() {
+        login("john.doe")
+        const organizationPartyId = "PRD_SELF_APPROVAL_ORG"
+        as("john.doe", () => {
+            call("create#mantle.party.Party", {partyId: organizationPartyId, partyTypeEnumId: "PtyOrganization"})
+            call("create#mantle.party.Organization", {partyId: organizationPartyId, organizationName: "Self approval kept"})
+            call("create#mantle.party.PartyRole", {partyId: organizationPartyId, roleTypeId: "OrgInternal"})
+            call("create#mantle.product.ProductCatalogSetting", {organizationPartyId, fromDate: "2000-01-01T00:00:00Z",
+                allowCostSelfApproval: "Y", changeReason: "Set by an administrator"})
+        })
+        const get = () => invoke(S + "get#CatalogSettings", {organizationPartyId})
+        const base = get()
+        const posted = Object.assign({}, base.settings)
+        delete posted.allowCostSelfApproval
+        const saved = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").renderMode("tui")
+            .render("apps/Products/Settings/Index/save", Object.assign({}, posted, {organizationPartyId, expectedVersion: base.versionSeqId,
+                packagingEnabled: String(!base.settings.packagingEnabled), changeReason: "A save with no self approval field"}), "post")
+        return {status: saved.status, before: base.settings.allowCostSelfApproval, after: get().settings.allowCostSelfApproval}
+    },
+    then({status, before, after}) {
+        status == 200
+        before == true
+        after == true
+    }
+})
+
 feature("clone preserves scoped IDs and independently copied document bytes, meters and maintenance references", {
     when() {
         return as("catalog.edit", () => {
