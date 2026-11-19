@@ -655,17 +655,50 @@ feature("Manufacturing's record panels serve its own records of the user's plant
             ec.message.clearErrors()
             return Array.from(out.errorMessages || []).join("\n")
         }
-        return asUser(users.read, () => ({
-            run: panel("mantle.work.effort.WorkEffort", ids.runId),
-            line: panel("mantle.facility.Facility", ids.lineId),
-            equipment: panel("mantle.product.asset.Asset", ids.equipmentId),
-            method: panel("mantle.product.bom.ProductBom", ids.methodId),
-            otherRun: panel("mantle.work.effort.WorkEffort", ids.otherRunId),
-            party: panel("mantle.party.Party", "ORG_ZIZI_RETAIL"),
-            invoice: panel("mantle.account.invoice.Invoice", "100000")
-        }))
+        // a write through the panels on a routing (a work effort whose first kinds, run and operation, do not fit): a note and
+        // a file, as the routing's editor and as the administrator; a refused kind marks no transaction rollback-only
+        const write = (user, name, parameters) =>
+            asUser(user, () => {
+                const out = ec.screen
+                    .makeTest()
+                    .rootScreen("component://webroot/screen/webroot.xml")
+                    .render(
+                        "apps/Manufacturing/" + name,
+                        Object.assign({recordEntity: "mantle.work.effort.WorkEffort", recordId: ids.routingId}, parameters),
+                        "post"
+                    )
+                ec.message.clearErrors()
+                return Array.from(out.errorMessages || []).join("\n")
+            })
+        const writes = {
+            methodNote: write(users.method, "Chatter/logNote", {body: "<p>Routing note from the method editor</p>"}),
+            adminNote: write(users.admin, "Chatter/logNote", {body: "<p>Routing note from the administrator</p>"}),
+            adminFile: write(users.admin, "RecordFiles/upload", {
+                contentFile: [uploadedFile("routing-note.txt", "Torque values")],
+                description: "Torques"
+            })
+        }
+        writes.notes = system(
+            () =>
+                Array.from(
+                    ec.entity.find("mantle.work.effort.WorkEffortCommEvent").condition("workEffortId", ids.routingId).list()
+                ).length
+        )
+        return Object.assign(
+            {writes},
+            asUser(users.read, () => ({
+                run: panel("mantle.work.effort.WorkEffort", ids.runId),
+                line: panel("mantle.facility.Facility", ids.lineId),
+                equipment: panel("mantle.product.asset.Asset", ids.equipmentId),
+                method: panel("mantle.product.bom.ProductBom", ids.methodId),
+                otherRun: panel("mantle.work.effort.WorkEffort", ids.otherRunId),
+                party: panel("mantle.party.Party", "ORG_ZIZI_RETAIL"),
+                invoice: panel("mantle.account.invoice.Invoice", "100000")
+            }))
+        )
     },
     then(r) {
+        r.writes.methodNote == "" && r.writes.adminNote == "" && r.writes.adminFile == "" && r.writes.notes >= 2
         !r.run.includes("RECORD_PANEL_UNAVAILABLE") && !r.line.includes("RECORD_PANEL_UNAVAILABLE")
         !r.equipment.includes("RECORD_PANEL_UNAVAILABLE") && !r.method.includes("RECORD_PANEL_UNAVAILABLE")
         r.otherRun.includes("RECORD_PANEL_UNAVAILABLE")

@@ -30,37 +30,15 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
         <service-call name="ironstone.manufacturing.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
                 out-map="manufacturing"/>
-        <!-- the record panels serve Manufacturing's own record hosts only (SEC-BAP-89, as Maintenance's root): this root's
-            inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits (another app's
-            invoices, orders, parties and shipments) to a user given Manufacturing without Commons, and an administrator's of
-            any organization while none is active. A work effort is a run, an operation or a routing; a BOM a method; a work
-            center (or its facility), an asset and a facility themselves; each checked as check#Record checks it (the user's
-            plants and organizations). A panel request with no record (a person search, an avatar) names none. -->
-        <script><![CDATA[
-            const pathNames = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String)
-            const panelName = pathNames[pathNames.indexOf('Manufacturing') + 1]
-            const wanted = ec.context.recordEntity
-            panelKinds = []
-            if ((panelName === 'Chatter' || panelName === 'RecordFiles') && wanted) {
-                let entityName = String(wanted)
-                try { entityName = ec.entity.makeValue(entityName).getEntityName() } catch (error) { entityName = '' }
-                const panelHosts = {'mantle.work.effort.WorkEffort': ['run', 'operation', 'routing'],
-                    'mantle.product.bom.ProductBom': ['method'], 'mantle.work.production.WorkCenter': ['workCenter'],
-                    'mantle.product.asset.Asset': ['asset'], 'mantle.facility.Facility': ['facility', 'workCenter']}
-                if (!Object.hasOwn(panelHosts, entityName))
-                    throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are kept in the app that owns it')
-                panelKinds = panelHosts[entityName]
-            }
-            panelRecord = null
-        ]]></script>
-        <iterate list="panelKinds" entry="panelKind">
-            <if condition="!panelRecord?.recordId">
-                <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="panelRecord" ignore-error="true"
-                        in-map="{appRoot:'Manufacturing', recordType:panelKind, recordId:ec.context.recordId || ''}"/>
-            </if>
-        </iterate>
-        <if condition="panelKinds.length">
-            <script>if (!ec.context.panelRecord?.recordId) throw new Error('RECORD_PANEL_UNAVAILABLE: Notes and files of this record are not available')</script>
+        <!-- the record panels serve Manufacturing's own record hosts of the user's plants only (SEC-BAP-89, as Maintenance's root):
+            this root's inheritable grant would otherwise open the notes and files of any record get#RecordLinkInfo admits (another
+            app's invoices, orders, parties and shipments). check#PanelRecord finds the kind from the record; a panel request with
+            no record (a person search, an avatar) names none. -->
+        <set field="panelName" from="(() => { const names = Array.from(sri.getScreenUrlInfo().fullPathNameList || []).map(String);
+                return names[names.indexOf('Manufacturing') + 1] })()"/>
+        <if condition="(panelName == 'Chatter' || panelName == 'RecordFiles') &amp;&amp; ec.context.recordEntity">
+            <service-call name="ironstone.manufacturing.AccessServices.check#PanelRecord"
+                    in-map="{recordEntity:ec.context.recordEntity, recordId:ec.context.recordId || ''}"/>
         </if>
         <set field="sharedLinks" from="manufacturing.sharedLinks"/>
     </always-actions>

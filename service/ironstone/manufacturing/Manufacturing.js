@@ -1476,7 +1476,37 @@ Object.assign(choiceSources, {
     }
 })
 
-const operations = {sharedContext, selectPlant, checkRecord, search, choices}
+// check#PanelRecord (SEC-BAP-89): the record a Chatter or RecordFiles panel under the Manufacturing root names, refused unless it is
+// a Manufacturing host of the user's plants: a work effort a run, an operation or a routing; a BOM a method; a work center, an
+// asset or a facility (a facility first as itself, else as its work center). The kind is found from the record, each tried as
+// recordOf checks it, in this script, so a kind that does not fit marks no transaction rollback-only.
+const panelHosts = {
+    "mantle.work.effort.WorkEffort": ["run", "operation", "routing"],
+    "mantle.product.bom.ProductBom": ["method"],
+    "mantle.work.production.WorkCenter": ["workCenter"],
+    "mantle.product.asset.Asset": ["asset"],
+    "mantle.facility.Facility": ["facility", "workCenter"]
+}
+function panelRecord(p) {
+    let entityName = String(p.recordEntity || "")
+    try {
+        entityName = ec.entity.makeValue(entityName).getEntityName()
+    } catch (error) {
+        entityName = ""
+    }
+    if (!Object.hasOwn(panelHosts, entityName))
+        denied("RECORD_PANEL_UNAVAILABLE", "Notes and files of this record are kept in the app that owns it")
+    const userScope = required()
+    for (const kind of panelHosts[entityName]) {
+        try {
+            return {recordType: kind, recordId: recordOf(userScope, kind, p.recordId).recordId}
+        } catch (error) {
+            // not this kind, or not the user's: the next kind
+        }
+    }
+    denied("RECORD_PANEL_UNAVAILABLE", "Notes and files of this record are not available")
+}
+const operations = {sharedContext, selectPlant, checkRecord, panelRecord, search, choices}
 ;({
     recordLink,
     // the scope for a phase's own module and the shared mounts' Manufacturing branch: the user's scope, the same refusing a

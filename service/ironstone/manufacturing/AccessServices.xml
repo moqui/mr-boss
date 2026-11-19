@@ -102,6 +102,21 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="detail" from="record.detail"/>
         </actions>
     </service>
+    <service verb="check" noun="PanelRecord" allow-remote="false" read-only="true">
+        <description>The record a Chatter or RecordFiles panel under the Manufacturing root names (SEC-BAP-89): refused
+            (RECORD_PANEL_UNAVAILABLE) unless it is a Manufacturing host of the user's plants, as check#Record checks it: a work
+            effort that is a run, an operation or a routing, a BOM, a work center, an asset or a facility. Answers its kind.</description>
+        <in-parameters>
+            <parameter name="recordEntity" required="true"/>
+            <parameter name="recordId"/>
+        </in-parameters>
+        <out-parameters><parameter name="recordType"/></out-parameters>
+        <actions>
+            <set field="record" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Manufacturing.js')
+                    .execute('panelRecord', context)"/>
+            <set field="recordType" from="record.recordType"/>
+        </actions>
+    </service>
     <service verb="select" noun="Plant" allow-remote="false">
         <description>Keep a plant of the user's as their selected one (the ManufacturingPlantActive preference), or clear it
             with none. The preference never widens the scope: a plant outside it is refused (PLANT_UNAVAILABLE), and one
