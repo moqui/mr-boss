@@ -156,6 +156,58 @@ feature("the recipient search never offers another organization's party, by name
     },
 })
 
+// user accounts with an address and no contact mech, so only the account search finds them: one of another organization's
+// party and one of a party every organization shares (_NA_)
+const ACCTORG = "BOSS_TEST_COMPOSE_ACCTORG"
+const ACCTOTHER = "BOSS_TEST_COMPOSE_ACCTOTHER"
+const ACCTSHARED = "BOSS_TEST_COMPOSE_ACCTSHARED"
+function makeAccountParties() {
+    sys(() => {
+        store("mantle.party.Party", { partyId: ACCTORG, partyTypeEnumId: "PtyOrganization", ownerPartyId: ACCTORG })
+        store("mantle.party.Organization", { partyId: ACCTORG, organizationName: "Acctreach Other Org" })
+        for (const [partyId, ownerPartyId, firstName, emailAddress] of [[ACCTOTHER, ACCTORG, "Otto", "otto.acctreach@other.example"],
+            [ACCTSHARED, "_NA_", "Sam", "sam.acctreach@shared.example"]]) {
+            store("mantle.party.Party", { partyId, partyTypeEnumId: "PtyPerson", ownerPartyId })
+            store("mantle.party.Person", { partyId, firstName, lastName: "Acctreach" })
+            if (ec.entity.find("moqui.security.UserAccount").condition("userId", partyId).count() == 0) {
+                const account = ec.entity.makeValue("moqui.security.UserAccount")
+                account.setFields({ userId: partyId, username: partyId.toLowerCase(), userFullName: firstName + " Acctreach", emailAddress, partyId,
+                    disabled: "N" }, true, null, null)
+                account.create()
+            }
+        }
+    })
+}
+function dropAccountParties() {
+    sys(() => {
+        const ids = [ACCTOTHER, ACCTSHARED]
+        ec.entity.find("moqui.security.UserAccount").condition("userId", "in", ids).deleteAll()
+        ec.entity.find("mantle.party.Person").condition("partyId", "in", ids).deleteAll()
+        ec.entity.find("mantle.party.Party").condition("partyId", "in", ids).deleteAll()
+        ec.entity.find("mantle.party.Organization").condition("partyId", ACCTORG).deleteAll()
+        ec.entity.find("mantle.party.Party").condition("partyId", ACCTORG).deleteAll()
+    })
+}
+feature("the recipient search offers the address of a user account only when its party is one the user may see (SEC-BOS-99)", {
+    when() {
+        makeAccountParties()
+        login("joe.developer")
+        try {
+            return { found: post("recipients", { term: "Acctreach", mode: "email" }), byAddress: post("recipients", { term: "otto.acctreach", mode: "email" }) }
+        } finally {
+            login("john.doe")
+            dropAccountParties()
+        }
+    },
+    then({ found, byAddress }) {
+        Array.isArray(found.json)
+        found.json.some((option) => option.value == '"Sam Acctreach" <sam.acctreach@shared.example>')
+        !found.json.some((option) => String(option.value).includes("otto.acctreach@other.example"))
+        Array.isArray(byAddress.json)
+        !byAddress.json.some((option) => String(option.value).includes("otto.acctreach@other.example"))
+    },
+})
+
 feature("a contact group in the recipients expands to its members on send", {
     when() {
         capture.clear()
