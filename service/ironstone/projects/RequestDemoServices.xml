@@ -76,6 +76,19 @@ along with this software (see the LICENSE.md file). If not, see
                         snippet: body.substring(0, 137).replace(/\s+/g, ' '), messageId: '<boss-demo-intake-1@acme.example>', messageDate: when, receivedDate: when,
                         isRead: 'N', hasAttachment: 'N', rootEmailMessageId: MAIL}).requireNewTransaction(true).call()
                     ec.service.sync().name('org.moqui.mail.EmailClientServices.run#EmailRules').parameters({emailAccountId: SUPPORT, emailMessageIdList: [MAIL]}).call()
+                    // on a server with no trusted mail gateway the rule names no party for the sender (SEC-BAP-84): the demo's
+                    // triage does it, as an agent who knows Dana would
+                    const link = Array.from(ec.entity.find('mantle.request.RequestEmailMessage').condition('emailMessageId', MAIL).list())[0]
+                    if (link && ec.entity.find('mantle.request.RequestParty').condition({requestId: link.requestId, roleTypeId: 'Customer'}).count() === 0) {
+                        const partyId = ec.service.sync().name('mantle.party.PartyServices.create#Person').parameters({firstName: 'Dana', lastName: 'Reyes',
+                            roleTypeId: 'Customer'}).call().partyId
+                        const contactMechId = ec.service.sync().name('mantle.party.ContactServices.create#EmailAddress').parameters({partyId: partyId,
+                            emailAddress: 'dana.reyes@acme.example', contactMechPurposeId: 'EmailPrimary'}).call().contactMechId
+                        for (const roleTypeId of ['Reporter', 'Customer']) ec.service.sync().name('create#mantle.request.RequestParty').parameters({
+                            requestId: link.requestId, partyId: partyId, roleTypeId: roleTypeId, fromDate: ec.user.nowTimestamp}).call()
+                        ec.service.sync().name('update#mantle.request.Request').parameters({requestId: link.requestId, filedByPartyId: partyId,
+                            emailContactMechId: contactMechId}).call()
+                    }
                 })
                 // a request sent through the form, as a visitor with no session user does
                 if (ec.entity.find('mantle.request.Request').condition('requestName', 'Add a dark theme to the request form').count() === 0) step('the request from the form', () => {
