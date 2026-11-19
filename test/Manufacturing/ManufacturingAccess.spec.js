@@ -642,3 +642,33 @@ feature("no Mantle REST run path, no Commons or Projects task change of a run's 
         problems.join("\n") == ""
     }
 })
+
+// the record panels' data, as the chatter and record-files elements ask for it (SEC-BAP-89): Manufacturing's own records of the
+// user's plants are hosts; another organization's run and another app's record (a party, an invoice) are not
+feature("Manufacturing's record panels serve its own records of the user's plants only (SEC-BAP-89)", {
+    when() {
+        const panel = (recordEntity, recordId) => {
+            const out = ec.screen
+                .makeTest()
+                .rootScreen("component://webroot/screen/webroot.xml")
+                .render("apps/Manufacturing/RecordFiles/filesData", {recordEntity, recordId}, "get")
+            ec.message.clearErrors()
+            return Array.from(out.errorMessages || []).join("\n")
+        }
+        return asUser(users.read, () => ({
+            run: panel("mantle.work.effort.WorkEffort", ids.runId),
+            line: panel("mantle.facility.Facility", ids.lineId),
+            equipment: panel("mantle.product.asset.Asset", ids.equipmentId),
+            method: panel("mantle.product.bom.ProductBom", ids.methodId),
+            otherRun: panel("mantle.work.effort.WorkEffort", ids.otherRunId),
+            party: panel("mantle.party.Party", "ORG_ZIZI_RETAIL"),
+            invoice: panel("mantle.account.invoice.Invoice", "100000")
+        }))
+    },
+    then(r) {
+        !r.run.includes("RECORD_PANEL_UNAVAILABLE") && !r.line.includes("RECORD_PANEL_UNAVAILABLE")
+        !r.equipment.includes("RECORD_PANEL_UNAVAILABLE") && !r.method.includes("RECORD_PANEL_UNAVAILABLE")
+        r.otherRun.includes("RECORD_PANEL_UNAVAILABLE")
+        r.party.includes("RECORD_PANEL_UNAVAILABLE") && r.invoice.includes("RECORD_PANEL_UNAVAILABLE")
+    }
+})
