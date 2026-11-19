@@ -1700,7 +1700,8 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="update" noun="SpaceSettings">
-        <description>A space's settings, by an administrator of it: description, public page and attachment URLs (http or https),
+        <description>A space's settings, by an administrator of it: description, public page and attachment URLs (http or https;
+            the page URL's only ${...} are ${pagePath}, ${versionName}, ${wikiPageId} and ${wikiSpaceId}, SEC-BAP-87),
             and who may read and write (restrictView, restrictUpdate). Allow any HTML is for the ADMIN group only, since a
             page's HTML then runs in the app's origin.</description>
         <in-parameters>
@@ -1724,7 +1725,17 @@ along with this software (see the LICENSE.md file). If not, see
             }
             const fields = {wikiSpaceId: wikiSpaceId}
             if (description != null) fields.description = String(description).trim() || wikiSpaceId
-            if (publicPageUrl != null) fields.publicPageUrl = url(publicPageUrl)
+            // the public page address is a pattern whose ${name}s are filled as text (Mantle's get#ArticlePublicLink, mr-marble's
+            // wiki): only the page's own names, so an expression meant as script is refused with a message (SEC-BAP-87)
+            if (publicPageUrl != null) {
+                const unknown = Array.from(String(publicPageUrl).matchAll(/\$\{([^}]*)\}?/g)).map((match) => match[0])
+                    .filter((name) => !['${pagePath}', '${versionName}', '${wikiPageId}', '${wikiSpaceId}'].includes(name))
+                if (unknown.length) {
+                    ec.message.addError(L('A public page URL may name only ${pagePath}, ${versionName}, ${wikiPageId} and ${wikiSpaceId}') + ': ' + unknown[0])
+                    return
+                }
+                fields.publicPageUrl = url(publicPageUrl)
+            }
             if (publicAttachmentUrl != null) fields.publicAttachmentUrl = url(publicAttachmentUrl)
             if (ec.message.hasError()) return
             if (restrictView != null && restrictView !== '') fields.restrictView = restrictView === 'Y' ? 'Y' : 'N'

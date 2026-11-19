@@ -425,6 +425,8 @@ feature("Bob Developer reads the handbook but may not change it nor add to it", 
     },
 })
 
+// a public page address with the names Mantle and Marble fill as text
+const PAGE_PATTERN = "https://help.example.com/${wikiSpaceId}/${pagePath}?v=${versionName}&id=${wikiPageId}"
 feature("Spaces: a new space on database files, settings, and members who then read it", {
     when() {
         const created = call_("Knowledge/Spaces/createSpace", { wikiSpaceId: `S${RUN}A`, description: `Spec space ${RUN}`, storage: "db", restrictView: "Y" }, "post")
@@ -434,17 +436,20 @@ feature("Spaces: a new space on database files, settings, and members who then r
         const bobAfter = as("bob.developer", () => get("page", { wikiSpaceId: `S${RUN}A`, pagePath: "" }))
         const bobSettings = as("bob.developer", () => call_("Knowledge/SpaceDetail/updateSettings", { wikiSpaceId: `S${RUN}A`, description: "Bob's" }, "post"))
         const settings = call_("Knowledge/SpaceDetail/updateSettings", { wikiSpaceId: `S${RUN}A`, description: `Spec space ${RUN} renamed`,
-            publicPageUrl: "https://help.example.com", restrictView: "Y", restrictUpdate: "Y" }, "post")
+            publicPageUrl: PAGE_PATTERN, restrictView: "Y", restrictUpdate: "Y" }, "post")
         const badUrl = call_("Knowledge/SpaceDetail/updateSettings", { wikiSpaceId: `S${RUN}A`, publicPageUrl: "javascript:alert(1)" }, "post")
+        // a ${...} other than the page's own names is refused with a message, though it passes the URL check (SEC-BAP-87)
+        const expression = call_("Knowledge/SpaceDetail/updateSettings", { wikiSpaceId: `S${RUN}A`,
+            publicPageUrl: "https://help.example.com/${ec.user.userId}" }, "post")
         const lastAdmin = call_("Knowledge/SpaceDetail/removeMember", { wikiSpaceId: `S${RUN}A`, userId: "EX_JOHN_DOE" }, "post")
         const saved = post("savePage", { wikiSpaceId: `S${RUN}A`, pagePath: "", pageText: "# Spec space\n\nSecond version\n", versionNote: "Second" })
         const list = render("Knowledge/Spaces")
         const detail = render("Knowledge/SpaceDetail", { wikiSpaceId: "BOSSKB" })
         const joeDetail = as("joe.developer", () => render("Knowledge/SpaceDetail", { wikiSpaceId: `S${RUN}A` }))
         const space = sys(() => ec.entity.find("moqui.resource.wiki.WikiSpace").condition("wikiSpaceId", `S${RUN}A`).one())
-        return { created, mirror, member, bobAfter, bobSettings, settings, badUrl, lastAdmin, saved, list, detail, joeDetail, space }
+        return { created, mirror, member, bobAfter, bobSettings, settings, badUrl, expression, lastAdmin, saved, list, detail, joeDetail, space }
     },
-    then({ created, mirror, member, bobAfter, bobSettings, settings, badUrl, lastAdmin, saved, list, detail, joeDetail, space }) {
+    then({ created, mirror, member, bobAfter, bobSettings, settings, badUrl, expression, lastAdmin, saved, list, detail, joeDetail, space }) {
         created.errors == ""
         mirror.errors.includes("Only an administrator adds a mirror")
         member.errors == ""
@@ -452,9 +457,10 @@ feature("Spaces: a new space on database files, settings, and members who then r
         bobSettings.errors.includes("Only an administrator of this space may do that")
         settings.errors == ""
         space.description == `Spec space ${RUN} renamed`
-        space.publicPageUrl == "https://help.example.com"
+        space.publicPageUrl == PAGE_PATTERN
         space.restrictUpdate == "Y"
         badUrl.errors.includes("A public URL starts with http")
+        expression.errors.includes("A public page URL may name only")
         lastAdmin.errors.includes("A space keeps at least one administrator")
         // the automatic root page, the space's home page, this save
         saved.json.versionName == "03"
