@@ -479,20 +479,32 @@ const sources = {
             label: row.invoiceId + " · " + stampDay(row.dueDate) + " · " + money(row.unpaidTotal, row.currencyUomId)
         }))
     },
+    // SEC-BOS-92: the organization's receivables to a receivables reader, its bills to a payables reader (both to a reports
+    // reader or the finance administrator), never a payroll-origin invoice, which is no template (RecurringInvoices.js)
     templateInvoices: parameters => {
-        const org = policy.organization(parameters).organizationPartyId
+        const scope = policy.organization(parameters)
+        const org = scope.organizationPartyId
+        const can = scope.capabilities
+        const broad = !!(can.reportRead || can.admin || can.systemAdmin)
+        const sideFields = [].concat(broad || can.arRead ? ["fromPartyId"] : [], broad || can.apRead ? ["toPartyId"] : [])
+        if (!sideFields.length) return []
         const cf = ec.entity.conditionFactory
+        const notPayroll = cf.makeCondition(
+            [cf.makeCondition("payrollOrigin", "is-null", null), cf.makeCondition("payrollOrigin", "not-equals", "Y")],
+            "or"
+        )
         let query = policy
             .find("mantle.account.invoice.Invoice")
             // field, operator, value: a two-argument comparison took the organization for the operator, and the
             // choice failed for every search (ACC-UI-031)
             .condition(
                 cf.makeCondition(
-                    [cf.makeCondition("fromPartyId", "equals", org), cf.makeCondition("toPartyId", "equals", org)],
+                    sideFields.map(field => cf.makeCondition(field, "equals", org)),
                     "or"
                 )
             )
             .condition("statusId", "not-equals", "InvoiceCancelled")
+            .condition(notPayroll)
         const term = String(parameters.term || "").trim()
         if (term)
             query = query.condition(
@@ -507,7 +519,7 @@ const sources = {
         const rows = array(query.orderBy("-invoiceDate").limit(30).list())
         if (parameters.selected && !rows.some(row => row.invoiceId === parameters.selected)) {
             const chosen = policy.one("mantle.account.invoice.Invoice", {invoiceId: parameters.selected})
-            if (chosen && [chosen.fromPartyId, chosen.toPartyId].includes(org)) rows.push(chosen)
+            if (chosen && sideFields.some(field => chosen[field] === org) && chosen.payrollOrigin !== "Y") rows.push(chosen)
         }
         const names = policy.lib.partyNames(rows.map(row => (row.fromPartyId === org ? row.toPartyId : row.fromPartyId)))
         return rows

@@ -185,3 +185,41 @@ feature("a recurring schedule's template choice lists the organization's invoice
         searched.includes("BOSS_ACCT_RENT_TEMPLATE")
     }
 })
+
+// SEC-BOS-92: the template choice offers a receivables reader the organization's receivables, never its bills, and nobody a
+// payroll-origin invoice (a pay run's net pay invoice is a payslip's lines)
+feature("the template choice leaves out payroll-origin invoices, and the bills for a receivables reader (SEC-BOS-92)", {
+    when() {
+        const make = (invoiceId, fields) => {
+            ec.artifactExecution.disableAuthz()
+            try {
+                if (!ec.entity.find("mantle.account.invoice.Invoice").condition("invoiceId", invoiceId).one())
+                    ec.entity.makeValue("mantle.account.invoice.Invoice").setAll(Object.assign({invoiceId, statusId: "InvoiceFinalized",
+                        invoiceDate: ec.user.nowTimestamp, currencyUomId: "USD"}, fields)).create()
+            } finally {
+                ec.artifactExecution.enableAuthz()
+            }
+        }
+        make("BOSS_ACCT_TPL_PAYROLL", {invoiceTypeEnumId: "InvoicePayroll", fromPartyId: org, toPartyId: "ORG_ACME",
+            description: "Template check payroll", payrollOrigin: "Y"})
+        make("BOSS_ACCT_TPL_BILL", {invoiceTypeEnumId: "InvoiceSales", fromPartyId: "ORG_ACME", toPartyId: org, description: "Template check bill"})
+        const choose = (username, parameters) =>
+            lib().asUser(username, () =>
+                Array.from(
+                    lib().call("ironstone.accounting.AccessServices.get#Choices", Object.assign({choice: "templateInvoices",
+                        organizationPartyId: org}, parameters)).options || []
+                ).map(row => row.value)
+            )
+        return {
+            ar: choose("finance.ar", {term: "Template check"}),
+            arSelected: choose("finance.ar", {term: "", selected: "BOSS_ACCT_TPL_PAYROLL"}),
+            admin: choose("finance.admin", {term: "Template check"})
+        }
+    },
+    then({ar, arSelected, admin}) {
+        ar == []
+        !arSelected.includes("BOSS_ACCT_TPL_PAYROLL")
+        admin.includes("BOSS_ACCT_TPL_BILL")
+        !admin.includes("BOSS_ACCT_TPL_PAYROLL")
+    }
+})
