@@ -194,7 +194,7 @@ feature("a refused purchase order is Rejected, with the reason on its decision",
             orderRevision: revisionOf(orderId),
             reason: "Wrong supplier for this part"
         })
-        const decision = rows("mantle.order.purchase.PurchaseApprovalDecision", {sourceId: orderId})[0]
+        const decision = rows("mantle.order.purchase.PurchaseApprovalDecision", {sourceEntityName: "mantle.order.OrderHeader", sourceId: orderId})[0]
         return {noReason, refused, decision, status: statusOf(orderId), waiting: !!waitingMessage(users.approve, orderId)}
     },
     then(r) {
