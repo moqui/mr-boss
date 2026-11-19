@@ -672,16 +672,22 @@ along with this software (see the LICENSE.md file). If not, see
                         roleText: role(row.roleTypeId), url: '/qapps/Commons/Tasks/TaskDetail?workEffortId=' + encodeURIComponent(row.workEffortId)})
                 }
             } else if (tab === 'requests') {
+                // the party's newest requests first; the limit of 100 applies to what the user may see, after the request rule, which
+                // stops at the first 100 shown as the Tasks tab does (at most 500 rows read)
                 const rows = Array.from(ec.entity.find('mantle.request.RequestParty').condition('partyId', partyId)
-                        .condition(cf.makeConditionDate('fromDate', 'thruDate', null)).orderBy('-fromDate').limit(100).list())
+                        .condition(cf.makeConditionDate('fromDate', 'thruDate', null)).orderBy('-fromDate').limit(500).list())
+                // the requests under the user's filters, read in one find (a confidential case is People's alone, on no contact's
+                // tab, impl-people P21)
+                const requestIds = Array.from(new Set(rows.map((row) => row.requestId)))
+                const requests = new Map(requestIds.length ? Array.from(ec.entity.find('mantle.request.Request').condition('requestId', 'in', requestIds)
+                        .condition(cf.makeCondition('requestTypeEnumId', 'not-equals', 'RqtHrCase', true)).list()).map((request) => [request.requestId, request]) : [])
                 const seen = new Set()
                 for (const row of rows) {
+                    if (requestList.length >= 100) break
                     if (seen.has(row.requestId)) continue
                     seen.add(row.requestId)
-                    // the request under the user's filters
-                    const request = ec.entity.find('mantle.request.Request').condition('requestId', row.requestId).one()
-                    // a confidential case is People's alone, on no contact's tab (impl-people P21)
-                    if (request == null || request.requestTypeEnumId === 'RqtHrCase') continue
+                    const request = requests.get(row.requestId)
+                    if (request == null) continue
                     // and only a request the user may see by the request rule, as the Tasks tab asks of a task (SEC-BOS-112)
                     const visible = ec.service.sync().name('mantle.party.CommunicationServices.get#RecordLinkInfo').parameters({
                         recordEntityName: 'mantle.request.Request', recordId: request.requestId, checkOnly: true}).call()
