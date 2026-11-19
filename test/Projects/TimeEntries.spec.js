@@ -657,18 +657,21 @@ feature("TimeSettings keeps the policy and the work types offered; MyTime and th
     }
 })
 
-// SEC-BOS-130: the entry dialog names a person given by id only when the user may view that person's week, and under the user's
-// own filters: another user's personal contact (Mary Doe, john.doe's) is no option for joe
-feature("the entry dialog names a person given by id only when the user may view that person's week (SEC-BOS-130)", {
+// SEC-BOS-130: the time screens' people (get#TimePeople, which the entry dialog, TimeEntries and MyWeek ask with the person
+// requested) name a person given by id only when the user may view that person's week of the day asked: another user's personal
+// contact (Mary Doe, john.doe's) and another organization's party (Bob Acme, a customer's) are no option for joe, his own party is
+feature("the time screens name a person given by id only when the user may view that person's week (SEC-BOS-130)", {
     when() {
-        const mary = as("joe.developer", () => render("apps/Projects/Time/TimeEntries/EditEntry", {partyId: "BOSS_DEMO_PC_MARY"}))
-        const own = as("joe.developer", () => render("apps/Projects/Time/TimeEntries/EditEntry", {partyId: "ORG_ZIZI_JD"}))
-        return {mary, own}
+        const people = partyId =>
+            as("joe.developer", () =>
+                sys(() => call("ironstone.projects.TimeServices.get#TimePeople", {partyId, date: new Date(at(13, 9))}).personOptions.map(option => option.key))
+            )
+        return {mary: people("BOSS_DEMO_PC_MARY"), customer: people("ORG_ACME_BA"), own: people("ORG_ZIZI_JD")}
     },
-    then({mary, own}) {
-        !mary.broken && !own.broken
-        !mary.output.includes("Mary Doe")
-        own.output.includes("ORG_ZIZI_JD")
+    then({mary, customer, own}) {
+        !mary.includes("BOSS_DEMO_PC_MARY")
+        !customer.includes("ORG_ACME_BA")
+        own.includes("ORG_ZIZI_JD")
     }
 })
 

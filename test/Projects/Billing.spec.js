@@ -217,7 +217,8 @@ feature("a rate edited (amount and thru) and ended; ended rates are listed on as
         const edited = post("Billing/Rates/saveRate", { rateAmountId: rate.rateAmountId, fromDate: "2027-07-01", thruDate: "2027-12-31", rateAmount: "125.50" })
         const afterEdit = one("mantle.humanres.rate.RateAmount", { rateAmountId: rate.rateAmountId })
         const ended = post("Billing/Rates/endRate", { rateAmountId: rate.rateAmountId })
-        const list = render("apps/Projects/Billing/Rates", { rootWorkEffortId: PROJECT })
+        // Which rate names the asked person under the user's filters: Joe's personal contact is not named (SEC-BOS-130)
+        const list = render("apps/Projects/Billing/Rates", { rootWorkEffortId: PROJECT, whichPartyId: "BOSS_DEMO_PC_SAM" })
         const withEnded = render("apps/Projects/Billing/Rates", {rootWorkEffortId: PROJECT, showEnded: "Y", purpose: "RaprClient",
             rateTypeEnumId: "RatpStandard", effectiveOn: "2027-07-10"})
         return { edited, afterEdit, ended, list, withEnded, endedRate: one("mantle.humanres.rate.RateAmount", { rateAmountId: rate.rateAmountId }) }
@@ -229,6 +230,8 @@ feature("a rate edited (amount and thru) and ended; ended rates are listed on as
         ended.errors == ""
         Number(String(endedRate.thruDate)) <= NOW
         !list.output.includes("125.50")
+        list.output.includes("Which rate")
+        !list.output.includes("Sam Secret")
         withEnded.output.includes("125.50")
         withEnded.output.includes("Ended")
         const reset = clearFindTarget(withEnded.output)
