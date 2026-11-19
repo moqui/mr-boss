@@ -511,6 +511,13 @@ along with this software (see the LICENSE.md file). If not, see
             <q-btn flat no-caps :label="t('Cancel')" @click="nameDialog.open = false"></q-btn></div>
     </m-dialog>
 
+    <!-- ===== A link to copy by hand, where the page has no clipboard: no window.prompt, which the phone app refuses on a
+        server's page, as one could ask, in the app's look, for another account's password (mr-moqui SEC-CLI-119) ===== -->
+    <m-dialog v-model="linkDialog.open" :title="t('Copy the link')" width="520">
+        <m-text-line v-model="linkDialog.text" name="itemLink" id="FilesItemLink" :label="t('Link')"></m-text-line>
+        <div class="row q-mt-md"><q-btn flat no-caps :label="t('Close')" @click="linkDialog.open = false"></q-btn></div>
+    </m-dialog>
+
     <!-- ===== A text or markdown file: new, or an edit as a new version ===== -->
     <m-dialog v-model="editor.open" :title="editor.isNew ? t('New file') : editor.name" width="900">
         <m-text-line v-if="editor.isNew" v-model="editor.name" name="textName" :label="t('Name')" class="q-mb-sm"></m-text-line>
@@ -679,6 +686,7 @@ module.exports = {
                 record: null, tab: 'details', versions: null, activity: null, preview: null },
             preview: { open: false, index: 0, row: null, kind: 'none', text: null, loading: false, hasImage: false, pages: null, sheet: null },
             nameDialog: { open: false, kind: 'folder', title: '', okLabel: '', name: '', row: null, saving: false },
+            linkDialog: { open: false, text: '' },
             editor: { open: false, isNew: true, folder: '', path: '', name: '', text: '', note: '', saving: false, loading: false, driveId: null },
             move: { open: false, mode: 'move', items: [], fromDriveId: null, driveId: null, path: '', rows: [], crumbs: [], loading: false, saving: false, canWrite: false },
             share: { open: false, row: null, withValue: null, permission: 'RspView', expire: '', note: '', saving: false, linkLabel: '', linkPermission: 'RspView',
@@ -1301,8 +1309,9 @@ module.exports = {
         copyItemLink(row) { this.copyText(this.itemLink(row), t('Link copied: it opens for those who may see the file')); },
         copyText(text, message) {
             const done = () => moqui.notifyMessages([{ type: 'success', message: message || t('Copied') }]);
-            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => window.prompt(t('Copy the link'), text));
-            else window.prompt(t('Copy the link'), text);
+            const byHand = () => { this.linkDialog = { open: true, text }; this.focusLater('FilesItemLink'); };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, byHand);
+            else byHand();
         },
 
         // ---- changes ----
