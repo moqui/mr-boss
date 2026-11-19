@@ -301,17 +301,23 @@ feature("Code settings: the repository defaults and conventions saved by a manag
             const out = ec.service.sync().name("ironstone.projects.CodeServices.store#RepositoryDefaults").parameters({ storage: "local" }).call()
             const errors = ec.message.getErrorsString(); ec.message.clearErrors(); return errors
         }))
-        const granted = post("Settings/Code/setSsh", { userGroupId: "BOSS_PROJECT_CLIENT", grant: "Y" })
-        const holds = sys(() => ec.entity.find("moqui.security.UserGroupPermission").condition({ userGroupId: "BOSS_PROJECT_CLIENT", userPermissionId: "SSH_GIT" })
+        const sshHolds = (userGroupId) => sys(() => ec.entity.find("moqui.security.UserGroupPermission").condition({ userGroupId, userPermissionId: "SSH_GIT" })
                 .condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null)).count())
-        const revoked = post("Settings/Code/setSsh", { userGroupId: "BOSS_PROJECT_CLIENT", grant: "N" })
+        const revoked = post("Settings/Code/setSsh", { userGroupId: "BOSS_PROJECT_TEAM", grant: "N" })
+        const revokedHolds = sshHolds("BOSS_PROJECT_TEAM")
+        const granted = post("Settings/Code/setSsh", { userGroupId: "BOSS_PROJECT_TEAM", grant: "Y" })
+        const holds = sshHolds("BOSS_PROJECT_TEAM")
         const adminRefused = post("Settings/Code/setSsh", { userGroupId: "ADMIN", grant: "N" })
+        // SEC-BOS-132: the client group and another app's group are not a Projects manager's to grant
+        const clientRefused = post("Settings/Code/setSsh", { userGroupId: "BOSS_PROJECT_CLIENT", grant: "Y" })
+        const otherRefused = post("Settings/Code/setSsh", { userGroupId: "BOSS_ACCOUNTING_ADMIN", grant: "Y" })
+        const otherHolds = sshHolds("BOSS_ACCOUNTING_ADMIN")
         const defaults = sys(() => call("mantle.work.GitServices.get#RepositoryDefaults", { organizationPartyId: "ORG_ZIZI_SERVICES" }).defaults)
-        return { page, saved, conventions, badPattern, teamRefused, granted, holds, revoked, adminRefused, defaults,
+        return { page, saved, conventions, badPattern, teamRefused, granted, holds, revoked, revokedHolds, adminRefused, clientRefused, otherRefused, otherHolds, defaults,
             after: sys(() => ec.entity.find("moqui.security.UserGroupPermission").condition({ userGroupId: "BOSS_PROJECT_CLIENT", userPermissionId: "SSH_GIT" })
                 .condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null)).count()) }
     },
-    then({ page, saved, conventions, badPattern, teamRefused, granted, holds, revoked, adminRefused, defaults, after }) {
+    then({ page, saved, conventions, badPattern, teamRefused, granted, holds, revoked, revokedHolds, adminRefused, clientRefused, otherRefused, otherHolds, defaults, after }) {
         page.status == 200
         !page.broken
         page.output.includes("Repository defaults")
@@ -325,11 +331,15 @@ feature("Code settings: the repository defaults and conventions saved by a manag
         conventions.errors == ""
         badPattern.errors.includes("names the work item")
         teamRefused.includes("Only project managers")
+        revoked.errors == ""
+        revokedHolds == 0
         granted.errors == ""
         holds == 1
-        revoked.errors == ""
         after == 0
         adminRefused.errors.includes("does not change here")
+        clientRefused.errors.includes("does not change here")
+        otherRefused.errors.includes("does not change here")
+        otherHolds == 0
     },
 })
 

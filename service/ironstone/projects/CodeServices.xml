@@ -1031,7 +1031,8 @@ along with this software (see the LICENSE.md file). If not, see
         <description>CodeSettings (design-projects.md §12): the organization's repository defaults (mantle.work.GitServices
             get#RepositoryDefaults, with the defaults filled in), its commit and branch conventions (the PartySetting
             ProjConventions: keywordComplete, branchPattern, mergeRequestMoves), and the user groups with whether they hold
-            SSH_GIT.</description>
+            SSH_GIT: the Projects staff groups, which a Projects manager changes (changeable; never the client group), and any
+            other group that holds it, which changes in Admin.</description>
         <out-parameters>
             <parameter name="organizationPartyId"/>
             <parameter name="organizationName"/>
@@ -1057,10 +1058,14 @@ along with this software (see the LICENSE.md file). If not, see
             conventions = {keywordComplete: yn(conv.keywordComplete, 'Y'), branchPattern: conv.branchPattern || '<id>-<words>', mergeRequestMoves: yn(conv.mergeRequestMoves, 'N')}
             const holders = new Set(Array.from(ec.entity.find('moqui.security.UserGroupPermission').condition('userPermissionId', 'SSH_GIT')
                     .conditionDate('fromDate', 'thruDate', null).disableAuthz().list()).map((row) => row.userGroupId))
+            // a Projects manager changes the SSH access of the Projects staff groups alone (never the client group, SEC-BOS-132); any
+            // other group that holds it is shown, and changed in Admin
+            const projectsStaff = (id) => String(id).startsWith('BOSS_PROJECT') && id !== 'BOSS_PROJECT_CLIENT'
             groupList = Array.from(ec.entity.find('moqui.security.UserGroup').orderBy('description').disableAuthz().list())
-                    .filter((group) => group.userGroupId !== 'ALL_USERS' && group.userGroupId !== 'BOSS_PROJECT_CLIENT')
+                    .filter((group) => projectsStaff(group.userGroupId) || (holders.has(group.userGroupId) && group.userGroupId !== 'ALL_USERS'))
                     .map((group) => ({userGroupId: group.userGroupId, description: group.description || group.userGroupId, holds: holders.has(group.userGroupId),
-                        isAdmin: group.userGroupId === 'ADMIN', isProjects: String(group.userGroupId).startsWith('BOSS_PROJECT')}))
+                        isAdmin: group.userGroupId === 'ADMIN', isProjects: String(group.userGroupId).startsWith('BOSS_PROJECT'),
+                        changeable: projectsStaff(group.userGroupId)}))
                     .sort((a, b) => (b.isProjects ? 1 : 0) - (a.isProjects ? 1 : 0) || (b.holds ? 1 : 0) - (a.holds ? 1 : 0) || a.description.localeCompare(b.description))
         ]]></script></actions>
     </service>
@@ -1120,7 +1125,8 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="set" noun="SshAccess">
         <description>CodeSettings' SshAccess: grant SSH_GIT to a user group, or revoke it (its UserGroupPermission ended), for
-            the Projects managers; ADMIN's grant does not change here.</description>
+            the Projects managers: only a group get#CodeSettings offers for a change (a Projects staff group, not the client group);
+            ADMIN's and any other group's grant does not change here.</description>
         <in-parameters>
             <parameter name="userGroupId" required="true"/>
             <parameter name="grant" default-value="Y"/>
@@ -1129,7 +1135,12 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             ec.service.sync().name('ironstone.projects.ProjectServices.check#SettingsManager').call()
             if (ec.message.hasError()) return
-            if (userGroupId === 'ADMIN' || userGroupId === 'ALL_USERS') { ec.message.addError(ec.resource.expand('The SSH access of ${userGroupId} does not change here', '', {userGroupId})); return }
+            // only a group get#CodeSettings offers for a change: the Projects staff groups, never the client group, ADMIN or another
+            // app's (SEC-BOS-132)
+            const offered = Array.from(ec.service.sync().name('ironstone.projects.CodeServices.get#CodeSettings').call()?.groupList || [])
+                    .find((row) => row.userGroupId === userGroupId && row.changeable)
+            if (ec.message.hasError()) return
+            if (!offered) { ec.message.addError(ec.resource.expand('The SSH access of ${userGroupId} does not change here', '', {userGroupId})); return }
             const group = ec.entity.find('moqui.security.UserGroup').condition('userGroupId', userGroupId).disableAuthz().one()
             if (group == null) { ec.message.addError(ec.resource.expand('No user group ${userGroupId}', '', {userGroupId})); return }
             const wasDisabled = ec.artifactExecution.disableAuthz()

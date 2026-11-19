@@ -99,7 +99,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <render-mode><text type="qvt"><![CDATA[${holds ? '<q-chip dense square class="q-ma-none m-tonal text-positive">' + WebUtilities.encodeHtml(ec.l10n.localize('Allowed')) + '</q-chip>' : '<span class="m-muted">—</span>'}]]></text>
                                 <text type="tui"><![CDATA[{"t": "text", "text": ${JSON.stringify(holds ? ec.l10n.localize("Allowed") : "—")}}]]></text></render-mode></default-field></field>
                         <field name="change"><default-field title="">
-                            <section name="SshChangeable" condition="!isAdmin"><widgets>
+                            <section name="SshChangeable" condition="changeable"><widgets>
                                 <link url="setSsh" link-type="hidden-form-link" text="Revoke" icon="sym_o_block" condition="holds" confirmation="Revoke SSH access of ${description}?"
                                         parameter-map="{userGroupId:userGroupId, grant:'N'}"/>
                                 <link url="setSsh" link-type="hidden-form-link" text="Grant" icon="sym_o_key" condition="!holds" parameter-map="{userGroupId:userGroupId, grant:'Y'}"/>
