@@ -1166,3 +1166,32 @@ feature("shared repositories: a client reads its project's, read only and withou
         settle()
     },
 })
+
+feature("a client approver downloads from a milestone only the estimate an approval request names, never the team's other files on it (SEC-BOS-96)", {
+    when() {
+        const file = (suffix, text) => {
+            const location = "dbresource://test/projects-milestone-" + suffix + ".txt"
+            sys(() => ec.resource.getLocationReference(location).putText(text))
+            return sys(() => ec.service.sync().name("create#mantle.work.effort.WorkEffortContent").parameters({ workEffortId: "ACME-MS-1",
+                contentLocation: location, contentTypeEnumId: "WectDesign", contentDate: ec.user.nowTimestamp }).call().workEffortContentId)
+        }
+        const estimate = file("estimate", "ZQX-ESTIMATE the figures to approve")
+        const internal = file("internal", "ZQX-MILESTONE-INTERNAL our margin notes")
+        sys(() => ec.service.sync().name("create#mantle.work.effort.WorkEffortApproval").parameters({ workEffortApprovalId: "BOSS_TEST_EST_AP",
+            workEffortId: "ACME-MS-1", approverPartyId: SHELDON_ID, statusId: "WeaCancelled", workEffortContentId: estimate,
+            requestedDate: ec.user.nowTimestamp }).call())
+        try {
+            return as(SHELDON, () => ({
+                named: hit("Projects/Projects/MilestoneDetail/estimateFile", { workEffortId: "ACME-MS-1", workEffortContentId: estimate }),
+                other: hit("Projects/Projects/MilestoneDetail/estimateFile", { workEffortId: "ACME-MS-1", workEffortContentId: internal })
+            }))
+        } finally {
+            sys(() => ec.entity.find("mantle.work.effort.WorkEffortApproval").condition("workEffortApprovalId", "BOSS_TEST_EST_AP").deleteAll())
+        }
+    },
+    then({ named, other }) {
+        named.output.includes("ZQX-ESTIMATE")
+        !other.output.includes("ZQX-MILESTONE-INTERNAL")
+        other.output.includes("The file is not available")
+    },
+})
