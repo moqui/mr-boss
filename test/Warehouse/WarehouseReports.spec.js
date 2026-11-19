@@ -182,10 +182,24 @@ feature("the report index, the exports and the drop-downs", {
                     ])
                 )
             ),
-            unknown: asUser("warehouse.read", () => refusal(R + "get#ReportChoices", {choice: "everything"}))
+            unknown: asUser("warehouse.read", () => refusal(R + "get#ReportChoices", {choice: "everything"})),
+            // a party another organization owns: neither found by name nor answered as selected (SEC-BAP-102)
+            foreign: (() => {
+                withAuthzOff(() => {
+                    const store = (entity, values) => ec.service.sync().name("store#" + entity).parameters(values).call()
+                    store("mantle.party.Party", {partyId: "BOSS_WH_RPT_FOREIGN", partyTypeEnumId: "PtyOrganization", ownerPartyId: "ORG_ZIZI_SERVICES"})
+                    store("mantle.party.Organization", {partyId: "BOSS_WH_RPT_FOREIGN", organizationName: "Zzforeignrpt Party"})
+                })
+                return asUser("warehouse.read", () => ({
+                    found: Array.from(invoke(R + "get#ReportChoices", {choice: "parties", term: "Zzforeignrpt"}).options).map(row => row.value),
+                    selected: Array.from(invoke(R + "get#ReportChoices", {choice: "parties", term: "zzz-none", selected: "BOSS_WH_RPT_FOREIGN"}).options).map(row => row.value)
+                }))
+            })()
         }
     },
-    then({reader, reviewer, export: exported, movements, choices, unknown}) {
+    then({reader, reviewer, export: exported, movements, choices, unknown, foreign}) {
+        foreign.found == []
+        foreign.selected == []
         reader.errors == []
         reader.output.includes("Stock at date")
         reader.output.includes("Operations history")

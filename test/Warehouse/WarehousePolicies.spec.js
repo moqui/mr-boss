@@ -29,6 +29,17 @@ function post(path, parameters) {
     return errors
 }
 const otherPoolId = "BOSS_WH_SPEC_OTHER_POOL"
+// a customer of another organization (ORG_ZIZI_SERVICES), for the party choices (SEC-BAP-102)
+const foreignPartyId = "BOSS_WH_SPEC_FOREIGN"
+function foreignParty() {
+    asUser("john.doe", () => {
+        ec.artifactExecution.disableAuthz()
+        const store = (entity, values) => ec.service.sync().name("store#" + entity).parameters(values).call()
+        store("mantle.party.Party", {partyId: foreignPartyId, partyTypeEnumId: "PtyOrganization", ownerPartyId: "ORG_ZIZI_SERVICES"})
+        store("mantle.party.Organization", {partyId: foreignPartyId, organizationName: "Zzforeignwh Customer"})
+        store("mantle.party.PartyRole", {partyId: foreignPartyId, roleTypeId: "Customer"})
+    })
+}
 spec({
     setupSpec() {
         asUser("john.doe", () => {
@@ -221,7 +232,12 @@ feature("each policy choice answers a selected value outside its page, and an un
             invoke(policies + "get#PolicyChoices", {appRoot: "Warehouse", choice: name, term: "zzz-none", selected}).options.map(
                 row => row.value
             )
+        foreignParty()
         return asUser("warehouse.manager", () => ({
+            // a customer another organization owns: neither found by name nor answered as selected (SEC-BAP-102)
+            foreignFound: invoke(policies + "get#PolicyChoices", {appRoot: "Warehouse", choice: "parties", term: "Zzforeignwh"})
+                .options.map(row => row.value),
+            foreignSelected: choice("parties", foreignPartyId),
             stores: choice("stores", "POPC_DEFAULT"),
             products: choice("products", "BOSS_WH_LOTTED"),
             parties: choice("parties", "CustJqp"),
@@ -232,7 +248,9 @@ feature("each policy choice answers a selected value outside its page, and an un
             unknown: refusal(policies + "get#PolicyChoices", {appRoot: "Warehouse", choice: "everything"})
         }))
     },
-    then({stores, products, parties, foreignProduct, organizations, unknown}) {
+    then({foreignFound, foreignSelected, stores, products, parties, foreignProduct, organizations, unknown}) {
+        foreignFound == []
+        foreignSelected == []
         stores == ["POPC_DEFAULT"]
         products == ["BOSS_WH_LOTTED"]
         parties == ["CustJqp"]

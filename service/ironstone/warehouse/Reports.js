@@ -179,11 +179,31 @@ function choices(p) {
             const options = Array.from(query.list()).map(option)
             return selected(options, row => userScope.unrestricted || userScope.organizationPartyIds.includes(row.partyId))
         },
+        // parties shared (owned by _NA_) or of the user's organizations, as the root's MANTLE_USER_ORG filter reads them, never
+        // another user's private contact; a selected id outside them answers nothing (SEC-BAP-102)
         parties: () => {
-            const options = Array.from(partyQuery().list())
-                .filter(row => !row.privateOwnerUserId || row.privateOwnerUserId === ec.user.userId)
-                .map(option)
-            return selected(options, row => !row.privateOwnerUserId || row.privateOwnerUserId === ec.user.userId)
+            const organizationIds = userScope.organizationPartyIds || []
+            const mine = row =>
+                (userScope.unrestricted ||
+                    !row.ownerPartyId ||
+                    row.ownerPartyId === "_NA_" ||
+                    organizationIds.includes(row.ownerPartyId) ||
+                    organizationIds.includes(row.partyId)) &&
+                (!row.privateOwnerUserId || row.privateOwnerUserId === ec.user.userId)
+            let query = partyQuery()
+            if (!userScope.unrestricted)
+                query = query.condition(
+                    factory.makeCondition(
+                        [
+                            factory.makeCondition("ownerPartyId", "in", organizationIds.concat(["_NA_"])),
+                            factory.makeCondition("ownerPartyId", "is-null", null),
+                            factory.makeCondition("partyId", "in", organizationIds.length ? organizationIds : ["_NONE_"])
+                        ],
+                        "or"
+                    )
+                )
+            const options = Array.from(query.list()).filter(mine).map(option)
+            return selected(options, mine)
         },
         carriers: () => {
             const carrierIds = Array.from(
