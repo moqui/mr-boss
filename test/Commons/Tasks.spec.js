@@ -317,19 +317,39 @@ feature("a task goes into or out of a project only for a member of it: a General
             call("create#mantle.work.effort.WorkEffortParty", { workEffortId: "BOSS_TEST_GEN_TASK", partyId: "ORG_ZIZI_JD", roleTypeId: "Assignee",
                 statusId: "WeptAssigned", fromDate: new Date(0) })
         })
+        const refusal = (run) => {
+            let thrown = ""
+            try { run() } catch (err) { thrown = String(err && err.message ? err.message : err) }
+            const error = ec.message.getErrorsString() + thrown
+            ec.message.clearErrors()
+            return error
+        }
         return as("joe.developer", () => ({
             added: post("Tasks/List/quickAdd", { workEffortName: "BOSS_TEST Into a general project", list: "all", rootWorkEffortId: "BOSS_TEST_GEN_PRJ" }),
-            out: post("Tasks/List/bulkAction", { bulk: "moveToProject", selectedTaskIds: "BOSS_TEST_GEN_TASK", projectId: "" }),
-            options: sys(() => call("ironstone.commons.TaskServices.get#ProjectOptions", {})).projectList.map((option) => option.key),
+            out: sys(() => call("ironstone.commons.TaskServices.bulk#Tasks", { action: "moveToProject", workEffortIds: "BOSS_TEST_GEN_TASK", rootWorkEffortId: null })),
+            // Projects' bulk move checks the item's own project too, and a sub-task goes into the parent's project only for a member
+            projectsOut: sys(() => call("ironstone.projects.WorkItemServices.bulk#WorkItems", { action: "moveToProject", workEffortIds: "BOSS_TEST_GEN_TASK",
+                value: "BOSS_DEMO_PROJECT" })),
+            subTask: refusal(() => sys(() => call("ironstone.commons.TaskServices.add#SubTask", { workEffortId: "BOSS_TEST_GEN_TASK", workEffortName: "BOSS_TEST Sub-task" }))),
+            projects: sys(() => call("ironstone.commons.TaskServices.get#ProjectOptions", {})),
             made: all("mantle.work.effort.WorkEffort", { workEffortName: "BOSS_TEST Into a general project" }).length,
+            subTasks: all("mantle.work.effort.WorkEffort", { workEffortName: "BOSS_TEST Sub-task" }).length,
             task: one("mantle.work.effort.WorkEffort", { workEffortId: "BOSS_TEST_GEN_TASK" }),
         }))
     },
-    then({ added, out, options, made, task }) {
+    then({ added, out, projectsOut, subTask, projects, made, subTasks, task }) {
         added.errors.includes("You may not add tasks to or take them out of project BOSS_TEST General project")
+        out.failedCount == 1
+        out.failures[0].reason.includes("You may not add tasks to or take them out of project BOSS_TEST General project")
+        projectsOut.failedCount == 1
+        projectsOut.failures[0].reason.includes("You may not add tasks to or take them out of project BOSS_TEST General project")
+        subTask.includes("You may not add tasks to or take them out of project BOSS_TEST General project")
         made == 0
+        subTasks == 0
         task.rootWorkEffortId == "BOSS_TEST_GEN_PRJ"
-        !options.includes("BOSS_TEST_GEN_PRJ")
+        !projects.projectList.map((option) => option.key).includes("BOSS_TEST_GEN_PRJ")
+        // the find still filters by it
+        projects.findProjectList.map((option) => option.key).includes("BOSS_TEST_GEN_PRJ")
     },
 })
 

@@ -608,10 +608,15 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="get" noun="ProjectOptions">
         <description>The projects of the project drop-downs: open WetProject work efforts the user is a party to or owns, or that are
-            of general visibility, by name, of those check#Project lets the user put tasks in.</description>
-        <out-parameters><parameter name="projectList" type="List"><description>key, text</description></parameter></out-parameters>
+            of general visibility, by name: all of them for the find's filter (findProjectList), and of those the ones check#Project lets
+            the user put tasks in for adding and moving (projectList).</description>
+        <out-parameters>
+            <parameter name="projectList" type="List"><description>key, text: the projects the user may add tasks to or move them to</description></parameter>
+            <parameter name="findProjectList" type="List"><description>key, text: every project of the list, for the find's filter</description></parameter>
+        </out-parameters>
         <actions><script><![CDATA[
             projectList = []
+            findProjectList = []
             const partyId = ec.user.userAccount?.partyId || null
             const cf = ec.entity.conditionFactory
             const seen = new Set()
@@ -628,12 +633,13 @@ along with this software (see the LICENSE.md file). If not, see
             }
             for (const row of ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortTypeEnumId', 'WetProject')
                     .condition('visibilityEnumId', 'WevGeneral').limit(200).list()) add(row)
-            // only those check#Project lets the user put tasks in (SEC-BOS-110)
+            projectList.sort((left, right) => String(left.text).localeCompare(String(right.text)))
+            // the find filters by any of them; adding and moving offer only those check#Project lets the user put tasks in (SEC-BOS-110)
+            findProjectList = projectList
             const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
             const manager = ec.user.isInGroup('BOSS_PROJECT_MANAGER')
             projectList = projectList.filter((option) => !!vis.allProjects || Array.from(vis.memberProjectIds || []).includes(option.key)
                     || (manager && Array.from(vis.visibleProjectIds || []).includes(option.key)))
-            projectList.sort((left, right) => String(left.text).localeCompare(String(right.text)))
         ]]></script></actions>
     </service>
 
@@ -1122,7 +1128,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="add" noun="SubTask">
         <description>A sub-task of the task (parentWorkEffortId, the same project), for the user, due on dueDate; by the task's
-            owner or an assignee.</description>
+            owner or an assignee who may put tasks in its project (check#Project).</description>
         <in-parameters>
             <parameter name="app" default-value="commons"><description>commons or projects (get#TaskAccess)</description></parameter>
             <parameter name="workEffortId" required="true"><description>The parent task</description></parameter>
@@ -1133,6 +1139,11 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.commons.TaskServices.get#TaskAccess" in-map="{workEffortId:workEffortId, need:'update', app:app}" out-map="access"/>
             <if condition="ec.message.hasError()"><return/></if>
+            <!-- a sub-task goes into the parent's project only for one who may put tasks in it (SEC-BOS-110), not any assignee -->
+            <if condition="access.workEffort.rootWorkEffortId">
+                <service-call name="ironstone.commons.TaskServices.check#Project" in-map="{rootWorkEffortId:access.workEffort.rootWorkEffortId}"/>
+                <if condition="ec.message.hasError()"><return/></if>
+            </if>
             <service-call name="ironstone.commons.QuickCreateServices.create#Task" out-map="created"
                     in-map="{workEffortName:workEffortName.trim(), estimatedCompletionDate:(dueDate ? String(dueDate).trim() : null)}"/>
             <if condition="ec.message.hasError()"><return/></if>

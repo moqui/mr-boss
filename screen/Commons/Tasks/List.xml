@@ -226,7 +226,10 @@ along with this software (see the LICENSE.md file). If not, see
             listChips = lists.map(([key, label, icon]) => ({key: key, label: L(label) + ' · ' + (counts[key] || 0), icon: icon, on: key === list,
                 params: Object.assign({}, find, {list: key})}))
             listLabel = L(lists.find((entry) => entry[0] === list)[1])
-            projectOptions = ec.service.sync().name('ironstone.commons.TaskServices.get#ProjectOptions').call()?.projectList || []
+            // the find filters by every project of the list; the move dialog offers only those the user may put tasks in
+            const projects = ec.service.sync().name('ironstone.commons.TaskServices.get#ProjectOptions').call() || {}
+            projectOptions = projects.projectList || []
+            findProjectOptions = projects.findProjectList || []
             // the board's columns: the stages of design §8 and any other status a row of the page has, in the flow's order
             const shownStatuses = new Set(taskRows.map((row) => row.statusId).filter((id) => id))
             boardColumnOrder = ['WeInPlanning', 'WeApproved', 'WeInProgress', 'WeOnHold', 'WeComplete', 'WeClosed', 'WeCancelled']
@@ -282,7 +285,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </entity-options></drop-down></default-field></field>
             <field name="due"><default-field title="Due"><date-period allow-empty="true"/></default-field></field>
             <field name="rootWorkEffortId"><default-field title="Project">
-                <drop-down allow-empty="true"><list-options list="projectOptions" key="${key}" text="${text}"/></drop-down></default-field></field>
+                <drop-down allow-empty="true"><list-options list="findProjectOptions" key="${key}" text="${text}"/></drop-down></default-field></field>
             <field name="recordId"><default-field title="Linked record id" tooltip="The id of a request, contact, order or other record the task is on">
                 <text-line size="12"/></default-field></field>
             <field name="findButton"><default-field title="Find"><submit icon="sym_o_search"/></default-field></field>

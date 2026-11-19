@@ -792,10 +792,11 @@ along with this software (see the LICENSE.md file). If not, see
                         else if (action === 'moveToProject') call = ['mantle.work.TaskServices.update#Task', {workEffortId: id, rootWorkEffortId: value}]
                         else if (action === 'delete') call = ['ironstone.commons.TaskServices.delete#OwnTask', {workEffortId: id, app: 'projects'}]
                         else call = ['ironstone.projects.WorkItemServices.update#WorkItemField', {workEffortId: id, field: fields[action], value: action === 'unassign' ? '' : (value || '')}]
-                        if (action === 'moveToProject') {
-                            const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
-                            if (!vis.allProjects && !Array.from(vis.memberProjectIds || []).includes(value) && !ec.user.isInGroup('BOSS_PROJECT_MANAGER'))
-                                reason = ec.resource.expand('you may not add to project ${value}', '', {value})
+                        // the target and the item's own project by Commons' check#Project: a member, or a Projects manager of a project
+                        // the user sees, or ADMIN (SEC-BOS-110); each in its own transaction, so a refusal marks no other item's
+                        if (action === 'moveToProject') for (const project of [value, access.workEffort.rootWorkEffortId].filter((id) => id && !reason)) {
+                            ec.service.sync().name('ironstone.commons.TaskServices.check#Project').parameters({rootWorkEffortId: project}).requireNewTransaction(true).call()
+                            if (ec.message.hasError()) reason = ec.message.getErrorsString()
                         }
                         if (!reason) {
                             ec.service.sync().name(call[0]).parameters(call[1]).requireNewTransaction(true).call()
