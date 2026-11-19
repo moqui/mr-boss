@@ -598,7 +598,14 @@ along with this software (see the LICENSE.md file). If not, see
                 for (const field of content.pkFields) keys[field] = row[field]
                 ec.service.sync().name('delete#' + content.entityName).parameters(keys).call()
                 if (ec.message.hasError()) return
-                if (fileOut.contentLocation) {
+                // only a file under Mantle's content roots is removed with its row, never another stored location (SEC-BAP-82)
+                const roots = [ec.factory.getConfValue('mantle@content-root'), ec.factory.getConfValue('mantle@content-large-root'),
+                    'dbresource://mantle/content'].filter((root) => root).map((root) => String(root).replace(/\/+$/, '') + '/')
+                const removable = (location) => !location.includes('#') && !location.split('/').includes('..')
+                    && roots.some((root) => location.startsWith(root))
+                if (fileOut.contentLocation && !removable(String(fileOut.contentLocation))) {
+                    ec.logger.warn(`Record files of ${entityName} ${recordId}: the row of ${fileOut.contentLocation} is removed, the file is not under the content root and is left`)
+                } else if (fileOut.contentLocation) {
                     try {
                         const ref = ec.resource.getLocationReference(fileOut.contentLocation)
                         if (ref && ref.getExists()) ref.delete()
