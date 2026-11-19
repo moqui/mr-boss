@@ -343,6 +343,36 @@ feature("Code settings: the repository defaults and conventions saved by a manag
     },
 })
 
+// SEC-BOS-132 (review): a group's SSH access is every organization's, so with more than one top-level internal organization (the
+// demo has several) a Projects manager who is no administrator of every project changes none, and the rows say where it changes
+feature("with several organizations a Projects manager who is not ADMIN changes no group's SSH access (SEC-BOS-132)", {
+    allowMessageErrors: true,
+    when() {
+        sys(() => {
+            if (ec.entity.find("moqui.security.UserAccount").condition("username", "code.manager").count()) return
+            const partyId = call("mantle.party.PartyServices.create#Person", { firstName: "Cody", lastName: "Manager" }).partyId
+            call("create#mantle.party.PartyRelationship", { relationshipTypeEnumId: "PrtEmployee", fromPartyId: partyId, fromRoleTypeId: "Employee",
+                toPartyId: "ORG_ZIZI_SERVICES", toRoleTypeId: "OrgEmployer", fromDate: new Date(0) })
+            const userId = call("mantle.party.PartyServices.create#PartyUserAccount", { partyId, emailAddress: "code.manager@example.com", username: "code.manager",
+                newPassword: "moqui1!!", newPasswordVerify: "moqui1!!" }).userId
+            for (const userGroupId of ["BOSS_USERS", "BOSS_PROJECT_MANAGER"]) call("create#moqui.security.UserGroupMember", { userGroupId, userId, fromDate: new Date(0) })
+        })
+        login("code.manager", "moqui1!!")
+        try {
+            const settings = sys(() => call("ironstone.projects.CodeServices.get#CodeSettings", {}))
+            const revoke = post("Settings/Code/setSsh", { userGroupId: "BOSS_PROJECT_TEAM", grant: "N" })
+            return { settings, revoke, holds: sys(() => ec.entity.find("moqui.security.UserGroupPermission").condition({ userGroupId: "BOSS_PROJECT_TEAM",
+                userPermissionId: "SSH_GIT" }).condition(ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", null)).count()) }
+        } finally { login("john.doe") }
+    },
+    then({ settings, revoke, holds }) {
+        settings.sharedByOrganizations == true
+        !settings.groupList.some((group) => group.changeable)
+        revoke.errors.includes("does not change here")
+        holds == 1
+    },
+})
+
 // plans/Security-Review.md SEC-GIT-01: a project's new repository imports from an http(s) URL only, since the import runs
 // with authorization disabled; another repository (git://) or a server directory is refused before anything is made
 feature("a new repository's import is an http(s) URL: another repository or a server path is refused and nothing is made", {

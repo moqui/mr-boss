@@ -1032,13 +1032,16 @@ along with this software (see the LICENSE.md file). If not, see
             get#RepositoryDefaults, with the defaults filled in), its commit and branch conventions (the PartySetting
             ProjConventions: keywordComplete, branchPattern, mergeRequestMoves), and the user groups with whether they hold
             SSH_GIT: the Projects staff groups, which a Projects manager changes (changeable; never the client group), and any
-            other group that holds it, which changes in Admin.</description>
+            other group that holds it, which changes in Admin. With more than one top-level internal organization a group's grant
+            is every organization's, so only an administrator of every project (ADMIN) changes it.</description>
         <out-parameters>
             <parameter name="organizationPartyId"/>
             <parameter name="organizationName"/>
             <parameter name="defaults" type="Map"/>
             <parameter name="conventions" type="Map"/>
             <parameter name="groupList" type="List"/>
+            <parameter name="sharedByOrganizations" type="Boolean"><description>More than one top-level internal organization: a
+                group's SSH access is every organization's, changed only by an administrator of every project</description></parameter>
         </out-parameters>
         <actions><script><![CDATA[
             const org = ec.service.sync().name('ironstone.projects.ProjectServices.get#SettingsOrganization').call() || {}
@@ -1061,11 +1064,22 @@ along with this software (see the LICENSE.md file). If not, see
             // a Projects manager changes the SSH access of the Projects staff groups alone (never the client group, SEC-BOS-132); any
             // other group that holds it is shown, and changed in Admin
             const projectsStaff = (id) => String(id).startsWith('BOSS_PROJECT') && id !== 'BOSS_PROJECT_CLIENT'
+            // a group's grant is every organization's: with more than one top-level internal organization only an administrator of
+            // every project (ADMIN, get#VisibleProjectInfo allProjects) changes it, never one organization's manager (SEC-BOS-132)
+            const internalIds = Array.from(ec.entity.find('mantle.party.PartyRole').condition('roleTypeId', 'OrgInternal').selectField('partyId')
+                    .disableAuthz().list()).map((row) => row.partyId)
+            const childIds = new Set(internalIds.length ? Array.from(ec.entity.find('mantle.party.PartyRelationship').condition('relationshipTypeEnumId', 'PrtOrgRollup')
+                    .condition('fromPartyId', 'in', internalIds).conditionDate('fromDate', 'thruDate', null).selectField('fromPartyId').disableAuthz().list())
+                    .map((row) => row.fromPartyId) : [])
+            const topLevelCount = internalIds.filter((id) => !childIds.has(id)).length
+            const everyProject = !!ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call()?.allProjects
+            sharedByOrganizations = topLevelCount > 1
+            const mayChange = everyProject || topLevelCount <= 1
             groupList = Array.from(ec.entity.find('moqui.security.UserGroup').orderBy('description').disableAuthz().list())
                     .filter((group) => projectsStaff(group.userGroupId) || (holders.has(group.userGroupId) && group.userGroupId !== 'ALL_USERS'))
                     .map((group) => ({userGroupId: group.userGroupId, description: group.description || group.userGroupId, holds: holders.has(group.userGroupId),
                         isAdmin: group.userGroupId === 'ADMIN', isProjects: String(group.userGroupId).startsWith('BOSS_PROJECT'),
-                        changeable: projectsStaff(group.userGroupId)}))
+                        changeable: mayChange && projectsStaff(group.userGroupId)}))
                     .sort((a, b) => (b.isProjects ? 1 : 0) - (a.isProjects ? 1 : 0) || (b.holds ? 1 : 0) - (a.holds ? 1 : 0) || a.description.localeCompare(b.description))
         ]]></script></actions>
     </service>
@@ -1140,7 +1154,7 @@ along with this software (see the LICENSE.md file). If not, see
             const offered = Array.from(ec.service.sync().name('ironstone.projects.CodeServices.get#CodeSettings').call()?.groupList || [])
                     .find((row) => row.userGroupId === userGroupId && row.changeable)
             if (ec.message.hasError()) return
-            if (!offered) { ec.message.addError(ec.resource.expand('The SSH access of ${userGroupId} does not change here', '', {userGroupId})); return }
+            if (!offered) { ec.message.addError(ec.resource.expand('The SSH access of ${userGroupId} does not change here: it is changed in Admin, or by an administrator of every organization', '', {userGroupId})); return }
             const group = ec.entity.find('moqui.security.UserGroup').condition('userGroupId', userGroupId).disableAuthz().one()
             if (group == null) { ec.message.addError(ec.resource.expand('No user group ${userGroupId}', '', {userGroupId})); return }
             const wasDisabled = ec.artifactExecution.disableAuthz()

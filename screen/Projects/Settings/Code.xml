@@ -103,7 +103,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 <link url="setSsh" link-type="hidden-form-link" text="Revoke" icon="sym_o_block" condition="holds" confirmation="Revoke SSH access of ${description}?"
                                         parameter-map="{userGroupId:userGroupId, grant:'N'}"/>
                                 <link url="setSsh" link-type="hidden-form-link" text="Grant" icon="sym_o_key" condition="!holds" parameter-map="{userGroupId:userGroupId, grant:'Y'}"/>
-                            </widgets></section></default-field></field>
+                            </widgets><fail-widgets>
+                                <label text="Changed in Admin" style="text-caption m-muted"/>
+                            </fail-widgets></section></default-field></field>
                     </form-list>
                 </box-body-nopad></container-box>
             </row-col>
