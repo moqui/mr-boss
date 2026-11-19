@@ -65,6 +65,10 @@ spec({
                 if (invoice && invoice.statusId !== "InvoiceCancelled") call("update#mantle.account.invoice.Invoice", { invoiceId: invoice.invoiceId, statusId: "InvoiceCancelled" })
             }
             for (const rate of ec.entity.find("mantle.humanres.rate.RateAmount").condition("workEffortId", PROJECT).list()) { rate.thruDate = rate.fromDate; rate.update() }
+            // the SEC-BOS-101 feature's rates of no project: the shared, the other organization's and the one joe added
+            const noProject = [made.rateShared, made.rateOther].filter(Boolean)
+            for (const rate of ec.entity.find("mantle.humanres.rate.RateAmount").condition("workEffortId", null).condition("ratePurposeEnumId", "RaprClient").list())
+                if (noProject.includes(rate.rateAmountId) || (rate.organizationPartyId === "ORG_ZIZI_SERVICES" && dec(rate.rateAmount) === "222.22")) rate.delete()
             const project = ec.entity.find("mantle.work.effort.WorkEffort").condition("workEffortId", PROJECT).one()
             if (project) { project.statusId = "WeCancelled"; project.update() }
             const setting = ec.entity.find("mantle.party.PartySetting").condition({ partyId: "ORG_ZIZI_SERVICES", partySettingTypeId: "ProjBillingDefaults" }).one()
