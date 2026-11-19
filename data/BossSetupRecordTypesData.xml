@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The record types IronStone's screens host beside Mantle's (mantle.party.communication.RecordLinkType, SEC-BOS-87): a record of
+    one of these is a screen's context record (its notes, activities, tasks, requests and events by quick create), a record card or
+    a mention, with the rule that decides who sees it. A store's records follow the store, whose organization must be the user's; a
+    campaign's tracking link follows the campaign (Marketing's check#CampaignAccess); a container and a count follow their facility
+    (its entity filters); a blog post its wiki page (the wiki's rule); a survey response its form. A segment, a list, a content
+    item, a survey's publication, a maintenance plan and a job opening are their organization's. A pay run and an expense claim
+    are People's own reads. A site and its pages are public content, under the entity filters alone; so is a survey form. A job
+    offer (its pay) and an Insights definition are not registered: their cards show the id alone. -->
+<entity-facade-xml type="seed">
+    <!-- Commerce -->
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.store.ProductStore" ownerText="IronStone Commerce: a store"
+            organizationField="organizationPartyId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.store.ProductStorePromotion" ownerText="IronStone Commerce and Marketing: a promotion"
+            parentEntityName="mantle.product.store.ProductStore" parentField="productStoreId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.store.ProductStorePromoCode" ownerText="IronStone Commerce and Marketing: a promotion code"
+            parentEntityName="mantle.product.store.ProductStorePromotion" parentField="storePromotionId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.store.ProductStoreFeed" ownerText="IronStone Commerce: a product feed"
+            parentEntityName="mantle.product.store.ProductStore" parentField="productStoreId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.public.PublicTheme" ownerText="IronStone Commerce: a theme"
+            parentEntityName="mantle.product.store.ProductStore" parentField="productStoreId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.subscription.StoreRecurringContract" ownerText="IronStone Commerce: a subscription"
+            parentEntityName="mantle.product.store.ProductStore" parentField="productStoreId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.public.PublicSite" ownerText="IronStone Commerce and Marketing: a site (public content)"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.public.PublicSitePage" ownerText="IronStone Commerce and Marketing: a site page"
+            parentEntityName="mantle.public.PublicSite" parentField="siteId"/>
+    <!-- Marketing -->
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.marketing.segment.MarketSegment" ownerText="IronStone Marketing: a segment"
+            organizationField="ownerPartyId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.marketing.contact.ContactList" ownerText="IronStone Marketing: a list"
+            organizationField="ownerPartyId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.marketing.tracking.TrackingCode" ownerText="IronStone Marketing: a tracking link"
+            parentEntityName="mantle.marketing.campaign.MarketingCampaign" parentField="marketingCampaignId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.marketing.campaign.CampaignContent" ownerText="IronStone Marketing: a content item"
+            organizationField="organizationPartyId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="moqui.resource.wiki.WikiBlog" ownerText="IronStone Marketing: a blog post"
+            parentEntityName="moqui.resource.wiki.WikiPage" parentField="wikiPageId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.party.FormPublication" ownerText="IronStone Marketing: a survey's publication"
+            organizationField="organizationPartyId"/>
+    <!-- the shared survey screens (Marketing, Customer Service, People) -->
+    <mantle.party.communication.RecordLinkType recordEntityName="moqui.screen.form.DbForm" ownerText="IronStone surveys: a survey form (its entity filters)"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="moqui.screen.form.FormResponse" ownerText="IronStone surveys: a survey response"
+            parentEntityName="moqui.screen.form.DbForm" parentField="formId"/>
+    <!-- Warehouse -->
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.asset.Container" ownerText="IronStone Warehouse: a container"
+            parentEntityName="mantle.facility.Facility" parentField="facilityId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.asset.PhysicalInventory" ownerText="IronStone Warehouse: a count"
+            parentEntityName="mantle.facility.Facility" parentField="facilityId"/>
+    <!-- Maintenance -->
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.work.maintenance.MaintenanceSchedule" ownerText="IronStone Maintenance: a maintenance plan"
+            organizationField="organizationPartyId"/>
+    <!-- People -->
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.humanres.recruitment.JobOpening" ownerText="IronStone People: a job opening"
+            organizationField="organizationPartyId"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.humanres.payroll.PayrollRun" ownerText="IronStone People: a pay run"
+            visibleService="mantle.humanres.PayrollRunServices.check#RunRecordVisible"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.humanres.expense.ExpenseClaim" ownerText="IronStone People: an expense claim"
+            visibleService="mantle.humanres.ExpenseServices.check#ClaimRecordVisible"/>
+</entity-facade-xml>

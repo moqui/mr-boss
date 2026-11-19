@@ -280,3 +280,28 @@ feature("an activity on another user's personal contact is refused and makes not
         after == before
     },
 })
+
+// SEC-BOS-87: a screen's context record of a registered type takes a quick create by its registration's rule (a store by its
+// organization, a container by its facility, a pay run by People's payroll read); another organization's store and an entity
+// that is no registered record type are refused
+feature("quick create on a registered record type of an app's screen, by its rule; another organization's store and an unregistered type refused (SEC-BOS-87)", {
+    allowMessageErrors: true,
+    when() {
+        const task = (name, recordEntity, recordId) => post("createTask", { workEffortName: name, estimatedCompletionDate: "2026-11-02", recordEntity, recordId })
+        const store = task("Check the store's hours", "mantle.product.store.ProductStore", "POPC_DEFAULT")
+        const container = task("Relabel the tote", "mantle.product.asset.Container", "BOSS_WH_TOTE_E1")
+        const unregistered = task("Not a record", "moqui.basic.Enumeration", "RqtSupport")
+        const joeStore = (() => { login("joe.developer"); try { return task("Joe on the retail store", "mantle.product.store.ProductStore", "POPC_DEFAULT") } finally { login("john.doe") } })()
+        return { store, container, unregistered, joeStore,
+            storeLink: one("mantle.work.effort.WorkEffortRecord", { workEffortId: store.json.workEffortId || "_NA_", recordEntityName: "mantle.product.store.ProductStore", recordId: "POPC_DEFAULT" }),
+            joeTasks: list("mantle.work.effort.WorkEffort", { workEffortName: "Joe on the retail store" }).length }
+    },
+    then({ store, container, unregistered, joeStore, storeLink, joeTasks }) {
+        store.errors == ""
+        storeLink != null
+        container.errors == ""
+        unregistered.status == 500
+        joeStore.status == 500
+        joeTasks == 0
+    },
+})
