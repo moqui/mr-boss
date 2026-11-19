@@ -657,6 +657,21 @@ feature("TimeSettings keeps the policy and the work types offered; MyTime and th
     }
 })
 
+// SEC-BOS-130: the entry dialog names a person given by id only when the user may view that person's week, and under the user's
+// own filters: another user's personal contact (Mary Doe, john.doe's) is no option for joe
+feature("the entry dialog names a person given by id only when the user may view that person's week (SEC-BOS-130)", {
+    when() {
+        const mary = as("joe.developer", () => render("apps/Projects/Time/TimeEntries/EditEntry", {partyId: "BOSS_DEMO_PC_MARY"}))
+        const own = as("joe.developer", () => render("apps/Projects/Time/TimeEntries/EditEntry", {partyId: "ORG_ZIZI_JD"}))
+        return {mary, own}
+    },
+    then({mary, own}) {
+        !mary.broken && !own.broken
+        !mary.output.includes("Mary Doe")
+        own.output.includes("ORG_ZIZI_JD")
+    }
+})
+
 // SEC-BOS-131: a work type an organization made is its own (its organization on the type): another organization's manager neither
 // sees, renames nor offers it
 feature("another organization's Projects manager neither renames nor offers an organization's own work type (SEC-BOS-131)", {

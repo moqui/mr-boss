@@ -138,7 +138,8 @@ along with this software (see the LICENSE.md file). If not, see
                     whichAnswer = Object.assign({}, whichAnswer, {worker: Object.assign({}, whichAnswer.worker, {text: 'Not shared with AI'})})
                 whichError = ec.message.hasError() ? ec.message.getErrorsString() : ''
                 ec.message.clearErrors()
-                const party = whichPartyId ? ec.entity.find('mantle.party.PartyDetail').condition('partyId', whichPartyId).disableAuthz().one() : null
+                // named as the user's own filters show the party (SEC-BOS-130: never another user's personal contact)
+                const party = whichPartyId ? ec.entity.find('mantle.party.PartyDetail').condition('partyId', whichPartyId).one() : null
                 whichQuestion = [party ? [party.firstName, party.lastName].filter((part) => part).join(' ') || party.organizationName : L('Anyone'),
                     whichWorkEffortId || L('any project'), whichWorkTypeEnumId ? (workTypeOptions.find((type) => type.key === whichWorkTypeEnumId)?.text || whichWorkTypeEnumId) : L('any work'),
                     whichDate || L('today')].join(' · ')

@@ -694,12 +694,14 @@ along with this software (see the LICENSE.md file). If not, see
         <description>The people the user may log or find time for, as options (key, text): the user first, then for an approver the
             time keepers of the projects they manage (ADMIN every time keeper) and the user's live reports (People P10:
             mantle.work.TimesheetServices.get#LineReports, whose weeks a line manager approves under the line policy), and the
-            person given. Each person's week is checked again where it is read or changed (get#TimesheetAccess).</description>
+            person given when the user may view that person's week (get#TimesheetAccess); names as the user's filters show them.
+            Each person's week is checked again where it is read or changed (get#TimesheetAccess).</description>
         <in-parameters><parameter name="partyId"/></in-parameters>
         <out-parameters><parameter name="personOptions" type="List"/></out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
             const me = ec.user.userAccount?.partyId || null
+            let ids = []
             const wasDisabled = ec.artifactExecution.disableAuthz()
             try {
                 const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
@@ -709,13 +711,18 @@ along with this software (see the LICENSE.md file). If not, see
                 if (isAdmin || managed.length) keepers = Array.from(ec.service.sync().name('mantle.work.TimesheetServices.get#TimeKeepers')
                         .parameters(isAdmin ? {} : {projectIds: managed}).call()?.partyIdList || [])
                 const reports = Array.from(ec.service.sync().name('mantle.work.TimesheetServices.get#LineReports').call()?.partyIdList || [])
-                const ids = Array.from(new Set([me].concat(keepers).concat(reports).concat(partyId ? [partyId] : []).filter((id) => id)))
-                const names = {}
-                if (ids.length) for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', ids).list())
-                    names[party.partyId] = party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ') || party.partyId
-                personOptions = ids.map((id) => ({key: id, text: (names[id] || id) + (id === me ? ' (' + L('me') + ')' : '')}))
-                        .sort((a, b) => (a.key === me ? -1 : b.key === me ? 1 : String(a.text).localeCompare(String(b.text))))
+                ids = Array.from(new Set([me].concat(keepers).concat(reports).filter((id) => id)))
             } finally { if (!wasDisabled) ec.artifactExecution.enableAuthz() }
+            // the person given only when the user may view that person's week (get#TimesheetAccess), never any party by its id
+            // (SEC-BOS-130)
+            if (partyId && !ids.includes(partyId) && ec.service.sync().name('mantle.work.TimesheetServices.get#TimesheetAccess')
+                    .parameters({partyId: partyId, date: ec.user.nowTimestamp}).call()?.canView === true) ids.push(partyId)
+            // the names as the user's own filters show the parties (another user's personal contact is not named)
+            const names = {}
+            if (ids.length) for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', ids).list())
+                names[party.partyId] = party.organizationName || [party.firstName, party.lastName].filter((part) => part).join(' ') || party.partyId
+            personOptions = ids.map((id) => ({key: id, text: (names[id] || id) + (id === me ? ' (' + L('me') + ')' : '')}))
+                    .sort((a, b) => (a.key === me ? -1 : b.key === me ? 1 : String(a.text).localeCompare(String(b.text))))
         ]]></script></actions>
     </service>
 
