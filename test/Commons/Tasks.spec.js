@@ -316,6 +316,11 @@ feature("a task goes into or out of a project only for a member of it: a General
                 statusId: "WeInPlanning", rootWorkEffortId: "BOSS_TEST_GEN_PRJ", parentWorkEffortId: "BOSS_TEST_GEN_PRJ", ownerPartyId: "ORG_ZIZI_JD" })
             call("create#mantle.work.effort.WorkEffortParty", { workEffortId: "BOSS_TEST_GEN_TASK", partyId: "ORG_ZIZI_JD", roleTypeId: "Assignee",
                 statusId: "WeptAssigned", fromDate: new Date(0) })
+            // a task tree whose root is a task, no project: its sub-task needs no project rule
+            call("create#mantle.work.effort.WorkEffort", { workEffortId: "BOSS_TEST_TREE_TOP", workEffortTypeEnumId: "WetTask", workEffortName: "BOSS_TEST Tree top",
+                statusId: "WeInPlanning", ownerPartyId: "ORG_ZIZI_JD" })
+            call("create#mantle.work.effort.WorkEffort", { workEffortId: "BOSS_TEST_TREE_CHILD", workEffortTypeEnumId: "WetTask", workEffortName: "BOSS_TEST Tree child",
+                statusId: "WeInPlanning", rootWorkEffortId: "BOSS_TEST_TREE_TOP", parentWorkEffortId: "BOSS_TEST_TREE_TOP", ownerPartyId: "ORG_ZIZI_JD" })
         })
         const refusal = (run) => {
             let thrown = ""
@@ -331,13 +336,16 @@ feature("a task goes into or out of a project only for a member of it: a General
             projectsOut: sys(() => call("ironstone.projects.WorkItemServices.bulk#WorkItems", { action: "moveToProject", workEffortIds: "BOSS_TEST_GEN_TASK",
                 value: "BOSS_DEMO_PROJECT" })),
             subTask: refusal(() => sys(() => call("ironstone.commons.TaskServices.add#SubTask", { workEffortId: "BOSS_TEST_GEN_TASK", workEffortName: "BOSS_TEST Sub-task" }))),
+            treeSubTask: refusal(() => sys(() => call("ironstone.commons.TaskServices.add#SubTask", { workEffortId: "BOSS_TEST_TREE_CHILD", workEffortName: "BOSS_TEST Tree sub-task" }))),
             projects: sys(() => call("ironstone.commons.TaskServices.get#ProjectOptions", {})),
             made: all("mantle.work.effort.WorkEffort", { workEffortName: "BOSS_TEST Into a general project" }).length,
             subTasks: all("mantle.work.effort.WorkEffort", { workEffortName: "BOSS_TEST Sub-task" }).length,
             task: one("mantle.work.effort.WorkEffort", { workEffortId: "BOSS_TEST_GEN_TASK" }),
         }))
     },
-    then({ added, out, projectsOut, subTask, projects, made, subTasks, task }) {
+    then({ added, out, projectsOut, subTask, treeSubTask, projects, made, subTasks, task }) {
+        treeSubTask == ""
+        one("mantle.work.effort.WorkEffort", { workEffortName: "BOSS_TEST Tree sub-task" })?.rootWorkEffortId == "BOSS_TEST_TREE_TOP"
         added.errors.includes("You may not add tasks to or take them out of project BOSS_TEST General project")
         out.failedCount == 1
         out.failures[0].reason.includes("You may not add tasks to or take them out of project BOSS_TEST General project")

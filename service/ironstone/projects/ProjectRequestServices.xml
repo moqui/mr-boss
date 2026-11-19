@@ -775,7 +775,6 @@ along with this software (see the LICENSE.md file). If not, see
                 stageStatusIds: ['ReqDraft', 'ReqSubmitted', 'ReqReviewed', 'ReqInProgress', 'ReqCompleted'], allowedStatusIds: allowed,
                 workList: workList, workDoneCount: doneCount, itemList: requestItems.map((row) => row.getMap()), itemsShown: itemsShown,
                 channelLabel: channel, customerOutside: customerOutside, noteList: notes,
-
                 canConvert: canTriage && open && (ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')),
                 projectName: project ? (project.workEffortName || project.workEffortId) : ''}
         ]]></script></actions>

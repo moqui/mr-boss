@@ -1139,10 +1139,15 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.commons.TaskServices.get#TaskAccess" in-map="{workEffortId:workEffortId, need:'update', app:app}" out-map="access"/>
             <if condition="ec.message.hasError()"><return/></if>
-            <!-- a sub-task goes into the parent's project only for one who may put tasks in it (SEC-BOS-110), not any assignee -->
+            <!-- a sub-task goes into the parent's project only for one who may put tasks in it (SEC-BOS-110), not any assignee; a
+                root that is no project (a production run's, a goal's) is no project to check -->
             <if condition="access.workEffort.rootWorkEffortId">
-                <service-call name="ironstone.commons.TaskServices.check#Project" in-map="{rootWorkEffortId:access.workEffort.rootWorkEffortId}"/>
-                <if condition="ec.message.hasError()"><return/></if>
+                <entity-find-one entity-name="mantle.work.effort.WorkEffort" value-field="parentRoot" disable-authz="true">
+                    <field-map field-name="workEffortId" from="access.workEffort.rootWorkEffortId"/></entity-find-one>
+                <if condition="parentRoot?.workEffortTypeEnumId == 'WetProject'">
+                    <service-call name="ironstone.commons.TaskServices.check#Project" in-map="{rootWorkEffortId:access.workEffort.rootWorkEffortId}"/>
+                    <if condition="ec.message.hasError()"><return/></if>
+                </if>
             </if>
             <service-call name="ironstone.commons.QuickCreateServices.create#Task" out-map="created"
                     in-map="{workEffortName:workEffortName.trim(), estimatedCompletionDate:(dueDate ? String(dueDate).trim() : null)}"/>
