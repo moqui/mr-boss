@@ -542,6 +542,23 @@ feature("joe.developer as the request's assignee takes john.doe's message off it
     },
 })
 
+// SEC-BAP-95 review: an order's manager is an editor of its kind: a buyer (PURCHASE_ORDER_EDIT) takes no one's message off a sale
+feature("a purchasing buyer takes no other user's message off a sales order of their organization", {
+    allowMessageErrors: true,
+    when() {
+        const order = { recordEntity: "mantle.order.OrderHeader", recordId: "BOSS_CS_SO_DELIVERED" }
+        const johnNote = post("logNote", { body: "<p>John's note on the sale.</p>" }, order).json.communicationEventId
+        const seen = as("purchasing.buyer", () => call_("chatterData", order))
+        const unlink = as("purchasing.buyer", () => post("unlink", { communicationEventId: johnNote }, order))
+        return { johnNote, seen, unlink, link: one("mantle.order.OrderCommunicationEvent", { orderId: "BOSS_CS_SO_DELIVERED", communicationEventId: johnNote }) }
+    },
+    then({ johnNote, seen, unlink, link }) {
+        johnNote != null
+        seen.status == 200
+        unlink.status == 500 && link != null
+    },
+})
+
 feature("a note with a reply is not deleted until the reply is", {
     allowMessageErrors: true,
     when() {

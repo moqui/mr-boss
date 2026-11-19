@@ -80,7 +80,9 @@ along with this software (see the LICENSE.md file). If not, see
             user's file, take another user's message off it, remove another follower; SEC-BAP-95): the owning app's rule when
             get#ContentType has one for the record type (its recordRule and catalogCanChange; for managed work changeOthers, its
             people and maintenance managers); for a request its assignee, a case manager or its project's manager; for a task its
-            owner, assignee or project manager; for an order its enterer or an order editor; for a shipment a shipper; else a
+            owner, assignee or project manager; for an order its enterer, or an editor of its kind (SALES_ORDER_EDIT for a sales part,
+            PURCHASE_ORDER_EDIT for a purchase part) of the part's seller or buyer organization; for a shipment a shipper
+            (SHIPMENT_SHIP) of its from or to party's organization; else a
             grant the user holds on the record's entity themselves (ec.artifactExecution.isPermittedOwn, never the app root's
             inherited grant every user of the root has), or a system administrator.</description>
         <in-parameters>
@@ -130,14 +132,30 @@ along with this software (see the LICENSE.md file). If not, see
                         || projectManager(work.rootWorkEffortId))
                 if (mayChange) return
             }
+            // the user's own organizations, for an order's or a shipment's manager
+            let userOrgIds = null
+            const ownOrganization = (partyIdOf) => {
+                if (userOrgIds == null) userOrgIds = Array.from(ec.service.sync().name('mantle.party.PartyServices.get#PartyOrganizationInfo')
+                        .disableAuthz().call()?.userOrgIds || [])
+                return !!partyIdOf && userOrgIds.includes(partyIdOf)
+            }
+            const internal = (partyIdOf) => !!partyIdOf && ec.entity.find('mantle.party.PartyRole')
+                    .condition({partyId: partyIdOf, roleTypeId: 'OrgInternal'}).disableAuthz().count() > 0
             if (entityName === 'mantle.order.OrderHeader') {
                 const order = one('mantle.order.OrderHeader', {orderId: id})
-                mayChange = !!order && ((!!partyId && order.enteredByPartyId === partyId)
-                        || ec.user.hasPermission('SALES_ORDER_EDIT') || ec.user.hasPermission('PURCHASE_ORDER_EDIT'))
+                // its enterer, or an editor of its kind (a sales part: SALES_ORDER_EDIT; a purchase part: PURCHASE_ORDER_EDIT) whose
+                // organization is that part's seller or buyer
+                const parts = order ? Array.from(ec.entity.find('mantle.order.OrderPart').condition('orderId', id).disableAuthz().list()) : []
+                mayChange = !!order && ((!!partyId && order.enteredByPartyId === partyId) || parts.some((part) =>
+                        (internal(part.vendorPartyId) && ownOrganization(part.vendorPartyId) && ec.user.hasPermission('SALES_ORDER_EDIT'))
+                        || (internal(part.customerPartyId) && ownOrganization(part.customerPartyId) && ec.user.hasPermission('PURCHASE_ORDER_EDIT'))))
                 if (mayChange) return
             }
             if (entityName === 'mantle.shipment.Shipment') {
-                mayChange = ec.user.hasPermission('SHIPMENT_SHIP')
+                // a shipper of one of its parties' organizations
+                const shipment = one('mantle.shipment.Shipment', {shipmentId: id})
+                mayChange = !!shipment && ec.user.hasPermission('SHIPMENT_SHIP')
+                        && (ownOrganization(shipment.fromPartyId) || ownOrganization(shipment.toPartyId))
                 if (mayChange) return
             }
             mayChange = ec.artifactExecution.isPermittedOwn(entityName, 'AT_ENTITY', 'update')
