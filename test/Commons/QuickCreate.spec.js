@@ -281,6 +281,21 @@ feature("an activity on another user's personal contact is refused and makes not
     },
 })
 
+// SEC-BOS-113: a request's customer passes raise#Request's party check: another user's personal contact is refused
+feature("a request whose customer is another user's personal contact is refused and makes nothing (SEC-BOS-113)", {
+    allowMessageErrors: true,
+    when() {
+        sys(() => { if (!one("mantle.party.Party", { partyId: "BOSS_TEST_PRIVATE" })) call("create#mantle.party.Party", { partyId: "BOSS_TEST_PRIVATE",
+            partyTypeEnumId: "PtyPerson", privateOwnerUserId: "ORG_ZIZI_JD" }) })
+        const refused = post("createRequest", { requestName: "BOSS_TEST Request for a private contact", customerPartyId: "BOSS_TEST_PRIVATE" })
+        return { refused, made: list("mantle.request.Request", { requestName: "BOSS_TEST Request for a private contact" }).length }
+    },
+    then({ refused, made }) {
+        refused.errors.includes("Customer BOSS_TEST_PRIVATE is not available")
+        made == 0
+    },
+})
+
 // SEC-BOS-87: a screen's context record of a registered type takes a quick create by its registration's rule (a store by its
 // organization, a container by its facility, a pay run by People's payroll read); another organization's store and an entity
 // that is no registered record type are refused

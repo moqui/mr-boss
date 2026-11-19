@@ -314,8 +314,8 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="create" noun="Request">
-        <description>A request filed by the user and submitted (mantle.request.RequestServices.create#Request), with its
-            customer (the party in context by default); on the record in context through link#RequestRecord (a work effort
+        <description>A request filed by the user and submitted (ironstone.commons.RequestServices.raise#Request, which refuses a
+            customer the user may not see or another user's personal contact), with its customer (the party in context by default); on the record in context through link#RequestRecord (a work effort
             through RequestWorkEffort, a wiki page through WikiPageRequest, any other record through RequestRecord).</description>
         <in-parameters>
             <parameter name="requestName" required="true"/>
@@ -335,9 +335,12 @@ along with this software (see the LICENSE.md file). If not, see
                 <if condition="ec.message.hasError()"><return/></if>
                 <if condition="!customerPartyId &amp;&amp; recordInfo.isParty"><set field="customerPartyId" from="recordId"/></if>
             </if>
-            <service-call name="mantle.request.RequestServices.create#Request" out-map="context" in-map="{requestName:requestName,
-                    requestTypeEnumId:requestTypeEnumId, priority:priority, customerPartyId:customerPartyId, description:description,
-                    statusId:'ReqSubmitted'}"/>
+            <!-- raise#Request's own checks, its customer among them: a party the user may see, never another user's personal
+                contact (SEC-BOS-113) -->
+            <service-call name="ironstone.commons.RequestServices.raise#Request" out-map="raised" in-map="{requestName:requestName,
+                    requestTypeEnumId:requestTypeEnumId, priority:priority, customerPartyId:customerPartyId, description:description}"/>
+            <if condition="ec.message.hasError()"><return/></if>
+            <set field="requestId" from="raised.requestId"/>
             <if condition="ec.message.hasError()"><return/></if>
             <if condition="recordEntity &amp;&amp; recordId">
                 <service-call name="mantle.request.RequestServices.link#RequestRecord" in-map="{requestId:requestId,
