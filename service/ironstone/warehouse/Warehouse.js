@@ -121,8 +121,8 @@ function rootGrants() {
                 .count() === 0
         )
     }
-    // every facility only with FACILITY_ALL_ORGANIZATIONS too (Mantle's every-organization facility permission, the
-    // administrator's), as Commerce's COMMERCE_ALL_ORGANIZATIONS; else the user's own organizations (SEC-BAP-86)
+    // every facility only with FACILITY_ALL_ORGANIZATIONS too (Mantle's every-organization facility permission,
+    // ADMIN's alone), as Commerce's COMMERCE_ALL_ORGANIZATIONS; else the user's own organizations (SEC-BAP-86)
     return {
         read: true,
         unrestricted: allowed.some(row => everyFacility(row.artifactAuthzId)) && access.has("FACILITY_ALL_ORGANIZATIONS")

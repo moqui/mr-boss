@@ -219,7 +219,7 @@ const capabilityUsers = [
     {user: users.resource, granted: ["productionRead", "policyEdit", "methodRead", "methodResources"]},
     {user: users.services, granted: read}
 ]
-feature("each group holds exactly the capabilities of its permissions, the administrator every one in every plant", {
+feature("each group holds exactly the capabilities of its permissions, the administrator every one in its own plants", {
     when() {
         const problems = []
         for (const {user, granted} of capabilityUsers) {
@@ -237,9 +237,11 @@ feature("each group holds exactly the capabilities of its permissions, the admin
         }))
         const missing = productionCapabilities.filter(name => !admin.context.capabilities[name])
         if (missing.length) problems.push(`the administrator lacks ${missing}`)
-        if (admin.context.allPlants !== true) problems.push("the administrator is not in every plant")
-        if (admin.other !== "") problems.push(`the administrator is refused the other organization's run: ${admin.other}`)
-        if (!admin.plants.includes(ids.plantId) || !admin.plants.includes(ids.otherPlantId))
+        // the administrator works in its own organizations' plants: every one is ADMIN's (FACILITY_ALL_ORGANIZATIONS, SEC-BAP-86)
+        if (admin.context.allPlants !== false) problems.push("the administrator is in every plant")
+        if (!admin.other.includes("RECORD_UNAVAILABLE"))
+            problems.push(`the administrator gets the other organization's run: ${admin.other}`)
+        if (!admin.plants.includes(ids.plantId) || admin.plants.includes(ids.otherPlantId))
             problems.push(`the administrator's plants: ${admin.plants}`)
         // the plant display holds no production permission
         const display = asUser(users.display, () => [

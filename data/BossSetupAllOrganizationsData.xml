@@ -16,8 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     (SEC-BAP-86): such a grant reaches every organization (the active one when one is) only with the app's permission too, as
     Accounting's ACCOUNTING_ALL_ORGANIZATIONS and Commerce's COMMERCE_ALL_ORGANIZATIONS; without it the administrator works in its
     own organizations. Seeded on ADMIN only; an operator grants one to a group that must reach every organization. Warehouse
-    and Manufacturing ask Mantle's FACILITY_ALL_ORGANIZATIONS, which their administrators hold by design. Seed, so a database
-    made before it gets it too. -->
+    and Manufacturing ask Mantle's FACILITY_ALL_ORGANIZATIONS, ADMIN's alone too (the owner's call of Nov 19, 2026). Seed, so a
+    database made before it gets it too. -->
 <entity-facade-xml type="seed">
     <moqui.security.UserPermission userPermissionId="PURCHASING_ALL_ORGANIZATIONS" description="Purchasing in every organization"/>
     <moqui.security.UserPermission userPermissionId="INSIGHTS_ALL_ORGANIZATIONS" description="Insights of every organization"/>

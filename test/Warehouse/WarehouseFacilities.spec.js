@@ -418,7 +418,7 @@ feature("editing a facility whose parent the user cannot see keeps the parent", 
 })
 
 feature(
-    "the Warehouse administrator edits another organization's facility (FACILITY_ALL_ORGANIZATIONS); the facility admin may not",
+    "the Warehouse administrator edits its own organization's facility, not another's (FACILITY_ALL_ORGANIZATIONS is ADMIN's, SEC-BAP-86)",
     {
         when() {
             const original = ec.entity
@@ -437,18 +437,19 @@ feature(
             return {
                 admin: asUser("warehouse.admin", () => ({
                     canEdit: invoke(facilities + "get#FacilityDetail", {facilityId: ids.otherFacilityId}).canEdit,
-                    renamed: rename("P2 admin rename"),
-                    restored: rename(original.facilityName)
+                    renamed: rename("P2 admin rename")
                 })),
+                nameAfter: ec.entity.find("mantle.facility.Facility").condition("facilityId", ids.otherFacilityId).disableAuthz().one()
+                    .facilityName,
+                originalName: original.facilityName,
                 facilityAdmin: asUser("warehouse.facility", () => ({
                     canEdit: invoke(facilities + "get#FacilityDetail", {facilityId: ids.facilityId}).canEdit
                 }))
             }
         },
-        then({admin, facilityAdmin}) {
-            admin.canEdit == true
-            admin.renamed == ""
-            admin.restored == ""
+        then({admin, facilityAdmin, nameAfter, originalName}) {
+            admin.canEdit != true
+            nameAfter == originalName
             facilityAdmin.canEdit == true
         }
     }

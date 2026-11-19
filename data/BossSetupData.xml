@@ -1079,9 +1079,8 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPPING_CARRIER_EDIT"
             fromDate="0"/>
-    <!-- the administrator works in every organization's facilities (impl-warehouse §4), in Mantle's guards too (F75) -->
-    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="FACILITY_ALL_ORGANIZATIONS"
-            fromDate="0"/>
+    <!-- the administrator works in its own organizations' facilities; every organization's is ADMIN's alone
+        (FACILITY_ALL_ORGANIZATIONS, MantleSetupData.xml; the owner's call of Nov 19, 2026, SEC-BAP-86) -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_RECEIVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_ISSUE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_MOVE" fromDate="0"/>
@@ -1172,8 +1171,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_DISPOSE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT"
             fromDate="0"/>
-    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="FACILITY_ALL_ORGANIZATIONS"
-            fromDate="0"/>
+    <!-- the administrator works in its own organizations' plants; every organization's is ADMIN's alone (FACILITY_ALL_ORGANIZATIONS;
+        the owner's call of Nov 19, 2026, SEC-BAP-86) -->
     <!-- Warehouse areas for their capability groups only (impl-warehouse P1); the others are open to every Warehouse user,
         and each service still checks its own permission and facility. Entity filters come from the record that
         authorizes the screen, so each ALWAYS row carries the root's filter sets (P1 review F59). Picking holds the move
@@ -3021,7 +3020,6 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_POLICY_MANAGE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPPING_CARRIER_EDIT" capabilityKindEnumId="CpkEdit"/>
-    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="FACILITY_ALL_ORGANIZATIONS" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_RECEIVE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_ISSUE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_MOVE" capabilityKindEnumId="CpkEdit"/>
@@ -3120,7 +3118,6 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_VERIFY" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_DISPOSE" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT" capabilityKindEnumId="CpkEdit"/>
-    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="FACILITY_ALL_ORGANIZATIONS" capabilityKindEnumId="CpkEdit"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_COST" appName="Manufacturing" description="Production cost estimator" scopeDependency="organization, plant" sequenceNum="640"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>

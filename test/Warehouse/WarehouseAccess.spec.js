@@ -117,7 +117,8 @@ feature("each group holds exactly its permissions' capabilities, and money shows
     },
     then({problems, allFacilities}) {
         problems.join("\n") == ""
-        allFacilities == true
+        // the administrator works in its own organizations' facilities: every one is ADMIN's (FACILITY_ALL_ORGANIZATIONS, SEC-BAP-86)
+        allFacilities == false
     }
 })
 
