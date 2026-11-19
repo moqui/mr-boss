@@ -204,15 +204,23 @@ feature("a price import sends its aggregate notice while suppressing per-row pri
             }
             const priceIds = applied.importRows.map(r => r.resultRecordId),
                 markers = Array.from(ec.entity.find("mantle.product.ProductCatalogOperation").disableAuthz().list())
-            return {applied, priceIds, markers}
+            return {applied, priceIds, markers, importerUserId: ec.user.userId}
         })
     },
-    then({applied, priceIds, markers}) {
+    then({applied, priceIds, markers, importerUserId}) {
         applied.appliedCount == 3
         markers.filter(
             r => r.operationType === "import-notice" && JSON.parse(r.requestJson).operationKey === applied.operationKey
         ).length == 1
         markers.filter(r => r.operationType === "price-notice" && priceIds.includes(JSON.parse(r.requestJson).productPriceId))
             .length == 0
+        // the organization's other pricing staff get one summary of the import's prices, the importer none (SEC-BAP-107)
+        const summaries = markers
+            .filter(r => r.operationType === "price-import-notice")
+            .map(r => JSON.parse(r.requestJson))
+            .filter(r => r.operationKey === applied.operationKey)
+        summaries.length >= 1
+        summaries.every(r => r.productCount == 1)
+        !summaries.some(r => r.userId === importerUserId)
     }
 })

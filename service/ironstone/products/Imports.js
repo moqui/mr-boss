@@ -57,6 +57,14 @@ function scopeFor(parameters) {
         if (nm.appName) nm.appName("Products")
         if (nm.actorUserId) nm.actorUserId(ec.user.userId)
         nm.send()
+        // the price rows the import changed: one summary to the organization's other pricing staff (SEC-BAP-107)
+        try {
+            ec.resource
+                .script("component://mr-boss/service/ironstone/products/PriceNotices.js")
+                .execute("importChanged", {operationKey: p.operationKey, importerUserId: ec.user.userId})
+        } catch (e) {
+            ec.logger.error("Catalog import " + p.operationKey + " price notice: " + e)
+        }
         call("create#mantle.product.ProductCatalogOperation", {
             operationKey: key,
             operationType: "import-notice",

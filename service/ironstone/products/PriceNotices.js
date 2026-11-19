@@ -194,7 +194,61 @@ function expiring(p) {
     }
     return {sentCount}
 }
+// SEC-BAP-107: an import's price rows skip the per-row change notice (the SECA's catalogOperationKey condition), so the
+// organization's other pricing staff get one summary of what the import changed instead: each recipient the rows' own rule
+// names (recipients), but the importer, once per import, listing up to 20 products.
+function importChanged(p) {
+    const items = rows(P + "ProductCatalogOperationItem", {operationKey: p.operationKey}).filter(
+        item => item.result === "applied" && item.resultEntityName === E && item.resultRecordId
+    )
+    const byRecipient = new Map()
+    for (const item of items) {
+        const r = one(E, {productPriceId: item.resultRecordId})
+        if (!r || r.priceTypeEnumId === "PptAverage") continue
+        for (const userId of recipients(r)) {
+            if (userId === p.importerUserId) continue
+            if (!byRecipient.has(userId)) byRecipient.set(userId, new Set())
+            byRecipient.get(userId).add(r.productId)
+        }
+    }
+    const sentTo = []
+    for (const [userId, productIds] of byRecipient) {
+        const marker = ec.user.singleUseCodeHash("import-prices|" + p.operationKey + "|" + userId).slice(0, 40)
+        if (one(P + "ProductCatalogOperation", {operationKey: marker})) continue
+        try {
+            const names = [...productIds]
+                .slice(0, 20)
+                .map(productId => one(P + "Product", {productId})?.productName || productId)
+            const nm = ec
+                .makeNotificationMessage()
+                .topic("CatalogImportResult")
+                .userId(userId)
+                .message({
+                    title: "A catalog import changed " + productIds.size + " products' prices",
+                    operationKey: p.operationKey,
+                    importedByUserId: p.importerUserId || null,
+                    productIds: [...productIds].slice(0, 20),
+                    productNames: names
+                })
+                .link("/qapps/Products/ProductImport?operationKey=" + encodeURIComponent(p.operationKey))
+            if (nm.appName) nm.appName("Products")
+            if (nm.actorUserId && p.importerUserId) nm.actorUserId(p.importerUserId)
+            nm.send()
+            call("create#" + P + "ProductCatalogOperation", {
+                operationKey: marker,
+                operationType: "price-import-notice",
+                submittedByUserId: p.importerUserId || null,
+                submittedDate: ec.user.nowTimestamp,
+                requestJson: JSON.stringify({operationKey: p.operationKey, userId, productCount: productIds.size})
+            })
+            sentTo.push(userId)
+        } catch (e) {
+            ec.logger.error("Import price notice " + p.operationKey + " to " + userId + " failed: " + e)
+        }
+    }
+    return {sentCount: sentTo.length, sentToUserIds: sentTo}
+}
 function execute(op, p) {
-    return {changed, expiring, sendOne}[op](p)
+    return {changed, expiring, sendOne, importChanged}[op](p)
 }
 ;({execute})
