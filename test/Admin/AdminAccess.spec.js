@@ -421,19 +421,24 @@ feature("an administrative bundle is proposed by an access administrator, never 
             asUser(user, () => invoke("org.moqui.admin.AccessServices.check#GrantProposal", {bundleGroupIdList}))
         const operatorAdmin = proposal(users.identity, adminBundles)
         const operatorPlain = proposal(users.identity, ["BOSS_ACCOUNTING_READ"])
-        const accessAdmin = proposal(users.access, adminBundles)
+        // the People administrator carries PEOPLE_ALL_ORGANIZATIONS, sealed (SEC-BOS-84): an access administrator of one
+        // organization proposes the other administrative bundles, not that one
+        const accessAdmin = proposal(users.access, adminBundles.filter(id => id !== "BOSS_PEOPLE_ADMIN"))
+        const accessEveryOrganization = proposal(users.access, ["BOSS_PEOPLE_ADMIN"])
         const unnamed = system(() =>
             Array.from(ec.entity.find("moqui.security.CapabilityBundle").list())
                 .filter(row => /^BOSS_ADMIN(_|$)|^BOSS_(ACCOUNTING|COMMERCE|COMMONS|COMMS|CUSTOMER_SERVICE|INSIGHTS|MAINTENANCE|MANUFACTURING|MARKETING|PEOPLE|PRODUCTS|PROJECTS|PURCHASING|SALES|WAREHOUSE)_ADMIN$/.test(row.userGroupId))
                 .filter(row => row.delegablePermissionId !== "ADMIN_ACCESS_MANAGE")
                 .map(row => row.userGroupId)
         )
-        return {operatorAdmin, operatorPlain, accessAdmin, unnamed}
+        return {operatorAdmin, operatorPlain, accessAdmin, accessEveryOrganization, unnamed}
     },
-    then({operatorAdmin, operatorPlain, accessAdmin, unnamed}) {
+    then({operatorAdmin, operatorPlain, accessAdmin, accessEveryOrganization, unnamed}) {
         operatorAdmin.bundleList.every(row => row.allowed === false && row.reasonCode === "NOT_DELEGABLE")
         operatorPlain.allowed === true
         accessAdmin.allowed === true
+        accessEveryOrganization.allowed === false
+        accessEveryOrganization.bundleList.every(row => row.reasonCode === "SEALED_PERMISSION")
         unnamed.length == 0
     }
 })

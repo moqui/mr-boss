@@ -149,6 +149,37 @@ feature(
     }
 )
 
+// SEC-BOS-84: an app's every-organization permission is sealed (MoquiConf.xml), so the access administrator of one organization
+// (admin.access, Retail) gives no membership of an app administrator group that carries one, their own account's included, nor
+// grants one to a group; the same membership of a People bundle without one is given
+feature("an access administrator of one organization gives no every-organization reach, by a membership or a grant", {
+    when() {
+        const result = asUser(users.access, () => {
+            const self = invoke(access + "store#Membership", {userGroupId: "BOSS_PEOPLE_ADMIN", userId: "BOSS_ADM_ACCESS", reason: "Spec"})
+            const other = invoke(access + "store#Membership", {userGroupId: "BOSS_SALES_ADMIN", userId: ids.retailUserId, reason: "Spec"})
+            const plain = invoke(access + "store#Membership", {userGroupId: "BOSS_PEOPLE_READ", userId: "BOSS_ADM_ACCESS", reason: "Spec"})
+            const grant = invoke(access + "preview#Grants", {
+                userGroupId: ids.delegateGroupId,
+                grantList: [{action: "add", bundleGroupId: "BOSS_PEOPLE_ADMIN", userPermissionId: "PEOPLE_ALL_ORGANIZATIONS"}]
+            })
+            return {self, other, plain, grant}
+        })
+        system(() => {
+            find("moqui.security.UserGroupMember", {userGroupId: "BOSS_PEOPLE_READ", userId: "BOSS_ADM_ACCESS"}).deleteAll()
+            find("moqui.security.UserGroupMember", {userGroupId: "BOSS_PEOPLE_ADMIN", userId: "BOSS_ADM_ACCESS"}).deleteAll()
+            find("moqui.security.UserGroupMember", {userGroupId: "BOSS_SALES_ADMIN", userId: ids.retailUserId}).deleteAll()
+        })
+        return result
+    },
+    then({self, other, plain, grant}) {
+        self.applied == false && self.reasonCode == "SEALED_PERMISSION" && self.reason.includes("PEOPLE_ALL_ORGANIZATIONS")
+        other.applied == false && other.reasonCode == "SEALED_PERMISSION"
+        plain.applied == true
+        grant.allowed == false
+        grant.changeList.some(change => change.id == "PEOPLE_ALL_ORGANIZATIONS" && change.reasonCode == "SEALED_PERMISSION")
+    }
+})
+
 // F129 (P19): a screen's read keeps a refusal's reason, which a service-call with ignore-error clears; an error that is not a
 // refusal shows only the screen's own words
 feature("a screen's refused read is shown as its reason, and any other failure as the screen's own words", {
