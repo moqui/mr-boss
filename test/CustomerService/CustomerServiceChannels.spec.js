@@ -3,7 +3,8 @@
 // Comms hook making a case from a customer's mail in the service mailbox (timed by its received date, the mail on it) and
 // refusing one from staff; ChannelSessions' customer audience leaving out an internal call, with the case linked, and its
 // one render (qvt); the call-context provider answering the caller's open cases to the agent and nothing to another
-// organization's. The Mantle rules (routes, intake, calls, the review) are Mantle's SupportChannels spec; the usable-when
+// organization's; the acknowledgement text options (the user's own blocks and their organization's service groups', and
+// each route's present block, SEC-BAP-81). The Mantle rules (routes, intake, calls, the review) are Mantle's SupportChannels spec; the usable-when
 // is the acceptance CustomerServiceChannelsWalk.
 // Run: ./moq test mr-boss --spec CustomerService/CustomerServiceChannels
 const lib = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")
@@ -95,10 +96,43 @@ feature("ChannelRouting reads the demo routes, a mail rule naming the queue and 
                 value: ids.supportQueueId
             })
         )
+        // the acknowledgement text options (SEC-BAP-81): the manager's own block; an agent's shared with the Customer Service
+        // app group the manager is in (no service group: not offered); the team's and Retail's service-wide replies (the
+        // manager is in both groups); and the route's present one
+        const blocks = {
+            CSCH_BLOCK_OWN: {ownerUserId: "BOSS_CS_MANAGER", title: "CSCH own"},
+            CSCH_BLOCK_APP: {ownerUserId: "BOSS_CS_AGENT", userGroupId: "BOSS_CUSTOMER_SERVICE", title: "CSCH app group"}
+        }
+        system(() => {
+            for (const [emailTextBlockId, fields] of Object.entries(blocks))
+                invoke("store#moqui.basic.email.EmailTextBlock", {
+                    emailTextBlockId,
+                    bodyHtml: "<p>Case ${requestId}</p>",
+                    ...fields
+                })
+        })
         const routing = asUser(users.manager, () => invoke(C + "find#ServiceRoutes", {appRoot: "CustomerService"}).routing, false)
-        return {routing}
+        // a route's present block is offered (RouteEdit shows it), though the manager may not name it on another route
+        const route = () => ec.entity.find("mantle.request.support.ServiceRoute").condition("serviceRouteId", ids.mailRouteId)
+        system(() => route().updateAll({ackTextBlockId: "CSCH_BLOCK_APP"}))
+        const present = asUser(users.manager, () => invoke(C + "find#ServiceRoutes", {appRoot: "CustomerService"}).routing, false)
+        system(() => {
+            route().updateAll({ackTextBlockId: "BOSS_CS_ACK_SUPPORT"})
+            ec.entity
+                .find("moqui.basic.email.EmailTextBlock")
+                .condition("emailTextBlockId", "in", Object.keys(blocks))
+                .deleteAll()
+        })
+        const values = found => Array.from(found.textBlockOptions || []).map(option => option.value)
+        return {routing, offered: values(routing), presentOffered: values(present)}
     },
-    then({routing}) {
+    then({routing, offered, presentOffered}) {
+        offered.includes("CSCH_BLOCK_OWN")
+        offered.includes("CSCH_BLOCK_APP") == false
+        offered.includes("BOSS_CS_REPLY_DETAILS")
+        offered.includes("BOSS_CS_REPLY_FILTERS")
+        offered.includes("BOSS_CS_ACK_SUPPORT")
+        presentOffered.includes("CSCH_BLOCK_APP")
         routing.organizationPartyId == ids.organizationId
         routing.canEdit == false
         routing.routes.some(row => row.serviceRouteId == ids.mailRouteId && row.acknowledge == "Y" && row.queueText == "Support")

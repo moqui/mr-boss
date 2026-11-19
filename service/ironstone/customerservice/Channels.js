@@ -183,10 +183,7 @@ function findRoutes(p) {
                       .list()
               ).map(row => ({value: row.emailIdentityId, label: [row.displayName, row.emailAddress].filter(Boolean).join(" · ")}))
             : [],
-        textBlockOptions: Array.from(blockFind.orderBy("title").limit(100).list()).map(row => ({
-            value: row.emailTextBlockId,
-            label: row.title || row.emailTextBlockId
-        })),
+        textBlockOptions: textBlockOptions(blockFind, routes),
         siteOptions: sites.map(row => ({value: row.siteId, label: row.name || row.siteId})),
         forumCategoryOptions: forumCategories.map(row => ({
             value: row.contactListId,
@@ -198,6 +195,21 @@ function findRoutes(p) {
                     row.contactListId)
         }))
     }
+}
+
+// The acknowledgement text options: the blocks the user may name, and each route's present block, which RouteEdit shows as
+// its value and Mantle's save#ServiceRoute lets that route keep.
+function textBlockOptions(blockFind, routes) {
+    const options = Array.from(blockFind.orderBy("title").limit(100).list()).map(row => ({
+        value: row.emailTextBlockId,
+        label: row.title || row.emailTextBlockId
+    }))
+    for (const emailTextBlockId of new Set(routes.map(route => route.ackTextBlockId).filter(Boolean)))
+        if (!options.some(option => option.value === emailTextBlockId)) {
+            const block = one("moqui.basic.email.EmailTextBlock", {emailTextBlockId})
+            if (block) options.push({value: emailTextBlockId, label: block.title || emailTextBlockId})
+        }
+    return options
 }
 
 // ===== find#ChannelSessions: ChannelSessions SessionFind, SessionList =====
