@@ -164,19 +164,30 @@ feature("an access administrator of one organization gives no every-organization
             })
             return {self, other, plain, grant}
         })
+        // ADMIN holds each of them: it gives the same membership, and invites into the group (Mantle's Invitations.js)
+        const admin = asUser(users.system, () => ({
+            member: invoke(access + "store#Membership", {userGroupId: "BOSS_PEOPLE_ADMIN", userId: ids.retailUserId, reason: "Spec"}),
+            invited: invoke("mantle.party.IdentityServices.invite#User", {emailAddress: "adm.sealed." + Date.now() + "@example.com",
+                firstName: "Sealed", lastName: "Invite", organizationPartyId: ids.organizationId, bundleGroupIdList: ["BOSS_PEOPLE_ADMIN"]})
+        }))
+        Object.assign(result, {admin})
         system(() => {
+            find("moqui.security.UserGroupMember", {userGroupId: "BOSS_PEOPLE_ADMIN", userId: ids.retailUserId}).deleteAll()
+            if (admin.invited?.invitationId) find("mantle.party.UserInvitation", {invitationId: admin.invited.invitationId}).deleteAll()
             find("moqui.security.UserGroupMember", {userGroupId: "BOSS_PEOPLE_READ", userId: "BOSS_ADM_ACCESS"}).deleteAll()
             find("moqui.security.UserGroupMember", {userGroupId: "BOSS_PEOPLE_ADMIN", userId: "BOSS_ADM_ACCESS"}).deleteAll()
             find("moqui.security.UserGroupMember", {userGroupId: "BOSS_SALES_ADMIN", userId: ids.retailUserId}).deleteAll()
         })
         return result
     },
-    then({self, other, plain, grant}) {
+    then({self, other, plain, grant, admin}) {
         self.applied == false && self.reasonCode == "SEALED_PERMISSION" && self.reason.includes("PEOPLE_ALL_ORGANIZATIONS")
         other.applied == false && other.reasonCode == "SEALED_PERMISSION"
         plain.applied == true
         grant.allowed == false
         grant.changeList.some(change => change.id == "PEOPLE_ALL_ORGANIZATIONS" && change.reasonCode == "SEALED_PERMISSION")
+        admin.member.applied == true
+        admin.invited.applied == true
     }
 })
 

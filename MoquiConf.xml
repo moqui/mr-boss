@@ -42,16 +42,6 @@
             <privileged-group name="BOSS_ADMIN_ACCESS"/>
             <privileged-group name="BOSS_ADMIN_BACKUP"/>
             <privileged-group name="BOSS_ADMIN_ADMIN"/>
-            <!-- an app's every-organization reach (SEC-BOS-84): only a holder grants one, or gives a membership of a group that
-                carries it (BOSS_PEOPLE_ADMIN, BOSS_SALES_ADMIN and the other app administrators), so an access administrator of
-                one organization does not widen anyone's scope, their own included -->
-            <sealed-permission name="ACCOUNTING_ALL_ORGANIZATIONS"/>
-            <sealed-permission name="COMMERCE_ALL_ORGANIZATIONS"/>
-            <sealed-permission name="FACILITY_ALL_ORGANIZATIONS"/>
-            <sealed-permission name="MAINTENANCE_ALL_ORGANIZATIONS"/>
-            <sealed-permission name="MARKETING_ALL_ORGANIZATIONS"/>
-            <sealed-permission name="PEOPLE_ALL_ORGANIZATIONS"/>
-            <sealed-permission name="SALES_ALL_ORGANIZATIONS"/>
         </authz>
     </user-facade>
     <screen-facade>
