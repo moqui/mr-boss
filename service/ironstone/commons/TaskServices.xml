@@ -579,7 +579,10 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="check" noun="Project" allow-remote="false">
-        <description>A project (WetProject) the user may put tasks in: one the user may see (get#RecordLinkInfo).</description>
+        <description>A project (WetProject) the user may put tasks in or take them out of: one the user may see
+            (get#RecordLinkInfo) and, as Projects' quickAdd#WorkItem asks, a member of (a current party), or a project of the
+            user's that the user manages as a Projects manager, or any for ADMIN (mantle.work.ProjectServices
+            get#VisibleProjectInfo). Seeing a General or All-users project is not enough (SEC-BOS-110).</description>
         <in-parameters><parameter name="rootWorkEffortId" required="true"/></in-parameters>
         <out-parameters><parameter name="projectName"/></out-parameters>
         <actions><script><![CDATA[
@@ -590,13 +593,22 @@ along with this software (see the LICENSE.md file). If not, see
                 ec.message.addError(ec.resource.expand('Project ${rootWorkEffortId} is not available', '', {rootWorkEffortId: rootWorkEffortId}))
                 return
             }
+            // Projects' rule (WorkItemServices quickAdd#WorkItem): a member, or a Projects manager of a project the user sees
+            const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
+            const may = !!vis.allProjects || Array.from(vis.memberProjectIds || []).includes(rootWorkEffortId)
+                    || (Array.from(vis.visibleProjectIds || []).includes(rootWorkEffortId) && ec.user.isInGroup('BOSS_PROJECT_MANAGER'))
+            if (!may) {
+                ec.message.addError(ec.resource.expand('You may not add tasks to or take them out of project ${name}', '',
+                        {name: project.workEffortName || rootWorkEffortId}))
+                return
+            }
             projectName = project.workEffortName || rootWorkEffortId
         ]]></script></actions>
     </service>
 
     <service verb="get" noun="ProjectOptions">
         <description>The projects of the project drop-downs: open WetProject work efforts the user is a party to or owns, or that are
-            of general visibility, by name.</description>
+            of general visibility, by name, of those check#Project lets the user put tasks in.</description>
         <out-parameters><parameter name="projectList" type="List"><description>key, text</description></parameter></out-parameters>
         <actions><script><![CDATA[
             projectList = []
@@ -616,6 +628,11 @@ along with this software (see the LICENSE.md file). If not, see
             }
             for (const row of ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortTypeEnumId', 'WetProject')
                     .condition('visibilityEnumId', 'WevGeneral').limit(200).list()) add(row)
+            // only those check#Project lets the user put tasks in (SEC-BOS-110)
+            const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
+            const manager = ec.user.isInGroup('BOSS_PROJECT_MANAGER')
+            projectList = projectList.filter((option) => !!vis.allProjects || Array.from(vis.memberProjectIds || []).includes(option.key)
+                    || (manager && Array.from(vis.visibleProjectIds || []).includes(option.key)))
             projectList.sort((left, right) => String(left.text).localeCompare(String(right.text)))
         ]]></script></actions>
     </service>
@@ -868,6 +885,14 @@ along with this software (see the LICENSE.md file). If not, see
                 ec.service.sync().name('ironstone.commons.TaskServices.check#Project').parameters({rootWorkEffortId: rootWorkEffortId}).call()
                 if (ec.message.hasError()) return
             }
+            // a task leaves its project (for another or for none) only by one who may put tasks in it (SEC-BOS-110)
+            const leaveRefusal = (task) => {
+                if (!task.rootWorkEffortId || task.rootWorkEffortId === (rootWorkEffortId || null)) return null
+                // its own transaction, as each task's change: a refusal marks no other task's rollback-only
+                ec.service.sync().name('ironstone.commons.TaskServices.check#Project').parameters({rootWorkEffortId: task.rootWorkEffortId})
+                        .requireNewTransaction(true).call()
+                return ec.message.hasError() ? ec.message.getErrorsString() : null
+            }
             for (const id of ids) {
                 ec.message.pushErrors()
                 let reason = null
@@ -876,6 +901,7 @@ along with this software (see the LICENSE.md file). If not, see
                     if (!access.visible) reason = ec.l10n.localize('not available')
                     else if (!access.canUpdate) reason = ec.l10n.localize('you may not change it')
                     else if (action === 'complete' && ['WeComplete', 'WeClosed'].includes(access.workEffort.statusId)) reason = null
+                    else if (action === 'moveToProject' && (reason = leaveRefusal(access.workEffort))) { /* stays in its project */ }
                     else {
                         let call
                         if (action === 'complete') call = ['ironstone.commons.TaskServices.set#TaskStatus', {workEffortId: id, toStatusId: 'WeComplete'}]
