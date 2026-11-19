@@ -1116,9 +1116,10 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="PublishedCalendar" authenticate="anonymous-view" allow-remote="false">
         <description>
             The events of a published calendar for its public page. The token is checked first. A current link with a
-            password and none given answers needsPassword and no events, without an error, so the page can ask. A wrong
-            password is "The password is not right" and no events. Otherwise mantle.work.CalendarServices.get#PublishedCalendarEvents
-            gives that calendar's events for start and end (yyyy-MM-dd), as Busy when the link is free/busy only.
+            password and none given answers needsPassword and no events, without an error, so the page can ask. Otherwise
+            mantle.work.CalendarServices.get#PublishedCalendarEvents checks the password (each try counted first: "too many tries"
+            past 10 a link or 30 a requester in ten minutes, and "The password is not right" for a wrong one) and gives that
+            calendar's events for start and end (yyyy-MM-dd), as Busy when the link is free/busy only.
         </description>
         <in-parameters>
             <parameter name="token" required="true"/>
@@ -1147,11 +1148,8 @@ along with this software (see the LICENSE.md file). If not, see
             const calendar = ec.entity.find('mantle.work.calendar.Calendar').condition('calendarId', share.calendarId).disableAuthz().one()
             calendarName = calendar?.calendarName ?? null
             color = calendar?.color ?? null
-            if (share.passwordHash) {
-                const given = password == null ? '' : String(password)
-                if (!given) { needsPassword = true; return }
-                if (!ec.user.passwordsMatch(given, share.passwordHash)) { ec.message.addError(L('The password is not right')); return }
-            }
+            // the password is checked once, by Mantle's get#PublishedCalendarEvents, which counts each try first (SEC-BOS-102)
+            if (share.passwordHash && !(password == null ? '' : String(password))) { needsPassword = true; return }
             if (!start || !end) { ec.message.addError(L('Choose the dates to show')); return }
             const out = ec.service.sync().name('mantle.work.CalendarServices.get#PublishedCalendarEvents').parameters({publishToken: tokenText,
                 password: password || null, start: start, end: end}).call()
