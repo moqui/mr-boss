@@ -571,7 +571,7 @@ along with this software (see the LICENSE.md file). If not, see
         <div class="row q-col-gutter-sm">
             <div class="col-12 col-sm-6"><m-text-line v-model="share.linkLabel" name="linkLabel" :label="t('Label (optional)')"></m-text-line></div>
             <div class="col-12 col-sm-6"><m-drop-down v-model="share.linkPermission" name="linkPermission" :options="linkPermissionOptions" :label="t('Visitors may')"></m-drop-down></div>
-            <div class="col-12 col-sm-6"><m-text-line v-model="share.linkPassword" name="linkPassword" type="password" :label="t('Password (optional)')"></m-text-line></div>
+            <div class="col-12 col-sm-6"><m-text-line v-model="share.linkPassword" name="linkPassword" type="password" autocomplete="new-password" :label="t('Password (optional)')"></m-text-line></div>
             <div class="col-12 col-sm-6"><m-date-time v-model="share.linkExpire" name="linkExpire" type="date" :label="t('Until (optional)')"></m-date-time></div>
         </div>
         <div class="row q-mt-sm"><q-btn unelevated no-caps class="m-btn-tonal" icon="sym_o_add_link" :label="t('Make a link')" :loading="share.linkSaving" @click="shareLink"></q-btn></div>

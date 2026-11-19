@@ -40,7 +40,7 @@ along with this software (see the LICENSE.md file). If not, see
     <q-card v-if="state === 'password'" flat bordered style="max-width:440px" class="q-mx-auto">
         <q-card-section>
             <div class="text-subtitle1 q-mb-sm">{{t('This link has a password')}}</div>
-            <div @keydown.enter.prevent="openLink"><m-text-line v-model="password" name="sharePassword" id="SharePassword" type="password" :label="t('Password')"></m-text-line></div>
+            <div @keydown.enter.prevent="openLink"><m-text-line v-model="password" name="sharePassword" id="SharePassword" type="password" autocomplete="current-password" :label="t('Password')"></m-text-line></div>
             <div v-if="passwordError" class="text-negative text-body2 q-mt-xs">{{passwordError}}</div>
             <q-btn unelevated no-caps color="primary" class="q-mt-md" icon="sym_o_lock_open" :label="t('Open')" :loading="opening" :disable="!password" @click="openLink"></q-btn>
         </q-card-section>
