@@ -152,7 +152,28 @@ feature("a folder link's zip is kept and sent again, replaced when the folder ch
             addFile(`spec-zip-${run}-2.txt`)
             const pastBuilds = withConf("resource-facade/drive-share@folder-zip-builds-per-link", "2", () => download())
             const tooLarge = withConf("resource-facade/drive-share@folder-zip-max-bytes", "10", () => download())
-            return { first, firstModified, head, second, secondModified, allowed, refused, changed, firstGone, pastBuilds, tooLarge }
+            // a third requester: the build claim. A build leaves no claim; a live claim answers "being prepared"; a stale one
+            // (a build that died) does not hold the zip back
+            ec.user.context.passRequester = "spec-zip-c-" + run
+            const claims = (prefix) => sys(() => ec.entity.find("moqui.security.public.AccountAttempt")
+                .condition("bucketId", "like", prefix + "%").count())
+            const built = download()
+            const claimId = built.location ? "share-zip-claim:" + built.location.replace(/^.*\//, "").replace(/\.zip$/, "") : "none"
+            const claimsAfterBuild = claims(claimId)
+            const setClaim = (expiresAt) => sys(() => {
+                ec.entity.find("moqui.security.public.AccountAttempt").condition("bucketId", claimId).deleteAll()
+                const row = ec.entity.makeValue("moqui.security.public.AccountAttempt")
+                row.setFields({ bucketId: claimId, attemptCount: 1, expiresAt: new Date(expiresAt) }, true, null, null)
+                row.create()
+                if (built.location) ec.resource.getLocationReference(built.location).delete()
+            })
+            setClaim(Date.now() + 60000)
+            const whileClaimed = download()
+            setClaim(Date.now() - 1000)
+            const afterStale = download()
+            const claimsAfterStale = claims(claimId)
+            return { first, firstModified, head, second, secondModified, allowed, refused, changed, firstGone, pastBuilds, tooLarge, built,
+                claimsAfterBuild, whileClaimed, afterStale, claimsAfterStale }
         } finally {
             ec.user.context.passRequester = null
             sys(() => {
@@ -174,6 +195,10 @@ feature("a folder link's zip is kept and sent again, replaced when the folder ch
         r.firstGone
         r.pastBuilds.errors.includes("Too many downloads of this folder")
         r.tooLarge.errors.includes("too large to download as one zip")
+        r.built.errors == "" && r.claimsAfterBuild == 0
+        r.whileClaimed.errors.includes("being prepared")
+        r.afterStale.errors == "" && r.afterStale.location == r.built.location
+        r.claimsAfterStale == 0
     },
 })
 
