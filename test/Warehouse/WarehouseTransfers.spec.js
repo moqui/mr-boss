@@ -67,3 +67,39 @@ feature("a stock request's detail shows its progress, approval for the stock pol
         home.waitingCount == 0
     }
 })
+
+feature("a stock request's item is added at a RequestDetail mount only by a Warehouse user of its facility (SEC-BAP-116)", {
+    when() {
+        const requestId = asUser("john.doe", () =>
+            invoke("mantle.request.RequestServices.create#Request", {
+                requestTypeEnumId: "RqtInventory",
+                statusId: "ReqDraft",
+                facilityId: "BOSS_WH_EAST",
+                requestName: "SEC-BAP-116 request"
+            }).requestId, false
+        )
+        const add = (username, root) =>
+            asUser(username, () => {
+                const rendered = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/" + root + ".xml")
+                    .render(
+                        (root === "Commons" ? "Requests" : "Transfers") + "/RequestDetail/addStockRequestItem",
+                        {requestId, productId: "BOSS_WH_TRF", quantity: "1"},
+                        "post"
+                    )
+                ec.message.clearErrors()
+                return rendered.status
+            })
+        const items = () =>
+            asUser("john.doe", () => ec.entity.find("mantle.request.RequestItem").condition("requestId", requestId).count(), false)
+        add("purchasing.requester", "Commons")
+        const afterCommons = items()
+        add("warehouse.move", "Warehouse")
+        return {afterCommons, afterWarehouse: items()}
+    },
+    then({afterCommons, afterWarehouse}) {
+        afterCommons == 0
+        afterWarehouse == 1
+    }
+})

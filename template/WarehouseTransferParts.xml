@@ -166,6 +166,13 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="addStockRequestItem">
         <actions>
+            <!-- the request's own Warehouse read, as the transitions around it: a Warehouse user of its facility, while items may
+                be added (SEC-BAP-116); a Commons user at a RequestDetail mount is refused -->
+            <service-call name="ironstone.warehouse.TransferServices.get#StockRequestDetail" out-map="checked"
+                    in-map="{requestId:requestId}"/>
+            <if condition="!checked.requestFound || !checked.stockRequest.canAddItem">
+                <return error="true" message="RECORD_UNAVAILABLE: Stock request ${requestId} is not available"/>
+            </if>
             <service-call name="mantle.request.RequestServices.add#InventoryRequestItem"
                     in-map="{requestId:requestId, productId:productId, quantity:quantity,
                         requiredByDate:requiredByDate || null}"/>
