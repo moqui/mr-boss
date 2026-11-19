@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Customer360's Overview and contacts tab, in the Customer Service context (crosscut §3.2 Customer Service row; design
     Customer360; impl-customer-service P3): the customer's contact mechanisms and the people who are its contacts (each
-    opening Customer Service's ContactDetail), its identifications and tax registrations read only, and its held orders.
+    opening Customer Service's ContactDetail), its identifications (masked, to a RECEIVABLE_EDIT holder only, SEC-BAP-98) and tax registrations read only, and its held orders.
     Payment details never show here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Overview" default-menu-index="1">

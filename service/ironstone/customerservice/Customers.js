@@ -241,11 +241,17 @@ function customer360(p) {
     const read = orders.moneyRead()
     const openInvoices = invoiceRows.filter(row => !row.paid)
     const heldOrders = orderRows.filter(row => row.statusId === "OrderHold")
-    // SEC-BOS-82: Accounting's read of a party's identifications, masked and never a tax one (SSN, FEIN, FUID)
-    const identifications = Array.from(
-        ec.resource
-            .script("component://mr-mantle/service/mantle/account/CustomerFinance.js")
-            .execute("identifications", {partyId: customerPartyId}).identifications
+    // SEC-BOS-82: Accounting's read of a party's identifications, masked and never a tax one (SSN, FEIN, FUID); shown only to
+    // a holder of Accounting's receivable edit (RECEIVABLE_EDIT), as Accounting's finance details are, never to every agent
+    // who serves the customer (SEC-BAP-98)
+    const identifications = (
+        userScope.capabilities.invoiceCredit
+            ? Array.from(
+                  ec.resource
+                      .script("component://mr-mantle/service/mantle/account/CustomerFinance.js")
+                      .execute("identifications", {partyId: customerPartyId}).identifications
+              )
+            : []
     ).map(row => ({
         typeText: cs.enumText(row.partyIdTypeEnumId),
         value: row.valueText,

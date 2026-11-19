@@ -187,6 +187,32 @@ feature(
     }
 )
 
+feature("Customer360 shows a customer's identifications, masked, only to a receivables editor (SEC-BAP-98)", {
+    when() {
+        system(() =>
+            ec.service
+                .sync()
+                .name("store#mantle.party.PartyIdentification")
+                .parameters({partyId: ids.customerId, partyIdTypeEnumId: "PtidPassport", idValue: "CSP98765432"})
+                .call()
+        )
+        const shown = user =>
+            asUser(user, () =>
+                Array.from(invoke(customers + "get#Customer360", {customerPartyId: ids.customerId}).customerDetail.identifications)
+            )
+        return {agent: shown(users.agent), receivables: shown(users.returnsReceivables)}
+    },
+    then({agent, receivables}) {
+        agent == []
+        receivables.length == 1
+        receivables[0].value == "•••• 5432"
+        !JSON.stringify(receivables).includes("CSP98765432")
+    },
+    cleanup() {
+        system(() => ec.entity.find("mantle.party.PartyIdentification").condition({partyId: ids.customerId, partyIdTypeEnumId: "PtidPassport"}).deleteAll())
+    }
+})
+
 feature("a case's linked order opens OrderDetail here, named by its kind", {
     when() {
         const detail = asUser(users.agent, () => invoke(cases + "get#CaseDetail", {requestId: ids.thermostatCaseId}).detail)
