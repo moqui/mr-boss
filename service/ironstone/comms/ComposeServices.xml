@@ -1043,6 +1043,9 @@ along with this software (see the LICENSE.md file). If not, see
                     if (!found.out || !found.out.resource) throw new Error(found.why || L('File not found'))
                     const resource = found.out.resource
                     if (resource.isDirectory || (resource.size != null && Number(resource.size) > Number(maxAttachBytes || 26214400))) {
+                        // a link is the drive's owner's and its managers' (SEC-BOS-106): an editor is told so
+                        const level = Number(own('org.moqui.resource.FileServices.get#DriveAccess', {driveId: item.driveId, path: item.path}).out?.level || 0)
+                        if (level < 3) throw new Error(L('Only a manager of the drive can send this as a link'))
                         const made = own('org.moqui.resource.FileServices.share#Resource', {driveId: item.driveId, path: item.path,
                             isLink: 'Y', permissionEnumId: 'RspView', linkLabel: L('Sent by email')})
                         if (!made.out) throw new Error(resource.isDirectory ? L('A folder is sent as a link, and you may not share this one')

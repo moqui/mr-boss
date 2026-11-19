@@ -168,7 +168,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- the people and groups of the share dialog and the drive members: [{value, label}] -->
     <transition name="shareTargets" read-only="true">
         <actions><script><![CDATA[
-            const out = ec.service.sync().name('ironstone.commons.DriveServices.search#ShareTargets').parameter('term', term || '').call()
+            const out = ec.service.sync().name('ironstone.commons.DriveServices.search#ShareTargets').parameters({term: term || '', driveId: driveId || null,
+                path: path || null}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? [] : (out.optionList || []))
         ]]></script></actions>
         <default-response type="none"/>

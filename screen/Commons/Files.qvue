@@ -557,7 +557,7 @@ along with this software (see the LICENSE.md file). If not, see
     <m-dialog v-model="share.open" :title="t('Share') + ' ' + (share.row ? share.row.name : '')" width="620">
         <div class="text-subtitle2 q-mb-xs">{{t('People and groups')}}</div>
         <div class="row q-col-gutter-sm">
-            <div class="col-12 col-sm-7"><m-drop-down v-model="share.withValue" name="shareWith" server-search :server-min-length="1" :options-url="url('shareTargets')"
+            <div class="col-12 col-sm-7"><m-drop-down v-model="share.withValue" name="shareWith" server-search :server-min-length="1" :options-url="url('shareTargets')" :options-parameters="{ driveId: share.row ? share.row.driveId : '', path: share.row ? share.row.path : '' }"
                     :label="t('Add a person or a group')"></m-drop-down></div>
             <div class="col-12 col-sm-5"><m-drop-down v-model="share.permission" name="sharePermission" :options="sharePermissionOptions" :label="t('May')"></m-drop-down></div>
             <div class="col-12 col-sm-5"><m-date-time v-model="share.expire" name="shareExpire" type="date" :label="t('Until (optional)')"></m-date-time></div>
@@ -574,6 +574,9 @@ along with this software (see the LICENSE.md file). If not, see
         </q-list>
         <q-separator class="q-my-md"></q-separator>
         <div class="text-subtitle2 q-mb-xs">{{t('Link')}}</div>
+        <!-- a link is the drive's owner's and its managers' (SEC-BOS-106): an editor sees why there is none to make -->
+        <div v-if="share.level != null && share.level < 3" class="text-caption m-muted q-mb-sm" data-state="link-managers-only">{{t('Only a manager of the drive makes a link.')}}</div>
+        <template v-else>
         <div class="text-caption m-muted q-mb-sm">{{t('Anyone with the link can open it, without signing in. Add a password and an end date for anything private.')}}</div>
         <div class="row q-col-gutter-sm">
             <div class="col-12 col-sm-6"><m-text-line v-model="share.linkLabel" name="linkLabel" :label="t('Label (optional)')"></m-text-line></div>
@@ -582,6 +585,7 @@ along with this software (see the LICENSE.md file). If not, see
             <div class="col-12 col-sm-6"><m-date-time v-model="share.linkExpire" name="linkExpire" type="date" :label="t('Until (optional)')"></m-date-time></div>
         </div>
         <div class="row q-mt-sm"><q-btn unelevated no-caps class="m-btn-tonal" icon="sym_o_add_link" :label="t('Make a link')" :loading="share.linkSaving" @click="shareLink"></q-btn></div>
+        </template>
         <q-banner v-if="share.newLink" dense rounded class="m-tonal text-positive q-mt-sm">
             <div class="text-caption">{{t('Copy the link now: it is shown only once.')}}</div>
             <div class="text-body2" style="word-break:break-all">{{share.newLink}}</div>
@@ -1477,7 +1481,7 @@ module.exports = {
             if (!row) return;
             const target = Object.assign({ driveId: this.rowDriveId(row) }, row);
             this.share = { open: true, row: target, withValue: null, permission: 'RspView', expire: '', note: '', saving: false, linkLabel: '', linkPermission: 'RspView',
-                linkPassword: '', linkExpire: '', linkSaving: false, newLink: null, shareList: [], linkList: [] };
+                linkPassword: '', linkExpire: '', linkSaving: false, newLink: null, shareList: [], linkList: [], level: null };
             this.loadShares();
         },
         loadShares() {
@@ -1486,6 +1490,7 @@ module.exports = {
                 const json = result.json || {};
                 this.share.shareList = json.shareList || [];
                 this.share.linkList = json.linkList || [];
+                this.share.level = json.access ? json.access.level : null;
             }, () => {});
         },
         sharePeople() {
