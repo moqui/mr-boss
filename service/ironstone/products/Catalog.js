@@ -434,10 +434,10 @@ function run(op, parameters) {
                 const location = String(data.contentLocation || "")
                 const copied =
                     location && (content.owned(row, contentConfig) || (location.startsWith(legacyFolder) && !location.split("/").includes("..")))
-                // a download or Shop text whose file is outside the base product's folder is not copied: create#ProductContent
-                // would refuse its location
-                const checked = data.productContentTypeEnumId === "PcntDownload" || content.shopTextTypes.includes(data.productContentTypeEnumId)
-                if (location && !copied && checked) {
+                // a row of any type whose file is outside the base product's folder is not copied (create#ProductContent would
+                // refuse its location, SEC-BAP-138), but for an image of a component or the content store a staff screen streams
+                // where it is (Content.js served, the demo's images), which the copy names as it is
+                if (location && !copied && !content.served(row, contentConfig)) {
                     warnings.push("Content " + row.productContentId + " is outside its product's folder: add it to the copy separately")
                     continue
                 }

@@ -432,7 +432,9 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="RecordFile">
         <description>One file of the record by its contentKey: the content row, which must be the record's, its location and
             file name, and whether it may show inline (a raster image or a PDF; anything else, SVG and HTML among them, only
-            downloads, so no script of an uploaded file runs in the app's origin).</description>
+            downloads, so no script of an uploaded file runs in the app's origin). A product's or category's row whose location is
+            neither its record's own content folder nor an image of a component or the content store is not available
+            (Content.js served, SEC-BAP-138).</description>
         <in-parameters>
             <parameter name="recordEntityName" required="true"/>
             <parameter name="recordId" required="true"/>
@@ -478,6 +480,14 @@ along with this software (see the LICENSE.md file). If not, see
                 if ((contentType.protectedContentIds || []).includes(String(contentRow.workEffortContentId)))
                     contentType = Object.assign({}, contentType, {catalogCanChange: false})
                 contentLocation = row.contentLocation ? String(row.contentLocation) : null
+                // a product's or category's file only from its record's own content folder, or an image of a component or the
+                // content store (Mantle's Content.js served, SEC-BAP-138): a row written with another location before is not read
+                const catalogKinds = {'mantle.product.ProductContent': 'product', 'mantle.product.category.ProductCategoryContent': 'category'}
+                if (contentLocation && Object.hasOwn(catalogKinds, contentType.entityName)) {
+                    const catalog = ec.resource.script('component://mr-mantle/service/mantle/product/Content.js')
+                    if (!catalog.served(contentRow, catalog.config({recordKind: catalogKinds[contentType.entityName]}))) {
+                        ec.message.addError(ec.l10n.localize('File is not available')); return }
+                }
                 const last = contentLocation ? contentLocation.substring(contentLocation.lastIndexOf('/') + 1) : null
                 try { fileName = last ? decodeURIComponent(last) : null } catch (err) { fileName = last }
                 inlineAllowed = !!fileName && /\.(png|jpe?g|gif|webp|pdf)$/i.test(fileName)

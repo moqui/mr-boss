@@ -358,6 +358,16 @@ feature("clone preserves scoped IDs and independently copied document bytes, met
                 intervalUomId: "LEN_km",
                 intervalProductMeterId: meter.productMeterId
             })
+            // rows of the base written with an outside location (SEC-BAP-138): a conf file is left out of the copy, with a warning;
+            // a component's image, which a staff screen streams where it is, is named as it is
+            for (const [productContentId, contentLocation] of [
+                ["PRD_P2_CONF", "component://mr-mantle/MoquiConf.xml"],
+                ["PRD_P2_IMAGE", "component://mr-marble/screen/ssstatic/images/Sales.png"]
+            ])
+                ec.entity
+                    .makeValue("mantle.product.ProductContent")
+                    .setAll({productContentId, productId: created.productId, productContentTypeEnumId: "PcntImageSmall", contentLocation})
+                    .create()
             const cloned = invoke(C + "clone#Product", {
                 baseProductId: created.productId,
                 productId: "PRD_P2_EQUIPMENT_COPY",
@@ -367,6 +377,9 @@ feature("clone preserves scoped IDs and independently copied document bytes, met
             })
             const detail = invoke(C + "get#ProductDetail", {productId: cloned.productId}).detail
             const original = invoke(C + "get#ProductDetail", {productId: created.productId}).detail
+            const copiedLocations = Array.from(
+                ec.entity.find("mantle.product.ProductContent").condition("productId", "PRD_P2_EQUIPMENT_COPY").list()
+            ).map(row => row.contentLocation)
             return {
                 created,
                 scoped,
@@ -376,6 +389,8 @@ feature("clone preserves scoped IDs and independently copied document bytes, met
                 cloned,
                 detail,
                 original,
+                copiedLocations,
+                warned: JSON.stringify(cloned.warnings ?? []),
                 text: detail?.contentRows[0]
                     ? ec.resource.getLocationReference(detail.contentRows[0].contentLocation).getText()
                     : null,
@@ -386,7 +401,10 @@ feature("clone preserves scoped IDs and independently copied document bytes, met
             }
         })
     },
-    then({created, scoped, content, meter, maintenance, cloned, detail, original, text, folder}) {
+    then({created, scoped, content, meter, maintenance, cloned, detail, original, copiedLocations, warned, text, folder}) {
+        warned.includes("Content PRD_P2_CONF is outside")
+        !copiedLocations.includes("component://mr-mantle/MoquiConf.xml")
+        copiedLocations.includes("component://mr-marble/screen/ssstatic/images/Sales.png")
         ;[created, scoped, content, meter, maintenance, cloned].every(out => out.error == "")
         detail.otherIdentifierRows.length == 1
         detail.otherIdentifierRows[0].idValue != "P2-SCOPED"
