@@ -897,8 +897,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="search" noun="CalendarEvents">
         <description>The calendar's search: events (not cancelled) whose name or location has the text and that the user owns, is
-            on, or that are in one of the user's calendars, upcoming first then the most recent past ones, at most 40, each with
-            its start day to go to.</description>
+            on, or that are in one of the user's calendars (an event only the people on it see when the user may open it,
+            check#EventAccess), upcoming first then the most recent past ones, at most 40, each with its start day to go to.</description>
         <in-parameters>
             <parameter name="text" required="true"/>
             <parameter name="calendarIds" type="Object"/>
@@ -929,7 +929,18 @@ along with this software (see the LICENSE.md file). If not, see
             if (!ids.size) return
             const nowMs = Number(String(ec.user.nowTimestamp))
             const toMillis = (value) => value == null || value === '' ? null : (/^-?\d+$/.test(String(value)) ? Number(String(value)) : Date.parse(String(value)))
+            // an event only the people on it see is found only by one who may open it (check#EventAccess: not a viewer of its
+            // calendar who is not on it, SEC-BOS-107)
+            const opens = (row) => {
+                if (!['WevRestricted', 'WevConfidential'].includes(row.visibilityEnumId)) return true
+                ec.message.pushErrors()
+                try {
+                    return !!ec.service.sync().name('mantle.work.EventServices.check#EventAccess').parameters({workEffortId: row.workEffortId, permission: 'none'})
+                            .call()?.canView
+                } catch (err) { return false } finally { ec.message.clearErrors(); ec.message.popErrors() }
+            }
             const rows = Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition(cf.makeCondition('workEffortId', 'in', Array.from(ids))).list())
+                    .filter(opens)
             const recurring = new Set(Array.from(ec.entity.find('mantle.work.effort.WorkEffortRecurrence').condition(cf.makeCondition('workEffortId', 'in', Array.from(ids)))
                     .selectField('workEffortId').list()).map((row) => row.workEffortId))
             const items = rows.map((row) => {
