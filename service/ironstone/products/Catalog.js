@@ -420,8 +420,8 @@ function run(op, parameters) {
             }
         }
         if (p.copyContent === true || p.copyContent === "Y") {
-            // a copied file goes in the new product's own content folder, where Shop reads a name or description and serves a
-            // download (mantle Content.js owned, SEC-PSS-82), and the row is made through create#ProductContent, which checks it
+            // a copied file goes in the new product's own content folder, content_<the new row's id>, where Shop reads a name or
+            // description and serves a download (mantle Content.js owned, SEC-PSS-82): the row is made first, then its file
             const content = ec.resource.script("component://mr-mantle/service/mantle/product/Content.js"),
                 contentConfig = content.config({}),
                 contentRoot = String(ec.factory.getConfValue("mantle@content-root") || "dbresource://mantle/content").replace(/\/+$/, ""),
@@ -432,27 +432,28 @@ function run(op, parameters) {
                 delete data.lastUpdatedStamp
                 data.productId = id
                 const location = String(data.contentLocation || "")
-                if (location && (content.owned(row, contentConfig) || (location.startsWith(legacyFolder) && !location.split("/").includes("..")))) {
-                    const target =
-                        contentRoot + "/product/" + id + "/content_" + row.productContentId + "/" + content.safeName(location.split("/").pop())
-                    const stream = ec.resource.getLocationReference(location).openStream()
-                    try {
-                        ec.resource.getLocationReference(target).putStream(stream)
-                    } finally {
-                        if (stream) stream.close()
-                    }
-                    data.contentLocation = target
-                }
+                const copied =
+                    location && (content.owned(row, contentConfig) || (location.startsWith(legacyFolder) && !location.split("/").includes("..")))
                 // a download or Shop text whose file is outside the base product's folder is not copied: create#ProductContent
-                // refuses its location, and the refusal would roll the whole copy back
+                // would refuse its location
                 const checked = data.productContentTypeEnumId === "PcntDownload" || content.shopTextTypes.includes(data.productContentTypeEnumId)
-                if (data.contentLocation && checked && !content.owned({productId: id}, contentConfig, data.contentLocation)) {
+                if (location && !copied && checked) {
                     warnings.push("Content " + row.productContentId + " is outside its product's folder: add it to the copy separately")
                     continue
                 }
-                // a row with no file (its text in description) is made as it is: create#ProductContent would give it a placeholder file
-                if (data.contentLocation) call(P + "ProductServices.create#ProductContent", data, true)
-                else call("create#" + P + "ProductContent", data, true)
+                if (copied) data.contentLocation = null
+                const newId = call("create#" + P + "ProductContent", data, true).productContentId
+                if (!copied) continue
+                const target =
+                    contentRoot + "/product/" + id + "/content_" + newId + "/" + content.safeName(location.split("/").pop())
+                if (!content.owned({productId: id}, contentConfig, target)) throw new Error("A copied file's place is not its product's folder")
+                const stream = ec.resource.getLocationReference(location).openStream()
+                try {
+                    ec.resource.getLocationReference(target).putStream(stream)
+                } finally {
+                    if (stream) stream.close()
+                }
+                call("update#" + P + "ProductContent", {productContentId: newId, contentLocation: target}, true)
             }
         }
         return {productId: id, warnings}

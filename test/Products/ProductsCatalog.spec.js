@@ -394,7 +394,7 @@ feature("clone preserves scoped IDs and independently copied document bytes, met
         detail.maintenanceRows[0].intervalProductMeterId == detail.meterRows[0].productMeterId
         detail.contentRows[0].contentLocation != original.contentRows[0].contentLocation
         text == "Independent clone document"
-        String(detail.contentRows[0].contentLocation).startsWith(folder)
+        String(detail.contentRows[0].contentLocation).startsWith(folder + "content_" + detail.contentRows[0].productContentId + "/")
     }
 })
 
