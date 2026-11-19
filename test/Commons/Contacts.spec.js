@@ -661,3 +661,44 @@ feature("Print: Mary Doe's contact card and the contact sheet of the find; anoth
         stranger.output.includes("This contact is not available")
     },
 })
+
+feature("a contact admin neither makes nor ends a staff relationship of an internal organization, nor changes the organization; Admin's settings manager does (SEC-BOS-89)", {
+    allowMessageErrors: true,
+    when() {
+        // Joe Developer as a contact admin for the moment
+        sys(() => call("create#moqui.security.UserGroupMember", { userGroupId: "BOSS_CONTACT_ADMIN", userId: "ORG_ZIZI_JD", fromDate: ec.user.nowTimestamp }))
+        try {
+            return as("joe.developer", () => ({
+                staffAdd: post("Contacts/ContactDetail/contactRelationshipAdd", { partyId: "ORG_ACME_BA", otherPartyId: "ORG_ZIZI_SERVICES",
+                    relationshipTypeEnumId: "PrtEmployee", direction: "to" }),
+                staffEnd: post("Contacts/ContactDetail/contactOrganization", { partyId: "ORG_ZIZI_JD", partyRelationshipId: "ORG_ZIZI_JD_EMP", thruNow: "true" }),
+                orgUpdate: post("Contacts/ContactDetail/contactUpdate", { partyId: "ORG_ZIZI_SERVICES", organizationName: "Ziziwork Renamed" }),
+                // an ordinary relationship stays the contact admin's
+                friend: post("Contacts/ContactDetail/contactRelationshipAdd", { partyId: "ORG_ACME_BA", otherPartyId: "ORG_ZIZI_JD",
+                    relationshipTypeEnumId: "PrtFriend", direction: "to" }),
+                employment: one("mantle.party.PartyRelationship", { partyRelationshipId: "ORG_ZIZI_JD_EMP" }),
+                madeStaff: current("mantle.party.PartyRelationship", { fromPartyId: "ORG_ACME_BA", toPartyId: "ORG_ZIZI_SERVICES", relationshipTypeEnumId: "PrtEmployee" }).length,
+                name: one("mantle.party.Organization", { partyId: "ORG_ZIZI_SERVICES" }).organizationName
+            }))
+        } finally {
+            sys(() => {
+                ec.entity.find("moqui.security.UserGroupMember").condition({ userGroupId: "BOSS_CONTACT_ADMIN", userId: "ORG_ZIZI_JD" }).deleteAll()
+                ec.entity.find("mantle.party.PartyRelationship").condition({ fromPartyId: "ORG_ACME_BA", toPartyId: "ORG_ZIZI_JD", relationshipTypeEnumId: "PrtFriend" }).deleteAll()
+            })
+        }
+    },
+    then({ staffAdd, staffEnd, orgUpdate, friend, employment, madeStaff, name }) {
+        staffAdd.errors.includes("made in Admin")
+        madeStaff == 0
+        staffEnd.errors.includes("changed in Admin")
+        employment.thruDate == null
+        orgUpdate.errors.includes("You may not change contact ORG_ZIZI_SERVICES")
+        name == "Ziziwork Services"
+        friend.errors == ""
+    },
+})
+
+feature("john.doe, who manages the settings of every organization, changes an internal organization's record in Commons (SEC-BOS-89)", {
+    when() { return post("Contacts/ContactDetail/contactUpdate", { partyId: "ORG_ZIZI_SERVICES", organizationName: "Ziziwork Services" }) },
+    then(updated) { updated.errors == "" },
+})

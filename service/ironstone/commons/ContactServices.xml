@@ -35,7 +35,9 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="check" noun="ContactAccess" allow-remote="false">
         <description>A party as the current user may see it (the entity filters, and a personal contact only its owner's) and
             what the user may do with it. With need (view, edit or delete) an error when the user may not; a party the user may
-            not see is "not found". Who may change a directory party (canEdit, need edit): a contact admin. Who may change its
+            not see is "not found". Who may change a directory party (canEdit, need edit): a contact admin; an internal
+            organization (OrgInternal) only a holder of ADMIN_SETTINGS_MANAGE who administers it (Mantle's identity scope,
+            Identity.js scope: Admin's OrganizationDetail rule, SEC-BOS-89). Who may change its
             identity and channels alone (canEditIdentity, need identity: the names, emails, phones, websites and addresses), besides
             them: (Sales owner contract, impl-sales P3 review and P4, F98; the user's calls of Nov 13, 2026) a holder of
             SALES_ACCOUNT_EDIT for a person owned by an organization of their sales scope (never a shared, _NA_, person) who is a
@@ -74,6 +76,13 @@ along with this software (see the LICENSE.md file). If not, see
                 isSelf = !!userId && ec.user.userAccount?.partyId === partyId
                 isDisabled = found.disabled === 'Y'
                 canEdit = !isDisabled && (isMine || (!isPersonal && isContactAdmin))
+                // an internal organization's own record is Admin's (SEC-BOS-89): its configuration administrator in scope alone
+                if (canEdit && !isPersonal && ec.entity.find('mantle.party.PartyRole').condition({partyId: partyId, roleTypeId: 'OrgInternal'})
+                        .disableAuthz().count() > 0) {
+                    const settingsManager = ec.resource.script('component://mr-mantle/service/mantle/product/ProductAccess.js').has('ADMIN_SETTINGS_MANAGE')
+                    const identityScope = settingsManager ? ec.resource.script('component://mr-mantle/service/mantle/party/Identity.js').scope() : null
+                    canEdit = !!identityScope && (identityScope.all || identityScope.organizationIds.includes(partyId))
+                }
                 // Sales (owner contract, F98): an account editor changes the identity and channels alone (canEditIdentity) of a
                 // person of an organization of their scope who is a contact of an account of such an organization, with Commons' own
                 // forms; a shared (_NA_) person or account, and a person with a user account (a login's email and name), stay the
@@ -514,7 +523,11 @@ along with this software (see the LICENSE.md file). If not, see
                 const other = visibleParty(outgoing ? rel.toPartyId : rel.fromPartyId)
                 if (other == null) continue
                 const type = enumText(rel.relationshipTypeEnumId)
-                const row = {partyRelationshipId: rel.partyRelationshipId, relationshipTypeEnumId: rel.relationshipTypeEnumId,
+                // a staff relationship is Admin's to change (SEC-BOS-89): shown, with no action here
+                const staff = ['PrtAgent', 'PrtEmployee', 'PrtMember', 'PrtRepresentative'].includes(rel.relationshipTypeEnumId)
+                        && ec.service.sync().name('ironstone.commons.ContactServices.check#StaffRelationship').parameters({relationshipTypeEnumId:
+                            rel.relationshipTypeEnumId, fromPartyId: rel.fromPartyId, toPartyId: rel.toPartyId}).call()?.isStaff === true
+                const row = {partyRelationshipId: rel.partyRelationshipId, relationshipTypeEnumId: rel.relationshipTypeEnumId, staff: staff,
                     otherPartyId: other.partyId, otherName: nameOf(other), otherIsOrganization: other.partyTypeEnumId === 'PtyOrganization',
                     otherIsPersonal: !!other.privateOwnerUserId, outgoing: outgoing,
                     // the type describes the from party: Joe is a Contact of Acme (outgoing), Manager: Bob (incoming)
@@ -524,7 +537,7 @@ along with this software (see the LICENSE.md file). If not, see
                 relationshipList.push(row)
                 if (!isOrg && outgoing && !row.expired && row.otherIsOrganization && ['PrtContact', 'PrtEmployee'].includes(rel.relationshipTypeEnumId))
                     organizationList.push({partyRelationshipId: rel.partyRelationshipId, organizationPartyId: other.partyId, organizationName: row.otherName,
-                        jobTitle: rel.relationshipName ?? null, relationshipTypeEnumId: rel.relationshipTypeEnumId, typeLabel: type})
+                        jobTitle: rel.relationshipName ?? null, relationshipTypeEnumId: rel.relationshipTypeEnumId, typeLabel: type, staff: staff})
             }
 
             // the user's books that hold the party, with their groups; the others the user may edit
@@ -713,7 +726,9 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="store" noun="ContactOrganization">
         <description>A person's organization and title: with partyRelationshipId the title (relationshipName) of that current
             PrtContact or PrtEmployee relationship; with organizationPartyId (an organization the user may see) a new PrtContact
-            relationship, or the title of the current one to it. thruNow ends the relationship given.</description>
+            relationship, or the title of the current one to it. thruNow ends the relationship given. A staff relationship (an
+            agent, employee, member or representative of an internal organization or a unit of one, SEC-BOS-89) is not changed or
+            ended here: it is the identity administrators' (mantle.party.IdentityServices.store#OrganizationMembership).</description>
         <in-parameters>
             <parameter name="partyId" required="true"/>
             <parameter name="partyRelationshipId"/>
@@ -728,6 +743,9 @@ along with this software (see the LICENSE.md file). If not, see
             if (partyRelationshipId) {
                 const rel = ec.entity.find('mantle.party.PartyRelationship').condition('partyRelationshipId', partyRelationshipId).one()
                 if (rel == null || (rel.fromPartyId !== partyId && rel.toPartyId !== partyId)) { ec.message.addError(ec.l10n.localize('Relationship not found')); return }
+                if (ec.service.sync().name('ironstone.commons.ContactServices.check#StaffRelationship').parameters({relationshipTypeEnumId: rel.relationshipTypeEnumId,
+                        fromPartyId: rel.fromPartyId, toPartyId: rel.toPartyId}).call()?.isStaff) {
+                    ec.message.addError(ec.l10n.localize('A staff relationship of an internal organization is changed in Admin, as an organization membership')); return }
                 if (thruNow) rel.set('thruDate', ec.user.nowTimestamp)
                 else rel.set('relationshipName', jobTitle ? String(jobTitle).trim() : null)
                 rel.update()
@@ -754,7 +772,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="add" noun="ContactRelationship">
         <description>A relationship of a contact the user may change to another party the user may see: the contact is the
             from party (the type describes it: Joe is a Contact of Acme) unless reverse; a directory party is not related to a
-            personal contact.</description>
+            personal contact. A staff relationship (check#StaffRelationship, SEC-BOS-89) is refused: it is made in Admin, as an
+            organization membership (mantle.party.IdentityServices.store#OrganizationMembership).</description>
         <in-parameters>
             <parameter name="partyId" required="true"/>
             <parameter name="otherPartyId" required="true"/>
@@ -772,9 +791,45 @@ along with this software (see the LICENSE.md file). If not, see
             if (!access.isPersonal && other.isPersonal) { ec.message.addError(ec.l10n.localize('A directory contact cannot be related to one of your personal contacts')); return }
             const type = ec.entity.find('moqui.basic.Enumeration').condition('enumId', relationshipTypeEnumId).condition('enumTypeId', 'PartyRelationshipType').useCache(true).one()
             if (type == null) { ec.message.addError(ec.resource.expand('Unknown relationship type ${id}', '', {id: relationshipTypeEnumId})); return }
+            if (ec.service.sync().name('ironstone.commons.ContactServices.check#StaffRelationship').parameters({relationshipTypeEnumId: relationshipTypeEnumId,
+                    fromPartyId: reverse ? otherPartyId : partyId, toPartyId: reverse ? partyId : otherPartyId}).call()?.isStaff) {
+                ec.message.addError(ec.l10n.localize('A staff relationship of an internal organization is made in Admin, as an organization membership')); return }
             partyRelationshipId = ec.service.sync().name('create#mantle.party.PartyRelationship').parameters({relationshipTypeEnumId: relationshipTypeEnumId,
                 fromPartyId: reverse ? otherPartyId : partyId, toPartyId: reverse ? partyId : otherPartyId,
                 relationshipName: relationshipName ? String(relationshipName).trim() : null, fromDate: ec.user.nowTimestamp}).call()?.partyRelationshipId
+        ]]></script></actions>
+    </service>
+
+    <service verb="check" noun="StaffRelationship" allow-remote="false">
+        <description>Whether a relationship is a staff relationship (SEC-BOS-89): an agent, employee, member or representative
+            (PrtAgent, PrtEmployee, PrtMember, PrtRepresentative) of a party that is an internal organization (OrgInternal) or a unit
+            whose PrtOrgRollup root is one (a department, a team), either way round. Those are the relationships that make a person
+            an organization's staff (get#PartyInternalOrgIds, Mantle's identity scope and reach), so Commons neither makes, changes
+            nor ends one; Admin does, through mantle.party.IdentityServices.store#OrganizationMembership.</description>
+        <in-parameters>
+            <parameter name="relationshipTypeEnumId" required="true"/>
+            <parameter name="fromPartyId"/>
+            <parameter name="toPartyId"/>
+        </in-parameters>
+        <out-parameters><parameter name="isStaff" type="Boolean"/></out-parameters>
+        <actions><script><![CDATA[
+            isStaff = false
+            if (!['PrtAgent', 'PrtEmployee', 'PrtMember', 'PrtRepresentative'].includes(relationshipTypeEnumId)) return
+            const internal = (id) => !!id && ec.entity.find('mantle.party.PartyRole').condition({partyId: id, roleTypeId: 'OrgInternal'}).disableAuthz().count() > 0
+            // the party, or up its current PrtOrgRollup parents (child to parent), at most ten levels
+            const underInternal = (id) => {
+                let at = id
+                for (let depth = 0; at && depth < 10; depth++) {
+                    if (internal(at)) return true
+                    const parent = Array.from(ec.entity.find('mantle.party.PartyRelationship').condition('fromPartyId', at)
+                            .condition('relationshipTypeEnumId', 'PrtOrgRollup').conditionDate('fromDate', 'thruDate', null)
+                            .selectField('toPartyId').disableAuthz().list())[0]?.toPartyId
+                    if (!parent || parent === at) return false
+                    at = parent
+                }
+                return false
+            }
+            isStaff = underInternal(toPartyId) || underInternal(fromPartyId)
         ]]></script></actions>
     </service>
 

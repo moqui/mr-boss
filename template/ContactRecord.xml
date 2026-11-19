@@ -670,7 +670,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                         <field name="organizationName"><default-field title="Organization">
                                                             <link url="." link-type="anchor" text="${organizationName}" parameter-map="{partyId:organizationPartyId}"/></default-field></field>
                                                         <field name="jobTitle"><default-field title="Title"><display/></default-field></field>
-                                                        <field name="rowActions" align="right"><conditional-field condition="canEdit" title="">
+                                                        <field name="rowActions" align="right"><conditional-field condition="canEdit &amp;&amp; !staff" title="">
                                                             <container style="row no-wrap justify-end items-center">
                                                                 <container-dialog id="ContactTitleDialog" button-text="" icon="sym_o_edit" width="480" title="Title at ${organizationName}" tooltip="Change the title">
                                                                     <form-single name="ContactTitleEdit" transition="contactOrganization">
@@ -720,7 +720,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                         <link url="." link-type="anchor" text="${description}" parameter-map="{partyId:otherPartyId}" style="${expired ? 'text-strike' : ''}"/></default-field></field>
                                                     <field name="relationshipName"><default-field title="Name"><display/></default-field></field>
                                                     <field name="fromDate"><default-field title="Since"><display style="text-caption m-muted text-no-wrap"/></default-field></field>
-                                                    <field name="rowActions" align="right"><conditional-field condition="canEdit &amp;&amp; !expired" title="">
+                                                    <field name="rowActions" align="right"><conditional-field condition="canEdit &amp;&amp; !expired &amp;&amp; !staff" title="">
                                                         <link url="contactOrganization" link-type="hidden-form-link" icon="sym_o_link_off" text="" tooltip="End" style="m-btn-flat"
                                                                 confirmation="End: ${description}?" parameter-map="{partyId:recordPartyId, partyRelationshipId:partyRelationshipId, thruNow:'true'}"/>
                                                     </conditional-field><default-field title=""><display text=""/></default-field></field>
