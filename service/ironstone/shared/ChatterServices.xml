@@ -492,9 +492,10 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
 
     <service verb="clean" noun="Html" allow-remote="false">
-        <description>HTML as an allow-html="safe" parameter keeps it (the framework's ammonia list plus data-mention-id): the body
-            of a message or note before the panel shows it.</description>
-        <in-parameters><parameter name="html" allow-html="safe"/></in-parameters>
+        <description>HTML as an allow-html="app" parameter keeps it (the framework's ammonia list plus data-mention-id, and an image
+            only from this server, SEC-CLI-82: an outside one would tell its host who read it and when): the body of a message,
+            note or email before the panel shows it.</description>
+        <in-parameters><parameter name="html" allow-html="app"/></in-parameters>
         <out-parameters><parameter name="html"/></out-parameters>
         <actions><script>html = html || ''</script></actions>
     </service>
@@ -797,7 +798,7 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters>
             <parameter name="recordEntityName" required="true"/>
             <parameter name="recordId" required="true"/>
-            <parameter name="body" required="true" allow-html="safe"/>
+            <parameter name="body" required="true" allow-html="app"/>
             <parameter name="subject"/>
             <parameter name="parentCommEventId"/>
             <parameter name="recordUrl"/>
@@ -835,7 +836,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="recordId" required="true"/>
             <parameter name="toUserIds" type="Object"/>
             <parameter name="subject"/>
-            <parameter name="body" required="true" allow-html="safe"/>
+            <parameter name="body" required="true" allow-html="app"/>
             <parameter name="recordUrl"/>
         </in-parameters>
         <out-parameters><parameter name="communicationEventId"/><parameter name="message"/></out-parameters>
@@ -915,7 +916,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="recordEntityName" required="true"/>
             <parameter name="recordId" required="true"/>
             <parameter name="parentCommEventId" required="true"/>
-            <parameter name="body" required="true" allow-html="safe"/>
+            <parameter name="body" required="true" allow-html="app"/>
             <parameter name="recordUrl"/>
         </in-parameters>
         <out-parameters><parameter name="communicationEventId"/><parameter name="message"/></out-parameters>
@@ -985,7 +986,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="recordEntityName" required="true"/>
             <parameter name="recordId" required="true"/>
             <parameter name="communicationEventId" required="true"/>
-            <parameter name="body" required="true" allow-html="safe"/>
+            <parameter name="body" required="true" allow-html="app"/>
             <parameter name="recordUrl"/>
         </in-parameters>
         <out-parameters><parameter name="mentionedUserIds" type="List"/><parameter name="message"/></out-parameters>
@@ -1126,7 +1127,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="recordEntityName" required="true"/>
             <parameter name="recordId" required="true"/>
             <parameter name="workEffortId" required="true"/>
-            <parameter name="feedback" allow-html="safe"/>
+            <parameter name="feedback" allow-html="app"/>
             <parameter name="nextActivityType"/>
             <parameter name="nextName"/>
             <parameter name="nextDueDate" type="Timestamp"/>

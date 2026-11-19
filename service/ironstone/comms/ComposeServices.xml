@@ -435,8 +435,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (addressParties.length) for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', addressParties).condition(visible)
                     .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true)).list()) names[party.partyId] = nameOf(party)
             // another organization's staff only when the user may see that organization (filter#VisibleParties, SEC-BOS-99)
-            const partyIds = Object.keys(names).length ? Array.from(ec.service.sync().name('mantle.party.PartyServices.filter#VisibleParties')
-                    .parameter('partyIdList', Object.keys(names)).call()?.visiblePartyIdList || []) : []
+            const partyIds = Object.keys(names).length ? Array.from(ec.resource.script('component://mr-mantle/service/mantle/party/PartyReach.js').visibleParties(Object.keys(names), false) || []) : []
             if (partyIds.length) for (const row of ec.entity.find('mantle.party.contact.PartyContactMechInfo').condition('partyId', 'in', partyIds)
                     .condition('contactMechTypeEnumId', 'CmtEmailAddress').condition(cf.makeConditionDate('fromDate', 'thruDate', null))
                     .selectField('partyId').selectField('infoString').disableAuthz().list()) {
@@ -456,8 +455,8 @@ along with this software (see the LICENSE.md file). If not, see
                             .selectField('userId').selectField('partyId').selectField('emailAddress').selectField('userFullName')
                             .orderBy('username').offset(pageIndex * pageSize).limit(pageSize).list())
                     if (!accounts.length) break
-                    const seenParties = new Set(Array.from(ec.service.sync().name('mantle.party.PartyServices.filter#VisibleParties')
-                            .parameter('partyIdList', accounts.map((account) => account.partyId)).call()?.visiblePartyIdList || []))
+                    const seenParties = new Set(Array.from(ec.resource.script('component://mr-mantle/service/mantle/party/PartyReach.js')
+                            .visibleParties(accounts.map((account) => account.partyId), false) || []))
                     const shown = accounts.filter((account) => seenParties.has(account.partyId))
                     const checked = shown.length ? ec.service.sync().name('org.moqui.chat.ChatServices.get#RefusedUsers')
                             .parameters({userIdList: shown.map((account) => account.userId), hook: 'chat-target'}).call() : null
@@ -602,13 +601,13 @@ along with this software (see the LICENSE.md file). If not, see
             for (const account of ec.entity.find('moqui.security.UserAccount').condition('userId', 'in', ids)
                     .selectField('userId').selectField('partyId').disableAuthz().list()) partyOf[account.userId] = account.partyId || null
             const partyIds = Array.from(new Set(Object.values(partyOf).filter((id) => id)))
-            const visible = cf.makeCondition([cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', userId)], 'or')
-            const notDisabled = cf.makeCondition('disabled', 'not-equals', 'Y', true)
             // with authorization on: call#Providers runs this as the Comms app, whose entity filters keep other organizations out;
             // their organizations are the user's, which a call from outside a Comms screen (an XMPP session) has not set up yet
             if (ec.user.context.filterOrgIds == null && ec.user.userAccount?.partyId) ec.service.sync().name('mantle.party.PartyServices.setup#UserOrganizationInfo').call()
-            const seen = new Set(partyIds.length ? Array.from(ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', partyIds)
-                .condition(visible).condition(notDisabled).selectField('partyId').list()).map((party) => party.partyId) : [])
+            // Mantle's filter#VisibleParties: under those filters, not disabled, not another user's personal contact, and another
+            // organization's staff only with an organization the user may reach (the owner's rule, SEC-BOS-98), so chat, calls,
+            // the people pickers and mentions reach whom an internal message may
+            const seen = new Set(partyIds.length ? Array.from(ec.resource.script('component://mr-mantle/service/mantle/party/PartyReach.js').visibleParties(partyIds, false) || []) : [])
             refusedUserIdList = ids.filter((id) => (id in partyOf) && partyOf[id] && !seen.has(partyOf[id]))
         ]]></script></actions>
     </service>
@@ -666,7 +665,8 @@ along with this software (see the LICENSE.md file). If not, see
                     kindOf[party.partyId] = party.partyTypeEnumId === 'PtyOrganization' ? 'organization' : 'person'
                 }
             }
-            const partyIds = Object.keys(names)
+            // another organization's staff only with an organization the user may reach (filter#VisibleParties, SEC-BOS-98)
+            const partyIds = Object.keys(names).length ? Array.from(ec.resource.script('component://mr-mantle/service/mantle/party/PartyReach.js').visibleParties(Object.keys(names), false) || []) : []
             if (!partyIds.length) return
             const purposes = {}
             const label = (purposeId) => {
@@ -711,6 +711,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="chipList" type="List"/>
             <parameter name="chipsJson" allow-html="any"/>
             <parameter name="mode" required="true"/>
+            <parameter name="keepPartyIdList" type="List"><description>Internal: an internal reply's thread participants (send#Compose,
+                when the user is one of them), whom a party or address chip keeps without the reach check, as create#Message keeps
+                them (SEC-BOS-98)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="addressText"/>
@@ -731,11 +734,12 @@ along with this software (see the LICENSE.md file). If not, see
             // (SEC-BOS-98): read with authorization on, so the Comms app's entity filters keep another organization's parties out
             // as search#Recipients does, not another user's private contact; for an internal message none of its users is one the
             // chat-target providers refuse (as the people search, ChatterServices.search#Users). Otherwise it is not found.
+            const kept = new Set(Array.from(keepPartyIdList || []).map((id) => String(id)))
             const reachableParty = (id) => {
                 if (!id) return false
+                if (mode === 'internal' && kept.has(String(id))) return true
                 // another organization's staff too, unless the user may see that organization (filter#VisibleParties)
-                const seen = Array.from(ec.service.sync().name('mantle.party.PartyServices.filter#VisibleParties')
-                    .parameters({partyIdList: [id], includeDisabled: true}).call()?.visiblePartyIdList || []).includes(id)
+                const seen = Array.from(ec.resource.script('component://mr-mantle/service/mantle/party/PartyReach.js').visibleParties([id], true) || []).includes(id)
                 if (!seen || mode !== 'internal') return seen
                 const userIds = Array.from(ec.entity.find('moqui.security.UserAccount').condition('partyId', id).selectField('userId').disableAuthz().list())
                     .map((account) => account.userId)
@@ -1248,8 +1252,16 @@ along with this software (see the LICENSE.md file). If not, see
                         // every message of the first send was taken back (Undo) or is gone: this send goes, and its answer replaces the ref's
                     }
                 }
+                // a reply keeps its thread's people when the user is one of them, as create#Message does (SEC-BOS-98)
+                let keepPartyIdList = []
+                if (parentCommEventId) {
+                    const participants = Array.from(ec.service.sync().name('mantle.party.CommunicationServices.get#ThreadParticipants')
+                            .parameter('communicationEventId', parentCommEventId).call()?.partyIdList || [])
+                    if (participants.includes(partyId)) keepPartyIdList = participants
+                }
                 const resolve = (json) => {
-                    const out = ec.service.sync().name('ironstone.comms.ComposeServices.resolve#Recipients').parameters({chipsJson: json || '[]', mode: 'internal'}).call()
+                    const out = ec.service.sync().name('ironstone.comms.ComposeServices.resolve#Recipients').parameters({chipsJson: json || '[]', mode: 'internal',
+                        keepPartyIdList: keepPartyIdList}).call()
                     return ec.message.hasError() ? null : out
                 }
                 const toOut = resolve(toJson)

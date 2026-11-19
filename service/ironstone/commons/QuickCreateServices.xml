@@ -183,7 +183,7 @@ along with this software (see the LICENSE.md file). If not, see
             (a new name when a page has it already).</description>
         <in-parameters>
             <parameter name="title"/>
-            <parameter name="noteText" required="true" allow-html="safe"/>
+            <parameter name="noteText" required="true" allow-html="app"/>
             <parameter name="contentType"><description>text/html for the rich text of a note on a record (the default there),
                 text/markdown otherwise</description></parameter>
             <parameter name="recordEntity"/>
