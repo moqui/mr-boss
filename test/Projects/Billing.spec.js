@@ -415,3 +415,38 @@ feature("a narrow project billing editor sends only a linked visible invoice wit
         issuedCount == 1 && pdfSize > 100
     }
 })
+
+// SEC-BOS-101: a rate of no project is an organization's, or shared by every organization; a Projects manager of one organization
+// (joe.developer, of Ziziwork Services, made one for the moment) lists only those of their own and the shared ones, adds one for their
+// own organization, and neither changes a shared one nor ends another organization's
+feature("a Projects manager's rates of no project are their organization's; a shared one is an administrator's and another's not theirs (SEC-BOS-101)", {
+    when() {
+        const rate = (rateAmount, organizationPartyId) => sys(() => call("create#mantle.humanres.rate.RateAmount", { ratePurposeEnumId: "RaprClient",
+            rateTypeEnumId: "RatpStandard", timePeriodUomId: "TF_hr", rateCurrencyUomId: "USD", rateAmount, organizationPartyId, fromDate: at(1, 0) }).rateAmountId)
+        made.rateShared = rate(333.33, null)
+        made.rateOther = rate(444.44, "ORG_ZIZI_HR")
+        sys(() => call("create#moqui.security.UserGroupMember", { userGroupId: "BOSS_PROJECT_MANAGER", userId: "ORG_ZIZI_JD", fromDate: 0 }))
+        try {
+            return as("joe.developer", () => {
+                const editShared = post("Billing/Rates/saveRate", { rateAmountId: made.rateShared, rateAmount: "1" })
+                const endOther = post("Billing/Rates/endRate", { rateAmountId: made.rateOther })
+                const created = post("Billing/Rates/saveRate", { ratePurposeEnumId: "RaprClient", newRateTypeEnumId: "RatpStandard", rateAmount: "222.22",
+                    fromDate: "2027-07-01" })
+                const rows = sys(() => Array.from(call("ironstone.projects.BillingServices.find#RateRows", { ratePurposeEnumId: "RaprClient" }).rowList || []))
+                return { editShared, endOther, created, rows }
+            })
+        } finally {
+            sys(() => ec.entity.find("moqui.security.UserGroupMember").condition({ userGroupId: "BOSS_PROJECT_MANAGER", userId: "ORG_ZIZI_JD" }).deleteAll())
+        }
+    },
+    then({ editShared, endOther, created, rows }) {
+        editShared.errors.includes("shared by every organization")
+        dec(one("mantle.humanres.rate.RateAmount", { rateAmountId: made.rateShared }).rateAmount) == "333.33"
+        endOther.errors.includes("is not available")
+        one("mantle.humanres.rate.RateAmount", { rateAmountId: made.rateOther }).thruDate == null
+        created.errors == ""
+        rows.some((row) => row.rateAmountId === made.rateShared && row.canChange === false && row.projectName === "Any project, every organization")
+        !rows.some((row) => row.rateAmountId === made.rateOther)
+        rows.some((row) => row.organizationPartyId === "ORG_ZIZI_SERVICES" && row.amountValue === "222.22" && row.canChange)
+    },
+})

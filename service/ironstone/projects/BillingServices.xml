@@ -928,7 +928,9 @@ along with this software (see the LICENSE.md file). If not, see
             organizations the user reads, or shared (find#CostingRates). The worker pay rate of a person who
             is an employee is the employee's pay (mantle.humanres.EmploymentServices.get#PayRateAccess): its amount only with
             PAYROLL_VIEW (else amountText says payroll sets it), and changed (canChange) only with PAYROLL_EDIT; a costing rate is
-            never changed here. counts: the rows of each list the user reads.</description>
+            never changed here. A client or worker rate of no project is an organization's (SEC-BOS-101): listed only for a user of
+            that organization, or shared by every organization (no organization), which an administrator of every project
+            (allProjects) alone changes; an employee's pay rate stays payroll's. counts: the rows of each list the user reads.</description>
         <in-parameters>
             <parameter name="ratePurposeEnumId" default-value="RaprClient"/>
             <parameter name="rootWorkEffortId"/>
@@ -962,7 +964,11 @@ along with this software (see the LICENSE.md file). If not, see
             }
             const conds = [cf.makeCondition('ratePurposeEnumId', 'in', purposes)]
             // a costing rate names no project or person; an employee's pay rate is payroll's on any project
-            if (!all && !rateAccess.payOnly) conds.push(cf.makeCondition([cf.makeCondition('workEffortId', 'is-null', null),
+            const orgIds = Array.from(vis.orgIds || [])
+            // a rate of no project: shared (no organization), or one of the user's organizations' (SEC-BOS-101)
+            if (!all && !rateAccess.payOnly) conds.push(cf.makeCondition([cf.makeCondition([cf.makeCondition('workEffortId', 'is-null', null),
+                    cf.makeCondition([cf.makeCondition('organizationPartyId', 'is-null', null),
+                        cf.makeCondition('organizationPartyId', 'in', orgIds.length ? orgIds : ['_NA_'])], 'or')], 'and'),
                 cf.makeCondition('workEffortId', 'in', visible.length ? visible : ['_NA_'])], 'or'))
             if (rateAccess.payOnly) conds.push(cf.makeCondition([cf.makeCondition('ratePurposeEnumId', 'equals', 'RaprCost'),
                 cf.makeCondition('partyId', 'is-not-null', null)], 'or'))
@@ -1027,8 +1033,15 @@ along with this software (see the LICENSE.md file). If not, see
                 const uom = rate.rateCurrencyUomId || 'USD'
                 const isPay = rate.ratePurposeEnumId === 'RaprVendor' && !!rate.partyId
                 const hidden = isPay && payHidden.has(rate.partyId)
+                // a shared rate of no project bills and pays every organization's time: an administrator of every project's to change
+                // (SEC-BOS-101); an employee's pay rate is payroll's either way
+                const sharedLocked = !rate.workEffortId && !rate.organizationPartyId && !all && rate.ratePurposeEnumId !== 'RaprCost'
+                        && !(isPay && employees.has(rate.partyId))
                 rowList.push({rateAmountId: rate.rateAmountId, ratePurposeEnumId: rate.ratePurposeEnumId, rateTypeEnumId: rate.rateTypeEnumId, rateTypeText: enumText(rate.rateTypeEnumId),
-                    workEffortId: rate.workEffortId || null, projectName: rate.workEffortId ? projectName(rate.workEffortId) : L('Any project'),
+                    workEffortId: rate.workEffortId || null, organizationPartyId: rate.organizationPartyId || null,
+                    projectName: rate.workEffortId ? projectName(rate.workEffortId) : rate.organizationPartyId
+                        ? ec.resource.expand('Any project of ${name}', '', {name: nameOf(rate.organizationPartyId)})
+                        : rate.ratePurposeEnumId === 'RaprCost' ? L('Any project') : L('Any project, every organization'),
                     projectUrl: rate.workEffortId && !rateAccess.payOnly ? '/qapps/Projects/Projects/ProjectDetail?workEffortId=' + encodeURIComponent(rate.workEffortId) : null,
                     partyId: rate.partyId || null, personName: rate.partyId ? nameOf(rate.partyId) : L('Anyone'), workTypeEnumId: rate.workTypeEnumId || null,
                     workTypeText: rate.workTypeEnumId ? enumText(rate.workTypeEnumId) : L('Any work'), emplPositionClassId: rate.emplPositionClassId || null,
@@ -1040,7 +1053,7 @@ along with this software (see the LICENSE.md file). If not, see
                     stateText: ended ? L('Ended') : coming ? L('From') + ' ' + ec.l10n.format(new Date(from), 'MMM d') : L('Current'), ended: ended, coming: coming,
                     // a no-charge rate on no project and no person is the seed that bills no-charge time at nothing: kept as it is
                     canChange: !ended && rate.ratePurposeEnumId !== 'RaprCost' && !(rate.rateTypeEnumId === 'RatpNoCharge' && !rate.workEffortId && !rate.partyId)
-                        && !(isPay && payLocked.has(rate.partyId))})
+                        && !(isPay && payLocked.has(rate.partyId)) && !sharedLocked})
             }
         ]]></script></actions>
     </service>
@@ -1055,7 +1068,10 @@ along with this software (see the LICENSE.md file). If not, see
             finds the rates again). A worker pay rate (RaprVendor) of a person who is an employee is the employee's pay: added or
             changed only with PAYROLL_EDIT (mantle.humanres.EmploymentServices.get#PayRateAccess), refused without it. A payroll user
             without money (check#RateAccess payOnly; People's Rates) adds and changes only an employee's pay rate, on no project. A
-            labor costing rate is not changed here (Accounting's CostingPolicies).</description>
+            labor costing rate is not changed here (Accounting's CostingPolicies). A rate of no project is an organization's
+            (SEC-BOS-101): organizationPartyId, one of the user's (the only one by default), else a rate shared by every
+            organization, which only an administrator of every project (allProjects) adds or changes; an employee's pay rate set by
+            payroll stays as it was.</description>
         <in-parameters>
             <parameter name="rateAmountId"/>
             <parameter name="ratePurposeEnumId"/>
@@ -1068,6 +1084,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="thruDate"/>
             <parameter name="rateAmount" required="true"/>
             <parameter name="rateCurrencyUomId"/>
+            <parameter name="organizationPartyId"><description>For a rate of no project: the organization whose time it bills or pays</description></parameter>
         </in-parameters>
         <out-parameters><parameter name="rateAmountId"/><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
@@ -1094,6 +1111,14 @@ along with this software (see the LICENSE.md file). If not, see
             const isEmployee = (id) => !!id && Array.from(ec.service.sync().name('ironstone.projects.BillingServices.get#PayrollEmployees')
                     .parameters({partyIdList: [id]}).call()?.employeePartyIds || []).includes(id)
             const payOnlyRefused = (purpose, id, project) => rateAccess.payOnly && (purpose !== 'RaprVendor' || !isEmployee(id) || !!project)
+            // SEC-BOS-101: a rate of no project of an organization of the user's, or shared, an administrator of every project's alone
+            const orgIds = Array.from(vis.orgIds || [])
+            const orgRefusal = (rate) => {
+                if (rate.workEffortId || rateAccess.payOnly || vis.allProjects) return null
+                if (rate.organizationPartyId) return orgIds.includes(rate.organizationPartyId) ? null : 'unavailable'
+                return rate.ratePurposeEnumId === 'RaprVendor' && isEmployee(rate.partyId) ? null : 'shared'
+            }
+            const sharedText = L('A rate of no project shared by every organization is changed only by an administrator of every project')
             const wasDisabled = ec.artifactExecution.disableAuthz()
             try {
                 if (rateAmountId) {
@@ -1101,6 +1126,9 @@ along with this software (see the LICENSE.md file). If not, see
                     if (!rate || !['RaprClient', 'RaprVendor'].includes(rate.ratePurposeEnumId) || (!rateAccess.payOnly && !sees(rate.workEffortId))
                             || (rateAccess.payOnly && (rate.ratePurposeEnumId !== 'RaprVendor' || !isEmployee(rate.partyId)))) {
                         ec.message.addError(ec.resource.expand('Rate ${rateAmountId} is not available', '', {rateAmountId})); return }
+                    const refusal = orgRefusal(rate)
+                    if (refusal === 'unavailable') { ec.message.addError(ec.resource.expand('Rate ${rateAmountId} is not available', '', {rateAmountId})); return }
+                    if (refusal === 'shared') { ec.message.addError(sharedText); return }
                     if (payLocked(rate.ratePurposeEnumId, rate.partyId)) { ec.message.addError(L('The worker pay rate of an employee is their pay: only payroll sets it')); return }
                     ec.service.sync().name('mantle.humanres.RateServices.update#RateAmount').parameters({rateAmountId: rateAmountId, rateAmount: toDecimal(text),
                         fromDate: from ?? rate.fromDate, thruDate: thru}).call()
@@ -1120,7 +1148,12 @@ along with this software (see the LICENSE.md file). If not, see
                     ec.message.addError(L('Not a work type')); return }
                 if (partyId && !ec.entity.find('mantle.party.Party').condition('partyId', partyId).one()) { ec.message.addError(ec.resource.expand('No party ${partyId}', '', {partyId})); return }
                 if (payLocked(ratePurposeEnumId, partyId)) { ec.message.addError(L('The worker pay rate of an employee is their pay: only payroll sets it')); return }
-                rateAmountId = ec.service.sync().name('mantle.humanres.RateServices.create#RateAmount').parameters({ratePurposeEnumId: ratePurposeEnumId, rateTypeEnumId: type,
+                const rateOrgId = workEffortId || rateAccess.payOnly ? null : (organizationPartyId || (orgIds.length === 1 && !vis.allProjects ? orgIds[0] : null))
+                const refusal = orgRefusal({workEffortId: workEffortId || null, organizationPartyId: rateOrgId, ratePurposeEnumId: ratePurposeEnumId, partyId: partyId || null})
+                if (refusal === 'unavailable') { ec.message.addError(ec.resource.expand('Organization ${id} is not available', '', {id: rateOrgId})); return }
+                if (refusal === 'shared') { ec.message.addError(L('Choose the organization whose time the rate is for')); return }
+                rateAmountId = ec.service.sync().name('mantle.humanres.RateServices.create#RateAmount').parameters({organizationPartyId: rateOrgId,
+                    ratePurposeEnumId: ratePurposeEnumId, rateTypeEnumId: type,
                     workEffortId: workEffortId || null, partyId: partyId || null, emplPositionClassId: emplPositionClassId || null, workTypeEnumId: workTypeEnumId || null,
                     fromDate: from ?? ec.user.nowTimestamp, thruDate: thru, rateAmount: toDecimal(text), timePeriodUomId: 'TF_hr',
                     rateCurrencyUomId: rateCurrencyUomId || ec.user.getPreference('CurrencyDefault') || 'USD'}).call()?.rateAmountId
@@ -1132,7 +1165,9 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="end" noun="Rate">
         <description>Rates' End: a rate ends now (thruDate), for one who manages money; the time already logged keeps it. A worker
             pay rate of a person who is an employee only with PAYROLL_EDIT (mantle.humanres.EmploymentServices.get#PayRateAccess), by
-            payroll without money too (check#RateAccess payOnly: an employee's pay rate alone). A costing rate is not ended here.</description>
+            payroll without money too (check#RateAccess payOnly: an employee's pay rate alone). A costing rate is not ended here. A rate
+            of no project of another organization is not available, and a shared one is an administrator of every project's to end
+            (SEC-BOS-101, as store#Rate).</description>
         <in-parameters><parameter name="rateAmountId" required="true"/></in-parameters>
         <out-parameters><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
@@ -1147,8 +1182,12 @@ along with this software (see the LICENSE.md file). If not, see
                         .parameters({partyIdList: [rate.partyId]}).call()?.employeePartyIds || []).includes(rate.partyId)
                 if (!rate || !['RaprClient', 'RaprVendor'].includes(rate.ratePurposeEnumId)
                         || (rateAccess.payOnly && (rate.ratePurposeEnumId !== 'RaprVendor' || !employee))
-                        || (!rateAccess.payOnly && rate.workEffortId && !vis.allProjects && !Array.from(vis.visibleProjectIds || []).includes(rate.workEffortId))) {
+                        || (!rateAccess.payOnly && rate.workEffortId && !vis.allProjects && !Array.from(vis.visibleProjectIds || []).includes(rate.workEffortId))
+                        || (!rateAccess.payOnly && !rate.workEffortId && !vis.allProjects && rate.organizationPartyId
+                            && !Array.from(vis.orgIds || []).includes(rate.organizationPartyId))) {
                     ec.message.addError(ec.resource.expand('Rate ${rateAmountId} is not available', '', {rateAmountId})); return }
+                if (!rateAccess.payOnly && !rate.workEffortId && !rate.organizationPartyId && !vis.allProjects && !employee) {
+                    ec.message.addError(L('A rate of no project shared by every organization is changed only by an administrator of every project')); return }
                 if (rate.ratePurposeEnumId === 'RaprVendor' && rate.partyId && Array.from(ec.service.sync().name('mantle.humanres.EmploymentServices.get#PayRateAccess')
                         .parameters({partyIdList: [rate.partyId]}).call()?.lockedPartyIds || []).includes(rate.partyId)) {
                     ec.message.addError(L('The worker pay rate of an employee is their pay: only payroll sets it')); return }
@@ -1164,17 +1203,22 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="get" noun="RateOptions">
         <description>The choices of Rates' forms: the open projects the user sees (not templates), the work types offered (WorkType), the
-            position classes and the rate types (RateType, Standard first).</description>
+            position classes, the rate types (RateType, Standard first) and the user's organizations, whose time a rate of no project
+            bills or pays (SEC-BOS-101).</description>
         <out-parameters>
             <parameter name="projectOptions" type="List"/>
             <parameter name="workTypeOptions" type="List"/>
             <parameter name="positionOptions" type="List"/>
             <parameter name="rateTypeOptions" type="List"/>
+            <parameter name="organizationOptions" type="List"><description>The user's organizations, for a rate of no project (SEC-BOS-101)</description></parameter>
         </out-parameters>
         <actions><script><![CDATA[
             const vis = ec.service.sync().name('mantle.work.ProjectServices.get#VisibleProjectInfo').call() || {}
             const wasDisabled = ec.artifactExecution.disableAuthz()
             try {
+                const orgIds = Array.from(vis.orgIds || [])
+                organizationOptions = orgIds.length ? Array.from(ec.entity.find('mantle.party.Organization').condition('partyId', 'in', orgIds).list())
+                        .map((row) => ({key: row.partyId, text: row.organizationName || row.partyId})).sort((a, b) => a.text.localeCompare(b.text)) : []
                 let find = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortTypeEnumId', 'WetProject')
                         .condition(ec.entity.conditionFactory.makeCondition('statusId', 'not-in', ['WeClosed', 'WeCancelled'], true))
                 if (!vis.allProjects) find = find.condition('workEffortId', 'in', Array.from(vis.visibleProjectIds || []).concat(['_NA_']))

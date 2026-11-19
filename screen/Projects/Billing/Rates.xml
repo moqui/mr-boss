@@ -45,7 +45,8 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.projects.BillingServices.store#Rate" out-map="saveOut" in-map="{rateAmountId:(rateAmountId || null), ratePurposeEnumId:(ratePurposeEnumId || null),
                     rateTypeEnumId:(newRateTypeEnumId || null), workEffortId:(rateWorkEffortId || null), partyId:(ratePartyId || null), emplPositionClassId:(emplPositionClassId || null),
-                    workTypeEnumId:(rateWorkTypeEnumId || null), fromDate:(fromDate || null), thruDate:(thruDate || null), rateAmount:(rateAmount ?? ''), rateCurrencyUomId:(rateCurrencyUomId || null)}"/>
+                    workTypeEnumId:(rateWorkTypeEnumId || null), fromDate:(fromDate || null), thruDate:(thruDate || null), rateAmount:(rateAmount ?? ''), rateCurrencyUomId:(rateCurrencyUomId || null),
+                    organizationPartyId:(rateOrganizationPartyId || null)}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(saveOut.message, 'success')</script></if>
         </actions>
         <default-response url="."><parameter name="purpose"/></default-response>
@@ -107,6 +108,7 @@ along with this software (see the LICENSE.md file). If not, see
             workTypeOptions = Array.from(options.workTypeOptions || [])
             positionOptions = Array.from(options.positionOptions || [])
             rateTypeOptions = Array.from(options.rateTypeOptions || [])
+            organizationOptions = Array.from(options.organizationOptions || [])
             const find = {rootWorkEffortId: rootWorkEffortId || null, partyId: partyId || null, workTypeEnumId: workTypeEnumId || null, rateTypeEnumId: rateTypeEnumId || null,
                 effectiveOn: effectiveOn || null, showEnded: showEnded === 'Y' ? 'Y' : null}
             Object.keys(find).forEach((key) => { if (find[key] == null) delete find[key] })
@@ -119,6 +121,7 @@ along with this software (see the LICENSE.md file). If not, see
             canAddRate = purpose !== 'RaprCost'
             payOnly = !!rateAccess.payOnly
             newRateValue = {ratePurposeEnumId: purpose, newRateTypeEnumId: 'RatpStandard', rateWorkEffortId: rootWorkEffortId || '', ratePartyId: partyId || '',
+                rateOrganizationPartyId: organizationOptions.length === 1 ? organizationOptions[0].key : '',
                 fromDate: ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd'), rateCurrencyUomId: ec.user.getPreference('CurrencyDefault') || 'USD'}
             emptyText = filtered ? L('No rates match') : purpose === 'RaprVendor' ? L('No worker pay rates: time is paid at none')
                     : purpose === 'RaprCost' ? L('No labor costing rates: labor hours are unpriced') : L('No client rates: time is billed at none')
@@ -176,6 +179,10 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="rateWorkEffortId"><conditional-field condition="payOnly"><hidden/></conditional-field>
                             <default-field title="Project (empty: any)">
                             <drop-down allow-empty="true"><list-options list="projectOptions" key="${key}" text="${text}"/></drop-down></default-field></field>
+                        <!-- a rate of no project is an organization's (SEC-BOS-101): the organization whose time it bills or pays -->
+                        <field name="rateOrganizationPartyId"><conditional-field condition="payOnly"><hidden/></conditional-field>
+                            <default-field title="Organization (for a rate of no project)">
+                            <drop-down allow-empty="true"><list-options list="organizationOptions" key="${key}" text="${text}"/></drop-down></default-field></field>
                         <field name="ratePartyId"><conditional-field condition="payOnly" title="Employee">
                             <drop-down><dynamic-options transition="people" server-search="true" min-length="0"/></drop-down></conditional-field>
                             <default-field title="Person (empty: anyone)">
