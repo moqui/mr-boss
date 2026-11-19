@@ -632,6 +632,9 @@ along with this software (see the LICENSE.md file). If not, see
                 return item ? (item.description || id) : id
             }
             if (tab === 'calendar') {
+                // a party's busy times only for a party the user may reach (Mantle's PartyReach.js visibleParties, as Find a time asks,
+                // SEC-BOS-108): seeing a contact's record is not enough
+                if (!Array.from(ec.resource.script('component://mr-mantle/service/mantle/party/PartyReach.js').visibleParties([partyId], true) || []).includes(partyId)) return
                 const out = ec.service.sync().name('mantle.work.EventServices.get#FullCalendarData').parameters({partyId: partyId,
                     start: day(now - 30 * 86400000), end: day(now + 90 * 86400000), includeAllUsers: false, showDeclined: false}).call()
                 if (ec.message.hasError()) { ec.logger.warn(`Contact ${partyId} calendar not shown: ${ec.message.getErrorsString()}`); ec.message.clearErrors(); return }

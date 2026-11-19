@@ -260,6 +260,42 @@ feature("contact requests omit a request the reader may not see by the request r
     },
 })
 
+// SEC-BOS-108 (review): a contact's Calendar tab shows a party's busy times only when the user may reach the party
+// (PartyReach.js visibleParties): another top-level organization's staff, whose person is in the shared directory, shows none
+feature("a contact's calendar tab shows nothing for another organization's staff (SEC-BOS-108)", {
+    when() {
+        const create = (entity, fields) => call("create#" + entity, fields)
+        const service = "ironstone.commons.ContactServices.get#ContactActivity"
+        const grant = { artifactGroupId: "BOSS_COMMONS", artifactName: service, artifactTypeEnumId: "AT_SERVICE" }
+        const hadGrant = one("moqui.security.ArtifactGroupMember", grant) != null
+        const day = 86400000
+        try {
+            sys(() => {
+                if (!hadGrant) create("moqui.security.ArtifactGroupMember", Object.assign({ inheritAuthz: "Y" }, grant))
+                if (one("mantle.party.Party", { partyId: "BOSS_TEST_CAL_OTHERCO" })) return
+                create("mantle.party.Party", { partyId: "BOSS_TEST_CAL_OTHERCO", partyTypeEnumId: "PtyOrganization", ownerPartyId: "BOSS_TEST_CAL_OTHERCO" })
+                create("mantle.party.Organization", { partyId: "BOSS_TEST_CAL_OTHERCO", organizationName: "BOSS_TEST Calendar Other Company" })
+                create("mantle.party.PartyRole", { partyId: "BOSS_TEST_CAL_OTHERCO", roleTypeId: "OrgInternal" })
+                create("mantle.party.Party", { partyId: "BOSS_TEST_CAL_STAFF", partyTypeEnumId: "PtyPerson", ownerPartyId: "_NA_" })
+                create("mantle.party.Person", { partyId: "BOSS_TEST_CAL_STAFF", firstName: "Olaf", lastName: "Othercompany" })
+                create("mantle.party.PartyRelationship", { relationshipTypeEnumId: "PrtEmployee", fromPartyId: "BOSS_TEST_CAL_STAFF", fromRoleTypeId: "Employee",
+                    toPartyId: "BOSS_TEST_CAL_OTHERCO", toRoleTypeId: "OrgEmployer", fromDate: new Date(0) })
+                create("mantle.work.effort.WorkEffort", { workEffortId: "BOSS_TEST_CAL_EVENT", workEffortTypeEnumId: "WetEvent", workEffortName: "BOSS_TEST Olaf's offsite",
+                    statusId: "WeInPlanning", ownerPartyId: "BOSS_TEST_CAL_STAFF", estimatedStartDate: new Date(Date.now() + 2 * day),
+                    estimatedCompletionDate: new Date(Date.now() + 2 * day + 3600000) })
+            })
+            return as("joe.developer", () => ({ other: call(service, { partyId: "BOSS_TEST_CAL_STAFF", tab: "calendar" }).eventList || [],
+                own: call(service, { partyId: "ORG_ZIZI_JD", tab: "calendar" }).eventList || [] }))
+        } finally {
+            sys(() => { if (!hadGrant) ec.entity.find("moqui.security.ArtifactGroupMember").condition(grant).deleteAll() })
+        }
+    },
+    then({ other, own }) {
+        other.length == 0
+        Array.isArray(own)
+    },
+})
+
 feature("a personal contact shows the Private banner with its book; an employee shows the read-only directory card", {
     when() {
         return { mary: detail(MARY), joe: detail("ORG_ZIZI_JD") }
