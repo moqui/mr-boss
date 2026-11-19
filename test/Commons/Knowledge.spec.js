@@ -440,7 +440,7 @@ feature("Bob Developer reads the handbook but may not change it nor add to it", 
 })
 
 // a public page address with the names Mantle and Marble fill as text
-const PAGE_PATTERN = "https://help.example.com/${wikiSpaceId}/${pagePath}?v=${versionName}&id=${wikiPageId}"
+const PAGE_PATTERN = "https://help.example.com/${wikiSpaceId}/${pagePath}?v=${versionName}&id=${wikiPageId}&t=${pageName}"
 feature("Spaces: a new space on database files, settings, and members who then read it", {
     when() {
         const created = call_("Knowledge/Spaces/createSpace", { wikiSpaceId: `S${RUN}A`, description: `Spec space ${RUN}`, storage: "db", restrictView: "Y" }, "post")

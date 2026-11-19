@@ -1701,7 +1701,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="update" noun="SpaceSettings">
         <description>A space's settings, by an administrator of it: description, public page and attachment URLs (http or https;
-            the page URL's only ${...} are ${pagePath}, ${versionName}, ${wikiPageId} and ${wikiSpaceId}, SEC-BAP-87),
+            the page URL's only ${...} are the names PublicUrlPattern.js fills, pageNames, SEC-BAP-87),
             and who may read and write (restrictView, restrictUpdate). Allow any HTML is for the ADMIN group only, since a
             page's HTML then runs in the app's origin.</description>
         <in-parameters>
@@ -1725,13 +1725,13 @@ along with this software (see the LICENSE.md file). If not, see
             }
             const fields = {wikiSpaceId: wikiSpaceId}
             if (description != null) fields.description = String(description).trim() || wikiSpaceId
-            // the public page address is a pattern whose ${name}s are filled as text (Mantle's get#ArticlePublicLink, mr-marble's
-            // wiki): only the page's own names, so an expression meant as script is refused with a message (SEC-BAP-87)
+            // the public page address is a pattern whose ${name}s are filled as text (Mantle's PublicUrlPattern.js, for its article
+            // links and mr-marble's wiki): only the names it fills, so an expression meant as script is refused with a message (SEC-BAP-87)
             if (publicPageUrl != null) {
-                const unknown = Array.from(String(publicPageUrl).matchAll(/\$\{([^}]*)\}?/g)).map((match) => match[0])
-                    .filter((name) => !['${pagePath}', '${versionName}', '${wikiPageId}', '${wikiSpaceId}'].includes(name))
+                const pattern = ec.resource.script('component://mr-mantle/service/mantle/other/PublicUrlPattern.js')
+                const unknown = Array.from(pattern.unknownNames(publicPageUrl))
                 if (unknown.length) {
-                    ec.message.addError(L('A public page URL may name only ${pagePath}, ${versionName}, ${wikiPageId} and ${wikiSpaceId}') + ': ' + unknown[0])
+                    ec.message.addError(L('A public page URL may name only') + ' ' + Array.from(pattern.pageNames).map((name) => '${' + name + '}').join(', ') + ': ' + unknown[0])
                     return
                 }
                 fields.publicPageUrl = url(publicPageUrl)
