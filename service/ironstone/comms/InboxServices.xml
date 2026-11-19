@@ -278,7 +278,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="match" noun="Addresses" allow-remote="false">
         <description>The parties the user may see with these email addresses (case does not matter): a current email of a
             directory party or of one of the user's personal contacts (another user's personal contacts never: IronStone R7),
-            or a user's address. partyMap is the address in lower case to {partyId, name, isPrivate, isUser}.</description>
+            or a user's address; only a party filter#VisibleParties answers (SEC-BOS-98), chosen among those. partyMap is the address in lower case to {partyId, name, isPrivate, isUser}.</description>
         <in-parameters><parameter name="addressList" type="List"/></in-parameters>
         <out-parameters><parameter name="partyMap" type="Map"/></out-parameters>
         <actions><script><![CDATA[
@@ -304,11 +304,13 @@ along with this software (see the LICENSE.md file). If not, see
                 candidates.push({partyId: account.partyId, address: String(account.emailAddress).toLowerCase(), isUser: true})
             const partyIds = Array.from(new Set(candidates.map((candidate) => candidate.partyId)))
             if (partyIds.length === 0) return
-            // R7: another user's personal contact is never seen; a disabled party is left out
+            // only parties the user may see (filter#VisibleParties: the Comms filters, R7's personal contacts, a disabled party
+            // left out, another organization's staff left out; SEC-BOS-98), and one of those chosen for each address below
+            const seenIds = Array.from(ec.service.sync().name('mantle.party.PartyServices.filter#VisibleParties')
+                    .parameter('partyIdList', partyIds).call()?.visiblePartyIdList || [])
             const parties = {}
-            for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', partyIds)
-                    .condition(cf.makeCondition([cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', userId)], 'or'))
-                    .condition(cf.makeCondition('disabled', 'not-equals', 'Y', true)).disableAuthz().list()) parties[party.partyId] = party
+            if (seenIds.length) for (const party of ec.entity.find('mantle.party.PartyDetail').condition('partyId', 'in', seenIds).disableAuthz().list())
+                parties[party.partyId] = party
             // the user's own contact first, then a user, then the directory
             const rank = (candidate) => (parties[candidate.partyId]?.privateOwnerUserId ? 0 : (candidate.isUser ? 1 : 2))
             candidates.sort((left, right) => rank(left) - rank(right))

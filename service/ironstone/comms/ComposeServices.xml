@@ -733,9 +733,9 @@ along with this software (see the LICENSE.md file). If not, see
             // chat-target providers refuse (as the people search, ChatterServices.search#Users). Otherwise it is not found.
             const reachableParty = (id) => {
                 if (!id) return false
-                const seen = Array.from(ec.entity.find('mantle.party.PartyDetail').condition('partyId', id).condition(cf.makeCondition([
-                    cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', ec.user.userId)], 'or'))
-                    .selectField('partyId').limit(1).list()).length > 0
+                // another organization's staff too, unless the user may see that organization (filter#VisibleParties)
+                const seen = Array.from(ec.service.sync().name('mantle.party.PartyServices.filter#VisibleParties')
+                    .parameters({partyIdList: [id], includeDisabled: true}).call()?.visiblePartyIdList || []).includes(id)
                 if (!seen || mode !== 'internal') return seen
                 const userIds = Array.from(ec.entity.find('moqui.security.UserAccount').condition('partyId', id).selectField('userId').disableAuthz().list())
                     .map((account) => account.userId)
@@ -761,7 +761,8 @@ along with this software (see the LICENSE.md file). If not, see
                     const id = member.partyId
                     const inBook = ec.entity.find('mantle.party.contact.ContactBookParty').condition('contactBookId', group.contactBookId)
                             .condition('partyId', id).condition(cf.makeConditionDate('fromDate', 'thruDate', null)).count() > 0
-                    if (!inBook || !visibleParty(id)) continue
+                    // an internal message's member as a party chip (SEC-BOS-98); an email's by the book's own privacy rule
+                    if (!inBook || !(mode === 'internal' ? reachableParty(id) : visibleParty(id))) continue
                     if (mode === 'internal') { found.push({partyId: id}); continue }
                     const address = ec.service.sync().name('mantle.party.ContactServices.get#PrimaryEmailAddress').parameter('partyId', id).call()?.emailAddress
                     ec.message.clearErrors()

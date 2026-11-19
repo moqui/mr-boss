@@ -229,18 +229,22 @@ feature("an internal message goes to no party the user may not see, by a party c
                 { communicationEventId: shared.json.communicationEventIdList[0] }) : []
             const forged = send("party:" + ACCTOTHER)
             const byAddress = send("otto.acctreach@other.example")
-            const reached = sys(() => ec.entity.find("mantle.party.communication.CommunicationEventParty").condition("partyId", ACCTOTHER).count())
-            return { shared, sharedRows, forged, byAddress, reached }
+            const staff = send("party:" + ACCTSTAFF)
+            const staffByAddress = send("stan.acctreach@staff.example")
+            const reached = sys(() => ec.entity.find("mantle.party.communication.CommunicationEventParty").condition("partyId", "in", [ACCTOTHER, ACCTSTAFF]).count())
+            return { shared, sharedRows, forged, byAddress, staff, staffByAddress, reached }
         } finally {
             login("john.doe")
             dropAccountParties()
         }
     },
-    then({ shared, sharedRows, forged, byAddress, reached }) {
+    then({ shared, sharedRows, forged, byAddress, staff, staffByAddress, reached }) {
         shared.errors == ""
         sharedRows.some((row) => row.partyId == "EX_JOHN_DOE" && row.roleTypeId == "MessageTo")
         forged.errors.includes("not found")
         byAddress.errors.includes("is not someone here")
+        staff.errors.includes("not found")
+        staffByAddress.errors.includes("is not someone here")
         reached == 0
     },
 })
