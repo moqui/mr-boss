@@ -378,6 +378,31 @@ feature("a link to a changed instance, by its series and the instance's start, o
     },
 })
 
+feature("Quick create refuses an attendee the user may not reach, and an export names no address of one (SEC-BOS-88)", {
+    allowMessageErrors: true,
+    when() {
+        // Joe Developer's personal contact Sam Secret: never john.doe's to invite or to read
+        const refused = post("Calendar/createEvent", { workEffortName: "BOSS_TEST unreachable guest", start: day(6) + " 09:00", end: day(6) + " 10:00",
+            calendarId: "BOSS_DEMO_CAL_JD", attendeePartyIds: "BOSS_DEMO_PC_SAM" })
+        const madeAnyway = all("mantle.work.effort.WorkEffort", { workEffortName: "BOSS_TEST unreachable guest" }).length
+        // an event with Sam on it all the same (written as the system): the export gives Joe's address, not Sam's
+        const id = quickEvent("BOSS_TEST guest addresses", day(6) + " 11:00", day(6) + " 12:00", { attendeePartyIds: "ORG_ZIZI_JD" })
+        sys(() => call("create#mantle.work.effort.WorkEffortParty", { workEffortId: id, partyId: "BOSS_DEMO_PC_SAM", roleTypeId: "Assignee",
+            statusId: "WeptOffered", fromDate: ec.user.nowTimestamp }))
+        const str = ec.screen.makeTest().rootScreen(commons).render("Calendar/EventDetail/exportIcs", { workEffortId: id }, null)
+        const ics = String(str.output || "")
+        ec.message.clearErrors()
+        return { refused, madeAnyway, ics }
+    },
+    then({ refused, madeAnyway, ics }) {
+        refused.errors.includes("Party BOSS_DEMO_PC_SAM not found")
+        madeAnyway == 0
+        ics.includes("BEGIN:VEVENT")
+        ics.includes("joe.developer@test.com")
+        !ics.includes("pat.quinn@quinnco.example")
+    },
+})
+
 feature("Duplicate makes a planned copy with the attendees to invite again; Export .ics answers the file", {
     when() {
         const copy = detailPost("duplicateEvent", { workEffortId: made.meeting })

@@ -99,7 +99,9 @@ along with this software (see the LICENSE.md file). If not, see
         <description>An event from estimatedStartDate to estimatedCompletionDate (an hour by default), or all day on those days,
             in calendarId (the user's default calendar by default), with the user assigned and the attendees invited
             (WorkEffortParty WeptOffered and mantle.work.EventServices.send#EventInvitations; an invitation that fails is
-            logged and the event stays), on the record in context. With attendees it is a meeting (WepMeeting).</description>
+            logged and the event stays), on the record in context. With attendees it is a meeting (WepMeeting). Each attendee is a
+            party the user may reach (SEC-BOS-88: Mantle's PartyReach.js visibleParties, the rule add#Attendees' finds keep and
+            the staff reach rule): any other is "not found" and nothing is made.</description>
         <in-parameters>
             <parameter name="workEffortName" required="true"/>
             <parameter name="estimatedStartDate" type="Timestamp" required="true"/>
@@ -131,6 +133,11 @@ along with this software (see the LICENSE.md file). If not, see
                 const myPartyId = ec.user.userAccount?.partyId
                 attendees = Array.from(new Set((Array.isArray(attendeePartyIds) ? attendeePartyIds : (attendeePartyIds ? String(attendeePartyIds).split(',') : []))
                         .map((id) => String(id).trim()).filter((id) => id && id !== myPartyId)))
+                // only a party the user may reach (SEC-BOS-88): never another's personal contact, a party out of the user's filters
+                // or another top-level organization's staff
+                const reachable = new Set(ec.resource.script('component://mr-mantle/service/mantle/party/PartyReach.js').visibleParties(attendees))
+                const unknown = attendees.find((id) => !reachable.has(id))
+                if (unknown) { ec.message.addError(ec.resource.expand('Party ${partyId} not found', '', {partyId: unknown})); return }
                 const startMillis = Number(String(estimatedStartDate))
                 eventFields = {workEffortName: workEffortName, description: description, calendarId: calendarId, assignToPartyId: myPartyId,
                     purposeEnumId: attendees.length ? 'WepMeeting' : null}
@@ -144,6 +151,7 @@ along with this software (see the LICENSE.md file). If not, see
                             estimatedCompletionDate : new Date(startMillis + 3600000)
                 }
             ]]></script>
+            <if condition="ec.message.hasError()"><return/></if>
             <service-call name="mantle.work.EventServices.create#Event" out-map="context" in-map="eventFields"/>
             <if condition="ec.message.hasError()"><return/></if>
             <iterate list="attendees" entry="attendeePartyId">
