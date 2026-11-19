@@ -255,6 +255,9 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   projections.
 - **No self-approval, no approval by default.** A decision service rechecks the decider's authority and the source's
   revision; an unresolved route waits; changed terms invalidate a pending approval (design §12 ApprovalPolicies).
+  No one changes their own pay inputs, leave or clock time either (SEC-BOS-114, SEC-BOS-117, `SELF_APPROVAL`), so a
+  one-person business cannot grant its own leave, set its own Projects worker rate or import its own clock punches:
+  a second HR or payroll user does it (the owner's decision is still open; mr-moqui plans/Security-Review-Low.md).
 - **Pay never leaves its lane.** Pay amounts never enter shell context, palette rows, notification titles, Chatter
   or a shipped dataset (design §2, §1.4); no HR, payroll or grievance service is exposed to MCP.
 - **The legacy payroll services are not called.** `process#TimePeriodPay`, `process#EmploymentPay`,
