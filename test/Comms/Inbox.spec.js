@@ -404,6 +404,51 @@ feature("a message is linked to a record and taken off it, a task starts from a 
     },
 })
 
+// another organization's person with an address: the card names them to no one outside it, by partyId or by address
+const CARDORG = "BOSS_TEST_INBOX_CARDORG"
+const CARDOTHER = "BOSS_TEST_INBOX_CARDOTHER"
+feature("the contact card names no party the user may not see, by partyId or by address (SEC-BOS-100)", {
+    when() {
+        const store = (entityName, fields) => ec.service.sync().name("store#" + entityName).parameters(fields).call()
+        sys(() => {
+            store("mantle.party.Party", { partyId: CARDORG, partyTypeEnumId: "PtyOrganization", ownerPartyId: CARDORG })
+            store("mantle.party.Organization", { partyId: CARDORG, organizationName: "Cardtest Other Org" })
+            store("mantle.party.Party", { partyId: CARDOTHER, partyTypeEnumId: "PtyPerson", ownerPartyId: CARDORG })
+            store("mantle.party.Person", { partyId: CARDOTHER, firstName: "Cora", lastName: "Cardtest" })
+            store("mantle.party.contact.ContactMech", { contactMechId: CARDOTHER, contactMechTypeEnumId: "CmtEmailAddress", infoString: "cora.cardtest@other.example" })
+            store("mantle.party.contact.PartyContactMech", { partyId: CARDOTHER, contactMechId: CARDOTHER, contactMechPurposeId: "EmailPrimary",
+                fromDate: new Date(Date.now() - 60000) })
+        })
+        // as an ordinary user (BOSS_USERS' own-organization filter), with the same call that names a party of his own
+        login("joe.developer")
+        try {
+            return { own: get("contactCard", { partyId: "ORG_ACME_BA" }), byId: get("contactCard", { partyId: CARDOTHER }),
+                byAddress: get("contactCard", { emailAddress: "cora.cardtest@other.example", name: "Cora" }) }
+        } finally {
+            login("john.doe")
+            sys(() => {
+                ec.entity.find("mantle.party.contact.PartyContactMech").condition("partyId", CARDOTHER).deleteAll()
+                ec.entity.find("mantle.party.contact.ContactMech").condition("contactMechId", CARDOTHER).deleteAll()
+                ec.entity.find("mantle.party.Person").condition("partyId", CARDOTHER).deleteAll()
+                ec.entity.find("mantle.party.Party").condition("partyId", CARDOTHER).deleteAll()
+                ec.entity.find("mantle.party.Organization").condition("partyId", CARDORG).deleteAll()
+                ec.entity.find("mantle.party.Party").condition("partyId", CARDORG).deleteAll()
+            })
+        }
+    },
+    then({ own, byId, byAddress }) {
+        own.json.card.partyId == "ORG_ACME_BA"
+        own.json.card.name == "Bob Acme"
+        byId.status == 200
+        byId.json.card.partyId == null
+        byId.json.card.name == null
+        byId.json.card.emailList.length == 0
+        byAddress.json.card.partyId == null
+        byAddress.json.card.name == "Cora"
+        byAddress.json.card.url == null
+    },
+})
+
 feature("the palette's Messages group finds threads and mailboxes, and MessageDetail shows a message with its source", {
     when() {
         const rows = sys(() => call("ironstone.comms.InboxServices.search#Messages", { text: "onboarding", limit: 5 })).rows

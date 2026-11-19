@@ -1083,7 +1083,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="get" noun="ContactCard">
         <description>Who an address or party is, for the contact card of the reading pane: the party the user may see with
-            that address (match#Addresses, R7) with its organization, email addresses and phone, the link to its contact
+            that address (match#Addresses, R7) or partyId, read under the Comms app's entity filters so another organization's
+            party is not named (SEC-BOS-100), with its organization, email addresses and phone, the link to its contact
             record, and the latest threads with it (from: the address) in the Inbox; without one, the address and name to
             add as a contact.</description>
         <in-parameters>
@@ -1100,9 +1101,14 @@ along with this software (see the LICENSE.md file). If not, see
                 const map = ec.service.sync().name('ironstone.comms.InboxServices.match#Addresses').parameter('addressList', [address]).call().partyMap || {}
                 party = map[address.toLowerCase()] || null
             }
+            // the party is one the user may see: read with authorization on, so the Comms app's entity filters (MANTLE_USER_ORG's
+            // organizations) keep another organization's party out, as search#Recipients and get#CallContext do, and not another
+            // user's private contact (SEC-BOS-100); else the card is the address and name alone
+            const visible = cf.makeCondition([cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', ec.user.userId)], 'or')
+            const seenDetail = (id) => id ? ec.entity.find('mantle.party.PartyDetail').condition('partyId', id).condition(visible).list()[0] || null : null
+            if (party && !seenDetail(party.partyId)) party = null
             if (!party && partyId) {
-                const detail = ec.entity.find('mantle.party.PartyDetail').condition('partyId', partyId).condition(cf.makeCondition([
-                    cf.makeCondition('privateOwnerUserId', 'equals', null), cf.makeCondition('privateOwnerUserId', 'equals', ec.user.userId)], 'or')).disableAuthz().one()
+                const detail = seenDetail(partyId)
                 if (detail) party = {partyId: detail.partyId, name: detail.organizationName || [detail.firstName, detail.lastName].filter((part) => part).join(' ') || detail.partyId,
                     isPrivate: !!detail.privateOwnerUserId}
             }
@@ -1124,8 +1130,8 @@ along with this software (see the LICENSE.md file). If not, see
                             .condition('relationshipTypeEnumId', 'in', ['PrtContact', 'PrtEmployee', 'PrtAgent']).condition(cf.makeConditionDate('fromDate', 'thruDate', null))
                             .disableAuthz().list()[0]
                     if (org) {
-                        const orgDetail = ec.entity.find('mantle.party.PartyDetail').condition('partyId', org.toPartyId).disableAuthz().one()
-                        if (orgDetail && (!orgDetail.privateOwnerUserId || orgDetail.privateOwnerUserId === ec.user.userId)) card.organizationName = orgDetail.organizationName || null
+                        const orgDetail = seenDetail(org.toPartyId)
+                        if (orgDetail) card.organizationName = orgDetail.organizationName || null
                     }
                 } catch (err) { ec.logger.warn(`The contact card of ${party.partyId} has less: ${err && err.message ? err.message : err}`) }
                 finally { ec.message.clearErrors(); ec.message.popErrors() }
