@@ -112,7 +112,8 @@ feature("ChannelRouting reads the demo routes, a mail rule naming the queue and 
                 })
         })
         const routing = asUser(users.manager, () => invoke(C + "find#ServiceRoutes", {appRoot: "CustomerService"}).routing, false)
-        // a route's present block is offered (RouteEdit shows it), though the manager may not name it on another route
+        // a route's present block is offered on that route's own form only (RouteEdit shows it), not to AddRoute or another
+        // route's form, where the manager may not name it
         const route = () => ec.entity.find("mantle.request.support.ServiceRoute").condition("serviceRouteId", ids.mailRouteId)
         system(() => route().updateAll({ackTextBlockId: "CSCH_BLOCK_APP"}))
         const present = asUser(users.manager, () => invoke(C + "find#ServiceRoutes", {appRoot: "CustomerService"}).routing, false)
@@ -123,8 +124,17 @@ feature("ChannelRouting reads the demo routes, a mail rule naming the queue and 
                 .condition("emailTextBlockId", "in", Object.keys(blocks))
                 .deleteAll()
         })
-        const values = found => Array.from(found.textBlockOptions || []).map(option => option.value)
-        return {routing, offered: values(routing), presentOffered: values(present)}
+        const values = options => Array.from(options || []).map(option => option.value)
+        const routeOf = (found, serviceRouteId) => found.routes.find(row => row.serviceRouteId == serviceRouteId)
+        return {
+            routing,
+            offered: values(routing.textBlockOptions),
+            presentOffered: {
+                add: values(present.textBlockOptions),
+                own: values(routeOf(present, ids.mailRouteId).ackTextBlockOptions),
+                other: values(routeOf(present, ids.formRouteId).ackTextBlockOptions)
+            }
+        }
     },
     then({routing, offered, presentOffered}) {
         offered.includes("CSCH_BLOCK_OWN")
@@ -132,7 +142,9 @@ feature("ChannelRouting reads the demo routes, a mail rule naming the queue and 
         offered.includes("BOSS_CS_REPLY_DETAILS")
         offered.includes("BOSS_CS_REPLY_FILTERS")
         offered.includes("BOSS_CS_ACK_SUPPORT")
-        presentOffered.includes("CSCH_BLOCK_APP")
+        presentOffered.own.includes("CSCH_BLOCK_APP")
+        presentOffered.add.includes("CSCH_BLOCK_APP") == false
+        presentOffered.other.includes("CSCH_BLOCK_APP") == false
         routing.organizationPartyId == ids.organizationId
         routing.canEdit == false
         routing.routes.some(row => row.serviceRouteId == ids.mailRouteId && row.acknowledge == "Y" && row.queueText == "Support")

@@ -271,6 +271,8 @@ feature(
             page.output.includes("Support")
             page.output.includes("Add route")
             page.output.includes("Held for review")
+            // the mail route's own form offers its present acknowledgement text (SEC-BAP-81)
+            page.output.includes("Support acknowledgement")
         }
     }
 )

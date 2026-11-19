@@ -273,6 +273,12 @@ along with this software (see the LICENSE.md file). If not, see
                                                     acknowledge:acknowledge, ackTextBlockId:ackTextBlockId, replyEmailIdentityId:replyEmailIdentityId,
                                                     rateLimitPerHour:rateLimitPerHour, tokenValidDays:tokenValidDays}">
                                             <field name="serviceRouteId"><default-field><hidden/></default-field></field>
+                                            <!-- this route's options: the user's blocks and its present one (SEC-BAP-81) -->
+                                            <field name="ackTextBlockId">
+                                                <default-field title="Acknowledgement text" tooltip="A Comms text block; it may name the case number, its subject and the queue">
+                                                    <drop-down allow-empty="true"><list-options list="ackTextBlockOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
                                             <field name="changeReason"><default-field title="Why"><text-line size="40"/></default-field></field>
                                             <field name="submitButton"><default-field title="Save from now"><submit/></default-field></field>
                                             <field-layout>
