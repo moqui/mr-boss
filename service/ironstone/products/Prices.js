@@ -101,6 +101,8 @@ function run(op, parameters) {
                   : "Effective"
         return out
     }
+    // the most products whose price rows the list with no product chosen resolves (boss@price-list-product-limit, SEC-BAP-109)
+    const productLimit = Math.max(1, Number(ec.factory.getConfValue("boss@price-list-product-limit") || 100))
     function findPrices(p) {
         const context = access(),
             capabilities = context.capabilities
@@ -116,12 +118,34 @@ function run(op, parameters) {
         if (!capabilities.priceRead && !capabilities.supplierPriceRead && !capabilities.costRead)
             throw new Error("Price read authority is required")
         if (p.productId) product(p.productId)
-        // the products with price rows, read as one distinct column, then only those the user may read
-        const productIds = p.productId
-            ? [p.productId]
-            : local.visibleProductIds(
-                  Array.from(find(E, {}).selectField("productId").distinct(true).list()).map(price => price.productId)
-              )
+        // the products with price rows matching the filters the database can apply, read as one distinct column in product
+        // order, then only those the user may read, and at most productLimit of them: the list with no product resolves a
+        // bounded number of products' rows, not every price row of the catalog (SEC-BAP-109)
+        let productIds = p.productId ? [p.productId] : []
+        let productsLimited = false
+        if (!p.productId) {
+            const cf = ec.entity.conditionFactory
+            let query = find(E, {}).selectField("productId").distinct(true).orderBy("productId")
+            for (const field of ["priceUomId", "pricePurposeEnumId", "vendorPartyId", "customerPartyId", "productStoreId", "agreementId", "priceTypeEnumId"])
+                if (p[field]) query = query.condition(field, p[field])
+            if (p.organizationPartyId)
+                query = query.condition(
+                    cf.makeCondition(
+                        [cf.makeCondition("vendorPartyId", "equals", p.organizationPartyId), cf.makeCondition("customerPartyId", "equals", p.organizationPartyId)],
+                        "or"
+                    )
+                )
+            const batchSize = 500
+            for (let offset = 0; productIds.length <= productLimit; offset += batchSize) {
+                const batch = Array.from(query.offset(offset).limit(batchSize).list()).map(price => price.productId)
+                productIds.push(...local.visibleProductIds(batch))
+                if (batch.length < batchSize) break
+            }
+            if (productIds.length > productLimit) {
+                productIds = productIds.slice(0, productLimit)
+                productsLimited = true
+            }
+        }
         const matching = []
         for (const productId of productIds) {
             ec.message.pushErrors()
@@ -169,7 +193,8 @@ function run(op, parameters) {
             priceRows: shown.rows.map(display),
             priceRowsCount: shown.count,
             pageIndex: shown.pageIndex,
-            pageSize: shown.pageSize
+            pageSize: shown.pageSize,
+            productsLimited
         }
     }
     function store(p) {

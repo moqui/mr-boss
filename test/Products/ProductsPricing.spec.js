@@ -93,6 +93,23 @@ feature("sales, supplier and cost values leave only their own authorized read bo
         !JSON.stringify(sales).includes("B5_SUPPLIER")
     }
 })
+feature("the list with no product chosen resolves the prices of at most boss@price-list-product-limit products (SEC-BAP-109)", {
+    when() {
+        const products = out => [...new Set(Array.from(out.priceRows).map(row => row.productId))]
+        const limited = withConf("boss@price-list-product-limit", "1", () =>
+            as("catalog.price.read", () => call(C + "find#ProductPrices", {pageSize: 50}))
+        )
+        const filtered = withConf("boss@price-list-product-limit", "1", () =>
+            as("catalog.price.read", () => call(C + "find#ProductPrices", {pageSize: 50, vendorPartyId: "ORG_ZIZI_SERVICES"}))
+        )
+        return {limited: products(limited), limitedFlag: limited.productsLimited, filteredFlag: filtered.productsLimited}
+    },
+    then({limited, limitedFlag, filteredFlag}) {
+        limited.length <= 1
+        limitedFlag == true
+        filteredFlag == true
+    }
+})
 // PRD-UI-038: a customer or purchase agreement's price changes on its agreement (Mantle's PricePolicy refuses it here), so its
 // row is not editable and says so; a price of the same product with no agreement still is
 feature("an agreement's price row offers no Schedule, Correct or End; a price with no agreement does", {

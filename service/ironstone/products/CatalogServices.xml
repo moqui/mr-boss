@@ -503,6 +503,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="priceRowsCount" type="Long"/>
             <parameter name="pageIndex" type="Integer"/>
             <parameter name="pageSize" type="Integer"/>
+            <parameter name="productsLimited" type="Boolean"><description>With no product chosen, only the first products (by id)
+                with matching price rows were read, boss@price-list-product-limit of them: choose a product, organization or store (SEC-BAP-109)</description></parameter>
         </out-parameters>
         <actions>
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/products/Prices.js').execute('findPrices',context))</script>
