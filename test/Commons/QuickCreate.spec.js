@@ -305,3 +305,44 @@ feature("quick create on a registered record type of an app's screen, by its rul
         joeTasks == 0
     },
 })
+
+// SEC-BOS-87 review: a registered type's rule is its owning app's own check, narrower than its organization: a user of Retail who
+// is no Commerce staff gets no store's card and files nothing on it; a survey form is its purpose's readers' (not every Commons
+// user's under the entity filters)
+feature("a Retail user who is no Commerce staff is refused a store's card and quick create; a survey form is its readers' (SEC-BOS-87)", {
+    allowMessageErrors: true,
+    when() {
+        const card = (recordEntity, recordId) => {
+            const str = ec.screen.makeTest().rootScreen(commons).render("Chatter/recordCard", { recordEntity, recordId }, null)
+            let json = null
+            try { json = JSON.parse(str.output) } catch (err) { json = null }
+            ec.message.clearErrors()
+            return { status: str.status, json: json || {}, errors: str.errorMessages.join(" | ") }
+        }
+        const task = (name, recordEntity, recordId) => post("createTask", { workEffortName: name, estimatedCompletionDate: "2026-11-02", recordEntity, recordId })
+        const johnStoreCard = card("mantle.product.store.ProductStore", "POPC_DEFAULT")
+        const johnFormCard = card("moqui.screen.form.DbForm", "BOSS_MKT_FORM_VISIT")
+        login("customerservice.agent")
+        try {
+            return {
+                johnStoreCard,
+                johnFormCard,
+                storeCard: card("mantle.product.store.ProductStore", "POPC_DEFAULT"),
+                storeTask: task("Agent on the retail store", "mantle.product.store.ProductStore", "POPC_DEFAULT"),
+                formCard: card("moqui.screen.form.DbForm", "BOSS_MKT_FORM_VISIT"),
+                formTask: task("Agent on the visit survey", "moqui.screen.form.DbForm", "BOSS_MKT_FORM_VISIT"),
+                agentTasks: list("mantle.work.effort.WorkEffort", { workEffortName: "Agent on the retail store" }).length
+                    + list("mantle.work.effort.WorkEffort", { workEffortName: "Agent on the visit survey" }).length
+            }
+        } finally { login("john.doe") }
+    },
+    then({ johnStoreCard, johnFormCard, storeCard, storeTask, formCard, formTask, agentTasks }) {
+        // a card the user may not see names the id alone, with no type
+        !!johnStoreCard.json.typeLabel && !!johnFormCard.json.typeLabel
+        !storeCard.json.typeLabel && storeCard.json.title == "POPC_DEFAULT"
+        storeTask.status == 500
+        !formCard.json.typeLabel && formCard.json.title == "BOSS_MKT_FORM_VISIT"
+        formTask.status == 500
+        agentTasks == 0
+    },
+})

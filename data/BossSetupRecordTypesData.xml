@@ -14,16 +14,19 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The record types IronStone's screens host beside Mantle's (mantle.party.communication.RecordLinkType, SEC-BOS-87): a record of
     one of these is a screen's context record (its notes, activities, tasks, requests and events by quick create), a record card or
-    a mention, with the rule that decides who sees it. A store's records follow the store, whose organization must be the user's; a
-    campaign's tracking link follows the campaign (Marketing's check#CampaignAccess); a container and a count follow their facility
-    (its entity filters); a blog post its wiki page (the wiki's rule); a survey response its form. A segment, a list, a content
-    item, a survey's publication, a maintenance plan and a job opening are their organization's. A pay run and an expense claim
-    are People's own reads. A site and its pages are public content, under the entity filters alone; so is a survey form. A job
-    offer (its pay) and an Insights definition are not registered: their cards show the id alone. -->
+    a mention, with the rule that decides who sees it: the owning app's own record check where it has one (SEC-BOS-87 review). A
+    store is Commerce's (its staff, a store-limited one's assigned stores; ChatterServices check#AppRecordVisible) and its records
+    follow it; a campaign's tracking link follows the campaign (Marketing's check#CampaignAccess); a segment, a list and a content
+    item are Marketing's (audienceRead for an audience); a container and a count follow their facility (its entity filters); a
+    blog post its wiki page (the wiki's rule); a survey form is its purpose's readers' of its organization (FormDefinitions), and
+    its responses and publications follow it; a maintenance plan is a plan reader's of its organization, a job opening a
+    recruiting reader's, a pay run and an expense claim People's own reads. A site is public content (publicRead), seen under the
+    entity filters alone, and its pages follow it. A registration with no rule is a system administrator's alone. A job offer
+    (its pay) and an Insights definition are not registered: their cards show the id alone. -->
 <entity-facade-xml type="seed">
     <!-- Commerce -->
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.store.ProductStore" ownerText="IronStone Commerce: a store"
-            organizationField="organizationPartyId"/>
+            visibleService="ironstone.shared.ChatterServices.check#AppRecordVisible"/>
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.store.ProductStorePromotion" ownerText="IronStone Commerce and Marketing: a promotion"
             parentEntityName="mantle.product.store.ProductStore" parentField="productStoreId"/>
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.store.ProductStorePromoCode" ownerText="IronStone Commerce and Marketing: a promotion code"
@@ -34,24 +37,26 @@ along with this software (see the LICENSE.md file). If not, see
             parentEntityName="mantle.product.store.ProductStore" parentField="productStoreId"/>
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.product.subscription.StoreRecurringContract" ownerText="IronStone Commerce: a subscription"
             parentEntityName="mantle.product.store.ProductStore" parentField="productStoreId"/>
-    <mantle.party.communication.RecordLinkType recordEntityName="mantle.public.PublicSite" ownerText="IronStone Commerce and Marketing: a site (public content)"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="mantle.public.PublicSite" ownerText="IronStone Commerce and Marketing: a site (public content)"
+            publicRead="Y"/>
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.public.PublicSitePage" ownerText="IronStone Commerce and Marketing: a site page"
             parentEntityName="mantle.public.PublicSite" parentField="siteId"/>
     <!-- Marketing -->
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.marketing.segment.MarketSegment" ownerText="IronStone Marketing: a segment"
-            organizationField="ownerPartyId"/>
+            visibleService="ironstone.shared.ChatterServices.check#AppRecordVisible"/>
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.marketing.contact.ContactList" ownerText="IronStone Marketing: a list"
-            organizationField="ownerPartyId"/>
+            visibleService="ironstone.shared.ChatterServices.check#AppRecordVisible"/>
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.marketing.tracking.TrackingCode" ownerText="IronStone Marketing: a tracking link"
-            parentEntityName="mantle.marketing.campaign.MarketingCampaign" parentField="marketingCampaignId"/>
+            parentEntityName="mantle.marketing.campaign.MarketingCampaign" parentField="marketingCampaignId" organizationField="organizationPartyId"/>
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.marketing.campaign.CampaignContent" ownerText="IronStone Marketing: a content item"
-            organizationField="organizationPartyId"/>
+            visibleService="ironstone.shared.ChatterServices.check#AppRecordVisible"/>
     <mantle.party.communication.RecordLinkType recordEntityName="moqui.resource.wiki.WikiBlog" ownerText="IronStone Marketing: a blog post"
             parentEntityName="moqui.resource.wiki.WikiPage" parentField="wikiPageId"/>
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.party.FormPublication" ownerText="IronStone Marketing: a survey's publication"
-            organizationField="organizationPartyId"/>
+            parentEntityName="moqui.screen.form.DbForm" parentField="formId"/>
     <!-- the shared survey screens (Marketing, Customer Service, People) -->
-    <mantle.party.communication.RecordLinkType recordEntityName="moqui.screen.form.DbForm" ownerText="IronStone surveys: a survey form (its entity filters)"/>
+    <mantle.party.communication.RecordLinkType recordEntityName="moqui.screen.form.DbForm" ownerText="IronStone surveys: a survey form"
+            visibleService="mantle.party.FormDefinitionServices.check#FormRecordVisible"/>
     <mantle.party.communication.RecordLinkType recordEntityName="moqui.screen.form.FormResponse" ownerText="IronStone surveys: a survey response"
             parentEntityName="moqui.screen.form.DbForm" parentField="formId"/>
     <!-- Warehouse -->
@@ -61,10 +66,10 @@ along with this software (see the LICENSE.md file). If not, see
             parentEntityName="mantle.facility.Facility" parentField="facilityId"/>
     <!-- Maintenance -->
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.work.maintenance.MaintenanceSchedule" ownerText="IronStone Maintenance: a maintenance plan"
-            organizationField="organizationPartyId"/>
+            visibleService="mantle.work.MaintenancePlanServices.check#PlanRecordVisible"/>
     <!-- People -->
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.humanres.recruitment.JobOpening" ownerText="IronStone People: a job opening"
-            organizationField="organizationPartyId"/>
+            visibleService="mantle.humanres.RecruitingServices.check#OpeningRecordVisible"/>
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.humanres.payroll.PayrollRun" ownerText="IronStone People: a pay run"
             visibleService="mantle.humanres.PayrollRunServices.check#RunRecordVisible"/>
     <mantle.party.communication.RecordLinkType recordEntityName="mantle.humanres.expense.ExpenseClaim" ownerText="IronStone People: an expense claim"

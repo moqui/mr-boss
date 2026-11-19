@@ -29,6 +29,34 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- ========== The record ========== -->
 
+    <service verb="check" noun="AppRecordVisible" allow-remote="false">
+        <description>Whether the user sees a record of an app's own type as a record, its card, notes and panels (the RecordLinkType
+            visibility service of the types data/BossSetupRecordTypesData.xml names it for, SEC-BOS-87): the owning app's own record
+            check with its read capability, which is narrower than the record's organization: Commerce's check#Record of a store
+            (a store-limited staff member's assigned stores only), Marketing's of a segment and a list (audienceRead) and of a
+            content item. Never an error: a record the check refuses, or a failure, is false.</description>
+        <implements service="mantle.party.CommunicationServices.check#RecordTypeVisible"/>
+        <actions><script><![CDATA[
+            recordVisible = false
+            const checks = {
+                'mantle.product.store.ProductStore': ['ironstone.commerce.ContextServices.check#Record', 'Commerce', 'store', null],
+                'mantle.marketing.segment.MarketSegment': ['ironstone.marketing.ContextServices.check#Record', 'Marketing', 'segment', 'audienceRead'],
+                'mantle.marketing.contact.ContactList': ['ironstone.marketing.ContextServices.check#Record', 'Marketing', 'list', 'audienceRead'],
+                'mantle.marketing.campaign.CampaignContent': ['ironstone.marketing.ContextServices.check#Record', 'Marketing', 'content', null]
+            }
+            const check = Object.hasOwn(checks, recordEntityName) ? checks[recordEntityName] : null
+            if (!check || !recordId || !ec.user.userId) return
+            ec.message.pushErrors()
+            try {
+                // a probe in its own transaction: the app's refusal must not mark the caller's rollback-only
+                const out = ec.service.sync().name(check[0]).parameters({appRoot: check[1], recordType: check[2], recordId: recordId,
+                    capability: check[3]}).requireNewTransaction(true).call()
+                recordVisible = !ec.message.hasError() && !!out?.recordId
+            } catch (error) {
+                recordVisible = false
+            } finally { ec.message.clearErrors(); ec.message.popErrors() }
+        ]]></script></actions>
+    </service>
     <service verb="check" noun="MayChangeRecord" allow-remote="false">
         <description>Whether the user may change what others put on a record through the panels (remove or replace another
             user's file, take another user's message off it, remove another follower; SEC-BAP-95): the owning app's rule when
