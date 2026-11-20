@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     The tab is an m-dynamic-container (m-tray-notifications) of its own: the toggle and the chips load the tab again with
     their parameters, and the actions answer JSON messages (the tab reloads on the shellCounts topic their changes publish,
     a refuse form reloads it itself); opening a row answers the screen to show in the canvas. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Notifications" default-menu-include="false">
 
     <parameter name="inboxEnumId"/>

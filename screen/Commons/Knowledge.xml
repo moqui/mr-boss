@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     a change the user may not make is refused. ProjectDetail mounts this screen as its Docs tab (design-projects.md §4 ProjectDocs):
     there setup answers the project's documentation space as the only space, with its linked pages, and the transitions
     setupProjectDocs, linkProjectPage and searchLinkPages serve the tab (Knowledge.qvue's project mode). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Knowledge" default-menu-index="7" menu-image="sym_o_menu_book" menu-image-type="icon"
         render-modes="vue,qvue,tui" server-static="vue,qvue">
 

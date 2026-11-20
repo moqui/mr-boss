@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     conversions, the orders attributed to a tracked recipient's own click or visit (P20); the remainder; the decision shown, never acted on); Winner (who chose it, why, and its
     release). Every change is Mantle's guarded service (store#Experiment, store#ExperimentVariant at the send's revision read; a change
     ends the send's approval; choose#ExperimentWinner, release#ExperimentWinner a dispatcher's). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Experiment" default-menu-include="false">
     <parameter name="campaignSendId" required="true"/>
     <transition-include name="storeExperiment" location="component://mr-boss/template/MarketingSends.xml"/>

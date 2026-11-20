@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     staff-editable draft. A missing cart and one outside the scope are "not available". Shop P8 (impl-commerce F108): a stuck
     placement's ResolvePlacement for a user with COMMERCE_PLACEMENT_RESOLVE (place again, or refund the kept payment and cancel
     the cart; ShopOperationsServices.resolve#StuckPlacement with an operation key and a reason). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Cart" default-menu-include="false">
     <parameter name="orderId" required="true"/>
     <transition name="sendRecovery">

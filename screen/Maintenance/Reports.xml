@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     ReportOptions and ReportLinks: the reports the user reads as linked cards, and Downtime, which opens the Equipment area's list),
     Work status (P17), PM compliance (P14), the cost report (P11, the cost reader's alone: BOSS_MNT_COSTS). Listed in Admin's Exports by one wizard
     export target (maintenanceReports, F72); each report's CSV is its own form-list's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="9" menu-image="sym_o_analytics" menu-image-type="icon">
     <subscreens default-item="Overview" always-use-full-path="true">
         <subscreens-item name="Overview" location="component://mr-boss/screen/Maintenance/Reports/Overview.xml" menu-index="1"/>

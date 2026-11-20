@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     scoped find (mantle.sales.SalesWorkspaceServices) and every write Mantle's guarded account service
     (mantle.sales.AccountServices). Accounts is built for a second mount (impl-sales §2, F47): Marketing's root mounts it with its
     own context and bulk action (impl-marketing P3). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Accounts" default-menu-index="3" menu-image="sym_o_storefront" menu-image-type="icon">
     <subscreens default-item="Accounts" always-use-full-path="true">
         <subscreens-item name="Customer360" location="component://mr-boss/screen/Shared/Customer360.xml" menu-include="false"/>

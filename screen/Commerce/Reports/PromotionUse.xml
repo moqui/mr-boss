@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     over mantle.product.StorePromotionServices.get#PromotionUseSummary): per promotion, code and currency the orders, uses,
     discount, the net sales of those orders and the uses left of a total limit, each opening PromotionDetail; in total per
     currency (an order once). The export holds the same rows. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Promotion use" default-menu-index="4">
     <parameter name="productStoreId"/>
     <parameter name="storePromotionId"/>

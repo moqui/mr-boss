@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     the maintenance for the equipment's open equipment-fault stop when there is one, else for the equipment alone), and the
     Downtime pane with its latest stops (equipmentStops, find#ProductionDowntime). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="ManufacturingEquipment" condition="recordFound &amp;&amp; appRoot == 'Manufacturing'">
             <widgets>

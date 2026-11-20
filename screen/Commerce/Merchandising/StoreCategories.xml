@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     with parent and sequence fields, Move up and Move down, and the store's category roles (StoreRoots) and category members
     (CategoryProducts), and is the browser's form view as well. Every Commerce user reads; the merchandiser
     (COMMERCE_MERCHANDISE) moves. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Store categories" default-menu-index="2" render-modes="vue,qvue,tui" server-static="vue,qvue">
     <parameter name="productStoreId"/>
     <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>

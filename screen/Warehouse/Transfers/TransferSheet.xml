@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     and boxes to sign at the origin and the destination; a subcontract dispatch adds its custodian, production work and
     service order item. Printed from TransferShipmentDetail as html-print
     (/apps/Warehouse/Transfers/TransferSheet?renderMode=html-print&amp;shipmentId=); printing posts nothing. No cost. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Transfer sheet" default-menu-include="false">
     <parameter name="shipmentId" required="true"/>
     <actions>

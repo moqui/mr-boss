@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     scope field is the organization field (reportPolicy, set by the root: Insights.js). Tools' other datasets (the
     telemetry and document indexes) are not shown under a mount and their transitions (explore, definition) are not taken
     in, so they do not exist on this route. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Datasets" default-menu-index="3">
     <parameter name="status"/>
     <parameter name="text"/>

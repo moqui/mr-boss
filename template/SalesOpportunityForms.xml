@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     - QualifyLeadForm: map qualifyValues ({salesOpportunityId, expectedRevision, organizationPartyId, accountPartyId}): an existing
       account or a new prospect, an existing contact or a new one, the pipeline and stage, owner, amount and close. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="NewOpportunityForm">
             <widgets>

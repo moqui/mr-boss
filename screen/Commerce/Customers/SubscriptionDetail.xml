@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     paid term kept) and RetryRenewal (retry#Renewal through the coordinator, keyed by an operation so a double submit charges
     once; refused while a payment is unresolved). Staff never enter a card or revoke access by hand: a refund is Accounting's
     and revokes the term it paid for. A missing contract and one outside the scope are "not available". -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Subscription" default-menu-include="false">
     <parameter name="contractId" required="true"/>
     <transition name="cancelRenewal">

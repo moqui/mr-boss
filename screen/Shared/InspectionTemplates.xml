@@ -29,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
     get#TemplateDetail): a holder of the template edit permission with Warehouse's scope edits them (Warehouse's choices),
     others read. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Templates"
         default-menu-index="2">
     <parameter name="inspectionTemplateId"/>

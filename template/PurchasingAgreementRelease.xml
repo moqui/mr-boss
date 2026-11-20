@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (releaseValue.agreementId set, releaseFixed true); on PurchaseOrders the buyer chooses an active agreement, of a supplier
     when one is chosen first. The screen sets releaseValue and releaseShown; it needs the choices transition (PurchasingParts). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="releaseAgreement">
         <actions>
             <service-call name="ironstone.purchasing.AccessServices.check#Record"

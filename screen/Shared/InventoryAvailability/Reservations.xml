@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- InventoryAvailability's Reservations tab, in the Warehouse context only (crosscut §3.7 Reservations): the product's open
     reservations on stock in the user's facilities, with what each still has to issue
     (ironstone.warehouse.InventoryServices.get#ProductStock). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reservations" default-menu-index="3">
     <condition><expression>appRoot == 'Warehouse'</expression></condition>
     <actions>

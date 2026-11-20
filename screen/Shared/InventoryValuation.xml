@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     the screen says so and links the quantity reports); revaluation and cost repair stay in Accounting's context. Mantle
     checks the organization and the permissions. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Inventory valuation"
         default-menu-include="false">
     <parameter name="appRoot"/>

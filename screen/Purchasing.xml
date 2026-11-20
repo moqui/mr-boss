@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     (BOSS_PUR_LISTS), Replenishment, Approvals and Settings their groups' (BOSS_PUR_<Area>).
     ironstone.purchasing.AccessServices.get#SharedContext checks the user and resolves their organizations and capabilities
     for every subscreen; each service checks again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Purchasing" menu-image="sym_o_shopping_cart" menu-image-type="icon">
 
     <always-actions>

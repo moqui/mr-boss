@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     own report screens by the root's reportLinks: a dashboard opens in Insights › Dashboard, New and edit in DashboardEditor
     (offered to authors only), Explore data in Report builder › Explore. REPORT_RECENT and REPORT_STARRED are the framework's
     preferences. ReportServices lists only the definitions the viewer may read: their own, their groups' and the shipped ones. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Dashboards" default-menu-index="2" menu-image="sym_o_widgets" menu-image-type="icon">
 
     <transition-include name="dashboard" location="component://tools/screen/Dashboards/Home.xml"/>

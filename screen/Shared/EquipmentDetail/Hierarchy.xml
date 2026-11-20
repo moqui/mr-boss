@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- EquipmentDetail's Hierarchy tab under Maintenance (impl-maintenance P2): the equipment it is part of and its parts, those the
     user's maintenance scope reads. Its parent is changed with Edit equipment (a cycle refused in Mantle). Renders nothing outside
     Maintenance. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Hierarchy" default-menu-index="2">
     <parameter name="assetId"/>
     <actions>

@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     with Insights' message (reportEmailTemplateId), Tools' dashboards are not scheduled (reportHiddenComponents), and the
     recipient cap, the organization's setting, is added here, where it is used: reading it costs more than the root should
     pay on every request. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Scheduled reports" default-menu-index="8" menu-image="sym_o_schedule" menu-image-type="icon">
     <always-actions>
         <!-- the area's addition to the root's reportPolicy, through the framework's one reader of the map; in always-actions,

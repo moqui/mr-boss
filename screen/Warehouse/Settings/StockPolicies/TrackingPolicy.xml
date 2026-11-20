@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     with its source. A narrower scope cannot lift an inherited expiry block. A manager changes them by a dated row
     (mantle.facility.WarehousePolicyServices.store#TrackingPolicy); product exceptions are on their own tab. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Tracking" default-menu-index="2">
     <transition-include name="storeTrackingPolicy" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
     <actions>

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     collected; get#SalesTopProduct and get#InvoicesByCustomerClass for the same organization and currency), each answering a holder of
     SALES_REPORT_VIEW for the organizations of their sales scope with costs withheld without PRODUCT_COST_VIEW. Its drop-downs are Sales'
     choices (the organization, its stores, accounts and products); the basis of each figure is named beside it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Sales summary" default-menu-index="1" menu-image="sym_o_list_alt" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="currencyUomId"/>

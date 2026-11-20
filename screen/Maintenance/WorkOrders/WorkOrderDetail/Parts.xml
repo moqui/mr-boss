@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     Add suggested parts (the equipment model's spare parts not yet planned), each line's stock (InventoryAvailability), and the parts
     used: what was issued and returned once each, with values for a cost reader only. Issuing and returning are the shared
     MaterialIssueReceipt's (Issue and return), under the stock permission and the assignment. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Parts" default-menu-index="40">
     <parameter name="workEffortId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>

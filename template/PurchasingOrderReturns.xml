@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     replacement state, each opening the shared ReturnDetail, and Return to supplier, which opens SupplierReturns with the
     order chosen for New supplier return. No transition of its own. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="PurchasingOrderReturns" condition="appRoot == 'Purchasing' &amp;&amp; po">
             <actions>

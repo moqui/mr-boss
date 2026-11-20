@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- PersonDetail's Overview (design-projects.md §9 PersonDetail): the directory card (email, phone, organizations), the position and the
     line managers, the skills (PartySkill) with their ratings, the working hours (their own, or the timesheet policy's week) and the
     next four weeks' load (capacity, allocated, assigned, the load chip), from ironstone.projects.ResourceServices.get#PersonOverview. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Overview" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
 
     <actions><script><![CDATA[

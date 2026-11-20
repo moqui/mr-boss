@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     The rules and writes are Mantle's mantle.request.KnowledgeServices (save#ServiceKnowledgeSource, find#ArticleSuggestions,
     get#ArticlePublicLink, record#ArticleFeedback, review#ArticleFeedback, suggest#ArticleEdit, create#ArticleFromCase),
     which the screens call after these checks. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="KnowledgeContext" allow-remote="false">
         <description>The Customer Service row of Commons Knowledge (design Knowledge): the wiki spaces of the user's
             organizations' knowledge sources and their draft spaces (the spaces the mount lists), the case worked on when

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     EDI trading partner is listed with its exceptions. NewBinding binds a store to a registered connector
     (store#StoreIntegration): the binding starts with its intake stopped until the operator has set its credentials in the
     System tools. A row opens IntegrationDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Integrations" default-menu-index="1">
     <parameter name="productStoreId"/>
     <parameter name="connectorId"/>

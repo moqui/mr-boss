@@ -29,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
     through Marketing's evidenced request (mantle.marketing.AudienceServices request#Subscriptions, accepted with the evidence) and the
     history of those organizations' rows. Decided by permission, whichever app shows the screen; Mantle's consent services check the
     same rule again (MarketingAccess.js requireConsentChange). The export of a data request stays the contact administrator's. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="check" noun="ConsentAdmin" allow-remote="false">
         <description>Whether the current user manages consent: a contact admin (every list and contact, isContactAdmin), or a

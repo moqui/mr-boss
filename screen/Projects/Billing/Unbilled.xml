@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     time). The Milestones due chip (impl-projects.md P8b; ironstone.projects.BillingServices.find#MilestonesDue): the milestone billing shares due
     (reached, approved when gated, not billed), each with Invoice (a new draft, or the project's open one) for those who manage the
     project. Contractor time is later (impl-projects.md §7). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Unbilled" default-menu-index="1" menu-image="sym_o_hourglass_empty" menu-image-type="icon">
 
     <parameter name="list"/>

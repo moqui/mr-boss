@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     asks, finance releases); and LegacyMatches, Accounting's legacy match backfill (preview#LegacyMatches, then
     apply#LegacyMatches with a result per bill) for a match operator (INVOICE_MATCH, F26). A buyer cannot release a hold or
     match here; InvoiceMatch is the match operator's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Match exceptions" default-menu-index="2">
     <parameter name="view"/>
     <parameter name="vendorPartyId"/>

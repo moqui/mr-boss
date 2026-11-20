@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     buyer and category changes), and Products' shared SupplierPrices and PriceExplain (crosscut §3.21, the purchase direction
     only) and Supplier360 (crosscut §3.3, hidden from the menu) in the Purchasing context
     (ironstone.products.SharedContext.js and Supplier360's Purchasing branch). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Suppliers" default-menu-index="2" menu-image="sym_o_corporate_fare" menu-image-type="icon">
     <subscreens default-item="SupplierList" always-use-full-path="true">
         <subscreens-item name="SupplierPrices" menu-index="2" menu-title="Supplier prices"

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The mail demo of the Comms Inbox (impl-drawers-commons.md M5b, M5c), for john.doe, so the Inbox, Compose and MessageDetail
     show and test with no mail server: data/BossMailDemoData.xml calls load#MailDemo, then load#MailSettingsDemo for the Comms
     mail settings (a shared account, rules, an automatic reply, text blocks). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="load" noun="MailDemo" authenticate="anonymous-all" allow-remote="false">
         <description>

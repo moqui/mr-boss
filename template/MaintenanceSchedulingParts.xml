@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     - BlockRows: the planned blocks (blockList) as a list and a calendar, each row's Correct and End; no block is moved by
       dragging. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="storePolicy">
         <actions>
             <service-call name="ironstone.maintenance.AccessServices.check#Record"

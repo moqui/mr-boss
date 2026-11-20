@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     approver), the user's upcoming bookings of it with Cancel, and its week in Rooms and equipment
     (service/ironstone/commons/ScheduleServices.xml get#ResourceDetail). Its record, approvers and blackout windows are Maintenance's;
     "Open in Maintenance" shows for a user who has it. Anything else is "not available". -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Resource" default-menu-include="false">
 
     <parameter name="resourceType" required="true"/>

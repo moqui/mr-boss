@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     - storeOffer, storeTicket, storeQuestions, storeNotice, publishOffer, closeOffer, addVideoCall: RegistrationSetup's.
     - NewEventForm: over the map newEventValues (campaignFixed keeps the campaign). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="createEvent">
         <actions>
             <!-- the organization and permission first, so no calendar event is made for someone who cannot offer it -->

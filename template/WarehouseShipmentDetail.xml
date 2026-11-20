@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     Pack and the packing slip open from the header (P12: Pack until the shipment ships, where a package is reopened);
     shipping comes with P13. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="WarehouseOutbound" condition="appRoot == 'Warehouse' &amp;&amp; outboundFound">
             <widgets>

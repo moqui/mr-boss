@@ -349,7 +349,7 @@ permissions and seals), ADM-SHELL.
     `ADMIN_BACKUP_DOWNLOAD` is seeded and sealed now, for design §15.3's escalation rule, though no screen uses it
     until the archive download (§7); the privacy and retention permissions come with their later screens (§7).
   - The seals (design §1.1, F5, §4). The framework: `user-facade` `authz` gains child elements `sealed-permission` and
-    `privileged-group` (each with a `name`) in `moqui-conf-3.xsd`; the conf merge adds each component's elements to
+    `privileged-group` (each with a `name`) in `mr-moqui-conf.xsd`; the conf merge adds each component's elements to
     the list, never replacing it; `security_checks.rs` reads the attribute lists (the framework's defaults, as today)
     joined with every element; and MoquiDefaultConf's `sealed-permissions` gains `ADMIN_IDENTITY_GLOBAL`,
     `ADMIN_ACCESS_MANAGE` and `ADMIN_BACKUP_DOWNLOAD`, beside `ADMIN_CONSTITUTION_GLOBAL`. Then mr-boss MoquiConf adds
@@ -398,7 +398,7 @@ permissions and seals), ADM-SHELL.
 
 **Built Nov 7 (P1).**
 - Framework (mr-moqui):
-  - `moqui-conf-3.xsd`: `user-facade` `authz` takes any number of `privileged-group` and `sealed-permission` children
+  - `mr-moqui-conf.xsd`: `user-facade` `authz` takes any number of `privileged-group` and `sealed-permission` children
     (each a `name`). `conf.rs` `merge_authz`: a component's `authz` attributes replace the base's as before, and its
     children are added to every other component's by `name`, never replacing them. `confcache.rs` keeps the children's
     names by element (`authz_names`, `ExecutionContextFactory::authz_names`); `security_checks.rs` joins the attribute

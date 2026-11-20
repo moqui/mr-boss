@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     those; one that names none packs any type in use. The facility administrator adds and removes them through
     mantle.shipment.PackagingServices.store#FacilityBoxType; the types themselves are kept on Locations' Box types. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Box types"
         default-menu-index="5">
     <parameter name="facilityId"/>

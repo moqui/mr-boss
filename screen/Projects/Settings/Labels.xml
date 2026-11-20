@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     WcatLabel) with their color (of the theme's set) and the count of work items that have each; New label, Edit (name and color)
     and Delete (taken off its items) on a row, and Merge (MergeLabels: the items of one get the other, which stays). Service:
     ironstone.projects.ProjectServices get#Labels and change#Label over the mantle.work.TaskServices label services. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Labels" default-menu-index="3" menu-image="sym_o_label" menu-image-type="icon">
 
     <transition name="changeLabel">

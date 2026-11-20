@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     draft space for articles from cases; Add source, Edit (a new row from now, the old one ended) and End through
     mantle.request.KnowledgeServices.save#ServiceKnowledgeSource (SUPPORT_POLICY_EDIT). Wiki spaces only: a source never
     widens who may read a page; publishing and the pages themselves are Commons Knowledge's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Knowledge sources" default-menu-index="7">
     <parameter name="organizationPartyId"/>
     <transition name="chooseOrganization">

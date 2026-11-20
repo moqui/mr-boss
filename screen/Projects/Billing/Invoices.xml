@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     chip; CSV. A client (impl-projects.md P10b) sees its own sent invoices only (find#InvoiceRows clientView: to its organization or
     itself, of its client projects; never a draft, a worker's or an expense invoice), with the chips Sent, Overdue, Paid and All, no
     kind and no link to Unbilled; its lines open InvoiceDetail read only. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Invoices" default-menu-index="2" menu-image="sym_o_receipt_long" menu-image-type="icon">
 
     <parameter name="list"/>

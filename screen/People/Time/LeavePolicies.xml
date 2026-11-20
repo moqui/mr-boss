@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     (PEOPLE_HR_EDIT) starts a dated policy (New policy, the one primary: name, employer, leave type, unit, accrual frequency, start);
     its terms, accrual steps, assignments and blocked days are set on the policy. A closed policy takes no new assignment and keeps
     what was posted. HR's (BOSS_PPL_LEAVE), under Time rather than Settings, as Holidays. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Leave policies" default-menu-index="10" menu-image="sym_o_policy" menu-image-type="icon">
     <parameter name="term"/>
     <parameter name="organizationPartyId"/>

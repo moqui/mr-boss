@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     the viewer, so Home declares no server-static template: impl-sales F66), a table in html and print and text bars in the
     terminal. New opportunity is the primary action; New lead, Schedule activity and Import (a manager's) beside it. A Sales user who
     reads nothing of Sales (an edit permission alone) is told what Home holds; a report reader gets the Sales summary shortcut. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>

@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     group: get#AccessLog checks the permission and reads it past its artifact, under the dataset's row filters; this
     answers of each line only the fields named here, never its other attributes. It checks ADMIN_AUDIT_VIEW under
     Admin. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="AccessLog" allow-remote="false">
         <description>Admin's AccessLog: the lines of the dataset admin-access-log (the report engine's and monitoring's
             audit lines, read by ReportServices.query#Documents after this service's own check), newest first, each as its safe fields only:

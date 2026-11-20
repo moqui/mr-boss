@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     P9): a step's procedure, read in Commons Knowledge mounted here with the way back to the map and its step. The page, its
     history, review, files and editing are Knowledge's own, each through ironstone.commons.KnowledgeServices, which asks the
     wiki's access rule for every page: reading a map grants no page. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Process story" default-menu-include="false">
 
     <parameter name="wikiPageId"/>

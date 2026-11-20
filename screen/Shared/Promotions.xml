@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     service name from the browser). The context is the mounting app's registration (service/ironstone/shared/PromotionApps.js; impl-marketing
     P19, F22): Commerce's (its Promotions area) and Marketing's (its Promotions area: the stores of the user's Marketing organizations
     within Commerce's store scope); Mantle's promotion services check Commerce's permissions and the store's scope again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Promotions" default-menu-index="1">
     <parameter name="productStoreId"/>
     <parameter name="term"/>

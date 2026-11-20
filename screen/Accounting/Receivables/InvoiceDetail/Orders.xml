@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- InvoiceDetail's Orders tab: the order lines the invoice bills. It reads the invoice when the client loads the tab
     alone. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Orders"
         default-menu-index="4">
     <parameter name="organizationPartyId"/>

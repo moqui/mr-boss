@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- PaymentDetail's History tab: each recorded change of the payment, its status before and after, who made it and why.
     It reads the payment when the client loads the tab alone. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="History"
         default-menu-index="7">
     <parameter name="organizationPartyId"/>

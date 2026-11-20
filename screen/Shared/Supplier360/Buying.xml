@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     Supplier360's always-actions (ironstone.purchasing.SupplierServices.get#SupplierContext); the changes are
     mantle.party.SupplierServices' store#SupplierProfile, store#SupplierBuyer and set#SupplierCategory
     (SUPPLIER_PROFILE_EDIT, an approval decision PURCHASE_APPROVE), after the supplier's check#Record. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Buying profile" default-menu-index="6">
     <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
     <transition name="storeProfile">

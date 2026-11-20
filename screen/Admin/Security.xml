@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     ADMIN_SETTINGS_VIEW or ADMIN_ACCESS_VIEW (the policy), ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE (the groups' rules, the
     role mappings and enabling a provider) and ADMIN_CONNECTION_VIEW and ADMIN_CONNECTION_MANAGE (a provider's configuration)
     whatever opens the screen. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Security" default-menu-index="4" menu-image="sym_o_shield_lock" menu-image-type="icon">
     <subscreens default-item="SignInPolicy" always-use-full-path="true">
         <!-- the framework's System › Security screens (mr-moqui plans/archive/Admin-Screens-Down.md), by location: no grant names

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Customer360's Sales Agreements tab (crosscut §3.2 Sales row; design-sales §4 Customer360, §7; impl-sales P15): the account's
     customer agreements the user sees (Mantle's scoped find#SalesAgreements for the customer: of the user's organizations), every state
     but templates, newest first, each opening AgreementDetail; New agreement for the account for a holder of SALES_AGREEMENT_EDIT. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Agreements" default-menu-index="6">
     <parameter name="customerPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>

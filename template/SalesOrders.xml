@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     salesReleaseHold (a Manual or a Change hold), salesCancelRemainder and salesCloneOrder; follow-up 5's salesUpdateOrderFacility (the
     facility a quote draft or an order ships from, its quote context's too). NewSalesOrderForm is the dialog's form,
     reading newOrderDefaults. A screen includes each transition and section it uses by name. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="createSalesOrder">
         <actions>
             <service-call name="mantle.order.SalesOrderServices.create#SalesOrder" out-map="created"

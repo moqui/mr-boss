@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     purchase orders through, a SystemMessageRemote, or email when none (mantle.order.DropShipServices.get#DropShipSetup). A
     purchase administrator (PURCHASE_POLICY_EDIT) adds one or changes its name and remote through store#DropShipFacility,
     after the supplier's check#Record. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Drop-ship" default-menu-index="12">
     <transition name="storeDropShipFacility">
         <actions>

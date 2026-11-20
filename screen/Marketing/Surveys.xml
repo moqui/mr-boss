@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     the authors, audience managers, analysts and the administrator (BOSS_MKT_SURVEYS denies the root user group); the area's check asks
     the capability too (surveys). Every read and write is mantle.party.FormDefinitionServices or mantle.marketing.MarketingFormServices,
     which check the purposes' permissions and the organization again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Surveys" default-menu-index="8" menu-image="sym_o_quiz" menu-image-type="icon">
     <always-actions>
         <script>if(!marketing.capabilities.surveys)throw new Error('PERMISSION_DENIED: Surveys are for the Marketing authors, audience managers and analysts')</script>

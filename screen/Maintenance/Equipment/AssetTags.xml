@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     equipment's name, id, serial and organization and a QR or Data Matrix of its EquipmentDetail link (ec.resource.barcodeSvg), at
     the size chosen; Print opens the html-print of the same labels. Equipment outside the user's maintenance scope is left out and
     counted. A scan of a tag opens EquipmentDetail for a reader (Find's tag field). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Asset tags" default-menu-index="2">
     <parameter name="assetIds"/>
     <parameter name="codeKind"/>

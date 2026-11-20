@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Store price lists under Commerce's Merchandising (impl-commerce P3; Products' Shared/PriceLists and Shared/PriceListDetail,
     crosscut §2) in Commerce's catalog context: list edits need PRICE_EDIT, checked again in Mantle. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Price lists" default-menu-index="4">
     <subscreens default-item="List">
         <subscreens-item name="List" location="component://mr-boss/screen/Shared/PriceLists.xml"/>

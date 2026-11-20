@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     includes the same ones. A screen includes each transition it uses by name (transition-include); the links go through the
     mounting root's sharedLinks. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <!-- a new account (NewAccount, NewPerson): Customer360 of the new account -->
     <transition name="createAccount">
         <actions>

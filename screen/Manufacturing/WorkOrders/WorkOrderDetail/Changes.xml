@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     held run with postings is cancelled only by its reviewed plan (preview#ProductionCancellation: a reversal that returns
     every issue, or a residual close that writes off what is left and completes it), for supervisors (cancel#ProductionOrder).
     Strict release refuses amendments; the tab says so. It reads the run when the client loads the tab alone. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Changes" default-menu-index="11">
     <parameter name="workEffortId"/>
     <parameter name="methodDate"/>

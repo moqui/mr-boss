@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     SourceOwners (each registered source's domain owner, class, state and steward, with its Data readiness link). An empty
     choice stays empty. A cap above Admin's ceiling is refused with the reason; the ceiling itself is Admin's instance
     setting. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="1">
 
     <parameter name="organizationPartyId"/>

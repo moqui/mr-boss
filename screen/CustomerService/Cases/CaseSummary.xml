@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     (renderMode=html-print), and Send to the customer mails the customer-visible summary to an address of the customer or its
     contacts through send#CaseSummary, which stores it as the case's RequestContent first. The case is checked as the user's
     (ironstone.customerservice.AccessServices.check#Record); printing posts nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Case summary" default-menu-include="false">
     <parameter name="requestId" required="true"/>
     <parameter name="audience"/>

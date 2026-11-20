@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     supplier's lead time or the one given, the safety and cover days), a product without demand history or lead time named;
     a stock planner applies the selected rows (applyLevels: apply#ReorderLevels, each row through store#ProductFacilityPolicy
     in its own transaction, each failure named and the others kept). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Suggest levels" default-menu-index="2">
     <parameter name="planFacilityId"/>
     <parameter name="scopeProductId"/>

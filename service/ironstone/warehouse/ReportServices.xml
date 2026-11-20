@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Warehouse reports' reads (impl-warehouse P17, design-warehouse §14; Reports.js): each runs the app's facility scope and
     calls Mantle's mantle.product.InventoryReportServices with the user's facilities, adding the Warehouse links. Every
     Warehouse user reads the quantity reports; values are Accounting's run#InventoryValuation, which checks financial read. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="StockAtDate" allow-remote="false">
         <description>Shared/StockAtDate's Warehouse branch: Mantle's get#InventoryAtDate in the user's facilities (or the
             given one, refused outside the scope: FACILITY_UNAVAILABLE), each row with its product, lot, asset and document

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     html-print through the same URL with renderMode=html-print). Internal users; Profitability and Utilization are the managers'
     (BOSS_PROJECTS_MANAGERS in data/BossSetupData.xml). Every report reads only the projects, time and money the user may see
     (mantle.work.ProjectReportServices). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="9" server-static="qvt" menu-image="sym_o_table_chart" menu-image-type="icon">
     <subscreens default-item="Index"/>
     <widgets>

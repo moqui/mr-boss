@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     period, each card opening it for a user of Reports; a strip that cannot be read says so and the work cards still show.
     P14: Integration errors counts a channel operator's channel message errors and failing or blocked feeds of the last 30
     days (get#ChannelHealth), opening Channel health. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="productStoreId"/>
     <parameter name="interval"/>

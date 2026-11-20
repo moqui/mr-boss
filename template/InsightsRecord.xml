@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     the owning apps' screens of it that open to the viewer, and the return to the report. Read only: no transition, form or
     action is here, and every operational action is on an owner's screen behind its own authorization. A record no source
     shows the viewer is "not available", whether or not it exists. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="InsightsRecord">
             <actions>

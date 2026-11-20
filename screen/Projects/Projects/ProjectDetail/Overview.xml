@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     Members, Repositories (with their HTTPS clone URLs, as text: a copy button wants a framework helper; empty without git
     hosting in the build) and Recent activity (status changes,
     comments, updates and commits). Every box is read by ironstone.projects.ProjectServices.get#ProjectOverview, each on its own. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Overview" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
 
     <transition name="saveDescription">

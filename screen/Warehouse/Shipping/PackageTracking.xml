@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     (record#PackageDelivery), which delivers the shipment once every package is. Tracking never reships anything. Incoming
     and return deliveries go through Receive and ReturnReceipt. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Package tracking" default-menu-index="4">
     <parameter name="show"/>
     <parameter name="carrierPartyId"/>

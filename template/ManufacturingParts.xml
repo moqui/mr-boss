@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     - selectPlant: the selected plant, a user preference that never widens the scope, with the PlantPicker
       section (manufacturing is the root's get#SharedContext answer). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="choices" read-only="true">
         <actions>
             <service-call name="ironstone.manufacturing.AccessServices.get#Choices" in-map="context" out-map="found"/>

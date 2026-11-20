@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     whose assignee reads nothing of the case). The case (what the employee wrote, the outcome), its people, the work asked of others
     (handlers), the conversation (its people's notes: Chatter of the request, which tells its people on PeopleCaseUpdate) and its
     files. No link completion, triage notice or Assist reaches it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="changeCase">
         <actions>
             <service-call name="mantle.request.RequestServices.change#PeopleCase" out-map="changed"

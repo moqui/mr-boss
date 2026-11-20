@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Agents area of IronStone Admin (design-admin §1.2, §13 AgentsHome): AgentsHome, the links to the framework's agent and
     model administration, which keeps AgentAdmin and its own checks. For the administrator (BOSS_ADM_AGENTS). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Agents" default-menu-index="11" menu-image="sym_o_smart_toy" menu-image-type="icon">
     <subscreens default-item="Home" always-use-full-path="true">
         <subscreens-item name="Home" location="component://mr-boss/screen/Admin/Agents/AgentsHome.xml" menu-title="Agents" menu-index="1"/>

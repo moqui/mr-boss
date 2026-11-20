@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     use, their save (the text through Comms' store#TextBlock, then the service facts and case actions) and the bulk reply's
     preview per case. A reply's preview and apply on a case are Mantle's mantle.request.SupportCaseServices.preview#SavedReply
     and apply#SavedReply (SUPPORT_CASE_EDIT, the case's organization), which the screens call after check#Record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="SavedReplies" allow-remote="false">
         <description>The saved replies the user may use (design SavedReplies ReplyList), as Comms' find#EmailTextBlocks
             reaches them (their own, and those shared with a group they are in now), kept to service replies: a personal

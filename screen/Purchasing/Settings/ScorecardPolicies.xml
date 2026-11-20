@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     or a risk severity drawing a warning, a warning with review or a block of new RFQs and purchase orders; no rule responds by
     default), each change a dated row with its reason through store#ScorecardPolicy, store#ScorecardCriterion and
     store#ScorecardAction (PURCHASE_POLICY_EDIT), the earlier rows kept. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Scorecard policies" default-menu-index="4">
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     contact and Promise to pay for AR (template/AccountingCollections.xml), a promise's Cancel, and the customer's disputed
     invoices. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Activities"
         default-menu-index="6">
     <parameter name="organizationPartyId"/>

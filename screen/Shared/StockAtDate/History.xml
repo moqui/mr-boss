@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- StockAtDate's History tab: the movements of the period, oldest first, with their effective and recorded dates, source
     document, asset and the place's balance after each; a revaluation split's pair of rows is one row -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="History"
         default-menu-index="2">
     <actions>

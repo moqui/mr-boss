@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     addresses a report went to) are never shown. A reader of some organizations reads the lines of those organizations'
     people; one whose organizations hold more than 5,000 accounts is told the log is not narrowed that far. The print and
     the CSV are the same projection, one bounded page of it. Reading needs ADMIN_AUDIT_VIEW; raw logs, traces and replay keep their own grants in System › Monitor. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Access log" menu-image="sym_o_receipt_long" menu-image-type="icon">
     <parameter name="source"/>
     <parameter name="actorUserId"/>

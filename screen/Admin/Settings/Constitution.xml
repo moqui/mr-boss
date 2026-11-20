@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
     checks) and Mantle's ORG_CONSTITUTION_EDIT in that organization (its services'); the instance's, ADMIN_SETTINGS_MANAGE and the
     sealed ADMIN_CONSTITUTION_GLOBAL. The trusted reference origins stay System › Constitution's (Origins), linked for ADMIN. The
     shared parts of System › Constitution (tools template/ConstitutionParts.xml) are used for the instance scope's source. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Constitution" menu-image="sym_o_gavel" menu-image-type="icon">
     <parameter name="scope"/>
     <parameter name="locale"/>

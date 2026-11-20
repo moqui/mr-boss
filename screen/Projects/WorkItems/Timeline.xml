@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     (get#Timeline, move#TimelineItem, save# and remove#TimelineDependency): who sees a project sees its timeline, its team moves
     bars and makes dependencies. The terminal: TimelineTui beside this file, with Move dates and the dependency dialogs
     (impl-projects.md P11). It is the default subscreen of the Plan tab, whose level the shell loads in qvt, so it answers qvt and html too (a line that it opens in the browser app), as Comms/Inbox/Mail does. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Timeline" default-menu-index="2" render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue" menu-image="sym_o_view_timeline" menu-image-type="icon">
 
     <parameter name="rootWorkEffortId"/>

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The payment run screens' reads (PaymentRuns, PaymentRunDetail; logic in PaymentRuns.js). Every change is a
     mantle.account.PaymentRunServices service, which checks its permission. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Runs" allow-remote="false">
         <description>A page of the organization's payment runs, newest first, with their status, masked bank account, dates,
             total and progress, and whether the user may start one. Refuses a user without payables or payment read

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     application when People admits the user to it (a recruiter: get#Application; Compose checks it again). Nothing is sent until the
     user submits. An answer about pay, a case or a review never reached Assist (those are not shared with AI), so none is sent from
     here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Send as message" default-menu-include="false">
     <parameter name="entityName"/>
     <parameter name="recordId"/>

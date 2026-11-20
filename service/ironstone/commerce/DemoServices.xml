@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Commerce demo (impl-commerce P1; Demo.js), loaded from data/BossZCommerceDemoData.xml. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="load" noun="CommerceDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
         <description>Idempotent Commerce demo sites by fixed ID: ZIZI_SHOP (shop.zizi.localhost) for Ziziwork Retail and
             ZIZI_DIGITAL (digital.zizi.localhost) for Ziziwork Services, disabled until published, each with Account, Billing

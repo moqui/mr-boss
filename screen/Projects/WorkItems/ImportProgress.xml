@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     component (screen/Commons/Contacts/ImportProgress.qvue) on the topic its query names (workItemImportProgress, which
     mantle.work.WorkItemImportServices.import#WorkItems sends the user who runs the import, every 25 rows and at the end), loaded by
     the Result step in a dynamic-container while the draft is running. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Import progress" default-menu-include="false" render-modes="vue,qvue,tui" server-static="vue,qvue">
     <widgets>
         <render-mode><text type="qvue" location="component://mr-boss/screen/Commons/Contacts/ImportProgress.qvue" template="false"/><text type="tui" location="component://mr-boss/screen/Commons/Contacts/ImportProgress.tui.json" template="false"/></render-mode>

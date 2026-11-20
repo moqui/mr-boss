@@ -817,7 +817,7 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
 - For the lead:
   - F57 is a framework divergence: `crates/moqui-entity/src/entity/field_rw.rs:349-352` skips an update whose old value
     is null when the flag is "update" ("does not log the first non-null value. That is the initial set."). The XSD
-    (`entity-definition-3.xsd:197-202`) and Moqui Java's `EntityValueBase.handleAuditLog` leave out only the create under
+    (`mr-entity-definition.xsd:197-202`) and Moqui Java's `EntityValueBase.handleAuditLog` leave out only the create under
     "update"; an update from null to a value is logged. With it fixed, "update" would do for the P3 fields (the as-of read
     needs the change, not the create) and save an audit row per new line of every order, sales included; Accounting's
     "update" fields (`OrderItem`/`InvoiceItem`/`AcctgTransEntry.costCenterId`, AccountingPayableEntities.xml and

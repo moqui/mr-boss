@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     form, and Place hold on the selected bills (hold#Invoice, each bill on its own). The Held tab lists the open holds
     (ironstone.accounting.MatchServices.find#BillExceptions). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Bills"
         default-menu-index="1">
     <parameter name="organizationPartyId"/>

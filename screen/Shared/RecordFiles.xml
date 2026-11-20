@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     type's Mantle create#XContent and save#XContentFile), preview and download, remove; and (Files and drives, M8) the record's
     folder in the records drive through FileServices: each file's versions (download, restore, a new version), the folder's
     other files, files added from Files (the picker of template/FilePickerTransitions.xml) and Open in Files. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Files" default-menu-include="false" render-modes="vue,qvue,tui" server-static="vue,qvue">
 
     <parameter name="recordEntity"/>

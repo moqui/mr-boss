@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     due to source. The screens call the Mantle writes (mantle.request.RequestServices create#PurchaseRequest, store# and
     delete#PurchaseRequestItem, submit#PurchaseRequest, decide#PurchaseRequestApproval, cancel#PurchaseRequest, preview# and
     convert#PurchaseSourcing) after AccessServices.check#Record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="PurchaseRequests" allow-remote="false">
         <description>The Requests list (design §4 RequestFind and RequestList): the purchase requests of the user's
             organizations (their OrgInternal RequestParty), a requester's own and assigned ones only, by view (mine: filed by

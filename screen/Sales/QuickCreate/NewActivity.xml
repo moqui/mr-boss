@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Quick create › Activity (design-sales §12.2, §3 OpportunityDetail's Schedule activity): an activity (a Commons task, for the user)
     on an open lead or opportunity the user sees and edits, chosen from Mantle's scoped find (Sales.js choice deals);
     add#OpportunityActivity checks the deal and SALES_OPPORTUNITY_EDIT again. Today and the user's calendar show it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="New activity" default-menu-include="false">
     <parameter name="salesOpportunityId"/>
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>

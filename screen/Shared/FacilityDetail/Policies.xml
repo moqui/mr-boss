@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.warehouse.PolicyServices.get#PolicyContext, which checks the facility is in the user's scope, so it renders
     on its own as well as under FacilityDetail. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Policies" default-menu-index="7">
     <parameter name="facilityId" required="true"/>
     <parameter name="appRoot"/>

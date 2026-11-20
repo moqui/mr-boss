@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     The totals are per unit and never add incompatible units. Each row opens its document (ReceiptDetail, ShipmentDetail,
     TransferShipmentDetail, ReturnReceipt or SupplierReturnShipment), its return and its movements. The export holds the
     find's filters. Every Warehouse user reads it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Operations history" default-menu-index="4">
     <parameter name="operation"/>
     <parameter name="dateBasis"/>

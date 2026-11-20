@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     its place (Offer or Stop offering, Up and Down, Icon), and NewType: a type of the organization's own (a WorkEffortPurpose under
     WetTask). A project offers these unless it chooses its own in its settings (WstWorkItemTypes); QuickCreate and the WorkItems
     quick add offer them. Service: ironstone.projects.ProjectServices get#WorkItemTypes, store#WorkItemTypes, create#WorkItemType. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work item types" default-menu-index="1" menu-image="sym_o_category" menu-image-type="icon">
 
     <!-- a change of the offered list: offer or stop offering a type, move it up or down, or its icon -->

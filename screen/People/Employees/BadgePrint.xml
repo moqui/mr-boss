@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     a link another site has an HR officer open spends no badge (the review's finding of P30). Never a tax id or a password; the
     PIN is the worker's and is not printed. HR's (BOSS_PPL_EMPLOYMENT, with the hire and change wizards); Mantle checks
     PEOPLE_HR_EDIT, the employer and the issuer. Out of the menu. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Clocking badge" default-menu-include="false" history="false">
     <parameter name="kioskBadgeId" required="true"/>
 

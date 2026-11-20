@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     open ones by default, as a list (the default), a board by state and a calendar by schedule; the views share the filters, sort and
     page. New send is the primary action (MARKETING_SEND_EDIT; a template's Use opens it with the template chosen); each row opens
     SendDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Sends" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

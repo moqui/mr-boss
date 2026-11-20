@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     a project may choose its own in its settings), and who may use git over SSH (SSH_GIT by user group). Webhooks are not a
     default: each needs its own secret, kept encrypted on the repository (impl-projects.md P3b). Services: ironstone.projects.CodeServices
     get#CodeSettings, store#RepositoryDefaults, store#Conventions, set#SshAccess. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Code" default-menu-index="7" menu-image="sym_o_code" menu-image-type="icon">
 
     <transition name="saveDefaults">

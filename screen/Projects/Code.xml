@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     RepositoryDetail, Compare and CommitDetail out of the menu. Git hosting is a build feature: codeHosting (ironstone.projects.CodeServices
     get#CodeHosting, in always-actions so a screen loaded on its own has it, impl-projects.md F18) is false without it, and each
     screen then says "Code hosting is not in this build" instead of reading repositories. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Code" default-menu-index="5" menu-image="sym_o_code" menu-image-type="icon">
     <always-actions><script><![CDATA[
         codeHosting = !!ec.service.sync().name('ironstone.projects.CodeServices.get#CodeHosting').call()?.available

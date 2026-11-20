@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     components, structures and groups) is under Payroll, payroll's area (the P22 review's call of Nov 12, 2026). P29: SetupReadiness
     with every phase's checks, each linking the place that sets it up, and Preferences (PeoplePreferences: an employer's clocking
     default and its confidential case intake handlers, store#Settings). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="20" menu-image="sym_o_settings" menu-image-type="icon">
     <subscreens default-item="SettingsHome" always-use-full-path="true">
         <!-- P16: the survey builder with People's registration (design §13 Forms) -->

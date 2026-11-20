@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     never zero); Send a copy for a receivables editor (RECEIVABLE_EDIT, Accounting's mantle.account.InvoiceServices
     send#Invoice, which carries the pay link when the organization has a Billing site), a finalized, sent or paid invoice
     only. No correction: that is Accounting's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="serviceInvoiceCopy">
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.check#Record"

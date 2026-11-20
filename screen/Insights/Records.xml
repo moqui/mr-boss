@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     Overview alone, read only, as People's scope admits the person to the viewer (Shared/Employee360 with Insights' context in
     ironstone.people's employee360Apps), with the return to the report. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Records"
         menu-image="sym_o_folder"
         menu-image-type="icon"

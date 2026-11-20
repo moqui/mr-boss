@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     application's (ApplicantDetail's Schedule interview). The same interviews of a panel member are the My interviews CalDAV
     collection (read only, CX-SYNC). The terminal: an agenda of the next two weeks (InterviewsCalendarTui). Every People user's:
     what each sees is what Mantle's service admits. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Interviews" default-menu-index="6" menu-image="sym_o_record_voice_over" menu-image-type="icon"
         render-modes="vue,qvue,tui" server-static="vue,qvue">
 

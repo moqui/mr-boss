@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     people, the seller's products), rfqStoreItem (a line, new, changed or removed), rfqUpdate (the request's facts and its
     assignment), rfqCreateQuote (a quote from the chosen lines, under an operation key; it opens the quote's OrderDetail) and
     rfqDecline (with the requester told at the previewed address). A screen includes each transition it uses by name. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="createQuoteRequest">
         <actions>
             <service-call name="mantle.order.SalesQuoteServices.create#QuoteRequest" out-map="created"

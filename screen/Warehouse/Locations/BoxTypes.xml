@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     Box types tab (FacilityPackaging); each row links there for the selected facility. The writes are Mantle's
     mantle.shipment.PackagingServices (FACILITY_EDIT); every Warehouse user reads. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Box types" default-menu-index="4">
     <parameter name="showRetired"/>
     <transition name="storeBoxType">

@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
       (PaymentDetail/Review, Payments/TransferReview, Receivables/SettlementReview), over the screen's review: its
       factRows, ledgerPreviewRows, postingResultRows and outputResultRows. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="savePaymentDraft">
         <actions>
             <service-call name="ironstone.accounting.PaymentScreenServices.save#PaymentDraft" in-map="context"

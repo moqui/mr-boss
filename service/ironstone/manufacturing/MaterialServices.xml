@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Manufacturing's materials and stock (impl-manufacturing P5b; Materials.js): Shared/MaterialIssueReceipt's Manufacturing
     context (crosscut §3.9) under WorkOrders/WorkOrderDetail. The screen checks the run (AccessServices.check#Record) before
     each read and posting; the Mantle production verbs check their own permission, organization and facility again. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="MaterialSource" allow-remote="false">
         <description>A production run as Shared/MaterialIssueReceipt shows it in Manufacturing: Warehouse's production run
             source read with the Manufacturing scope and record check (the output lines, issuances left to return, the

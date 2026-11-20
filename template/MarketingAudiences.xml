@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     - P4: previewImport, applyImport and downloadImportErrors are AudienceImport's, mergeLists AudienceMerge's and exportMembers
       ListDetail's (the framework's run#Export of the target marketingAudienceMembers). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <!-- a new list: its ListDetail, else the list again -->
     <transition name="createList">
         <actions>

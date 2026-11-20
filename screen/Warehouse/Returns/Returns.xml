@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     NewReturn, a customer return from a sales order (create#ReturnFromOrder) for a receiver or a supplier return from a
     facility (create#Return) for a quality manager. Authorization is Customer Service's (RETURN_AUTHORIZE) and settlement
     Accounting's; a receipt without a return shipment is not offered (receive#ReturnWithoutShipment). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Returns" default-menu-index="1">
     <parameter name="facilityId"/>
     <parameter name="direction"/>

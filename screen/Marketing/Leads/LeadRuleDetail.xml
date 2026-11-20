@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     triggerEnumId, registered or attended) takes the team and source alone: the attendee's own name and address go to Sales, no
     answer. Marketing's own context (`marketing`): the Leads area's
     `sharedLinks` are Sales'. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Lead rule" default-menu-include="false">
     <parameter name="leadRuleId"/>
     <parameter name="publicationId"/>

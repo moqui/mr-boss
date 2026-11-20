@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     resource, source, kind or none). StatusTotals: the six counts and the groups, each count opening its rows. StatusRows: the work
     orders counted (of one measure and one group when chosen), each opening WorkOrderDetail; its CSV is the form-list's own (the
     columns chosen, every row; the totals are left out of an export, review R2), and Print renders the page with its options (renderMode=html-print). No cost, rate or amount. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work status" default-menu-index="2">
     <parameter name="organizationPartyId"/>
     <parameter name="facilityId"/>

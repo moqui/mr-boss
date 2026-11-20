@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (view=due): what the count schedule and the ad hoc requests make due (Mantle's find#DueCounts), each with Count now,
     which plans a count of that location or product. NewCount plans a scoped count (createCount). A link opens
     CountVariance under Reports. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Counts" default-menu-index="1">
     <parameter name="facilityId"/>
     <parameter name="view"/>

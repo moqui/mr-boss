@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- People's shipped datasets (impl-people P29 and its review; data/BossSetupPeopleReportData.xml): what the search documents need
     beyond their fields. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="QualificationDocumentData" authenticate="anonymous-all" allow-remote="false">
         <description>The manual data service of the search document BossPeopleQualification: a qualification's holder's employments
             (fromRelationships) are kept only while not ended (no end recorded), so the employers the organization row filter reads

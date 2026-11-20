@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     need date, with its name and a link to it in Maintenance only for a user Maintenance admits (mantle.work.MaintenanceServices.get#PurchaseRequestWork). Its transitions are below, included by Shared/RequestDetail;
     each checks the request (AccessServices.check#Record) before the Mantle service, which checks again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="purchaseRequestChoices" read-only="true">
         <actions>
             <service-call name="ironstone.purchasing.AccessServices.get#Choices" in-map="context" out-map="found"/>

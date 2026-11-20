@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
       stock planner's capability (stockPolicy), through Warehouse's mantle.facility.FacilityServices.store#ProductFacilityPolicy,
       which checks STOCK_POLICY_PLAN and the organization again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="choices" read-only="true">
         <actions>
             <service-call name="ironstone.purchasing.AccessServices.get#Choices" in-map="context" out-map="found"/>

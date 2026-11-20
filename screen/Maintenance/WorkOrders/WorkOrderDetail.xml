@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
     Instructions print, with the QR of the work order's link), Add to calendar (.ics of its planned window) and, for a planner,
     supervisor or its assigned technician, Add video call (a Commons event with a call link, the vendor's expert and the
     technicians invited; add#MaintenanceVideoCall). No cost outside the Costs tab. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work order" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
     <!-- the work order is the user's (Maintenance's check and Mantle's scope), for every tab and transition -->

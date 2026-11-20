@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Maintenance's shell contributions (impl-maintenance P3; design-maintenance §1.2): the Today source (WorkOrders.js). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="TodayItems" allow-remote="false">
         <description>The Maintenance today-source (get#UserTodayItems calls it): the user's open work orders (Mantle's
             find#MaintenanceWorkOrders, mine) due by thruDate, by their planned finish or else start, each opening WorkOrderDetail

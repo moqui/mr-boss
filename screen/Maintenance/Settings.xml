@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     from Admin's settings index (maintenance.settings): SettingsHome, the landing; the work policy (MaintenanceSettings, P3, dated
     from P18), Teams (P8: People's teams read only, their dispatch defaults), Lookups and the setup Readiness (P18, the provider
     maintenance.readiness that Admin's Health shows too). A planner or supervisor opens Teams alone, read only (P8 review). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="20"
         default-menu-include="ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT') || ec.user.hasPermission('MAINTENANCE_PLAN') || ec.user.hasPermission('MAINTENANCE_SUPERVISE')" menu-image="sym_o_settings" menu-image-type="icon">
     <!-- the user's call of Nov 12 on F346 (impl-maintenance P20 "Gating Nov 12"): gated by permission, as the menu is, so a

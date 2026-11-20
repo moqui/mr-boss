@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     (get#ServiceAgreements: period, status, whether it covers now, the products covered and the warranty terms), with New
     agreement and Change for a holder of SUPPORT_POLICY_EDIT through Mantle's mantle.request.WarrantyServices
     store#ServiceAgreement after the customer's check (P11 built the store, F165). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Service" default-menu-index="5">
     <parameter name="customerPartyId"/>
     <parameter name="periodDays"/>

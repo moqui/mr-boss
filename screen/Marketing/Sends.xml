@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     root's menu shows it to a template reader or a Marketing reader who writes, approves or dispatches sends); the area's check asks
     the capability too (sends), so a custom group given Marketing is shown no area its services refuse. Every read and write is
     mantle.marketing.CampaignSendServices or mantle.party.MessageServices, which check the permissions and the organization again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Sends" default-menu-index="4" menu-image="sym_o_forward_to_inbox" menu-image-type="icon">
     <always-actions>
         <script>if(!marketing.capabilities.sends)throw new Error('PERMISSION_DENIED: Sends are for the Marketing authors, approvers and dispatchers')</script>

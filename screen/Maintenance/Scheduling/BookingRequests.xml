@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     approved or denied alike, decide#ResourceBookings, each named when it fails). The same decision is Commons' approvals inbox card
     (the ResourceBooking topic). A phone shows the resource, the time and the consequence. Mantle checks every decision again: a
     current approver of the resource holding RESOURCE_BOOKING_APPROVE. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Booking requests" default-menu-index="2">
     <parameter name="facilityId"/>
     <parameter name="assetId"/>

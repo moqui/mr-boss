@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Insights' Analysis (design-insights §5 Analysis; impl-insights P6, INS-03; Analysis.js): an aggregate over an admitted
     dataset from typed choices, run through the report engine as the author and saved as a library panel. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="AnalysisChoices" type="interface">
         <in-parameters>
             <parameter name="datasetId"/>

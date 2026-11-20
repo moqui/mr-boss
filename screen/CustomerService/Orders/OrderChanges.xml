@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     find#OrderChanges, which checks the order-change permissions and the user's organizations): each proposal with its order
     and the order's revision, the kind, the requested lines, the reason, who asked and when, the decision and its approver, a
     hold or conflict and the state, opening OrderChangeDetail. A user without an order-change permission is told so. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Changes" default-menu-index="2">
     <parameter name="orderId"/>
     <parameter name="customerPartyId"/>

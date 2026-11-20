@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     through the engine's store#BusinessDatasetFields and store#BusinessDatasetConditions, which check the dataset's update
     artifact, refuse removing or renaming a field a definition over the dataset uses and a stale version, and leave the
     index to be rebuilt. The screen has no other transition. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Fields" default-menu-include="false">
     <parameter name="datasetId" required="true"/>
 

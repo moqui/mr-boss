@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     otherwise), the automation, its source and the definition's time it follows, the state chip; Stop the one action (a dispatcher's or an
     audience editor's) while it is active. The boxes: Enrollment (next step, due time and why it waits, the goal, why it ended) and Step
     history (each step's time, outcome and reason, a wait's end in the rule's zone, a send's delivery state). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Enrollment" default-menu-include="false">
     <parameter name="automationEnrollmentId" required="true"/>
     <transition-include name="stopEnrollment" location="component://mr-boss/template/MarketingAutomations.xml"/>

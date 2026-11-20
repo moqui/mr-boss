@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     knowledge author's and the service manager's review queue, BOSS_CS_ARTICLE_FEEDBACK), with CaseToArticle (an article
     drafted from a case, for the knowledge author, BOSS_CS_CASE_TO_ARTICLE) reached from a case. Every Customer Service user
     reads Knowledge; the wiki's own rules decide each page. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Knowledge" default-menu-index="8" menu-image="sym_o_article" menu-image-type="icon">
     <always-actions>
         <!-- Commons Knowledge mounted here knows it is in Customer Service (its setup asks get#KnowledgeContext) -->

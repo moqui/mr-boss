@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     quotes and orders (AgreementConnections, the lines priced from it that the user sees); Documents; History; Conversation and Files
     (AgreementCollaboration). Every change is Mantle's guarded service at the revision shown (template/SalesAgreements.xml). More's
     Print (PDF) renders the agreement as it is now from its own records (get#SalesAgreementPrint; Sales P20 review). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Agreement" default-menu-include="false">
     <parameter name="agreementId" required="true"/>
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>

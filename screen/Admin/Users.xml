@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     waits in them, and LifecycleDetail, one operation's steps with retry and TransferOwnership (P6, contextual). For the identity operator and the administrator (BOSS_ADM_USERS); Mantle's
     IdentityServices and the framework's IdentityServices check ADMIN_IDENTITY_VIEW, ADMIN_IDENTITY_MANAGE, ADMIN_IDENTITY_GLOBAL and
     the organization scope themselves, whatever opens the screen. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Users" default-menu-index="2" menu-image="sym_o_person" menu-image-type="icon">
     <subscreens default-item="Users" always-use-full-path="true">
         <subscreens-item name="Users" location="component://mr-boss/screen/Admin/Users/Users.xml" menu-title="Users" menu-index="1"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     evaluation, out of the menu), Spend, Commitments, ProcurementTracker, PurchaseHistory and SupplierStatement (a finance
     reader's), each over its ironstone.purchasing.ReportServices read, which decides what the user may see; the evaluations
     and risks are written by mantle.party.SupplierServices. The scorecard policies are under Settings. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Performance" default-menu-index="12" menu-image="sym_o_trending_up" menu-image-type="icon">
     <subscreens default-item="Scorecards" always-use-full-path="true"/>
     <widgets>

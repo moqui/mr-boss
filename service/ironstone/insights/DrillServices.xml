@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Insights' drill and read-only record contexts (design-insights §4 Drill, §10; impl-insights P6; Drill.js, Records.js), and
     (P12) whether the record panels mounted under the Insights root are served to the viewer (get#RecordPanelAccess). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Drill" allow-remote="false">
         <description>From a value of a saved panel to its meaning, a breakdown and the records behind it, for an Insights reader
             (INSIGHTS_VIEW_REQUIRED otherwise). The request names the definition, the panel, one of its queries, the range and

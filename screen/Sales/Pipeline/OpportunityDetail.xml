@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     opportunity being a Chatter and files host (get#RecordLinkInfo, F69). Every change is Mantle's guarded service at the revision
     read; a stage move is not a closure. An account the user may not see is unnamed. P5: Inquiries, the intakes that made or
     joined a lead (what the inquirer submitted, until purged), which QualifyLead's new account and contact start from. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Opportunity" default-menu-include="false">
     <parameter name="salesOpportunityId" required="true"/>
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.party.IdentityServices.invite#User (ADMIN_IDENTITY_MANAGE, which checks the scope and the proposal). The invitation
     is mailed; when the instance cannot send mail, Invitations shows its acceptance link once (revealInvitationId). An address
     with an account is matched when its owner accepts. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Invite users" default-menu-include="false" menu-image="sym_o_person_add" menu-image-type="icon">
 
     <transition name="choices" read-only="true">

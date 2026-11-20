@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     state. Each row records a contact (with a dispute and a next action, which reaches the collector's Today) or a promise
     to pay (template/AccountingCollections.xml), and opens the customer. Reminders are sent from Dunning. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Collections"
         default-menu-index="4">
     <parameter name="organizationPartyId"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     file (ManagementDigest), answered as a small page with its download link, as the framework's report preview does; its
     service checks its own permission. The schedule and alert screens are the framework's, with their own transitions
     (mr-moqui plans/archive/Admin-Screens-Down.md, Track I). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="previewFile" method="get" read-only="true">
         <actions>
             <service-call name="ironstone.insights.DeliveryServices.preview#Report" out-map="file"

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     Printed from WorkOrderDetail's Quality tab as html-print (WorkOrderDetail/QualityChecklist, hidden from the menu, so the
     floor reaches it), read through ironstone.manufacturing.QualityServices.get#QualityChecklist; it posts nothing. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quality checklist" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
     <parameter name="productionQualityGateId" required="true"/>

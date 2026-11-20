@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     else the route's screen authorization, decides whether the viewer reads an entry; the report engine checks every definition
     read and save as the viewer. Each service refuses a user without Insights (INSIGHTS_UNAVAILABLE) or without Insights read
     (INSIGHTS_VIEW_REQUIRED). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Reports" allow-remote="false">
         <description>The catalog entries the user reads (each owner's catalogue service as the user, else whether the entry's
             route opens to the user's groups), pinned first in their order, then by purpose and the owners' order; filtered by

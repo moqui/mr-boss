@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Time (design-projects.md §8): my week (MyTime, a .qvue with its terminal twin MyTimeTui), the timesheets and one timesheet
     (TimesheetDetail, opened from the list), and the time entries, opening on My time (impl-projects.md P6a). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Time" default-menu-index="6" menu-image="sym_o_work_history" menu-image-type="icon">
     <subscreens default-item="MyTime"/>
     <widgets>

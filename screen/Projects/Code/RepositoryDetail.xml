@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     user may not view is "not available", as one that is not there. A client contact (impl-projects.md P10b) views a repository
     its project shares with it, read only: Clone over HTTPS with its user name and password (no SSH, no Git access), no New merge
     request, and no Activity or Settings tab (refused it, so left out of the tabs). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Repository" default-menu-include="false">
 
     <parameter name="repositoryId"/>

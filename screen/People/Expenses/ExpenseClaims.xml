@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     they work on, the day and the purpose, made by mantle.account.InvoiceServices.create#ProjectExpenseInvoice with expenseClaim; a
     holder of PEOPLE_EXPENSE_MANAGE (HR) chooses an employer and an employee to claim for. The claim opens to add its expenses. Every People user's and a
     self-service employee's (the expenses area's own grant, BOSS_PPL_EXPENSES); what each reads and may make is Mantle's check. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Expense claims" default-menu-index="1" menu-image="sym_o_receipt_long" menu-image-type="icon">
     <parameter name="show"/>
     <parameter name="statusEnumId"/>

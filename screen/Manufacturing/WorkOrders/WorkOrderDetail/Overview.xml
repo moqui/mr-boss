@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     (store#ProductionParty, the guarded add#/remove#WorkEffortParty: people of the run's organization only; an assignment
     grants no stock, cost or release permission); a draft's shortages; and the status history with its reasons. It reads the
     run when the client loads the tab alone. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Overview" default-menu-index="1">
     <parameter name="workEffortId"/>
     <transition name="storeHeader">

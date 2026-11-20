@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     requested version against the one published when it was asked); Approve publishes the version, Request changes sends a
     note back to the requester (decide#WikiPageReview, which checks the review is the user's to decide), and the requester
     may cancel. The tray's Notifications tab decides the same reviews (topic WikiPageReview). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Review" default-menu-index="2" menu-image="sym_o_fact_check" menu-image-type="icon">
 
     <parameter name="filter"/>

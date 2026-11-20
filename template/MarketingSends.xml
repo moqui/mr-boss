@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     - NewSendForm: the Sends list's, CampaignDetail's QuickSend (the campaign fixed) and a template's Use (the template fixed) form
       (design §5 NewSend), over the map newSendValues. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <!-- a new draft send: its Compose, else the screen again -->
     <transition name="createSend">
         <actions>

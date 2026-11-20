@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     - MaintenanceReportSummary: the reporter's safe summary of their maintenance request in Commons' RequestDetail (maintenanceSummary,
       Mantle's find#MaintenanceRequests row: the state, the target and the work order's name and status; nothing else of the work). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="triageRequest">
         <actions>
             <service-call name="ironstone.maintenance.AccessServices.check#Record"

@@ -2,7 +2,7 @@
 <!-- Store-filter test fixture (test/Commerce/CommerceAccess.spec.js, impl-commerce F50): as the Commerce root does, the user's
     organizations and a store-limited staff member's stores into the user context, then a raw ProductStore find under the
     fixture's authorization, which carries MANTLE_USER_ORG and COMMERCE_STORE. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="rows" read-only="true">
         <actions>
             <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>

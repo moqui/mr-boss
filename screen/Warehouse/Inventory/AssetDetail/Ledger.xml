@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- AssetDetail's ledger (AssetLedger): the asset's quantity changes, newest first, each with its source, document,
     correction chain and the revaluation split or partial move it belongs to (mantle.product.TraceabilityServices
     find#Movements through ironstone.warehouse.InventoryServices.find#Movements); unit cost for financial read only. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Ledger" default-menu-index="1">
     <parameter name="assetId" required="true"/>
     <parameter name="pageIndex"/>

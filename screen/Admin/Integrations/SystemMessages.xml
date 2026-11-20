@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     registered. A message's owner is linked by the mount's routes (Admin.js mountRoutes: Commerce's store integration). The
     System screen's own part for the instance administrator (send all, consume all, a message typed in) is not shown under
     a mount and its transitions are not taken in, so they do not exist on this route. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="System messages" menu-image="sym_o_swap_horiz" menu-image-type="icon">
     <parameter name="state"/>
     <parameter name="systemMessageTypeId"/>

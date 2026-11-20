@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
     screen of this directory: an export of a period's approved inputs for an external processor, and imports of payroll history and of
     a processor's results, each previewed, reconciled and done (Mantle's PayrollExchangeServices check PAYROLL_VIEW, PAYROLL_EDIT and,
     to import, PEOPLE_IMPORT). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Payroll" default-menu-index="10" menu-image="sym_o_payments" menu-image-type="icon">
     <subscreens default-item="PayRuns">
         <!-- P25: pay runs (menu 1, the area's landing, design §1.2) and a run's wizard out of the menu -->

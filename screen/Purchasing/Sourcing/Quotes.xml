@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     prices), with saved finds; NewSupplierQuote (New supplier quote: an email, phone or unsolicited quote entered on the
     supplier's behalf with how it came and its evidence, mantle.order.SourcingServices.store#SupplierQuote; for an RFQ's
     supplier it answers the RFQ's items; it opens QuoteDetail to enter the prices). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quotes" default-menu-index="2">
     <parameter name="view"/>
     <parameter name="vendorPartyId"/>

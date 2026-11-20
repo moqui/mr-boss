@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Wrapper for the Commons tabs of the tray panel (design-drawers-commons.md §1.4): Today and Notifications. The framework
     frame (m-shell-tray) loads each tab by its path (the theme values STRT_TRAY_TODAY and STRT_TRAY_NOTIFICATIONS) into an
     m-dynamic-container with the id m-tray-today or m-tray-notifications, which the tabs reload after a post. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Panel" default-menu-include="false" server-static="qvt">
     <widgets>
         <subscreens-active/>

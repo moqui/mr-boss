@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     get#Roster; template/PeopleRoster.xml), the shifts of those days with their state and conflicts, and the same commands: Shift
     (a new shift, or a change of one: the person, start, end, break, work location and reason) previews it through store#Shift, whose
     box then saves it; Remove shift; Publish (publish#Shifts, each worker told). Readers have the tables only. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Shift roster" default-menu-include="false">
 
     <parameter name="organizationPartyId"/>

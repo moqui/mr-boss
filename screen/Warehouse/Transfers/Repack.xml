@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     Mantle's guarded mantle.shipment.WarehouseTaskServices.repack#Asset with the page's operation key: the issue and the
     receipt of an organization-owned assembling work effort, netting to zero. The repackStock transition checks the asset
     with the move capability first. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Repack" default-menu-index="3">
     <parameter name="facilityId"/>
     <parameter name="productId"/>

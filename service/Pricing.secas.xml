@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<secas xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-eca-3.xsd">
+<secas xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-eca.xsd">
     <!-- Notification failures happen after the price commit and never undo an accepted price change. -->
     <seca id="BossStoredPriceNotice" service="mantle.product.PriceServices.store#ProductPrice" when="tx-commit">
         <condition><expression>!parameters.catalogOperationKey</expression></condition>

@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     Nothing is deleted. CanonicalEditors links the owners' editors of what Maintenance does not keep: meters on the equipment
     model (Products), asset classes (Accounting), units (Products) and status flows (Tools). The Maintenance administrator's
     (MAINTENANCE_SETTINGS_EDIT, which Mantle checks on every change). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Lookups" default-menu-index="5"
         default-menu-include="ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT')">
     <parameter name="enumTypeId"/>

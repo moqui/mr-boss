@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (book#ResourceSlot, cancel#MyBooking: create#Event, book#Resource, cancel#ResourceBooking), refused by the same policy and
     blocks; an event opens in Commons; a resource's name opens its policy (ResourcePolicyDetail). No maintenance interval is edited
     by dragging. The terminal shows ResourceCalendarTui, the resources and the day's intervals. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Resource calendar" default-menu-index="4" render-modes="vue,qvue,tui" server-static="vue,qvue">
 
     <parameter name="view"/>

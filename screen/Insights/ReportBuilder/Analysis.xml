@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     saveAnalysis is not taken in. AnalysisSteps is then the framework definition editor (Insights › PanelDetail), where
     transformations, pivot, totals and the time comparison are the engine's own. The author's and the dataset steward's
     (BOSS_INS_ANALYSIS); a reader opens a saved analysis as the panel it is. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Analysis" default-menu-index="2">
 
     <parameter name="datasetId"/>

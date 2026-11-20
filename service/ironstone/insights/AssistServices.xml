@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     surfaces are separate services, since a tool exposure (moqui.agent.AgentToolExposure, data/BossSetupData.xml) is offered to
     one or the other by its row: the MCP ones never read a cost or margin, whatever the caller holds. The report engine's own
     run#Query is not exposed. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="SourceAnswer" type="interface">
         <out-parameters>
             <parameter name="datasets" type="List"><description>datasetId, title, timeField, domainOwner, costs</description></parameter>

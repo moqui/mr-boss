@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     removing another user as a follower need the sender, or a user the record's own authorization lets update it. A note or
     comment is changed by its author and deleted by its author or a user in the ADMIN group (Mantle's update#RecordNote and
     delete#RecordNote check it again). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== The record ========== -->
 

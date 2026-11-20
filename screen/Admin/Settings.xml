@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     InstanceSettings and Localization (P8), theirs too, and ReferenceData (P8), every Admin user's as the index. The area is every Admin user's: the index shows each entry
     only to those who open its destination. A BOSS user outside Admin is granted SettingsHome alone (impl-admin F46), not this
     area or the root; a member reads its organization's Constitution in the Assist drawer's Rules pane (impl-admin F46), not here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="5" menu-image="sym_o_settings" menu-image-type="icon">
     <subscreens default-item="SettingsHome" always-use-full-path="true">
         <subscreens-item name="SettingsHome" location="component://mr-boss/screen/Admin/Settings/SettingsHome.xml" menu-title="Settings index"

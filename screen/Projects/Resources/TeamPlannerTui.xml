@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     days, or new first and last days: move#Allocation), and for an approver Decide (approve, reject with a reason, or cancel:
     decide#Allocation). Each dialog answers the planner again on the same find. Requesting a new allocation and staffing a
     placeholder are Allocations' (plain screens the terminal renders); a person opens PersonDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Team planner" default-menu-include="false">
 
     <parameter name="fromDate"/>

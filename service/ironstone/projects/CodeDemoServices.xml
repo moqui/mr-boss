@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     commits by the demo users, branches, tags, checks and a merge request, written through the framework's git services so the
     objects, the push log and Mantle's links are real. Git hosting is a build feature: without it the parts log that they were
     not loaded and the rest of the demo stands. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="load" noun="CodeDemo" authenticate="anonymous-all" allow-remote="false">
         <description>Stores, each part once (a repository with commits already is left as it is):

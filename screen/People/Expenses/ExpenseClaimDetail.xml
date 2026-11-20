@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     reimbursement), the claimant's advances outstanding, and the claim's invoice under People's Payroll for a holder of PEOPLE_EXPENSE_MANAGE who opens Payroll. Print
     and Download PDF (ExpenseClaimPrint) and the evidence bundle (the PDF and the receipts in a zip) for every reader. Every People
     user's and a self-service employee's by the expenses area's grant; decide#Claim and the other services check again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Expense claim" default-menu-include="false">
     <parameter name="invoiceId"/>
     <transition name="saveHeader">

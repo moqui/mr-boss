@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     the public forum's staff use, through the same services (mantle.forum.ModerationServices), so a decision here is the
     same decision, revision-checked and audited by the forum. These services only shape it for the Comms screens; the forum
     decides who may. A public account has no moderation scopes here even if it moderates a public site. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="check" noun="Internal" allow-remote="false">
         <description>Refuses a public account: forum moderation in Comms is for internal staff, whatever public site they moderate.</description>

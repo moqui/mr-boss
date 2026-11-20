@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     may see them) and Capacity (twelve weeks). People P2 (an owner contract, design-people §4 Employee360): the person's employee
     record, a link for a viewer People's scope admits (ironstone.people.ContextServices.get#Employee360Link: People's mount for a
     People user, Commons' for the person themselves); the link adds no right, Employee360 checks again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Person" default-menu-include="false">
 
     <parameter name="partyId"/>

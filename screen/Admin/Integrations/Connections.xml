@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     ConnectionFind and ConnectionList extended here), and createConnection is taken in from it. Mail relays are Mail and
     protocols' (MailRelays). Reading needs ADMIN_CONNECTION_VIEW and starting one ADMIN_CONNECTION_MANAGE, checked by the
     services. No secret is shown or listed. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Connections" menu-image="sym_o_hub" menu-image-type="icon">
     <parameter name="text"/>
     <parameter name="adapterKey"/>

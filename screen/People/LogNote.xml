@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     then files it as a note on it (mantle.party.CommunicationServices.log#RecordNote), seen in its notes by those who may see them.
     No other People record takes a note from Assist: an employment's notes are HR's on Employee360, and a confidential case's,
     a review's or a qualification's are never written from an Assist answer. Nothing is filed until the user submits. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Log as note" default-menu-include="false">
     <parameter name="entityName"/>
     <parameter name="recordId"/>

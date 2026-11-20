@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The terminal twin of the work-center calendar (ResourceCalendar.xml's tui text is a dynamic container of this screen):
     the next two weeks from date (today by default) of ironstone.manufacturing.WorkCenterServices.get#ResourceCalendarEvents
     for the selected plant's work centers, each with its kind: work hours, holidays and released operations. Read only. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Calendar" default-menu-include="false">
     <parameter name="date"/>
     <actions>

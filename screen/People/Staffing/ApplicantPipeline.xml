@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     application is named. Add application (the one primary) records one for an open opening: the person chosen or named, the
     source and referral, the contact permission and a resume. Panel members read their interviews' applications from
     ApplicantDetail and the interviews calendar, never this list. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Applicants" default-menu-index="5" menu-image="sym_o_view_kanban" menu-image-type="icon">
     <parameter name="jobOpeningId"/>
     <parameter name="statusId"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.purchasing.SettingsServices) and PurchasePolicy (the buying policy, mantle.order.PurchaseServices, with the
     policies it depends on read only), built in impl-purchasing P2; ApprovalPolicies (P4) and ScorecardPolicies (P15, the
     supplier scorecard basis, measures and response rules) join them, and InspectionTemplates' menu entry in its phase. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="13" menu-image="sym_o_settings" menu-image-type="icon">
     <subscreens default-item="SettingsHome" always-use-full-path="true"/>
     <widgets>

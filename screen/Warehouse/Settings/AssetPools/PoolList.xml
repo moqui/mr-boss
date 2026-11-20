@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     with owner and members (ironstone.warehouse.PolicyServices.get#Pools); a manager creates one
     (mantle.product.AssetPoolServices.store#AssetPool). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pools" default-menu-index="1" default-menu-include="false">
     <parameter name="term"/>
     <transition-include name="policyChoices" location="component://mr-boss/template/WarehousePolicyParts.xml"/>

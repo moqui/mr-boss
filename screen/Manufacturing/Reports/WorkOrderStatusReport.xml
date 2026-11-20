@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     with its target, good and remaining quantity, due date, days late and what blocks it (StatusRows), with the totals
     per unit and the count per status. The report's scope, as-of time, units and any partition it could not read show
     above the results (ReportStatus). The export holds the parameters and columns. Every Manufacturing reader reads it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Status" default-menu-index="2">
     <parameter name="organizationPartyId"/>
     <parameter name="facilityId"/>

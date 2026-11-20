@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     screen's part for the instance administrator (a remote's record changed directly) is not here. Reading needs
     ADMIN_CONNECTION_VIEW and a change or a test ADMIN_CONNECTION_MANAGE: the services check them, and every refusal comes
     back as a reason shown here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Connection" default-menu-include="false">
     <parameter name="adapterKey" required="true"/>
     <parameter name="connectionKey" required="true"/>

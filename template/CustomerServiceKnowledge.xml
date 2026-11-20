@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.request.KnowledgeServices.suggest#ArticleEdit, a task for the review team) and Helpful? (record#ArticleFeedback),
     each after the case's check (caseEdit); Make an article opens CaseToArticle for a knowledge author. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <!-- the suggestions for other words (a link form: the tab again with articleText) -->
     <transition name="searchArticles">
         <default-response url=".">

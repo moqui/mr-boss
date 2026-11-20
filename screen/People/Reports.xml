@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     completion), and its CSV (exportCsv: the same projection and options, safe from spreadsheet formulas). Every People user's by
     the root's grant; a user who reads no report is told which access it needs. Insights' catalog opens a report here by its id
     (People's ReportCatalogEntry rows; the route's reportId). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="14" menu-image="sym_o_bar_chart" menu-image-type="icon">
     <parameter name="reportId"/>
     <parameter name="organizationPartyId"/>

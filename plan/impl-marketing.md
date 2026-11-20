@@ -1061,7 +1061,7 @@ ContactDetail's Add to list; MKT-AUDIENCE, MKT-CONSENT (the suppression and scop
   - Sales.js `mountRoots`' Marketing row gains `Accounts/Accounts` → `Leads/Accounts`, mounted at
     `Marketing/Leads/Accounts` (design §2), so the action is offered under both roots;
   - LeadList's `row-selection` admits the audience editor too, its Assign and Disqualify actions taking
-    `condition="canEdit"` and the new action the audience capability (xml-form-3.xsd :177-182); AccountList gains row
+    `condition="canEdit"` and the new action the audience capability (mr-xml-form.xsd :177-182); AccountList gains row
     selection for it; both render in qvt and tui only, as row selection does;
   - a lead row names no contact (SalesOpportunities.js :841-884), so the action resolves each selected lead's current
     contact rows and an account's contacts through Sales' services under the caller's Sales read, a lead with no
@@ -5113,7 +5113,7 @@ files (EventRegistrations.js, EventRegistrationPlaces.js, EventRegistrationPayme
   (impl-people P30: BossSetupData.xml's PEOPLE_CLOCKING, BOSS_DEV_PPL_CLOCKING, BOSS_PEOPLE_KIOSK, ClockingKiosk.xml's island page,
   KioskIdentity.js's device check, PeopleKiosk and KioskIdentity specs); EventRegistrationPlaces.js (`registrationOfCode`, the states,
   EventRegistrationAction); MarketingAutomations.js (the triggers' cursors, the run-as-owner rule) and MarketingLeads.js (rules,
-  captures, the job); Sales' SalesIntake.js source kinds; the scan-input contract (xml-form-3.xsd, screen/scan.rs). The code over the
+  captures, the job); Sales' SalesIntake.js source kinds; the scan-input contract (mr-xml-form.xsd, screen/scan.rs). The code over the
   plan:
   - "one attendance fact per registration": a record of its own, `EventAttendance` (the registration its key; offer, event,
     organization, attendee, ticket, method EamCode, EamLookup or EamOverride, the state then, the code's revision, reason, device, who,
@@ -6262,7 +6262,7 @@ per sending number for promotional texts"). Built beside follow-up 4 (`mkt/fix4`
   - DeliveryAnalysis already has no open rate for SMS (P20); nothing changed there. An experiment stays email only (P10).
 - mr-moqui (framework): `screen/shell.rs` (CONF_PROVIDER_HOOKS, `conf_providers_of`, `conf_providers`), `screen/cache.rs` (ScreenConf
   `providers`), `context/conf.rs` (the merge by hook and name), `service/shell.rs` (call#Providers and get#Providers with the conf's),
-  `moqui-conf-3.xsd`, ShellServices.xml, ProviderInterfaces.xml (sms#Consent); Sms.js (the counters, `promo:<number>`,
+  `mr-moqui-conf.xsd`, ShellServices.xml, ProviderInterfaces.xml (sms#Consent); Sms.js (the counters, `promo:<number>`,
   `deliveryOutcome`, the providers asked with authorization disabled), SmsServices.xml (check#SmsSend, note#SmsSent and release#SmsSend
   take fromNumber and isPromotional), org/moqui/SmsServices.xml (deliveryOutcome), VoiceEntities.xml, Voice.js, VoiceServices.xml and
   basic-comms `System/Voice/Fraud.xml` (smsMaxPromotionalPerNumber); docs `interfaces/SMS.md`, `tools/Comms.md` ("Provider hooks": the
@@ -7629,7 +7629,7 @@ failing run's log (`wave-logs/sm-final-apps.log`) and its worker logs (`runtime/
     section renders its widgets in qvt, qvt-static, html and tui alike; SendDetail has no .qvue or tui twin), for an unreleased one
     nothing (`delivery` is `detail?.delivery || {}`, so the condition never throws; MarketingDispatch's get#Send gives `{released:
     false}` before the release). The Pause and Cancel link already had its own condition;
-  - the framework claim: a `container-box` takes no condition. The XSD (`xml-screen-3.xsd`) gives it only id, type and initial; the
+  - the framework claim: a `container-box` takes no condition. The XSD (`mr-xml-screen.xsd`) gives it only id, type and initial; the
     containerBoxMacro of ScreenQvt.js, ScreenQvtStatic.js and ScreenHtml.js and ScreenTui.js's "container-box" read no condition, and
     TemplateSupport's `stmt` adds no generic one (the widgets that honour one test it in their own macro, as labels, links and dialogs
     do; the Rust screen definition reads a condition on sections only). Screen lint does not flag it. Counted (multi-line tags
@@ -7981,7 +7981,7 @@ day, against the code and the other three plans; F64–F89 by the rest of P0 on 
 | F62 | P0 (review): no phase planned abuse handling of the public endpoints beyond the verification mail's limit, or the update of `docs/security/Attack-Surface.md` | §2 "Public endpoints are bounded"; P7, P12, P15, P17 and P23 |
 | F63 | P0 (review): P15's walk opens P14's landing page and its PASS pages carry its codes, so P15 does not run beside P14; P14 named an Event component that P16 builds; P3 named Marketing's ContactDetail, which is P19's | §1 order; P14, P16, P3 corrected |
 | F64 | P0 (Nov 13): Sales' mount row (mr-boss service/ironstone/sales/Sales.js:30-33) admits the Marketing root for `Pipeline/Leads` → `Leads` and `Settings/LeadSources` → `Settings/LeadSources` only, and its `sharedLinks` hold just those two (:184-188), so a lead shows unlinked under Marketing and every transition stays Sales' guarded service; Accounts is not admitted (impl-sales F110), and design §2 had no Marketing path for it | P3 adds `Accounts/Accounts` → `Leads/Accounts` (Marketing/Leads/Accounts; §4, design §§2, 10), P19 `Accounts/Customer360` → `Customers/Customer360`. §1, P3 changed |
-| F65 | P0 (Nov 13): LeadList's row selection (screen/Sales/Pipeline/Leads.xml:90-128) is shown only with `canEdit` (SALES_OPPORTUNITY_EDIT) and its two actions carry no condition; row selection takes a condition per action and renders in qvt and tui only (framework xsd/xml-form-3.xsd:161, :177-182); its key is `id@revision` and a row names its account but no contact (mr-mantle SalesOpportunities.js:841-884). AccountList (screen/Sales/Accounts/Accounts.xml) has no row selection | P3: the selection admits the audience editor, Sales' actions take `canEdit`, Marketing's the audience capability; each selected lead's contacts are resolved through Sales' services, one with none named as its failure; AccountList gains its selection. P3 changed |
+| F65 | P0 (Nov 13): LeadList's row selection (screen/Sales/Pipeline/Leads.xml:90-128) is shown only with `canEdit` (SALES_OPPORTUNITY_EDIT) and its two actions carry no condition; row selection takes a condition per action and renders in qvt and tui only (framework xsd/mr-xml-form.xsd:161, :177-182); its key is `id@revision` and a row names its account but no contact (mr-mantle SalesOpportunities.js:841-884). AccountList (screen/Sales/Accounts/Accounts.xml) has no row selection | P3: the selection admits the audience editor, Sales' actions take `canEdit`, Marketing's the audience capability; each selected lead's contacts are resolved through Sales' services, one with none named as its failure; AccountList gains its selection. P3 changed |
 | F66 | P0 (Nov 13): `find#Opportunities` (mr-mantle service/mantle/sales/OpportunityServices.xml:262-300) filters by one `marketingCampaignId` and one `dataSourceId` and refuses a caller with no Sales read (PERMISSION_DENIED); LeadList shows the campaign as its id (Leads.xml:186) and takes the campaign as a parameter (:35, :50) | P13: handoff counts for a `MARKETING_VIEW` holder come from Marketing's own MarketingLeadCapture rows; the campaign column shows its name. P13 changed |
 | F67 | P0 (Nov 13): consent on Sales' ContactDetail is the Commons contact record's Consent tab (mr-boss template/ContactRecord.xml:876-889, included by every app's ContactDetail), read only through `ironstone.comms.ConsentServices.get#ContactConsent` (template/ConsentRecord.xml:55-75), its link going to `/qapps/Comms/Consent/Contact` for a contact administrator (`isConsentAdmin`) only | P3: the tab links a holder of `MARKETING_CONSENT_EDIT` to Marketing's Consent mount (owner contract, Commons), which Sales' ContactDetail then shows. P3 changed |
 | F68 | P0 (Nov 13): Sales' P5 (`store#LeadIntake`, SalesLeadIntake, the lead-source map, UtmSourceMap), P6 (user facts), P7 (X1), P9 and P11 (the approval setting, `place#Order` from a quote) are not on master; nothing writes SalesLeadIntake or SalesOpportunityTracking yet (F87). impl-sales P5 names the inputs this plan expects (organization, source kind and id, name, email, phone, UTM source and medium, campaign, tracking code, default source, team queue, operation key; one lead per source identity; a repeated key answers the first result) | Checked by the phase that needs each, against the Sales phase as merged: `store#LeadIntake` at Marketing P13 against Sales P5; X1 and the placement at P17 against Sales P7, P9 and P11; the user facts at P21 against Sales P6. §1, P13 changed |

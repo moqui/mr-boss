@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
     menu, Customers (the shared Customer360 with Marketing's engagement) and Contacts (the Commons contact record), the audience
     readers'; P20 Reports (the report readers'; BOSS_MKT_REPORTS); P21 the campaign calendar (every Marketing reader's, hidden from the
     menu: Home's Calendar and the key g k), quick create's send, Today, the Comms hooks and Assist's answer actions. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Marketing" menu-image="sym_o_campaign" menu-image-type="icon">
 
     <always-actions>

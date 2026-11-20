@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     Release hold (release#CreditHold, a credit manager, with a reason) and the decisions made. A credit manager or finance
     administrator sets the customer's limit (store#Policy). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Credit"
         default-menu-index="4">
     <parameter name="organizationPartyId"/>

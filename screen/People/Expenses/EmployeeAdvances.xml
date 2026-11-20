@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     be settled; request#Advance); an approver of the step waiting approves or refuses it in its row (AdvanceDecision, decide#Advance),
     the person or who asked withdraws it. Approval to advance is not payment: it makes a bill to the employee that finance approves
     for payment and a payment run pays, and finance applies it to a claim in Accounting's Expense posting. Every People user's and a self-service employee's (BOSS_PPL_EXPENSES); Mantle checks every read and decision. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Advances" default-menu-index="2" menu-image="sym_o_payments" menu-image-type="icon">
     <parameter name="show"/>
     <parameter name="statusEnumId"/>

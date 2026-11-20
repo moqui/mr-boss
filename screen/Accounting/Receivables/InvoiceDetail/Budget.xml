@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     purchase order commitment it converted), from get#InvoiceFinanceDetail. It reads the invoice when the client loads the
     tab alone. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Budget details"
         default-menu-index="6">
     <parameter name="organizationPartyId"/>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     permission. MANTLE_USER_ORG's organizations limit what they administer; MANTLE_ACTIVE_ORG (the administrator's) leaves the
     active organization, or every one with none active. UserAccount and UserGroup carry no organization, so an identity is in
     scope through its party's organization relationships. Disabled artifact authorization widens nothing here. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="Parameters" type="interface">
         <description>The in-parameters the Admin app services share; each service declares what it returns.</description>
         <in-parameters>

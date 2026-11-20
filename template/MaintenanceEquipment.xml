@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     Maintenance's tabs (equipmentTabItems, EquipmentDetail's: the Book tab only when Accounting's get#AssetBook admitted the user), shown when the
     Maintenance context found the equipment (maintenanceEquipment from ironstone.maintenance.EquipmentServices.get#Equipment). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="MaintenanceEquipment" condition="recordFound &amp;&amp; appRoot == 'Maintenance'">
             <actions>

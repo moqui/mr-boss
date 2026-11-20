@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     distributor may name (recipientPermissionId: Insights' readers), and the recipient cap, the organization's setting,
     added here, where it is used: reading it costs more than the root should pay on every request. Tools' contact points,
     silences, mute timings, shared items and evaluation are not on these routes. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Business alerts" default-menu-index="10" menu-image="sym_o_notifications_active" menu-image-type="icon">
     <always-actions>
         <!-- the area's addition to the root's reportPolicy, through the framework's one reader of the map; in always-actions,

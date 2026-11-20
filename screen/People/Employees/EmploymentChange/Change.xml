@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     left out); and why (required for a change that waits for approval). Next checks it (mantle.humanres.PeopleServices
     .preview#EmploymentChange: a date outside the employment or before a change set later, a seat held then, a manager not of the
     employer or below the person, nothing changing) and keeps the draft (the user's draft record). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Change" default-menu-index="1" menu-image="sym_o_edit_calendar" menu-image-type="icon">
 
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>

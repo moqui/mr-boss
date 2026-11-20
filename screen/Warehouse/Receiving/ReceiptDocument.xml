@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     rejectedOnly the rejected units only, for the supplier. Printed from ReceiptDetail as html-print
     (/apps/Warehouse/Receiving/ReceiptDocument?renderMode=html-print); printing posts nothing, and a print that fails leaves
     the receipt as it is. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Receipt document" default-menu-include="false">
     <parameter name="shipmentId" required="true"/>
     <parameter name="rejectedOnly"/>

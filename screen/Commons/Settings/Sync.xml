@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     once, after the redirect), the addresses (org.moqui.resource.DavServices.get#SyncAddresses)
     and SetupGuides (the steps for iOS and iPadOS, macOS, Android, Windows, Thunderbird and Linux). Services:
     org.moqui.impl.UserServices create#UserAppPassword, revoke#UserAppPassword, get#UserAppPasswords. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Sync" default-menu-index="6" menu-image="sym_o_sync" menu-image-type="icon">
 
     <transition name="createAppPassword">

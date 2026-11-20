@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     from its calendar, the organization's holidays and the released operations by their estimated dates
     (ironstone.manufacturing.WorkCenterServices.get#ResourceCalendarEvents). Nothing moves or opens an editor here: schedule
     changes are ProductionSchedule's. The terminal: an agenda of the next two weeks (ResourceCalendarTui). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Calendar" default-menu-index="3" render-modes="vue,qvue,tui" server-static="vue,qvue">
 
     <parameter name="view"/>

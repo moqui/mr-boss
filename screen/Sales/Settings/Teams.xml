@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     otherwise, for a viewer People's scope admits (ironstone.people.ContextServices.get#Employee360Link); Sales mounts no
     Employee360. Membership changes access prospectively and rewrites no attribution; it grants no permission. The Sales
     administrator's (SALES_CONFIGURE) and the manager's (SALES_TEAM_MANAGE), which Mantle checks with the organization. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Teams" default-menu-index="3"
         default-menu-include="ec.user.hasPermission('SALES_CONFIGURE') || ec.user.hasPermission('SALES_TEAM_MANAGE')">
     <parameter name="organizationPartyId"/>

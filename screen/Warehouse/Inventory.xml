@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     container's detail open from the lists; Products' Shared/Product360 and Shared/InventoryAvailability are mounted with
     the Warehouse context (Products' get#SharedContext Warehouse branch) and open from a product; Shared/MaterialIssueReceipt
     (P12: a shipment's pick assembly) opens from Pack. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Inventory" default-menu-index="4" menu-image="sym_o_inventory" menu-image-type="icon"
         server-static="qvt">
     <subscreens default-item="Assets" always-use-full-path="true">

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     file; the note open is in the URL (wikiPageId, as QuickCreate's note kind links to it). Every read and change goes through
     the JSON transitions below, services of service/ironstone/commons/KnowledgeServices.xml that check the wiki's access rule: the
     notes space is its owner's (restrictView and restrictUpdate), so another user's note is "not found". -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Notes" default-menu-index="8" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_sticky_note_2" menu-image-type="icon">
 
     <parameter name="wikiPageId"/>

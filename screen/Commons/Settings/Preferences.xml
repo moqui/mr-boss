@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     pictures in mail show at once, threads or messages, the default account, where the signature goes and the two phone
     swipe actions (org.moqui.comms.MailSettingsServices.set#MailDefaults, the preferences the Inbox and Compose read). Sound
     defaults come later. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Preferences" default-menu-index="2" server-static="qvt" menu-image="sym_o_tune" menu-image-type="icon">
 
     <!-- the page loads again, so the shell takes dark mode and the menu -->

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     quick create), Move inside a facility (with its handheld mount at Handheld/Move), Repack, and internal StockRequests
     (RequestDetail, the shared request screen; NewStockRequest, the quick create). A move to another facility is a transfer:
     Move links to Transfers for it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Transfers" default-menu-index="6" menu-image="sym_o_swap_horiz" menu-image-type="icon">
     <subscreens default-item="Move" always-use-full-path="true">
         <!-- P15: a transfer and a subcontract dispatch are the shared shipment screen with the Warehouse transfer branch, a

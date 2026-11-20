@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     each), Scope changes (items added or taken out after the start, when and by whom); Chatter, the retrospective, as the right
     column from 1440 px. Services: ironstone.projects.PlanningServices get#SprintDetail, save#, start#, complete#Sprint;
     ironstone.projects.WorkItemServices.move#WorkItemCard. A sprint of a project the user does not see is "not available". -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Sprint" default-menu-include="false">
 
     <parameter name="workEffortId" required="true"/>

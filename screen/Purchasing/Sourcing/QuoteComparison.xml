@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     the chosen line's quantities to its selectable offers (a substitute accepted explicitly); the award so far shows each
     line's demanded, selected and remaining quantity, and Review the award opens Award with the allocations. Print and CSV
     give the comparison with the original and normalized basis. Prices are a buyer's or an approver's (Mantle's permission). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Compare quotes" default-menu-include="false">
     <parameter name="requestId" required="true"/>
     <parameter name="requestItemSeqId"/>

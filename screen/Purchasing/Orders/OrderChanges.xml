@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     reason and the preview's basis, so a receipt posted since fails it by name; then the new revision waits for its approval
     on OrderDetail, which releases the hold, and is sent again from there. Let the change go (cancel#PurchaseRevision) while
     nothing is applied. For a buyer; a purchase approver reads it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Order change" default-menu-include="false">
     <parameter name="orderId" required="true"/>
     <!-- the proposed change while it is reviewed: {itemChanges, partChanges} as JSON -->

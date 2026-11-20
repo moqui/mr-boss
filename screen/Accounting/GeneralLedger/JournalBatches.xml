@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Journal batches"
         default-menu-index="4"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <parameter name="organizationPartyId"/>
     <parameter name="text"/>
     <parameter name="previewId"/>

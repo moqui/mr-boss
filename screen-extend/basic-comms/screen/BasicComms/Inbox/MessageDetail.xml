@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (ironstone.customerservice.ChannelServices.create#CaseFromMessage: a case for the customer who sent it, the mail on it,
     timed by its received date), then CaseDetail. The Inbox has no message-actions slot yet (F-P6-2), so this is MessageDetail's;
     mail to a queue's address is the Comms rule's createRequest action (ChannelRouting). -->
-<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="createCase">
         <actions>
             <service-call name="ironstone.customerservice.ChannelServices.create#CaseFromMessage" out-map="caseMade"

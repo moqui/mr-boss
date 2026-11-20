@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (find#Acknowledgements, included in ironstone.purchasing.OrderServices by name) and the Today source of acknowledgements
     due. The screens call the Mantle writes (mantle.order.OrderServices start#, cancel#, preview#, apply#PurchaseRevision,
     record#Acknowledgement, send#PurchaseReminder) after AccessServices.check#Record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="OrderRevisions" allow-remote="false">
         <description>OrderDetail's Revisions and Acknowledgements of one purchase order (design §6 OrderDetail): each revision
             with its time, its changes from the audit log (a price change withheld from a user who sees no order amounts)

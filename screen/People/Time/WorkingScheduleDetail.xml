@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     a past week keeps its hours, intervals in effect together never overlap), edits its name, calendar and, until someone follows
     it, its zone, and ends it (store#Schedule, refused while someone follows it after the end). Each write names the revision read.
     No historical pay is recomputed. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Working schedule" default-menu-include="false">
     <parameter name="workingScheduleId"/>
     <parameter name="previewPartyId"/>

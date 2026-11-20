@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     user holds its permission: campaigns, lists and segments, sends with their delivery, opens and clicks (only while the person allows
     tracking), form answers (no answer text), event registrations (no order or payment), promotion use (no order) and consent; the
     sources the user may not read are named, never shown as none. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="MarketingCustomer" condition="appRoot == 'Marketing'">
             <widgets>

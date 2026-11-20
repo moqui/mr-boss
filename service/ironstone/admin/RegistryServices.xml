@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     get#SupportSummary, check#InstanceSetup), and
     every screen and app calls those. Here are the contract service its registrations name for the owners whose services keep
     their own shapes, and the check of which registered places open to the viewer under Admin (Registry.js). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="check" noun="OwnerReadiness" allow-remote="false">
         <description>The framework's readiness contract (moqui.server.ReadinessProvider) over an owner whose service keeps its
             own shape, by the provider key its registration names: accounting.setup (Mantle's setup readiness, for a holder of

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     open through the form request with parentWorkEffortId), with CSV, XLSX and html-print at that depth (a level column and an indented item in those). Hours
     only: no money is shown. Over mantle.work.ProjectReportServices.get#ProgressBreakdown (the project must be one the user sees;
     Restricted items the user may not see are left out). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Progress" default-menu-index="5" menu-image="sym_o_pending_actions" menu-image-type="icon">
 
     <parameter name="rootWorkEffortId"/>

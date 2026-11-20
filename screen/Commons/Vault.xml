@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     people the user's own vault records name (service/ironstone/commons/VaultPeopleServices.xml). Its path names Vault, so the page gets
     the framework's vault screens' Content-Security-Policy (vault@screen-policy), loads as a page of its own, and in the desktop and
     mobile apps may call their native vault, as Settings/VaultKey, Contacts/VaultContacts and Admin › Security › Recovery keys. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Vault" default-menu-index="9" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_encrypted" menu-image-type="icon">
 
     <parameter name="vaultId"/>

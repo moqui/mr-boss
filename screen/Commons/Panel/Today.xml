@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     messages rather than a screen, and the tab reloads on the shellCounts topic their changes publish; the forms reload it
     themselves (background-reload-id). The record of the canvas's screen context reaches the panel only on the client: "Add
     activity on this record" reads $root.screenRecord; the quick-add line links to the record given as parameters. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Today" default-menu-include="false">
 
     <parameter name="recordEntity"/>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     reads the record and the hints with inject: ['mRecordPanel'] and calls the JSON transitions below, each of which first
     finds the record under the user's filters (service/ironstone/shared/ChatterServices.xml): a read answers {visible: false} and the
     panel shows nothing, a write is refused. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Chatter" default-menu-include="false" render-modes="vue,qvue,tui" server-static="vue,qvue">
 
     <parameter name="recordEntity"/>

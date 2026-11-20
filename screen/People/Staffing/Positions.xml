@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     dates, state and vacancy (filled or vacant from its holders at the date, never stored) and its holder, as a list or a board by
     status; each opens PositionDetail. An HR editor (PEOPLE_HR_EDIT) plans a seat (New position, the one primary): it starts
     planned, and its activation is an approval (P5). A grade is its name: no pay amount is part of this screen. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Positions" default-menu-index="1" menu-image="sym_o_event_seat" menu-image-type="icon">
     <parameter name="term"/>
     <parameter name="organizationPartyId"/>

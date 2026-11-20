@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.commons.CalendarDemoServices.load-CalendarDemo): john.doe's calendars, events, invitations and bookings dated from the day
     the data is loaded, in john.doe's time zone (US/Central) whatever the server's is, so the week of the load has content.
     Only the BOSS_DEMO_* records are written; loading again moves their dates to the new day. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="load" noun="CalendarDemo" authenticate="anonymous-all" allow-remote="false">
         <description>Stores, for D the day of the load in john.doe's time zone:

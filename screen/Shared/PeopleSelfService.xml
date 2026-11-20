@@ -49,7 +49,7 @@ along with this software (see the LICENSE.md file). If not, see
     when they have any, each opening MyPayslip beside this screen (none in this build outside a live payroll: pay groups are in preview
     mode, design §5 Q3); the net is opted out of AI. P26 review (the user's call of Nov 12, 2026): their own legacy pay history in the
     same list, labelled historical, opening the record read only by its key (MyPayslip with legacyKey). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Self-service" default-menu-include="false" menu-image="sym_o_person" menu-image-type="icon">
 
     <transition-include name="storeEmergencyContact" location="component://mr-boss/template/PeopleEmergencyContacts.xml"/>

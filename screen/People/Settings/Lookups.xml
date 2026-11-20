@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     records hold each; Add value (the one primary), each value's Edit (name, code, order) and End (a danger dialog naming the
     value: it stays for the records that hold it and is offered for no new one). Nothing is deleted. The People
     administrator's (PEOPLE_CONFIGURE, which Mantle checks on every change). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Lookups" default-menu-index="3">
     <parameter name="enumTypeId"/>
     <parameter name="includeEnded"/>

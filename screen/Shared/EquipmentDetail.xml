@@ -35,7 +35,7 @@ along with this software (see the LICENSE.md file). If not, see
     maintenance records' files listed) and Conversation; the other apps' contexts render no tab. Other apps add their contexts
     when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Equipment"
         default-menu-include="false">
     <parameter name="assetId" required="true"/>

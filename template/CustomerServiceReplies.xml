@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     client and filed on the case once sent; its operation key makes a second click the first one's result). The preview's
     display is template/CustomerServiceReplyPreview.xml's ReplyPreviewBody, which SavedReplies' ReplyPreview shows too. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <!-- the saved replies the user may use on the case -->
     <transition name="caseReplyChoices" read-only="true">
         <actions>

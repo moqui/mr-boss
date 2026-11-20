@@ -79,7 +79,7 @@ along with this software (see the LICENSE.md file). If not, see
     read only but for an internal note, with Open in Customer Service.
     The request is found under the record visibility rule (R5, R28; in Projects also its project's, impl-projects.md F1): one the
     user may not see is "not available". -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Request" default-menu-include="false">
 
     <parameter name="requestId" required="true"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     basis, linking to its screen. The quantity reports are complete for every Warehouse user; valuation opens Accounting's
     InventoryValuation with the Warehouse context and shows values only with financial read; count variance is for count
     reviewers and adjusters. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="All reports" default-menu-index="1">
     <actions>
         <set field="can" from="warehouse.capabilities"/>

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     user's Warehouse facilities in the query (AccessServices' scope) and answers cost only with financial read
     (ACCOUNTING_VIEW). The writes check the record and capability, then call mantle.product.AssetRecordServices, which checks
     its permission and organization again. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="ListParameters" type="interface">
         <description>The in-parameters the Inventory lists share: the facility of the list (one of the user's; all of them
             when empty) and the page.</description>

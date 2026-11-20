@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     PRODUCTION_SUPERVISE to report and PRODUCTION_SUPERVISE to approve and correct. OperationExecution's Pause (P10) opens it
     with workEffortId and operationWorkEffortId (and facilityId, assetId) and _openDialog=ReportStopDialog, so the report
     carries the run and operation. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Downtime" default-menu-index="4">
     <parameter name="facilityId"/>
     <parameter name="assetId"/>

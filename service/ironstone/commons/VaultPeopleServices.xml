@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     own vault records name, the holders a recovery key may be split to, and the groups it may be kept for. People are found
     only as Chatter's people search finds them (ironstone.shared.ChatterServices.search#Users: the users the apps'
     chat-target providers refuse are left out, as ones that do not exist; SEC-COM-01). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="search" noun="VaultPeople" allow-remote="false">
         <description>People the user may reach (search#Users) who have an active vault key, by name or username, as options

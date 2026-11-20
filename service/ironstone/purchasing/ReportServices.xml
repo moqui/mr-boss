@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     is left out and named as withheld, never zero. With output csv each answers csvText and fileName: the same rows with
     the filters, snapshot time and omitted-data warning, formula-like text guarded. The evaluations and risks are written by
     mantle.party.SupplierServices, which the screens call after AccessServices. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="ReportAnswer" type="interface">
         <description>The parameters every Purchasing report takes: its organization (every one of the user's when empty), the
             page, and output csv for the export.</description>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     (ASN)", for a buyer or a receiver: the order part's one open receipt through Warehouse's
     mantle.shipment.WarehouseTaskServices.ensure#PurchaseReceipt (a second request opens the same receipt), then
     ShipmentDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Receipts" default-menu-index="1">
     <parameter name="view"/>
     <parameter name="supplierPartyId"/>

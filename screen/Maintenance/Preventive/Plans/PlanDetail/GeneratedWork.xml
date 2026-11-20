@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     for the plan (Mantle's find#MaintenanceOccurrences' workList, a maintenance reader of its organization), latest first, each with
     the due date it executes, its status, its planned day and completion, and whether it is a catch-up or a completion no longer
     counted. Each opens WorkOrderDetail. Reads the plan itself, so it renders alone. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Generated work" default-menu-index="3">
     <parameter name="maintenanceScheduleId"/>
     <actions>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     files are attached on the case after filing. Nobody else reads a case: not the employee's manager, not HR, not the
     administrator. The whole screen is opted out of AI (PE-21): an assistant reads and fills nothing here. Every People user's
     and a self-service employee's (its own grant, BOSS_PPL_CASES_SELF). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Grievances" default-menu-index="4" menu-image="sym_o_shield_person" menu-image-type="icon" ai-opt-out="true">
     <parameter name="show"/>
     <parameter name="pageIndex"/>

@@ -30,7 +30,7 @@ along with this software (see the LICENSE.md file). If not, see
     org.moqui.admin.BackupServices', which check ADMIN_BACKUP_VIEW and ADMIN_BACKUP_RUN: the backup operator opens only
     Backups here (BOSS_ADM_DATA_BACKUPS: the area's screen without its other subscreens) and lands on it; the data
     operator opens Backups too and is told it is not available. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Data" default-menu-index="9" menu-image="sym_o_swap_vert" menu-image-type="icon">
     <subscreens default-item="Imports" always-use-full-path="true">
         <!-- the backup operator opens only the backups here: the area starts at them -->

@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Products owner/capability boundary. Check the real user's groups and organizations even when a caller has disabled
      artifact authorization. Never trust a capability or organization list supplied by a screen, import or client. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="SharedContext" allow-remote="false">
         <description>Trusted app routing, tabs and launcher capabilities for shared catalog mounts. New apps extend the policy in SharedContext.js.</description>
         <in-parameters>

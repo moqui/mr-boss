@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     WectInstruction row (stored once with its checksum and its start; the one before ended). Work made of the procedure resolves the
     instruction in effect when it was made, so a later approval changes none of it. For an author: Edit (store#ProcessInstruction, a
     draft) and Remove (no instruction from the next approval). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Instructions" default-menu-index="4">
     <parameter name="workEffortId"/>
     <transition-include name="storeInstruction" location="component://mr-boss/template/MaintenanceProcedureParts.xml"/>

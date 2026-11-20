@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     private notes their author's alone. A self-service employee without the launcher opens the area by its own grant
     (BOSS_PPL_PERFORMANCE), for their own reviews, goals and feedback. Review cycles and Review forms are the review administrator's
     (BOSS_PPL_REVIEW_ADMIN: BOSS_PEOPLE_DEVELOP, the People administrator and ADMIN; denied to the root user group and self-service). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reviews &amp; goals" default-menu-index="13" menu-image="sym_o_rate_review" menu-image-type="icon">
     <subscreens default-item="Reviews">
         <!-- Reviews (menu index 1), Goals (2), ReviewCycles (3) and ReviewForms (4) are files under Performance/, with ReviewDetail

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     over-shipment tolerances (zero unless set), the short-quantity choice, blind counts and auto-print, each with its
     source; a manager changes it by a dated row (mantle.facility.WarehousePolicyServices.store#OperationPolicy). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Operations" default-menu-index="1">
     <transition-include name="storeOperationPolicy" location="component://mr-boss/template/WarehousePolicyParts.xml"/>
     <actions>

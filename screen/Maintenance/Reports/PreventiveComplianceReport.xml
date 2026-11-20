@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     target, due date or threshold, outcome, when it was satisfied, its work order and a note (coalesced into a catch-up, a skip's
     reason, the reading at a meter completion); its CSV is the form-list's own (P17: the columns chosen, every row, each outcome
     named; the summary left out, review R2). No cost. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="PM compliance" default-menu-index="2">
     <parameter name="fromDate"/>
     <parameter name="thruDate"/>

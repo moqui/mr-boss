@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     applies to, who changes it and a link to the owner's screen, shown only to a viewer that screen opens to. Admin changes none
     of them: Products owns units, Accounting currencies, tax and terms, each app its own types and statuses, and the generic
     status-flow editor stays in Tools for an instance administrator. Every Admin user's, as the settings index. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reference data" menu-image="sym_o_category" menu-image-type="icon">
     <parameter name="text"/>
     <parameter name="ownerApp"/>

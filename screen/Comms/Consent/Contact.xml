@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     are its dialogs. For contact admins only, as the registry; the contact record's Consent tab shows the same state to
     anyone who may see the contact. Marketing mounts it at Marketing/Audiences/Consent/Contact (impl-marketing P3): a Marketing
     consent editor sees a contact of their organizations' lists only, without the link to Commons. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Contact consent" default-menu-include="false">
 
     <parameter name="partyId"/>

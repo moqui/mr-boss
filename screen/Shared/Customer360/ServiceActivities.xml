@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     P3 review): the customer's and its contact people's communication events on cases the user sees or with the user's
     organizations, and the activities on the customer (CustomerServices.get#CustomerActivities, F74), read only. Accounting's
     Activities tab (collections) stays Accounting's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Activities" default-menu-index="5">
     <parameter name="customerPartyId"/>
     <condition><expression>appRoot == 'CustomerService'</expression></condition>

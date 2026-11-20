@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     at Handheld/Count), CountReview and the printed count sheets; CountVariance is under Reports. The services are Mantle's
     mantle.product.InventoryCountServices, through ironstone.warehouse.CountServices' reads and the transitions of
     template/WarehouseCountParts.xml. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Counts" default-menu-index="5" menu-image="sym_o_checklist" menu-image-type="icon">
     <subscreens default-item="Counts" always-use-full-path="true"/>
     <widgets>

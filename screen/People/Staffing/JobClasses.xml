@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     the skills it requires, the positions of it the reader reads and its state; ended classes when asked. Every staff reader reads
     them; an HR editor (PEOPLE_HR_EDIT) starts one (New job class, the one primary), which opens JobClassDetail. A used class is
     ended there, never deleted. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Job classes" default-menu-index="2" menu-image="sym_o_work_history" menu-image-type="icon">
     <parameter name="term"/>
     <parameter name="includeEnded"/>

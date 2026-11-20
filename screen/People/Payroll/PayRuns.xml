@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     its pay date and source cutoff, a regular run; a period whose inputs another run took, or with a regular run already, is
     refused; P26: or an off-cycle run, paying the period's approved adjustments no run took), which opens the run's PayRunDetail. Payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read and write. Amounts are
     opted out of AI. Creating and calculating a run make no invoice or payment. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pay runs" default-menu-index="1" menu-image="sym_o_payments" menu-image-type="icon">
     <parameter name="payrollGroupId"/>
     <parameter name="statusId"/>

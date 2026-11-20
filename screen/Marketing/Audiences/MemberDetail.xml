@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     action by state (Confirm with evidence for a pending request, a consent editor's) and Withdraw in More. The boxes: the membership
     rows, the subscription requests with their evidence and outcome, and the consent history of the list and of its organization's
     purposes. A staff member cannot undo a complaint or a hard bounce here: a suppression has its own review (Suppressions). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Member" default-menu-include="false">
     <parameter name="contactListId" required="true"/>
     <parameter name="partyId" required="true"/>

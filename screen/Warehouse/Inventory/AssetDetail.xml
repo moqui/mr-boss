@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     name and comments (the metadata allowlist, mantle.product.AssetRecordServices.update#AssetMetadata, audit-logged) for
     a user with adjust. Quantity, location, status, owner and cost change only through their guarded tasks. Tabs: the
     ledger, reservations, the audit trail, files (AssetContent) and notes. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Asset" default-menu-include="false">
     <parameter name="assetId" required="true"/>
     <transition name="storeMetadata">

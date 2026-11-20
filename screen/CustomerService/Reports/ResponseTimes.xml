@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     business time (each clock's calendar, less its pauses) and elapsed time, and the clocks still open with their median age.
     First response is an outward response the channel accepted (an acknowledgement or a note is none); each resolution episode
     counts, a reopen its own. The export holds the same rows -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Response times" default-menu-index="3">
     <parameter name="organizationPartyId"/>
     <parameter name="requestCategoryId"/>

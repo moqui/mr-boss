@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     not named, and the file as it would be sent. Its schedule is an ordinary schedule of it (Scheduled reports), personal or to
     owner-equivalent recipients: there is no separate timer, snapshot or mailer, and a digest adds nothing across recipients.
     Show on Home sets which digest Home previews for the caller. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Management digest" default-menu-index="9" menu-image="sym_o_summarize" menu-image-type="icon">
 
     <parameter name="definitionId"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     and an agreement's among them, read by PRICE_VIEW or PRICE_EDIT and edited by PRICE_EDIT, each checked again in Mantle; no cost,
     margin or supplier price. An agreement's negotiated prices are kept on the agreement (AgreementDetail's Items), and the price
     resolver applies them only while the agreement is active and dated. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Customer prices" default-menu-index="2">
     <subscreens default-item="List">
         <subscreens-item name="List" location="component://mr-boss/screen/Shared/Prices.xml"/>

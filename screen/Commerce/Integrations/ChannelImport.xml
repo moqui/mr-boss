@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     each order its own message and transaction, a failing one not stopping the rest; committing again answers the outcome).
     ImportResult: each order's outcome, order and error; failed ones are retried from IntegrationDetail. Admin §11 registers
     this wizard as an import target when Admin is built (impl-commerce §7). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Channel import" default-menu-index="2">
     <parameter name="systemMessageId"/>
     <parameter name="systemMessageRemoteId"/>

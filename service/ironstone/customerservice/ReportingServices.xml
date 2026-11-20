@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     Customer360's service statistics and agreements, each over the reports' scope (the Reports area, the user's organizations,
     the queues of the teams they report on), with its as-of time, period and time zone, its filters and what it left out, and
     with output csv the same rows, the export audited. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="ServiceDashboard" allow-remote="false">
         <description>Home's service measures for the user's scope over a period (the last 30 days by default): open,
             overdue, unassigned, SLA compliance, first response, resolution and CSAT, each with its label, value text (null

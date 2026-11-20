@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (include or exclude, dated, ended never deleted); Evaluation (as of a time: who matches and by what, who is left out and why;
     refused with no count when the filter needs a source the user cannot read). Every change is Mantle's guarded segment service at
     the revision read; an evaluation subscribes no one. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Segment" default-menu-include="false">
     <parameter name="marketSegmentId" required="true"/>
     <parameter name="asOf"/>

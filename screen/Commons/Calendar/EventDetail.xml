@@ -29,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
     the same layout read-only, and one an application keeps (a People training session or interview) says where it is changed
     (Commons calendar editors, Nov 12, 2026). A mounting app's own links show above the tabs (eventAppLinks: Marketing's Registration
     setup, impl-marketing P16). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Event" default-menu-include="false">
 
     <parameter name="workEffortId" required="true"/>

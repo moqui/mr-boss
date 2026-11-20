@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     get#PublishedCalendar with the token the route gives (the token parameter, whatever the request says), which checks it
     again before it reads anything; a missing password answers needsPassword and no events, and a wrong one is its own
     error. Nothing else is read here. No CalDAV. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         require-authentication="false" default-menu-include="false" default-menu-title="Calendar" render-modes="vue,qvue,tui" server-static="vue,qvue">
 
     <!-- a POST (SEC-BOS-05): the link's password goes in the body, never in the address, where access and proxy logs and

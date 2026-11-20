@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Purchasing's approval reads (design-purchasing §12 ApprovalPolicies, §6 Approvals; impl-purchasing P4; Approvals.js): the
     approval policy list of the Settings area and the Today source of the decisions waiting. The policies are stored, previewed
     and decided through Mantle's mantle.order.PurchaseServices, which the screens call after AccessServices. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="PurchaseApprovalPolicies" allow-remote="false">
         <description>An organization's approval policy rows (ApprovalPolicyList): each step with its source type, amount band and
             currency, category or facility, step, approver, quorum, separation, self-approval and expiry, its dates and state,

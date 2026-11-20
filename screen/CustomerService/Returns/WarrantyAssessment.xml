@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
       or cost), opens WorkOrderDetail for a user Maintenance admits to the work order, is moved in Maintenance rather than by
       Update repair, and gains Send intervention report once Maintenance has stored the report: send#InterventionReport mails it
       to an address of the customer or its contacts through Customer Service's own mail draft and files it on the case. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Warranty claim" default-menu-include="false">
     <parameter name="requestId"/>
 

@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     request names one of Insights' registrations, never a service or an index, and gives its reason) and is offered only where
     the viewer may run it. It is not
     a replacement for Monitor. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Data readiness" default-menu-index="2">
 
     <parameter name="organizationPartyId"/>

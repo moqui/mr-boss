@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     decides, and why) and the decisions; an approver of the step waiting decides it here (Approve, the primary, or Refuse with a
     reason, decide#PositionApproval) as from Approvals. New terms supersede a request waiting. A position outside the reader's
     reach shows "Not available", whether or not it exists. No pay amount is part of it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Position" default-menu-include="false">
     <parameter name="emplPositionId"/>
     <parameter name="asOfDate"/>

@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
       reconcile#MaintenanceSchedule, with its reason), or a meter's reading (decision reading: MaintenanceResourceServices
       record#MaintenanceMeter, the resource administrator's). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="storePlan">
         <actions>
             <if condition="maintenanceScheduleId">

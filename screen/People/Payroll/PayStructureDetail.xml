@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     PakPayrollConfig (Mantle's publish#Structure), which takes effect when approved: the Approval box shows the request (who asked, why,
     who decides it and the decisions), and its approver (a payroll approver who did not draft it, decide#Publication) approves or
     refuses it here or from the notice. A changed draft supersedes the request. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pay structure" default-menu-include="false">
     <parameter name="payrollStructureId"/>
     <parameter name="asOfDate"/>

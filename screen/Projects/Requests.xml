@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Requests (design-projects.md §6): the request list is the default subscreen Requests/List, with RequestDetail in its place: the
     shared request detail (screen/Shared/RequestDetail.xml) in the Projects context. The public request form is not here: it is
     screen/RequestIntake.xml, served at /r/<token> without a sign-in (MoquiConf.xml token-route r). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Requests" default-menu-index="4" menu-image="sym_o_flag" menu-image-type="icon">
     <subscreens default-item="List">
         <subscreens-item name="RequestDetail" location="component://mr-boss/screen/Shared/RequestDetail.xml" menu-include="false"/>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     and End. Then the recurring sales orders, read only (their recurrence is edited in Sales' Recurring orders, impl-sales P16, which
     "Manage in Sales" opens for a keeper of recurrence), with their last copy and invoice, and the last run of the create_RecurringOrders job that copies them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Recurring invoices"
         default-menu-index="6">
     <parameter name="organizationPartyId"/>

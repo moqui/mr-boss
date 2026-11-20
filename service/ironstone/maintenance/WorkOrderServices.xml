@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Maintenance's work order list (impl-maintenance P3; design-maintenance §3 WorkOrders; WorkOrders.js): the list's shape over
     Mantle's find#MaintenanceWorkOrders, which checks the user's maintenance scope; the work order's own reads and writes are Mantle's
     mantle.work.MaintenanceServices, which the screens call after check#Record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="WorkOrderRows" allow-remote="false" read-only="true">
         <description>WorkOrders' rows: Mantle's find#MaintenanceWorkOrders with a saved find applied (savedFind: mine, team (the
             user's first team), unassigned, overdue, blocked, preventive) and each row's state color, calendar title, assignee text

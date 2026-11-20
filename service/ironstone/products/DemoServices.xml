@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The Products demo's dates relative to the load (data/BossProductsDemoData.xml calls load#ScheduledPriceDemo). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="load" noun="ScheduledPriceDemo" authenticate="anonymous-all" allow-remote="false">
         <description>Moves the switch from BOSS_PRICE_SALES (15.00) to BOSS_PRICE_NEXT (16.00, "Scheduled next price") to the
             first day of the month after next at 00:00, so the demo's next price is always ahead of the load; loading again moves

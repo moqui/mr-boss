@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     repository its project shares: the work items shared with it, no Link or Unlink, and no checks (the team's CI). Services:
     ironstone.projects.CodeServices get#CommitDetail, link#CommitItem,
     unlink#CommitItem (org.moqui.git.GitServices get#GitCommit, get#GitCommitDiff, get#GitCommitStatuses). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Commit" default-menu-include="false">
 
     <parameter name="repositoryId" required="true"/>

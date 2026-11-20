@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     change starts a policy from now and ends the one in effect, named as read (mantle.marketing.CampaignServices.store#MarketingPolicy);
     Preview shows what it would change first (preview#MarketingPolicy). The one-person-team flag is off by default: with it on an author
     approves their own campaign and their own send to fewer than 500 recipients, recorded as a self-approval. The history below. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Campaign defaults" default-menu-index="3">
     <parameter name="organizationPartyId"/>
     <parameter name="previewing"/>

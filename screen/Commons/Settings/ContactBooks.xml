@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     manage), and the CardDAV address (CardDavInfo, later: the CardDAV server comes with Sync). Everything goes through
     mantle.party.ContactBookServices, which checks the user's permission on each book: the owner manages a personal book, a
     share's permission a shared one. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Contact books" default-menu-index="4" menu-image="sym_o_contacts" menu-image-type="icon">
 
     <transition name="createBook">

@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     The first-use state offers the suite dashboard, Dashboards and Reports, and no sample numbers. DigestPreview (P7): the digest
     the user chose to show on Home (Management digest › Show on Home), as their own preview, two panels a section, with Open
     digest; absent until they choose one. A user with no Insights read (the root group alone) is told why Home shows nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
 
     <parameter name="organizationPartyId"/>

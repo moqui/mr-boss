@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     with the project fixed, the default) and its Calendar (Plan/Calendar: Commons' Calendar.qvue in its project mode), one at a time.
     The toggle between them is in each component's header (a tab's subscreens show no second row of tabs); in the terminal the two
     are this screen's menu. Clients will see the Timeline only (impl-projects.md P10). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Plan" default-menu-index="4" menu-image="sym_o_view_timeline" menu-image-type="icon">
     <subscreens default-item="Timeline">
         <subscreens-item name="Timeline" location="component://mr-boss/screen/Projects/WorkItems/Timeline.xml" menu-title="Timeline" menu-index="1"/>

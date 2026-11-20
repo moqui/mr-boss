@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     Supplier360; impl-purchasing P6): the supplier's last bills to the user's organizations with their match and holds, each
     opening Purchasing's InvoiceDetail, the open and held counts, and the unpaid amount per currency for a finance reader
     (withheld otherwise), from ironstone.purchasing.BillServices.get#SupplierBills. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Bills &amp; payments" default-menu-index="9">
     <condition>
         <expression>appRoot == 'Purchasing'</expression>

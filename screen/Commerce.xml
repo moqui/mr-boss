@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     Settings their groups' (BOSS_COM_<Area>). ironstone.commerce.ContextServices.get#SharedContext checks the user and
     resolves their organizations, stores (a store-limited staff member's own), capabilities and links for every subscreen;
     each service checks again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Commerce" menu-image="sym_o_storefront" menu-image-type="icon">
 
     <always-actions>

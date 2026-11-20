@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     files), each with the owner's publication state read only, by campaign, kind and use, a page at a time
     (mantle.marketing.MarketingContentServices.find#CampaignContent, scoped in the query). Link content is the primary action
     (MARKETING_CONTENT_EDIT); each row opens ContentDetail. Linking publishes nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Content" default-menu-index="1">
     <parameter name="marketingCampaignId"/>
     <parameter name="contentKindEnumId"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     default); Products' shared InventoryAvailability with the Manufacturing context (P5b), opened from a work order's
     Components with the component and the plant, so not in the menu; and P12's ProductionSchedule (with its terminal twin
     ProductionScheduleTui and the plan snapshot ScheduleSnapshot, hidden from the menu) and Capacity, the files of Planning/. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Planning" default-menu-index="8" menu-image="sym_o_view_timeline" menu-image-type="icon">
     <subscreens default-item="SupplyPlanning" always-use-full-path="true">
         <subscreens-item name="SupplyPlanning" location="component://mr-boss/screen/Shared/SupplyPlanning.xml"

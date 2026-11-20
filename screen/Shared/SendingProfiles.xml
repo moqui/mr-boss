@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     domains and credentials. P22: a text message profile is bound to one of the organization's messaging numbers (a number of the
     organization's contact information that System, Voice, Numbers gives a messaging bridge), with its purpose, throttle, quiet hours
     and the cost of a segment for the estimate before approval; ready only with the number's bridge. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Sending profiles" default-menu-index="5">
     <parameter name="sendingProfileId"/>
     <parameter name="organizationPartyId"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     Carriers and Printers, §16 labels and manifests; Shipping.js). The postings are Mantle's (WarehouseTaskServices,
     PrintServices, CarrierSetupServices), which the screens call after ironstone.warehouse.AccessServices.check#Record. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="ShipContext" allow-remote="false">
         <description>The Ship task, for the ship capability only (PERMISSION_DENIED): one outgoing shipment of the user's
             facilities with its addresses (and their check), route segment, gateway, packages with their labels, last gateway

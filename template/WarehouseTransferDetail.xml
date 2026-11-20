@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     item, the custodian, the direct moves) with Returned components and the output receipt (P16), files and conversation.
     Its transitions are template/WarehouseTransferParts.xml's. No cost is shown. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="WarehouseTransfer" condition="appRoot == 'Warehouse' &amp;&amp; transferFound">
             <actions>

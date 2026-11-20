@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     (P9, contextual); AccessInspector later. For the access administrator and the administrator (BOSS_ADM_ACCESS; design §2 gives Groups to the
     access administrator, A); the framework's org.moqui.admin.AccessServices check ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE
     and the delegation rules themselves, whatever opens the screen. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Access" default-menu-index="3" menu-image="sym_o_group" menu-image-type="icon">
     <subscreens default-item="Groups" always-use-full-path="true">
         <!-- the framework's System › Access screens (mr-moqui plans/archive/Admin-Screens-Down.md): Capabilities and RowRules by

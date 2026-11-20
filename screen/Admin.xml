@@ -29,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
     Operations is the reader's, the operations operator's and the administrator's; Agents the
     administrator's (BOSS_ADM_<Area>). The framework's tools are linked at their own app (Home's Tools link), not listed here. The other areas of design §1.2 (Security, Settings, Integrations, Mail and
     protocols, Data, Audit and privacy) and Settings' other screens are added by the phases that build them. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Admin" menu-image="sym_o_admin_panel_settings" menu-image-type="icon">
 
     <always-actions>

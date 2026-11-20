@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     them (mantle.work.ProductionServices.get#ProductionChanges, substitute#ProductionMaterial) to planners and supervisors; a
     planner's request waits for a supervisor, who approves or refuses it here (or applies their own at once), and the
     requests are listed with their state. It reads the run when the client loads the tab alone. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Components" default-menu-index="2">
     <parameter name="workEffortId"/>
     <transition name="storeMaterial">

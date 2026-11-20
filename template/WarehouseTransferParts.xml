@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
       request's own check), approve#InventoryRequest and allocate#InventoryRequest;
     - sections NewTransferForm and NewStockRequestForm. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="transferChoices" read-only="true">
         <actions>
             <service-call name="ironstone.warehouse.TransferServices.get#TransferChoices" in-map="context" out-map="found"/>

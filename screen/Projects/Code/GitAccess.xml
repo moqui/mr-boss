@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     own (org.moqui.impl.UserServices create#UserSshKey, delete#UserSshKey, create#UserAccessToken, revoke#UserAccessToken, which
     act on ec.user). Commons Settings, Account links here for a user who has Projects. The keys and tokens need no git hosting;
     the clone addresses do. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Git access" default-menu-index="3" menu-image="sym_o_key" menu-image-type="icon">
 
     <transition name="createAccessToken">

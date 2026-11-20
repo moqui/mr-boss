@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- PageText, the terminal twin of PageDetail's Content tab (impl-commerce P4): the page's current text as a form, saved as a
     new version through mantle.public.ThemeServices.store#SitePage (COMMERCE_THEME_EDIT; a page saved since it was opened
     answers that it changed). The live page changes only when the Publication tab publishes a version. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Text" default-menu-include="false">
     <transition name="saveText">
         <actions>

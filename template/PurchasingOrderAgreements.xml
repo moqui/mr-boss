@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (ironstone.purchasing.AgreementServices.get#OrderAgreements), each line's agreement, item, revision, quantity and value,
     each opening AgreementDetail. Shown only when the order has a release. No transition of its own. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="PurchasingOrderAgreements" condition="appRoot == 'Purchasing' &amp;&amp; po">
             <actions>

@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     P8 (design §3 AssignSchedule, review Y8): the technicians are offered ranked for the window and team chosen (the choice
     technicians over Mantle's find#MaintenanceCandidates: free hours with People's schedules and leave, skill, qualification state,
     team), and saving names each one whose required qualification is missing or expired (refused under the work policy's block). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Overview" default-menu-index="10">
     <parameter name="workEffortId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>

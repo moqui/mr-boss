@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     returned or reopened. The terminal: MyTimeTui beside this file, the week by day with the timer, Log time, an entry's Edit and
     Delete, and Submit, Approve, Return and Reopen (impl-projects.md P11). Mounted under People too (People/Time/MyTime, impl-people
     P10): the links and the terminal's container follow the mount (appRoot). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="My time" default-menu-index="1" render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue" menu-image="sym_o_work_history" menu-image-type="icon">
 
     <parameter name="partyId"/>

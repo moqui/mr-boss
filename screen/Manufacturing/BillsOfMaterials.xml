@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (Products' get#SharedContext Manufacturing branch): BillOfMaterialsDetail with its explosion, compare, where used, routing
     and notes tabs, WhereUsed of a component, Product360 with the Manufacturing tabs, and CostRollup for a cost reader. Open
     to every Manufacturing user; the method services check METHOD_VIEW, METHOD_EDIT and METHOD_APPROVE. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="BOMs" default-menu-index="4" menu-image="sym_o_account_tree" menu-image-type="icon">
     <subscreens default-item="Find" always-use-full-path="true">
         <subscreens-item name="Find" location="component://mr-boss/screen/Manufacturing/BillsOfMaterials/Find.xml"

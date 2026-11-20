@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     element ironstone.commons.KnowledgeDemoServices.load-KnowledgeDemo): spaces with page trees, links, history and a review, and
     john.doe's notes, written through the wiki services as the demo users so the versions, their notes and authors are real,
     dated over the weeks before the load. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="load" noun="KnowledgeDemo" authenticate="anonymous-all" allow-remote="false">
         <description>Stores, each part once (a part whose space or note is there already is left as it is):

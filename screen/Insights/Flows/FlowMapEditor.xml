@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     read, so a second editor's stale save is refused. MapVersions: the report engine's versions of the map, what one changed
     and Restore (a new current version). A template, or another editor's map, shows read only: copy it to change it.
     Nothing typed here is ever run or expanded: a step links only where a registration says. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Edit map" default-menu-include="false">
 
     <parameter name="definitionId"/>

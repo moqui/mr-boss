@@ -29,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
       (mantle.account.InvoiceServices.create#InvoiceFromSource, basis received, PAYABLE_EDIT);
     - sections PrepareReceiptDialog (Receipts' header) and PurchasingReceipt (Shared/ShipmentDetail's Purchasing branch). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="purchaseReceiptChoices" read-only="true">
         <actions>
             <service-call name="ironstone.purchasing.AccessServices.get#Choices" in-map="context" out-map="found"/>

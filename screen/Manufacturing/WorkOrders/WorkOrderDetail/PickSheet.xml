@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     the run owner's available stock at the line and its plant, oldest receipt first, by lot and location), with what stays
     short. A print (html-print) opened from WorkOrderDetail's More menu. Picking moves nothing; the issue posts on
     MaterialIssueReceipt. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pick sheet" default-menu-include="false">
     <parameter name="workEffortId"/>
     <actions>

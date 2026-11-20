@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     passing assessment was recorded, never rendered again), for the person, a development reader and an HR reader of the employer.
     Printed from TrainingDetail as html-print (/apps/People/Development/TrainingCertificate?personTrainingId=...&renderMode=html-print);
     its PDF, also stored when issued, is TrainingDetail's certificatePdf. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Training certificate" default-menu-include="false">
     <parameter name="personTrainingId" required="true"/>
     <actions>

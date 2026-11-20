@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     AccessServices (the user's organizations and customers, and the cases of their queues or assigned to them). The case's
     create, update, transition and tags are Mantle's mantle.request.SupportCaseServices, which the screens call after
     check#Record; apply#CaseBatch calls them per case. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Cases" allow-remote="false">
         <description>The cases the user sees (design Cases CaseFind, CaseList; Home's MyCases): a saved view (mine, the
             default; unassigned; waiting; needsResponse; slaRisk, none until service levels; resolved, the last 7 days; all),

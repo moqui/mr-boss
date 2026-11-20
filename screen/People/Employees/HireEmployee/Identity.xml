@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     until chosen, or the new person confirmed) and keeps the draft. P17: the accepted offers of the user's employers to hire from
     (mantle.humanres.RecruitingServices.find#Offers; OfferDetail's Hire opens this step with its offer): Start from the offer keeps a
     draft of the offer's employer, applicant and terms (get#Offer's hireTerms, never pay), whose hire consumes the offer once. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Identity" default-menu-index="1" menu-image="sym_o_person_search" menu-image-type="icon">
     <parameter name="employmentOfferId"/>
 

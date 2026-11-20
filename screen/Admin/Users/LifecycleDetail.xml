@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     Retry (retry#LifecycleStep, named confirmation) and each resource waiting for a new owner with TransferOwnership
     (ironstone.admin.LifecycleServices.transfer#OwnedResource: a staff identity of the user's organizations who can sign in, the
     owner's service checking whether they may own it). A failed step never undoes the others: the access revoked stays revoked. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Lifecycle operation" default-menu-include="false">
     <parameter name="operationId" required="true"/>
 

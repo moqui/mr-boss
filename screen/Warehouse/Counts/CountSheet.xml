@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     blank to write the count in and never an expected quantity; and the reviewed variance sheet (sheet=variance), with the
     snapshot, the count, the approved variance and its reason, as Mantle's get#Count gives them to the user (a counter of a
     blind count gets no variance sheet). Opened in the html webapp to print, or as a PDF. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Count sheet" default-menu-include="false" server-static="qvt">
     <parameter name="physicalInventoryId" required="true"/>
     <parameter name="sheet"/>

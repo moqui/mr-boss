@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     validity; impl-sales P7, the template P12), shared by Quotes, quick create, OpportunityDetail and Customer360: the form posts to the screen's createQuote
     (template/SalesQuotes.xml) and reads its values from newQuoteDefaults (the organization, and the customer and opportunity when
     opened from one). Without a store the quote is taxed through the seller's gateway (X1). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="NewQuoteForm">
             <widgets>

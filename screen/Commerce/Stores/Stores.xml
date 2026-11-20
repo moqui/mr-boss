@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     one of the user's organizations, its currency and locale from the organization unless chosen, no site mount; a facility
     bound from now when one is chosen). A store-limited staff member does not start stores. Home's first-use state opens
     NewStore here (_openDialog=NewStore). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Stores" default-menu-index="1">
     <parameter name="term"/>
     <parameter name="organizationPartyId"/>

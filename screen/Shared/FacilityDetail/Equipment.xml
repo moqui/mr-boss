@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     the facility and the facilities inside it, as Mantle's scoped find gives it, each with its site, custodian, state and supplier
     warranty and opening EquipmentDetail under Maintenance. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Equipment"
         default-menu-index="4">
     <parameter name="facilityId"/>

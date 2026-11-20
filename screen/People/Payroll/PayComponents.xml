@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     needs PAYROLL_EDIT and PAYROLL_CONFIGURE as well, which Mantle checks, and opens the new component's detail, where its terms,
     examples and publishing are. A used component is
     ended, never deleted. No pay amount reaches the shell's context, a choice or the palette. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pay components" default-menu-index="6">
     <parameter name="term"/>
     <parameter name="componentKindEnumId"/>

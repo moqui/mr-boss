@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     code and each line's delivered and remaining quantity, with "Confirm delivery" (finalize#DropShipPurchaseOrder) for a buyer,
     after the order's check#Record. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="dropShipLine">
         <actions>
             <service-call name="mantle.order.DropShipServices.route#OrderItemToDropShip" out-map="routed"

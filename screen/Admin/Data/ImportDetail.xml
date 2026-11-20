@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     ADMIN_TRANSFER_RUN, and get#ImportReport); an import still open is continued in the wizard by the mount's dataImport
     route (Admin.js mountRoutes). Read by who staged the import and those its target admits; anyone else is told it is
     not available. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Import" default-menu-include="false">
     <parameter name="targetId" required="true"/>
     <parameter name="operationKey" required="true"/>

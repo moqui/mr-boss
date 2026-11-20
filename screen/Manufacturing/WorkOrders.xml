@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     assembly kit (P9). Open to every
     Manufacturing user; NewWorkOrder and QuickCreate for the planners (BOSS_MFG_NEW_WORK_ORDER), and the run services check
     PRODUCTION_VIEW, PRODUCTION_PLAN or PRODUCTION_SUPERVISE and the organization. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work orders" default-menu-index="2" menu-image="sym_o_task_alt" menu-image-type="icon">
     <subscreens default-item="Find" always-use-full-path="true"/>
     <widgets>

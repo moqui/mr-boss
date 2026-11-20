@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     CaseAnalytics (P4: one case's measurements, opened from CaseDetail's Service level tab, hidden from the menu), and the CSAT
     results and one answer (P13), out of the menu: the catalogue offers CSAT results to service management only, who alone may
     read it (F186); for the agent, manager and return authorizer (BOSS_CS_REPORTS). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="9" menu-image="sym_o_monitoring" menu-image-type="icon">
     <subscreens default-item="ReportsHome" always-use-full-path="true">
         <subscreens-item name="CaseAnalytics" location="component://mr-boss/screen/CustomerService/Reports/CaseAnalytics.xml"

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     where, what or how, and starts one run of the instance's backup job with its stored parameters. Reading needs
     ADMIN_BACKUP_VIEW, checked by the services: the data operator, who holds neither, opens the screen and is told it is
     not available. Restoring is not done here, and there is no download. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Backups" menu-image="sym_o_backup" menu-image-type="icon">
     <parameter name="pageIndex"/>
 

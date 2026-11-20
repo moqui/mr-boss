@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     a maintenance default of its model, whose values it takes where it names none) or one facility, with a procedure or with none
     (then P14's work order is ad hoc, with the plan's name and estimate: the user's call, Nov 12); activation is on PlanDetail,
     where a missing time zone or a procedure that does not qualify is named. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Plans" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

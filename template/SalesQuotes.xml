@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     salesDeleteLine and salesUpdateQuote (name, validity, customer reference, address); P9: salesRequestApproval and salesDecideQuote
     (mantle.order.SalesApprovalServices request#QuoteApproval and decide#Quote, each at the revision shown). A screen includes each
     transition it uses by name. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="createQuote">
         <actions>
             <service-call name="mantle.order.SalesQuoteServices.create#Quote" out-map="created"

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     table (WorkItemSummary: the group, a column per status up to twelve, total, open, overdue, resolved in the period, the average cycle
     days; a totals row last; CSV and XLSX); Print opens the same report in html-print. Over
     mantle.work.ProjectReportServices.get#WorkItemSummary, which counts only the items the user may see. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work items" default-menu-index="2" menu-image="sym_o_checklist" menu-image-type="icon">
 
     <parameter name="rootWorkEffortId"/>

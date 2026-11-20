@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     with its work order and operation, sample, due, inspector, state and result, held quantity and its link to the shared
     QualityInspection, where it is recorded, submitted, verified (never by its submitter) and disposed. Queue assignment
     grants no verifier authority. The operator mode opens at InspectionStation. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Inspections" default-menu-index="1">
     <parameter name="statusId"/>
     <parameter name="workEffortId"/>

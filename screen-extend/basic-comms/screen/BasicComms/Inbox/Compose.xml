@@ -14,6 +14,6 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- IronStone's part of Attach from Files in the BasicComms composer: the picker is BasicComms' (FilePickerServices), and its
     pickerFolder is replaced by IronStone's, which names the records drive's folders by their records' titles (Mantle). -->
-<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition-include name="pickerFolder" location="component://mr-boss/template/FilePickerTransitions.xml"/>
 </screen-extend>

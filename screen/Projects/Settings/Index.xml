@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Projects settings index (design-projects.md §12 Settings; style-guide §3.9 Settings): a card per settings page with a
     line about it and its link (the Billing page is a placeholder until impl-projects.md P8), and links to Commons' notification settings and to Admin's user groups, where people are put in the three Projects
     groups. Managers only (BOSS_PROJECTS_MANAGERS). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="All settings" default-menu-include="false" server-static="qvt">
     <widgets>
         <label type="h5" text="Projects settings" style="q-mt-none q-mb-sm"/>

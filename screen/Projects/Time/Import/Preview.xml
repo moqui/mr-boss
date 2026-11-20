@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     submitted or not the user's to change) and warnings (hours rounded to the smallest entry, a work type not found), with the
     counts over the whole file and which column each field was read from. confirmPreview notes it in the draft; the next step
     imports. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Preview" default-menu-index="2" server-static="qvt" menu-image="sym_o_visibility" menu-image-type="icon">
 
     <parameter name="importId"/>

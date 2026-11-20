@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     facilities of the user's maintenance scope as a tree or a list (FacilityFind, FacilityTree, NewFacility), and the shared
     FacilityDetail with Maintenance's tabs, hidden from the menu. Shown to a user who reads facilities (the root's menu
     condition); reads are Mantle's scoped find, writes FacilityServices.store#Facility's (FACILITY_EDIT). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Facilities" default-menu-index="7" menu-image="sym_o_domain" menu-image-type="icon">
     <subscreens default-item="Find" always-use-full-path="true">
         <subscreens-item name="FacilityDetail" location="component://mr-boss/screen/Shared/FacilityDetail.xml" menu-include="false"/>

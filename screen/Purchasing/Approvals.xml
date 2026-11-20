@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.order.PurchaseServices approve#PurchaseSource and refuse#PurchaseSource, which refuse a superseded revision naming
     the current one); opening a row opens the order or Supplier360, whose approval shows the steps and the budget. P10 adds
     PurchaseRequestApproval and P12 PurchaseAwardApproval to the list. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Approvals" default-menu-index="6" menu-image="sym_o_approval" menu-image-type="icon">
     <always-actions>
         <set field="notificationTopics" from="['PurchaseOrderApproval', 'PurchaseSupplierApproval', 'PurchaseRequestApproval',

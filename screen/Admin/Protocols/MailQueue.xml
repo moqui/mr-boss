@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     integration administrator, with its two transitions: retryOutcome and settleOutcome, through
     org.moqui.admin.OperationServices, which check ADMIN_OPERATION_MANAGE and what each message's owner allows. A mail
     account's message links Comms' mail accounts by the mount's routes (Admin.js mountRoutes). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Mail queue" menu-image="sym_o_outbox" menu-image-type="icon">
     <parameter name="state"/>
     <parameter name="binding"/>

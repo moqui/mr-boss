@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     through the field-scoped mantle.facility.WarehousePolicyServices.update#StoreReservation by a manager of the store's
     organization; the effective reservation policy for the store's orders, with each value's source. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Store settings" default-menu-index="2">
     <parameter name="productStoreId"/>
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>

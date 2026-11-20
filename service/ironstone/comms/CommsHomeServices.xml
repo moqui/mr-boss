@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.marketing.ContactListServices.find#ContactLists, org.moqui.chat.ChatServices.find#Rooms). Failure tolerant
     (AGENTS.md): each part runs in a transaction of its own; one that fails is logged by name, named in failedParts and
     left out, and the rest is answered. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="HomeSource">
         <implements service="org.moqui.comms.ProviderInterfaces.home#Source"/>

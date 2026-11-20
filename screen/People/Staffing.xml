@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     P17 (design §5 OfferDetail, §15): OfferDetail, an offer of employment opened from ApplicantDetail, a notice or the hire wizard
     (a recruiter's, HR's and payroll's of the employer, and its approver's: mantle.humanres.RecruitingServices), and OfferLetter, its
     letter's print, both out of the menu. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Positions &amp; recruiting" default-menu-index="6" menu-image="sym_o_work" menu-image-type="icon">
     <subscreens default-item="Positions">
         <!-- Positions (menu index 1), JobClasses (2) and PayGrades (3) are files under Staffing/, with PositionDetail and

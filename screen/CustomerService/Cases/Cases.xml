@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.request.SupportCaseServices.transition#Case after the case's check; and BulkCaseAction, row-selection actions to
     assign, set the status of and tag the selected cases (apply#CaseBatch, a result per case), and P5's Reply, a saved reply
     previewed per case on BulkReply. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Cases" default-menu-index="1">
     <parameter name="view"/>
     <parameter name="text"/>

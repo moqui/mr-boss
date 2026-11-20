@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- ProjectFiles (design-projects.md §4 ProjectFiles): the record-files element over the project (design-drawers-commons §9
     RecordFiles): the WorkEffortContent files under the Records drive's work folder. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Files" default-menu-index="12" menu-image="sym_o_folder" menu-image-type="icon">
     <widgets>
         <section name="FilesFound" condition="recordFound"><widgets>

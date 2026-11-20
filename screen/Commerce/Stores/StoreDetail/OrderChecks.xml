@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- StoreDetail's Order checks tab (design-commerce §3 OrderChecks; impl-commerce P2): the checks the store runs before it
     approves an order, in sequence, dated (mantle.product.StoreAdminServices.store#StoreApproval: a registered OrderValidate
     service only, never a service name typed in; End). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Order checks" default-menu-index="6">
     <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
     <transition name="addCheck">

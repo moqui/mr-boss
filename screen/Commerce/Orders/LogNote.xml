@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     text, then files it as an internal note on the order (mantle.order.StoreOperationsServices.add#StoreOrderNote: OrderNote,
     internal, never sent to the customer; COMMERCE_ORDER_VIEW and the order's store scope). Nothing is filed until the user
     submits. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Log as note" default-menu-include="false">
     <parameter name="entityName"/>
     <parameter name="recordId"/>

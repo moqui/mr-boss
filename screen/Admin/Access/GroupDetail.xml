@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     System screen's "Open in System" link in its header, to that page. Every change the framework refuses (an unregistered bundle, a sealed
     permission the user does not hold, a privileged group the user is not in, a stale revision, the last administration
     path) is shown as its reason, never written. For the access administrator and the administrator (BOSS_ADM_ACCESS). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Group" default-menu-include="false">
     <parameter name="userGroupId" required="true"/>
     <!-- a grant change to preview (GroupCapabilities): add or end a bundle, one of its permissions or one of its bindings -->

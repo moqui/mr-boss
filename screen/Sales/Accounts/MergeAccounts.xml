@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     Mantle's merge#Parties) or is marked Not a duplicate (Commons' mark#NotDuplicate). For a Sales manager or administrator
     (BOSS_SAL_MERGE, and the capability mergeAccounts: SALES_ACCOUNT_EDIT with SALES_TEAM_MANAGE or SALES_CONFIGURE); there is no
     Sales merge service, and no merge happens on similarity alone. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Duplicates" default-menu-include="false">
     <parameter name="reason"/>
     <transition name="notDuplicate">

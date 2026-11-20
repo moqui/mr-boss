@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     user's facilities with how many assets each holds (ironstone.warehouse.InventoryServices.find#Containers), and
     NewContainer, an empty container at a facility and location of theirs for a user with move (create#Container). Its
     contents are attached and moved by the guarded container tasks. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Containers" default-menu-index="4">
     <parameter name="facilityId"/>
     <parameter name="containerTypeEnumId"/>

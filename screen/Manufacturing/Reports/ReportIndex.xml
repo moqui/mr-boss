@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- ReportIndex (design-manufacturing §9 Reports; style-guide §3.12): the Manufacturing reports, each with its purpose and
     date basis, linking to its screen. Every report is complete for a production reader; the money columns of the cost, loss
     and BOM variance reports show only with financial read. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="All reports" default-menu-index="1">
     <actions>
         <set field="financialRead" from="!!manufacturing.capabilities.financialRead"/>

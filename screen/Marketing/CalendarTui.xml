@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.marketing.MarketingWorkspaceServices.get#CalendarItems, each item opening its record (a send SendDetail, an event
     EventDetail); Earlier, Today and Later open the calendar four weeks before, today and four weeks after. Read only; a source that
     could not be read is named. Hidden from the menu. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Campaign calendar" default-menu-include="false">
     <parameter name="date"/>
     <actions>

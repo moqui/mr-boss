@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.shipment.WarehouseTaskServices with the form's operation key (a render token) or the scan's id, so a double submit
     answers the first. Each answers back to the screen it was posted from, with the shipment. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <!-- PackScan: a line, a product, or a scan (on the handheld the product scan's id is the operation key) -->
     <transition name="packStock">
         <actions>

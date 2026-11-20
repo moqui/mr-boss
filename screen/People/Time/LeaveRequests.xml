@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     approves, and what blocks it), where the reason is written and the request made (submit#Request). The reason field is opted out
     of AI (ai-opt-out, PE-21): no text actions on it and nothing of it reaches an agent. Every People user's and a self-service
     employee's (the time area's own grant, BOSS_PPL_TIME); what each reads and may ask is Mantle's check. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Leave requests" default-menu-index="4" menu-image="sym_o_event_busy" menu-image-type="icon">
     <parameter name="show"/>
     <parameter name="partyId"/>

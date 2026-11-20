@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- IronStone's cards on the Comms settings index: Calls, and the reading defaults and keys in Commons Preferences. -->
-<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets-extend name="SettingsCards" where="append">
         <row-col md="4" sm="6"><container-box><box-header title="Calls"/><box-body>
             <label type="p" text="Choose this browser's microphone, camera and speaker, test the microphone and camera, and set the ringtone and how calls start." style="m-muted"/>

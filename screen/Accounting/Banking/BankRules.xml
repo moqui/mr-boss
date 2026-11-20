@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     which shows every open line the rule matches, its candidates and whether it would apply (test#Rule), changing
     nothing. A rule applies on its own only to an exact, unambiguous match. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Bank rules"
         default-menu-index="5">
     <parameter name="organizationPartyId"/>

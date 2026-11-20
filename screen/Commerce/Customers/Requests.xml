@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     case's store, linked to one of the stores' orders, or filed in a store's checkout support queue): subject, customer,
     source order, status, queue, assignee and due date. A store-filtered view of Customer Service's cases (X7): a row opens
     the shared RequestDetail read only, with Open in Customer Service for a user who works cases there. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Requests" default-menu-index="3">
     <parameter name="productStoreId"/>
     <parameter name="term"/>

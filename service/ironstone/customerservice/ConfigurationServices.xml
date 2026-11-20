@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     for one of the user's organizations. The saves are Mantle's mantle.request.SupportCaseServices (save#ServiceQueue,
     save#ServiceRequestType, save#CaseStatusMapping, save#CaseWorkflow, save#ServiceDefaults, save#ServiceTeam,
     save#ServiceTeamMember), which check SUPPORT_POLICY_EDIT or SUPPORT_CASE_MANAGE and the organization themselves. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="SettingsParameters" type="interface">
         <description>The organization a settings read is of (one of the user's; the active one, else their first, when
             empty).</description>

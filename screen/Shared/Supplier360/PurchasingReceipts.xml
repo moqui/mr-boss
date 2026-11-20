@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     impl-purchasing P5): the supplier's purchase order lines of the user's organizations with expected, received, accepted,
     rejected and held apart, the late ones first, and the inspections of its receipts with their outcome (the quality
     evidence), over ironstone.purchasing.ReceiptServices find#ExpectedReceipts and find#PurchaseInspections. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Receipts &amp; quality" default-menu-index="8">
     <condition>
         <expression>appRoot == 'Purchasing'</expression>

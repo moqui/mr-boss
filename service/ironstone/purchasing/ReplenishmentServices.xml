@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     its SupplyPlanning and ReorderRules screens and the reorder rules ReorderRules lists, each for a user with the
     Replenishment area. The writes are Mantle's, called by the screens after ironstone.purchasing.AccessServices:
     SupplyPlanningServices (run, schedule, convert), FacilityServices.store#ProductFacilityPolicy and ReorderRuleServices. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="PlanContext" allow-remote="false">
         <description>The planning facility of a Replenishment screen: the one given, checked as one of the user's
             organizations' facilities (RECORD_UNAVAILABLE), else the first warehouse or plant of the active organization, or of

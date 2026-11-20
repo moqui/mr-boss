@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     reason; the files that name it confirmed). Source and schema text are never evaluated here: a <script>, an event
     handler, an executable URL or an ec name is refused by mantle.public.ThemeServices.store#ThemeFile with its line, and
     the active release never changes. Its terminal twin is TemplateEditorTui, on the framework text editor. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Template editor" default-menu-include="false" render-modes="vue,qvue,tui" server-static="vue,qvue">
     <parameter name="themeId" required="true"/>
     <parameter name="path"/>

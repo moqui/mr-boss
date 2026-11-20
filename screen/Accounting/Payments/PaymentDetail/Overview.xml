@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- PaymentDetail's Overview tab: the payment's facts, the two payments of an internal transfer and its fee payment, its
     methods (masked) and the records it came from. It reads the payment when the client loads the tab alone. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Overview"
         default-menu-index="1">
     <parameter name="organizationPartyId"/>

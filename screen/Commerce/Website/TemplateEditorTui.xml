@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     event handler or an ec name with its line); Diagnostics: the adapter's findings in it; FileOperation: add, rename or
     remove a file with a reason (change#ThemeFile; the files that name it confirmed). COMMERCE_THEME_CODE, checked by the
     services. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Source as forms" default-menu-include="false">
     <parameter name="themeId" required="true"/>
     <parameter name="path"/>

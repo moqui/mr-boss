@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     actual cost, accepted sends and reach, visits, leads and qualified leads, registrations, and its attributed orders' value, invoiced,
     returns and net by currency (never one total across currencies), ROI only over one currency, and the summarized numSent with its
     time. A report reader's (MARKETING_REPORT_VIEW); Mantle checks again. CSV of the list; print. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Campaign performance" default-menu-index="1" menu-image="sym_o_campaign" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="fromDate"/>

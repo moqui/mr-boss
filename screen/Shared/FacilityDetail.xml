@@ -31,7 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
     facility checks the mounting app's own record check (Warehouse's or Maintenance's), then Mantle's store#Facility checks
     FACILITY_EDIT. Other apps add their contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Facility"
         default-menu-include="false">
     <parameter name="facilityId" required="true"/>

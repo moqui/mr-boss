@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     map the root sets), every link goes through sharedLinks and a row whose Customer360 the root does not mount shows its name
     without a link, as does, under Marketing, a row Marketing's Customer360 does not open (check#Contacts). Marketing's root adds AccountList's row selection and its bulk action "Add to list (evidenced)"
     (impl-marketing P3) around the form named AccountList. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Accounts" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

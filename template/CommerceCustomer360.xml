@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     methods (type and last four only), and its orders, carts, cases and returns in those stores, each opening Commerce's
     detail, and (P12) its subscriptions in those stores, billing and access apart, each opening SubscriptionDetail. Order again
     is on a past order's OrderDetail. No password editing or impersonation. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="CommerceCustomer" condition="appRoot == 'Commerce'">
             <widgets>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     preview#LegacyMatches, apply#LegacyMatches) and mantle.order.PurchaseServices.request#SupplierPrepayment after
     AccessServices.check#Record; Accounting's find#BillExceptions needs payables read, which buyers do not hold, so the
     held bills here are this service's read of the buying organizations' bills. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Bills" allow-remote="false">
         <description>One page of the supplier bills of the user's organizations, newest first, by view (incoming, review,
             held, unmatched, approved, paid), supplier, purchase order, status, organization and text (bill, supplier

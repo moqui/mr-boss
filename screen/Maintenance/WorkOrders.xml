@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     InventoryAvailability (Shared, a part's stock in the user's facilities), hidden too; OrderDetail (P10), the shared screen read only
     for the purchase orders of the work, hidden too; InterventionReport (P12), a customer repair's report, hidden too. Shown to a user who reads maintenance work (the root's menu condition); every
     read and write is Mantle's mantle.work.MaintenanceServices after the root's check. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work orders" default-menu-index="2" menu-image="sym_o_handyman" menu-image-type="icon">
     <subscreens default-item="Find" always-use-full-path="true">
         <subscreens-item name="NewWorkOrder" location="component://mr-boss/screen/Maintenance/WorkOrders/NewWorkOrder.xml" menu-include="false"/>

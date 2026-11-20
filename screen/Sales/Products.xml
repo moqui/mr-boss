@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     its variants, identifiers, documents, stock and, for a price reader, prices), InventoryAvailability (read only, the selling
     organizations' facilities) and PriceExplain (a quote line's safe explanation; the trace for a price reader), each in Products'
     Sales context (ironstone.products.CatalogServices.get#SharedContext salesContext: no cost, supplier price or edit). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Products" default-menu-index="9" menu-image="sym_o_inventory_2" menu-image-type="icon">
     <subscreens default-item="Product360" always-use-full-path="true">
         <subscreens-item name="Product360" location="component://mr-boss/screen/Shared/Product360.xml" menu-include="false"/>

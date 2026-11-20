@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     organizations over the last year, the quoted, ordered and billed prices apart in each document's currency and unit, with
     the supplier, facility and lead time (ironstone.purchasing.ReportServices.get#PurchaseHistory; prices withheld from a user
     who may not read supplier prices), and a link to the full report. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Purchase history" default-menu-index="20">
     <condition>
         <expression>Array.isArray(product360Tabs) &amp;&amp; product360Tabs.includes('PurchaseHistory')</expression>

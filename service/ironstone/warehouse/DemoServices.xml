@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The Warehouse demo's setup that fixed-ID records cannot express (impl-warehouse P6; BossWarehouseDemoData.xml). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="load" noun="WarehouseDemo" authenticate="anonymous-all" allow-remote="false">
         <description>Idempotent: the scrap account (519200000, a cost of goods sold child) on ORG_ZIZI_CORP's own
             AstTpInventory AssetTypeGlAccount rows, which ZIRET's postings reach through its rollup (impl-warehouse F40),

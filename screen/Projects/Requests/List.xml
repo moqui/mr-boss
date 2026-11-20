@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     off, the triage assignee and the default type, each edited in the project's Settings (ProjectRequestServices get#ProjectIntake).
     A transition's project falls back to workEffortId when projectTabId is not set (impl-projects.md F43), so one who cannot see
     the project gets "not available". The list's state is in the URL; each change answers this screen again with it (keep). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Requests" default-menu-include="false">
 
     <parameter name="list"/>

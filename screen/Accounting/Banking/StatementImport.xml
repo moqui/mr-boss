@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     (commit#StatementImport) and see what was imported. A line's identity is the bank's FIT id in OFX and its source row
     in BAI2 and CSV, so a file imported again adds nothing. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Statement import"
         default-menu-index="2">
     <parameter name="organizationPartyId"/>

@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The Sales demo's dates relative to the load (data/BossZSalesDemoData.xml calls load#QuoteDatesDemo; impl-marketing follow-up 3). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="load" noun="QuoteDatesDemo" authenticate="anonymous-all" allow-remote="false">
         <description>Moves the end of the demo quotes' validity to the load: BOSS_SAL_QTE_WINGTIP's to 77 days and BOSS_SAL_QTE_FABRIKAM's
             to 105 days after the load day at 00:00 (a load on Nov 15, 2026 gives Jan 31 and Feb 28, 2027), so both are open whenever

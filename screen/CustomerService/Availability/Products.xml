@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     a customer asks about (by id, name or code; the user's organizations' and shared products), then open its availability
     at the customer-serving facilities (InventoryAvailability) or its record (Product360), each in Products' Customer Service
     context: no cost or supplier price, and an unready projection says unknown, never zero (F31). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Products" default-menu-index="1">
     <parameter name="productId"/>
     <transition-include name="serviceAvailabilityChoices" location="component://mr-boss/template/CustomerServiceAvailability.xml"/>

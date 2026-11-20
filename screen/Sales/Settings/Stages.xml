@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     flag and open deals, moved up or down or numbered, renamed, and retired: a stage that holds open deals is retired only with
     the stage they move to (store#Stage, which moves them and leaves closed deals). Nothing is deleted. SALES_CONFIGURE, which
     Mantle checks with the organization. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Stages" default-menu-index="2"
         default-menu-include="ec.user.hasPermission('SALES_CONFIGURE')">
     <parameter name="organizationPartyId"/>

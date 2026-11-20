@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     each opening its forecast; orders and invoices with no representative apart. Only the deals, orders and invoices the reader sees
     are counted, and no template or recurring base; one currency at a time. A report reader's (SALES_REPORT_VIEW), as the Reports area
     is; Mantle checks again. Exports to CSV. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Target attainment" default-menu-index="3" menu-image="sym_o_flag" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="timePeriodId"/>

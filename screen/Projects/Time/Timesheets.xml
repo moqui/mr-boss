@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     decisions on the selected rows (TimesheetBulk: Approve, Return with a reason; RemindMissing: Remind), each on its own. The
     tray's Approvals group decides the same weeks through the TimesheetApproval topic (design §8 Context passed). Mounted under People
     too (People/Time/Timesheets, impl-people P10): the rows' links follow the mount (appRoot). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Timesheets" default-menu-index="2" menu-image="sym_o_assignment" menu-image-type="icon">
 
     <parameter name="list"/>

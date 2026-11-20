@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     ReadinessProvider, RefreshOperation and SettingsEntry, which each owner seeds in its own setup data and
     org.moqui.admin.ReadinessServices reads. Insights P4 has its records (ReportCatalogEntry, MetricRegistration); Admin P6 the
     lifecycle participants after them. -->
-<entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/entity-definition-3.xsd">
+<entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-entity-definition.xsd">
     <!-- Insights' registries (impl-insights §4, P4; design-insights §6.1, §6.2): the report catalog and the metric registrations
         of the domain report services, BOSS seed records each owner fills in its own block of BossSetupData. They hold navigation
         and meaning only: whether a viewer reads an entry is its owner's catalogue service where one is registered, else the

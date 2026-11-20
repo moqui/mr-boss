@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     (push, mirror fetch, import, a write through Moqui), the transport, the refs changed, and the state of its gitECA rules with
     a failure's error; Run again (process#GitUpdate) for a failed one, for the repository's maintainers. Services:
     ironstone.projects.CodeServices.get#RepositoryActivity (org.moqui.git.GitServices.find#GitUpdates). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Activity" default-menu-index="6" menu-image="sym_o_history" menu-image-type="icon">
 
     <parameter name="source"/>

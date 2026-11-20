@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     imports; under Marketing's mount, whose sharedLinks hold no import, Import is not shown. impl-marketing P13 (owner contract): the
     campaign filter offers Marketing's campaigns to a user who reads Marketing (one campaign and one source a find), and the campaign
     column shows the campaign's name. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Leads" default-menu-index="2">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     manager (a Sales manager or administrator who edits quotes) the saved lists Open, Published, Drafts, Scheduled and Ended, and New
     template (store#QuoteTemplate checks the organization). Found by text, organization and product; each row opens
     QuoteTemplateDetail with its organization, published interval, line count and state. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quote templates" default-menu-index="3">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

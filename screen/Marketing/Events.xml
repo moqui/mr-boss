@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     event's or offer's attendees, StaffRegistration and RegistrationBatch) and RegistrationDetail (one registration, its change), the
     events managers'; P18 CheckIn (an offer's door: an events manager's under their own sign-in, or the offer's shared door tablet,
     whose request runs as a display account with no Marketing context: screen/Marketing.xml). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Events" default-menu-index="7" menu-image="sym_o_event" menu-image-type="icon">
     <always-actions>
         <!-- a door tablet (marketing.device) reaches CheckIn alone, by its route group; CheckIn's services check it -->

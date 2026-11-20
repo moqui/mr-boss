@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     repository's access in repoAccess, so the repository is fixed there and its column and find field are left out. Without git
     hosting in the build it says so. A client contact (clientUser; impl-projects.md P10b) sees the merge requests of the
     repositories its projects share, without reviewers, comments or New merge request. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Merge requests" default-menu-index="2" menu-image="sym_o_merge" menu-image-type="icon">
 
     <parameter name="list"/>

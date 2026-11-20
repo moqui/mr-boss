@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     details only with the reader's own Accounting permission), its links and its requests and decisions made by then, with
     self-approvals marked and those a later change ended. Printed from CampaignDetail's More menu as html-print
     (renderMode=html-print); printing changes nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Campaign plan" default-menu-include="false">
     <parameter name="marketingCampaignId" required="true"/>
     <parameter name="asOf"/>

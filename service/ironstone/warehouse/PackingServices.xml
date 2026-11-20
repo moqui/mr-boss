@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.shipment.WarehouseTaskServices, mantle.shipment.PackagingServices), which the screens call after
     ironstone.warehouse.AccessServices.check#Record with the capability. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="PackContext" allow-remote="false">
         <description>The Pack task (desk and Handheld/Pack), for the pack capability only (PERMISSION_DENIED, F291): one
             outgoing shipment of the user's facilities with its lines

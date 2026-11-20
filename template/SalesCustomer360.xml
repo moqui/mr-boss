@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     for an inviter (P13, template/SalesInvite.xml), the contact record, the account's contacts and, for a manager or
     administrator, its duplicates in More; the key numbers (contacts, and by the user's rights open orders and open invoices,
     each linking to its tab), then the tabs. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="SalesCustomer" condition="appRoot == 'Sales'">
             <widgets>

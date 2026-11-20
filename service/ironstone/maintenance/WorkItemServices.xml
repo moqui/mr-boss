@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- WorkItemDetail's Maintenance context and a work order's follow-up tasks (impl-maintenance P7; WorkItems.js; crosscut §3.12): an
     owner contract with Commons, on Manufacturing's pattern (DowntimeServices.get#WorkItemContext). The task stays Commons': its
     actions are Commons' task rule; a work order's root or step is no task here. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="WorkItemContext" allow-remote="false" read-only="true">
         <description>WorkItemDetail's Maintenance context: a follow-up task of one or more work orders the user reads (a current
             Caused By or Relates To link from the task to the work order's root; available), with those work orders and their

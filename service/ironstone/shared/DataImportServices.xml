@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     target's registration and calls its owner as the user; these services call it with authorization as it is and add no
     right. The mount is the app root the wizard is opened under: a catalog app's is the catalog target only; Admin's the
     target named, for a holder of ADMIN_TRANSFER_RUN. No group is authorized to call them but through the screens that do. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="ImportParameters" type="interface">
         <in-parameters>
             <parameter name="appRoot"/>

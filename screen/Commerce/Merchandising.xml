@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     user; the merchandiser changes the assortment and categories (COMMERCE_MERCHANDISE), the publisher publishes
     (COMMERCE_PUBLISH), each checked again in mantle.product.StoreMerchandisingServices. Reviews (P9): the store's reviews,
     decided and replied to by the merchandiser. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Merchandising" default-menu-index="3" menu-image="sym_o_category" menu-image-type="icon">
     <subscreens default-item="Assortment" always-use-full-path="true">
         <subscreens-item name="Documents" location="component://mr-boss/screen/Commerce/Merchandising/Documents.xml" menu-index="3"/>

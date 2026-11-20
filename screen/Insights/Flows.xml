@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     opens it; each transition reaches ironstone.insights.FlowMapServices, which checks INSIGHTS_VIEW or INSIGHTS_FLOW_EDIT,
     the map's organization and its owner itself, and the report engine checks its own grants. A map documents and links:
     nothing here completes a task or changes a business record. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Business flows" default-menu-index="11" menu-image="sym_o_account_tree" menu-image-type="icon">
     <subscreens default-item="FlowMap"/>
     <widgets><subscreens-panel id="InsightsFlowsPanel" type="tab"/></widgets>

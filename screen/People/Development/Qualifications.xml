@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     qualification's content host (PartyQualification, PE-01), the person's and HR's alone, shown below the list. The number is opted
     out of AI wherever it shows (ai-opt-out, PE-21). Every People user's and a self-service employee's (the area's own grant,
     BOSS_PPL_DEVELOPMENT). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Qualifications" default-menu-index="2" menu-image="sym_o_workspace_premium" menu-image-type="icon">
     <parameter name="show"/>
     <parameter name="state"/>

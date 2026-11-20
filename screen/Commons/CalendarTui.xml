@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     get#CalendarSetup and get#CalendarEvents, which check what the user may see; times are wall-clock text in the user's time
     zone). The grid views, the rail and the quick event are the browser's. The framework calendar component wants a month
     transition answering {month, events} with an id per event, which the Calendar's transitions do not answer. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Calendar" default-menu-include="false">
 
     <parameter name="date"/>

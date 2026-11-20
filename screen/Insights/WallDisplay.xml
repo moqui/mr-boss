@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     sends) and everything runs as the device's display account, which needs no Insights root grant (BOSS_INSIGHTS_DISPLAY opens
     this screen and its data transition alone; BOSS_INSIGHTS_READ gives the reading): a dashboard it may not read is left out and
     logged by name. A signed-in Insights user opens it too (Playlists' Play full screen), as themselves. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Wall display" default-menu-include="false" standalone="true" history="false"
         screen-theme-type-enum-id="STT_INTERNAL_QUASAR">
 

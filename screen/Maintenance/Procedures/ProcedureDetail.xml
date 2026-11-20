@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     and down actions, StepRequirements and Dependencies in the step dialog), Resources (3: ProcessResources), Instructions (4),
     Approval (5: request, approve, refuse, retire and the history) and Usage (6: ProcessUsage). Each write is
     mantle.work.ProcessServices' after the record check; an author's change of an approved procedure takes it back to Draft. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Procedure" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
     <always-actions>

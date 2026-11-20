@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     proposal (propose#StorePublication), never published until approved. The store is checked by
     ironstone.commerce.ContextServices.check#Record, and each service checks the permission and the store's organization
     again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Assortment" default-menu-index="1">
     <parameter name="productStoreId"/>
     <parameter name="term"/>

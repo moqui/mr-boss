@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     Redmine, GitHub issues or other CSV), its character set and the project the work items go into (one the user works in).
     saveSource keeps it in the import's draft (ironstone.projects.WorkItemImportServices.save#ImportSource) and answers the importId the
     next steps carry. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Source" default-menu-index="1" server-static="qvt" menu-image="sym_o_dynamic_feed" menu-image-type="icon">
 
     <parameter name="importId"/>

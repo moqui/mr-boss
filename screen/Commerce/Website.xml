@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (BOSS_COM_WEBSITE). Pages is Shared/Pages and PageDetail Shared/PageDetail in Commerce's context (the sites of the user's
     stores), Navigation the site's menus and redirects; each Mantle service (mantle.public.ThemeServices, SiteServices'
     publish#SitePage) checks the permission and the site's store again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Website" default-menu-index="4" menu-image="sym_o_web" menu-image-type="icon">
     <subscreens default-item="Pages" always-use-full-path="true">
         <subscreens-item name="Pages" location="component://mr-boss/screen/Shared/Pages.xml" menu-title="Pages" menu-index="1"/>

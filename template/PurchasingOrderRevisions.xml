@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     linePromise (record#Acknowledgement) and sendReminders (send#PurchaseReminder, a result per order). Each checks the
     order with AccessServices.check#Record first; the Mantle service checks its permission and the organization again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="startRevision">
         <actions>
             <service-call name="ironstone.purchasing.AccessServices.check#Record"

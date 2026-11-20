@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     order links to Purchasing's OrderDetail; anyone else in Purchasing gets the match as not available. A buyer asks for a
     hold's release on the bill (InvoiceDetail, MatchExceptions); the hold is finance's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Match"
         default-menu-index="3">
     <parameter name="organizationPartyId"/>

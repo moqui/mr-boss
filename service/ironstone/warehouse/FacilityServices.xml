@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     user's facility scope (ironstone.warehouse.AccessServices) and answers a screen's rows with their display text. The
     writes are Mantle's mantle.facility.FacilityServices (store#Facility, store#FacilityLocation, store#FacilityLocationType,
     close#FacilityLocation, reopen#FacilityLocation) and store#ProductFacilityPolicy, which check their own permissions. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Facilities" allow-remote="false">
         <description>The user's facilities (Facilities' list and tree), searched by id or name ignoring case
             and filtered by type and parent, a page at a time: each with its type, parent (when it is the user's), owner,

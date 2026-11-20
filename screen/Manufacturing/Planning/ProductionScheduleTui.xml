@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     commands: Move (a form with the operation, the work center, the start and the end) previews the move, whose box then
     applies it, asks a supervisor for an override or unschedules the operation (template/ManufacturingSchedule.xml); Show
     conflicts lists every conflict; a supervisor decides the override requests. Read-only users have the table only. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Production schedule" default-menu-include="false">
 
     <parameter name="plantId"/>

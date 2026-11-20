@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (template/PeopleClock.xml: their employments with clocking on, each with its state, today's time and Clock in or Clock out), or,
     when clocking is not on for their employment, why, with Request leave. Every People user's and a self-service employee's by the
     time area's grant (BOSS_PPL_TIME); record#Punch and get#MyClock answer the user alone. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Clock in" default-menu-include="false" menu-image="sym_o_timer" menu-image-type="icon">
     <transition-include name="clock" location="component://mr-boss/template/PeopleClock.xml"/>
     <actions>

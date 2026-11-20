@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     approves or refuses a Pending one at its revision, the count of its profile rows (decide#SupplierApproval). Each
     transition checks the supplier with AccessServices.check#Record, included by name in Shared/Supplier360.xml. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="submitSupplier">
         <actions>
             <script>if (appRoot !== 'Purchasing') throw new Error('Supplier approval actions require the Purchasing context')</script>

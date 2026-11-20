@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- StoreDetail's Facilities tab (design-commerce §3 Facilities; impl-commerce P2): the facilities that fulfill the store's
     orders, dated, by priority (mantle.product.StoreAdminServices.store#StoreFacility: a facility of the store's organization
     from a date, ending the row it replaces; End). A store of digital items only needs none. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Facilities" default-menu-index="3">
     <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
     <transition name="saveFacility">

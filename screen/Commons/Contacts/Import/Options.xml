@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     contacts (only you see them, into one of your books) or directory contacts (contact admins; into a shared book, or none),
     the target book, groups to add to every contact (existing ones and new names), the file's own groups, and what to do with
     a row that matches an existing contact (skip, update, or create anyway). saveOptions keeps them in the import's draft. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Options" default-menu-index="3" server-static="qvt" menu-image="sym_o_tune" menu-image-type="icon">
 
     <parameter name="importId"/>

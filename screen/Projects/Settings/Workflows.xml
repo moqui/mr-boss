@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     Default flow is the system's and the projects' own; its work moves are shown with the others it holds left out. Other status
     types are edited in the Tools app's Status Flows. Service: ironstone.projects.ProjectServices get#Workflows, store#FlowTransition,
     update#WorkStatus. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Workflows" default-menu-index="2" menu-image="sym_o_account_tree" menu-image-type="icon">
 
     <parameter name="statusFlowId"/>

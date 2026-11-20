@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     mailbox), active ones by default, each with its kind, channel, organization, campaign, subscribed and pending counts and state.
     New list is the primary action (MARKETING_AUDIENCE_EDIT); a list subscribes no one, its members come by evidenced requests on
     ListDetail. Import (AudienceImport, MARKETING_AUDIENCE_IMPORT) and Merge (AudienceMerge) open their screens (P4). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Lists" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

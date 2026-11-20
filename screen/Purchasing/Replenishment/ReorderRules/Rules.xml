@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     and snooze; a stock planner (STOCK_POLICY_PLAN) adds and edits a rule, snoozes it with a thru date and reason, through
     store#ProductFacilityPolicy (storeRule). A snooze stops automatic conversion, not the shortage: the supply plan still
     suggests it. Each product opens InventoryAvailability with the Purchasing context. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Rules" default-menu-index="1">
     <parameter name="productId"/>
     <parameter name="facilityId"/>

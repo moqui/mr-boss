@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     get#ReportCatalogue, the entries it registers for Insights' catalog): each with what it shows, the filters it takes and
     whether it exports, opening the report; CSAT results for service management only (F186), and Case analytics opened from
     a case. Nothing is run or exported from here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="1">
     <actions>
         <service-call name="ironstone.customerservice.ReportingServices.get#ReportCatalogue" out-map="catalogue"

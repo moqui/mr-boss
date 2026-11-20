@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     and the administrator, with its two transitions: valueOptions (the values a preference may take) and storePreference,
     through org.moqui.admin.ConfigurationServices, which check ADMIN_SETTINGS_VIEW and ADMIN_SETTINGS_MANAGE and change a
     registered preference only. The conf itself is linked for a user who opens System by their own grant. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Instance" menu-image="sym_o_tune" menu-image-type="icon">
 
     <transition-include name="valueOptions" location="component://tools/screen/System/Settings/InstanceSettings.xml"/>

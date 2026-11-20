@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     basis, the decision and its approver, the linked repair or return, the next action and the state, opening
     WarrantyAssessment. New claim opens NewCase with the warranty claim type (its template), or a row of Customer360's
     Delivered items. For the agent and the manager (a user without SUPPORT_CASE_EDIT or WARRANTY_APPROVE is told so). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Warranty" default-menu-index="3">
     <parameter name="customerPartyId"/>
     <parameter name="productId"/>

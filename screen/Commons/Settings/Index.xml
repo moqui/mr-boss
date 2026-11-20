@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Commons settings index (design-drawers-commons.md §11 Settings; style-guide §3.9 Settings): a card per settings group
     with a line about it and the links into its pages, Comms settings last. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="All settings" default-menu-include="false" server-static="qvt">
     <widgets>
         <label type="h5" text="Settings" style="q-mt-none q-mb-sm"/>

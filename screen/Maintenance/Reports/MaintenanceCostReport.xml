@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     type, a supplier bill, an acceptance beyond the bills, an order not yet accepted) with its work order, quantity or hours, amount,
     currency and posting state. Export CSV (the options and the same sources) and Print (renderMode=html-print, every value escaped)
     carry the same scope. No person's pay rate. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Cost report" default-menu-index="3" menu-image="sym_o_request_quote" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="facilityId"/>

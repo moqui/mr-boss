@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     is ThemeEditorTui, also the browser's form view. The JSON transitions below call mantle.public.ThemeServices
     (ThemeCalls.js), which checks COMMERCE_THEME_EDIT, the store and the draft revision on every save; publishing stays on
     ThemeDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Theme editor" default-menu-include="false" render-modes="vue,qvue,tui" server-static="vue,qvue">
     <parameter name="themeId" required="true"/>
     <transition name="editorData" method="get" read-only="true">

@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     - CountHeader: the record header of CountDetail, CountEntry and CountReview;
     - NewCountForm: the plan-a-count form of Counts' dialog and the NewCount quick create (P18). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="countChoices" read-only="true">
         <actions>
             <service-call name="ironstone.warehouse.CountServices.get#CountChoices" in-map="context" out-map="found"/>

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     placed date, status, total, computed payment state, fulfillment and its badges (a hold, a Payment hold, a cancellation
     request). A row opens the shared OrderDetail; a stuck Shop placement (Attention: placement waiting, impl-shop F85) is still
     an open order with its payment kept and opens CartDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Orders" default-menu-index="1">
     <parameter name="productStoreId"/>
     <parameter name="term"/>

@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     In Planning (service/ironstone/projects/ProjectServices.xml create#NewProject), so a wizard left keeps a draft project; each later step
     carries its workEffortId in the URL. For managers (BOSS_PROJECTS_MANAGERS); QuickProject's More options opens it. The
     request's Convert to project and the sales order's Create project come with impl-projects.md P5 and Sales. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="New project" default-menu-include="false">
 
     <parameter name="workEffortId"/>

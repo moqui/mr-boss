@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     content grant edits; the wiki's own rules decide each page. Every read and write is mantle.marketing.MarketingContentServices or
     the site page services, which check the permission, the organization and the wiki's rule again. P15: Tracking links and
     TrackingLinkDetail (a campaign's links and QR codes, mantle.marketing.TrackingServices). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Content" default-menu-index="6" menu-image="sym_o_article" menu-image-type="icon">
     <always-actions>
         <script>if(!marketing.capabilities.contentRead)throw new Error('PERMISSION_DENIED: Content is for Marketing readers')</script>

@@ -33,7 +33,7 @@ along with this software (see the LICENSE.md file). If not, see
     customer-order shortage's sales lines to the supplier's drop-ship facility (buyRoute, Mantle's route). Other apps add their
     contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Supply planning"
         default-menu-include="false">
     <parameter name="plantId"/>

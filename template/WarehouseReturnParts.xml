@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     - shipSupplierReturn: ship the supplier return (ship#SupplierReturn, ReturnShipped);
     - sections NewReturnForm and ReturnInspectionList (template/WarehouseReturnDetail.xml's inspections). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="returnChoices" read-only="true">
         <actions>
             <service-call name="ironstone.warehouse.ReturnServices.get#ReturnChoices" in-map="context" out-map="found"/>

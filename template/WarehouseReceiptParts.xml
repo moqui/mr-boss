@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     - sections NewReceiptForm, ReceiptLines, ReceiptRows and FinishReceipt; Shared/ShipmentDetail's Warehouse branch, which
       includes them, is template/WarehouseReceiptDetail.xml. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="receiptChoices" read-only="true">
         <actions>
             <service-call name="ironstone.warehouse.ReceiptServices.get#ReceiptChoices" in-map="context" out-map="found"/>

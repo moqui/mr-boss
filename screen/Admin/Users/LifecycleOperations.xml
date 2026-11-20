@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     too). LifecycleFind narrows by organization, kind, state and requested date; LifecycleList shows each one's account, kind,
     scope, requester, source, state, progress and what waits (failed steps, resources waiting for a new owner), and opens
     LifecycleDetail. Operations are started from UserDetail's Lifecycle box and Users' bulk disable. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Lifecycle" menu-image="sym_o_manage_accounts" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="kind"/>

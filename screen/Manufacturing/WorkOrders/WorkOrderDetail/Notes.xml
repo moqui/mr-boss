@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- WorkOrderDetail's Notes and files (design-manufacturing §3 WorkOrderDetail, Chatter, RecordFiles): the run's
     conversation and activity (chatter on the WorkEffort record, through the hidden Manufacturing/Chatter) and its files
     (record-files, Manufacturing/RecordFiles). Notes are internal; nothing here is published outside the organization. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Notes and files" default-menu-index="10" server-static="qvt">
     <parameter name="workEffortId"/>
     <widgets>

@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     - CaseLineageBox: Overview's lineage, each relation from or to the case with the other case, who, when, why and what it
       referenced, each with who could see it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="followUpCase">
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.check#Record"

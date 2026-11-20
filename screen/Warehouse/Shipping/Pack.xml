@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     requested (complete#Pack). ReopenPackage takes a package's contents (or one asset's) back off before ship, releasing the
     in-process invoice first (reopen#ShipmentPackage). Every posting checks the shipment with the pack capability first. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pack" default-menu-index="2">
     <parameter name="shipmentId"/>
     <transition-include name="packStock" location="component://mr-boss/template/WarehousePackParts.xml"/>

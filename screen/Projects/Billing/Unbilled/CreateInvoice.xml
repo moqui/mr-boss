@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     open drafts of the project to add to, the grouping of the lines
     (per entry, per worker, one line; the project's own setting by default), the payment terms and the invoice date. The invoice made,
     InvoiceDetail opens on it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Create invoice" default-menu-include="false">
 
     <parameter name="workEffortId" required="true"/>

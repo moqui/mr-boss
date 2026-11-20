@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- NewProject step 5, ProjectReview (design-projects.md §4 NewProject; style-guide §3.10 review step): everything chosen (the
     project, its team, modules, repository and documentation, budget and rates), each step's link to change it; Create opens the
     project, which is in planning until it is approved. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Review" default-menu-index="5" menu-image="sym_o_fact_check" menu-image-type="icon">
 
     <parameter name="workEffortId"/>

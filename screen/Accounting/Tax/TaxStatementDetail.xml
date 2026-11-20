@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Tax statement"
         default-menu-include="false"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <parameter name="organizationPartyId"/>
     <parameter name="taxStatementId"/>
     <!-- the export records who exported the statement and when, which keeps it: a posted form, not a link -->

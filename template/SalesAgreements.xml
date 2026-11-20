@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     salesRenewAgreement (it opens the renewal), each at the revision shown, and salesAgreementContent (a document or the customer's
     acceptance, through Mantle's create#AgreementContent once the user may change the agreement); salesAgreementPrint (the agreement as
     it is now, a PDF, for one who reads it; Sales P20 review). A screen includes each transition it uses by name. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="salesAgreementPrint" read-only="true">
         <actions>
             <service-call name="mantle.party.SalesAgreementServices.get#SalesAgreementPrint" out-map="printed" in-map="{agreementId:agreementId}"/>

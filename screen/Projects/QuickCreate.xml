@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     day (today), the hours, billable, the work type and a comment (service/ironstone/projects/TimeServices.xml save#TimeEntry, which checks the
     item and that the week is not submitted); From and to are in MyTime's entry form, which More options opens. The project kind is the managers-only screen Projects/QuickProject (impl-projects.md F8); here it only
     points there. The transition answers JSON messages, so the shell's dialog closes and the page under it stays. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quick create" default-menu-include="false" server-static="qvt">
     <parameter name="kind"/>
     <parameter name="recordEntity"/>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.account.ReconciliationServices checks the bank account's organization and BANK_RECONCILE, clears a line in one
     statement only and finishes only at zero difference. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Statement"
         default-menu-include="false">
     <parameter name="organizationPartyId"/>

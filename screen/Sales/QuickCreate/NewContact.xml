@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Quick create › Contact (design-sales §12.2): NewContact, the Contacts list's form (a new person as a contact of an account of
     the user's scope), for a holder of SALES_ACCOUNT_EDIT. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="New contact" default-menu-include="false">
     <parameter name="accountPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>

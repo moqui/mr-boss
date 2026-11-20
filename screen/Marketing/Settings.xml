@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     (P13) join with their phases. P13: Sales' LeadSources mounted (design §12 LeadSources; Sales.js admits this root), in Sales' context
     for this root (`sales`: the user's own Sales grant and scope decide; SALES_CONFIGURE writes it), its UTM map offering Marketing's
     vocabulary. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="10" menu-image="sym_o_settings" menu-image-type="icon"
         default-menu-include="ec.user.hasPermission('MARKETING_CONFIGURE')">
     <always-actions>

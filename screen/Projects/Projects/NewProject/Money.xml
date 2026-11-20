@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     worker pay for a person, a work type or everyone, mantle.humanres.RateServices.create#RateAmount scoped to the project; End), and
     for those who manage money the order line it fulfils (impl-projects.md P8b: a line of a sales order to the project's client,
     ironstone.projects.BillingServices.search#OrderLines and link#OrderLine; milestones take their shares of it later, on MilestoneDetail). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Money" default-menu-index="4" menu-image="sym_o_account_balance_wallet" menu-image-type="icon">
 
     <parameter name="workEffortId"/>

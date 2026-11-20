@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     downloads it (the stored one when there is one), and Store for the customer (the work's planner, supervisor or assigned
     technician, once the work is complete) stores it on the work order with the customer's acknowledgment file
     (store#InterventionReport); Customer Service's RepairLinks sends the stored report. Printing and storing post nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Intervention report" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
     <transition name="reportPdf" read-only="true">

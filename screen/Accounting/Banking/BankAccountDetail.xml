@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     (R-ACC-25); and its deposits. Reads and changes go through mantle.account.ReconciliationServices, which checks the
     bank account's organization and BANK_RECONCILE. An account the user may not see is "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Bank account"
         default-menu-include="false">
     <parameter name="organizationPartyId"/>

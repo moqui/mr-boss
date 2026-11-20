@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Comms Consent (design-drawers-commons.md §16 Consent; impl-drawers-commons.md M11): whether contacts may be solicited, their
     list subscriptions and the history behind them, for contact admins. The registry is the default subscreen Consent/List and
     one contact's consent is Consent/Contact, which shows in its place (the client loads each screen of the path on its own). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Consent" default-menu-index="5" menu-image="sym_o_verified_user" menu-image-type="icon">
     <subscreens default-item="List"/>
     <widgets>

@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (salesStoreLine and salesDeleteLine: a product priced on the quote's date, or a fixed price with its reason, or a charge); Preview
     (preview#QuoteTemplate: the lines priced for a customer on a date, with warnings); History. A published template is not changed:
     its successor, a draft copy, replaces it when published, and the quotes made from it keep their terms. No cost or margin. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quote template" default-menu-include="false">
     <parameter name="orderId" required="true"/>
     <parameter name="previewCustomerPartyId"/>

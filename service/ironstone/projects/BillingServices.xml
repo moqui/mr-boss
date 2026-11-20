@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     with approvedOnly and billableOnly: only the approved, billable time), in one transaction: it is made whole or not at all. Clients
     (impl-projects.md P10b: PROJECT_CLIENT) never manage money; they read their own sent invoices only (get#ClientInvoices,
     get#InvoiceAccess clientView), and every service that changes an invoice asks need change, which a client never passes. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== Access ========== -->
 

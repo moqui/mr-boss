@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (get#ShopFloorQueue, get#ProductionOperation, start#, pause#, complete#ProductionOperation, record#MachineRuntime,
     get#ProductionInstructions, record#InstructionStep, get#ProductionTime), which the ShopFloor screens call after
     ironstone.manufacturing.AccessServices; nothing here passes them through. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Station" allow-remote="false">
         <description>The station's board (design-manufacturing ShopFloor Station and Queue): the operations of the user's selected
             plant (or the plant given) as cards in the board's groups (running, ready, paused, blocked, and done with

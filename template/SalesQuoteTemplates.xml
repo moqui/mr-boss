@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     draft's header), salesSucceedTemplate (a published template's successor, a draft copy that opens next), salesPublishTemplate and
     salesEndTemplate, each at the revision shown. A template's lines go through the quote draft's salesStoreLine and salesDeleteLine
     (template/SalesQuotes.xml). A screen includes each transition it uses by name. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="createQuoteTemplate">
         <actions>
             <service-call name="mantle.order.SalesQuoteServices.store#QuoteTemplate" out-map="created"

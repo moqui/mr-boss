@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
       forum checks their posting rights there); the case's private notes are never copied;
     - CaseForumReply: the section that shows it on CaseDetail's Conversation for such a case. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="previewForumReply">
         <default-response url=".">
             <parameter name="requestId"/>

@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     waiting; Withdraw, while it waits, for the person or who asked; Ask to cancel approved leave, for the person (approved as a request
     is); Cancel at once with a reason, for an HR editor. Each names the revision read. Every People user's and a self-service
     employee's by the time area's grant. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Leave request" default-menu-include="false">
     <parameter name="leaveRequestId"/>
     <!-- a decision, withdrawal or cancellation: Mantle checks who decides, the revision and the balance again -->

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     Each refuses a user without Purchasing; a record outside the user's organizations or supplier scope is refused
     (RECORD_UNAVAILABLE). Purchasing posts no stock: the screens call the Mantle receiving, quality and bill services after
     ironstone.purchasing.AccessServices.check#Record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="ExpectedReceipts" allow-remote="false">
         <description>One page of the stock lines of the user's purchase orders in a view (open, the default; partial, late,
             held, completed or all), by supplier, order, facility and due dates, the nearest due first: each line's expected,

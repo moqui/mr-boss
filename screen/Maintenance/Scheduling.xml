@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     and scope. P16: BookingRequests, the bookings waiting for a decision (BookingFind, BookingRows, BookingDecision,
     BulkBookingDecision), and ResourceCalendar, Commons' Schedules component over the scope's resources with their blocks
     (ResourceCalendarTui its terminal twin, hidden from the menu). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Scheduling" default-menu-index="8" menu-image="sym_o_event_available" menu-image-type="icon">
     <subscreens default-item="Resources" always-use-full-path="true">
         <subscreens-item name="ResourcePolicyDetail" location="component://mr-boss/screen/Maintenance/Scheduling/ResourcePolicyDetail.xml" menu-include="false"/>

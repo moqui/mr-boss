@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.projects.PlanningServices get#PlanItemDetail, get#ReleaseCode, get#ReleaseNotesInfo, save#PlanItem, set#PlanItemItems,
     create#ReleaseTag, save#ReleaseNotes, release#ReleaseBoss; ironstone.projects.CodeServices link# and unlink#RefWorkEffort. A release
     of a project the user does not see is "not available". -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Release" default-menu-include="false">
 
     <parameter name="workEffortId" required="true"/>

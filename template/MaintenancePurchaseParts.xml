@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
       with lines of work orders the user reads (get#MaintenanceOrder, read by OrderDetail's actions), each with its work orders and
       what was accepted, prices only for a price reader. Sourcing, placing, receiving and paying stay Purchasing's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="requestPurchase">
         <actions>
             <service-call name="ironstone.maintenance.AccessServices.check#Record"

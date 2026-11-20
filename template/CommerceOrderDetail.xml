@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     proposals linking Customer Service's OrderChangeDetail (X7); the payment, fulfillment and case cards; items, payments,
     shipments, invoices, cases, returns and the order's notices on the delivery ledger (addresses masked). Place, approve,
     hold and cancel stay the owners' screens'. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="commerceReorder">
         <actions>
             <service-call name="mantle.order.StoreOperationsServices.reorder#StoreOrder" in-map="{orderId:orderId, orderRevision:(orderRevision || null), operationKey:(operationKey || null)}" out-map="reordered"/>

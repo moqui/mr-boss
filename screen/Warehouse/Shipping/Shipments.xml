@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     progress, exceptions and picklist; drop shipments show only under the type filter and are read only (Purchasing and
     Sales own them). NewOutgoing creates a shipment of an approved order part for the pick supervisor
     (mantle.shipment.WarehouseTaskServices.create#OutgoingShipment; a held order gets none). The board and calendar read. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Shipments" default-menu-index="1">
     <parameter name="facilityId"/>
     <parameter name="statusId"/>

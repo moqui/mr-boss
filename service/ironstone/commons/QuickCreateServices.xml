@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     when it has one), a note through mantle.party.CommunicationServices.log#RecordNote. Each answers the created record's id,
     its BOSS screen (url, a /qapps link) and the message the dialog shows. The record must be one the user may see:
     get#RecordLinkInfo finds it under the user's filters. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="create" noun="Task">
         <description>A task for the user or someone else (assignToPartyId, default the user's party), owned by the user, due on

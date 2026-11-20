@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     Insights › Dashboard's ShareDashboard, so the editor's save keeps the group as it is (a posted group is not taken); save and
     copy take only this editor's types. Definition import is not offered (P12's admitted bundles); BOSS_INS_AUTHORING names
     each transition taken in here, so one added must be named there too. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Library panel" default-menu-include="false">
 
     <!-- in always-actions, so save and copy keep to these types too -->

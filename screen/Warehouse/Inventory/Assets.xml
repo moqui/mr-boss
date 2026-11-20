@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     only for a user with financial read, whose service answers it. Relocate (P5) moves the selected assets to one location
     of the facility, each on its own with its own result (template/WarehouseMoveParts.xml relocateAssets); a single move is
     Transfers/Move. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Assets" default-menu-index="1">
     <parameter name="facilityId"/>
     <parameter name="productId"/>

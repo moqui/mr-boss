@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     contact (create#Contact), Add a person (add#Contact) and End (delete#Contact: the relationship ends, the person is kept) for a
     holder of SALES_ACCOUNT_EDIT, through Mantle's guarded services. A contact of two accounts shows here under each; nothing of the
     other account shows. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Contacts" default-menu-index="2">
     <parameter name="customerPartyId"/>
     <condition><expression>appRoot == 'Sales'</expression></condition>

@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     The time-and-attendance transfer target (Mantle's TransferTarget timeAndAttendance) lists its imports in Admin's Imports, which
     opens one here (owner route peopleTimeImport, attendanceImportId). HR's own (BOSS_PPL_TIME_IMPORT, denied to the root user group
     and to self-service); Mantle checks PEOPLE_IMPORT, PEOPLE_HR_VIEW, PEOPLE_HR_EDIT and the employer again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Time import" default-menu-include="false" menu-image="sym_o_upload_file" menu-image-type="icon">
     <parameter name="attendanceImportId"/>
     <parameter name="outcome"/>

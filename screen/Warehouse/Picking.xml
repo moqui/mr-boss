@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     needs, quick move, below minimum; mounted at Handheld/PickFace) and PickSheet (the picklist and the combined pick and
     pack sheets). Reads are ironstone.warehouse.PickingServices; the postings Mantle's, through
     template/WarehousePickParts.xml. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Picking" default-menu-index="7" menu-image="sym_o_shopping_cart" menu-image-type="icon">
     <subscreens default-item="Picklists" always-use-full-path="true"/>
     <widgets>

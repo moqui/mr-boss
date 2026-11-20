@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Customer360's Cases tab, in the Customer Service context (crosscut §3.2 CustomerCasesReturns; impl-customer-service P3):
     the customer's cases the user sees (CaseServices.find#Cases), open first by date, each opening CaseDetail; returns come
     with P9. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Cases" default-menu-index="2">
     <parameter name="customerPartyId"/>
     <condition><expression>appRoot == 'CustomerService'</expression></condition>

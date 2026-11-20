@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     received not billed and billed not received, the bulk re-evaluation and the hold release request), LegacyMatches
     (Accounting's legacy match backfill, for a match operator), and Projects' shared InvoiceDetail and Accounting's shared
     InvoiceMatch in the Purchasing context (crosscut §3.16, §3.22; hidden from the menu). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Bills &amp; matching" default-menu-index="11" menu-image="sym_o_receipt" menu-image-type="icon">
     <subscreens default-item="BillList" always-use-full-path="true">
         <subscreens-item name="InvoiceDetail" location="component://mr-boss/screen/Shared/InvoiceDetail.xml" menu-include="false"/>

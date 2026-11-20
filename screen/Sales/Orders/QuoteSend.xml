@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     and, on a second send, who has it already (skipped) and whom it failed to reach (tried again). Send calls send#Quote at the
     revision shown with an operation key of its own; send#Quote checks SALES_QUOTE_EDIT, SALES_QUOTE_SEND, the organization, the
     commercial revision and the validity itself. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Send quote" default-menu-include="false">
     <parameter name="orderId" required="true"/>
     <transition name="sendQuote">

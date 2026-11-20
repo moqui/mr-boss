@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     dated and ended, never deleted: list types and tracking code types (their enumerations) and the UTM sources, media and content
     codes with their labels, which Sales' UtmSourceMap maps to a lead source. The Marketing administrator's (MARKETING_CONFIGURE;
     mantle.marketing.CampaignServices.store#Vocabulary and find#Vocabulary). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Vocabularies" default-menu-index="4">
     <parameter name="organizationPartyId"/>
     <parameter name="includeEnded"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     its asset class versions, shaped for form-lists. Book changes, depreciation and the asset's book go to
     mantle.ledger.AssetBookServices; Products' revaluation context (get#RevaluationContext) is there too. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Assets" allow-remote="false">
         <description>A page of the organization's fixed assets by class, type, facility, depreciation method, acquired days
             and whether disposed: each with its class, in-service day, cost, accumulated depreciation, net book, location

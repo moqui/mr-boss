@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     Home, Cases, Customers, Orders, Availability and Knowledge are every Customer Service user's; Returns, Approvals, Reports
     and Settings their groups' (BOSS_CS_<Area>). ironstone.customerservice.AccessServices.get#SharedContext checks the user
     and resolves their organizations, capabilities, queues and teams for every subscreen; each service checks again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Customer Service" menu-image="sym_o_support_agent" menu-image-type="icon">
 
     <always-actions>

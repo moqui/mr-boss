@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     decide at the message's revision and refuse a stale one naming the current revision; OrderChangeServices' for a change); opening a
     quote's row opens its OrderDetail, whose Approval box shows the rules, and a change's row opens where Commons' record-link resolver
     sends the approver (F58). The list adds no right: each decision is Mantle's check. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Approvals" default-menu-index="8" menu-image="sym_o_approval" menu-image-type="icon"
         default-menu-include="ec.user.hasPermission('SALES_APPROVE')">
     <always-actions>

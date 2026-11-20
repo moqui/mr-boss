@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     - DocumentPrint (invoices and bills): the document as issued (mantle.account.InvoiceServices.get#InvoiceOutput, Mantle's
       print template), with printScreen (its print route) and listPath. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="createDraft">
         <actions>
             <service-call name="mantle.ledger.AccountingServices.create#DraftDocument"

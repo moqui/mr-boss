@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     SEC-BOS-82, Accounting's finance details refuse employees). Assigning a structure changes no salary: the salary is changed on Employee360's
     Compensation as a pay change. Under Payroll, payroll's area (BOSS_PPL_PAYROLL); Mantle checks every read and change. Salaries,
     pay rates, an assignment's inputs and a benefit's cost are opted out of AI (the user's call of Nov 12, 2026, PE-21). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pay assignments" default-menu-index="3">
     <parameter name="organizationPartyId"/>
     <parameter name="readiness"/>

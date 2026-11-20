@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     index 4, a file under Employees/: the user's confidential cases, every People user's and a self-service employee's by its own
     grant, BOSS_PPL_CASES_SELF) and RequestDetail (the shared request detail, Shared/RequestDetail.xml, with People's branch: a
     confidential case for its people alone; any other request is not available here), out of the menu. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Employees" default-menu-index="4" menu-image="sym_o_badge" menu-image-type="icon">
     <subscreens default-item="List">
         <subscreens-item name="Employee360" location="component://mr-boss/screen/Shared/Employee360.xml" menu-include="false"/>

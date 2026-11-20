@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     Warehouse context, P17), CountVariance (P10), OperationsHistory (P17) and InventoryValuation (Accounting's
     Shared/InventoryValuation with the Warehouse context, P17). Every Warehouse user opens the area; each report's service
     decides what it shows them (CountVariance: count reviewers and adjusters; InventoryValuation's values: financial read). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="12" menu-image="sym_o_bar_chart" menu-image-type="icon">
     <subscreens default-item="ReportIndex" always-use-full-path="true">
         <subscreens-item name="StockAtDate" location="component://mr-boss/screen/Shared/StockAtDate.xml" menu-index="2"/>

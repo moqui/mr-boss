@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     them cases, the most open cases, a substitute, the calendar of their hours), effective-dated beside the membership, over
     ironstone.customerservice.AssignmentServices.get#TeamParticipation and kept through save#ServiceTeamMember (participation),
     which also keeps the team's user group (its saved replies' audience) in step with its members. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Agent teams" default-menu-index="3">
     <parameter name="organizationPartyId"/>
     <transition name="chooseOrganization">

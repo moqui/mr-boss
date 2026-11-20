@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     parameter, so an importId never opens another user's import. mantle.work.TimeServices.import#TimeEntryCsv reads the file by
     its location, plans each row (preview) and imports each through store#TimeEntry in its own transaction. Any internal user
     imports: their own time, and the time of the people whose weeks they approve. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="ImportDraft">
         <description>The draft of a time import of the current user: the draft map (empty when there is none, or the id is not a

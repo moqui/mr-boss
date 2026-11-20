@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     card's link by Admin's mount, each only where its place opens to the reader). A provider that could not be checked is
     named; a summary that cannot be read leaves the others. No Fix all. A user without the read sees the shortcuts and why
     the summaries are not shown. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <actions>
         <set field="can" from="admin.capabilities"/>

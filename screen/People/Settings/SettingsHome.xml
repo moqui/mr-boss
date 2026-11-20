@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     from its readiness registry (people.setup). An employer with no employees has no check yet. P29: every phase's checks (payroll,
     positions, the approval rules' HR fallback, an onboarding checklist, a working schedule, a leave policy, the confidential case
     intake), each linking the place that sets it up; PeoplePreferences is the Preferences tab. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="1">
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>

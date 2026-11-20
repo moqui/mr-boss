@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     which check the caller's maintenance permissions and the new person themselves. Admin's Projects participant leaves managed
     work out. P15: the rooms and equipment the leaver approves bookings of (BookingApprover), handed over through Mantle's
     store#ResourceApprover (RESOURCE_POLICY_EDIT), the leaver ended and the new person approving from then. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Assignments" allow-remote="false" read-only="true">
         <description>What userId holds of Maintenance (the user's own, or another's with ADMIN_IDENTITY_VIEW): their open work orders
             (a current technician assignment), the equipment they hold (a current custodian or operator) and the resources whose

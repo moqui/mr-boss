@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     customer's as a customer administrator), with no user group. The link is shown once, for the agent to send. Included by name
     in CustomerService/Customers/ContactDetail.xml. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="inviteSupportContact">
         <actions>
             <service-call name="ironstone.customerservice.SupportAppServices.create#SupportInvitation" out-map="invited"

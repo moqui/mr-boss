@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     SupplierStatementRows (ironstone.purchasing.ReportServices.get#SupplierStatement): each currency's opening balance, the
     bills, credits and payments in date order with the running balance, and the closing balance; no bank details and no
     payment action. Anyone else is told the statement needs finance read. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Supplier statement" default-menu-index="6">
     <parameter name="organizationPartyId"/>
     <parameter name="supplierPartyId"/>

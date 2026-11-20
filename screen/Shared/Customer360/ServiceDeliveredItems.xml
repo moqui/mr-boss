@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     find#DeliveredItems, over AssetIssuance and the orders' parts; a shared customer's other organizations' left out, F74),
     newest first, each with its product, order, ship date, the warranty end and its source, opening OrderDetail, and its open
     claim or New claim (NewCase with the warranty claim type, the serial and its order). For the agent and the manager. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Delivered items" default-menu-index="5">
     <parameter name="customerPartyId"/>
     <condition><expression>appRoot == 'CustomerService' &amp;&amp; !!(customerService?.capabilities?.caseEdit

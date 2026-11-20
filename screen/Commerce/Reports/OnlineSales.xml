@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     stores per currency and period with the change against the period before (Home's strip reads the same), each store's
     rows when there are several, and the period's top products; never summed across currencies. Open carts are never
     orders. The export holds the same rows. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Online sales" default-menu-index="2">
     <parameter name="productStoreId"/>
     <parameter name="interval"/>

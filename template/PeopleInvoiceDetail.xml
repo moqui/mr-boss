@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     a payee's amounts, a receivable from a person who left, a claim a run settled) with its run and payslip, the invoice's state and
     posting, its lines with their accounts and the payments applied; amounts opted out of AI. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="PeopleInvoice" condition="peopleRoot">
             <widgets>

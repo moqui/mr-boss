@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     for a holder of SALES_QUOTE_EDIT (create#Quote checks the organization, customer, opportunity and store). P10: QuoteBatch, the
     rows' selection sent or withdrawn each on its own (mantle.order.SalesQuoteIssueServices.apply#QuoteBatch). P11: To send, the proposed quotes
     with no issue standing (Home's and Insights' Quotes to send); an accepted quote, once placed, is listed with the orders. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quotes" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

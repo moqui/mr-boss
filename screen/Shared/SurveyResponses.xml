@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     the responses (publication, date, respondent as the service names them, how they came, score), each opening ResponseDetail; only
     responses submitted to the app's publications, never a case's. impl-marketing P23 (design-marketing §18, the survey results): the
     choices and the responses each download as CSV, the same rows and columns as shown (the respondent as the service names them). The case branch is unchanged. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Survey responses">
     <parameter name="formId"/>
     <parameter name="periodId"/>

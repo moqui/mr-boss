@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     own in BOSS_PROJECTS_MANAGERS (data/BossSetupData.xml), since the shell offers a quick-create kind by its screen's
     authorization: the team is not offered it (impl-projects.md F8), and the service refuses a non-manager too
     (ironstone.projects.ProjectServices.create#NewProject does the work). More options opens the NewProject wizard. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="New project" default-menu-include="false" server-static="qvt">
 
     <transition name="createProject">

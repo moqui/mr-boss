@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     receipt, bill line or RFQ invitation with its due date and basis, latest promise, event, quantity and counted share, or
     why it was left out), with its CSV export; the supplier's risks (SupplierRisk, store#SupplierRisk: record, end) and its
     other evaluations. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Evaluation" default-menu-include="false">
     <parameter name="supplierScorecardId" required="true"/>
     <parameter name="metricEnumId"/>

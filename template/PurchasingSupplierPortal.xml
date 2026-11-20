@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     Checked with AccessServices.check#Record (the supplier in scope, the buy capability); included by name in
     Shared/Supplier360.xml. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="inviteSupplierContact">
         <actions>
             <script>if (appRoot !== 'Purchasing') throw new Error('Supplier invitations require the Purchasing context')</script>

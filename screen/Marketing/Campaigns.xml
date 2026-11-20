@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     approval topics, the approvers', BOSS_MKT_APPROVALS), in the menu; CampaignDetail and its plan print (CampaignPlan), hidden. Shown
     to a user who reads Marketing (the root's menu condition); every read is Mantle's scoped find and every write Mantle's guarded
     campaign service. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Campaigns" default-menu-index="2" menu-image="sym_o_campaign" menu-image-type="icon">
     <subscreens default-item="Campaigns" always-use-full-path="true">
         <!-- the approvers' (the menu for a holder of MARKETING_APPROVE; the area's deny for the root user group) -->

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     and UploadSupplierBill: a buyer's upload of the supplier's bill (PAYABLE_IMPORT) through Accounting's intake,
     mantle.account.InvoiceServices.import#Bill, which keys it by organization, supplier and the supplier's reference and
     refuses a second one naming the first; it opens the draft bill in InvoiceDetail for AP's review. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Supplier bills" default-menu-index="1">
     <parameter name="view"/>
     <parameter name="vendorPartyId"/>

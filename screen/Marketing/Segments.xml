@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Marketing/Segments (impl-marketing F2; design-marketing §1.2): the old placeholder's route, kept so an incoming link still
     lands, a redirect hidden from the menu: to Audiences › Segments since P5. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-include="false">
     <always-actions>
         <script>sri.sendRedirectAndStopRender('/qapps/Marketing/Audiences/Segments')</script>

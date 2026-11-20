@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     The folder comes from the current user, never from a parameter, so an importId never opens another user's import. The Mantle
     services (mantle.work.WorkItemImportServices) read the file by its location. The import is the managers' (the screen's
     BOSS_PROJECTS_MANAGERS) into a project they may work in (ironstone.projects.ProjectServices.get#ProjectAccess update). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="ImportDraft">
         <description>The draft of a work item import of the current user: the draft map (empty when there is none, or the id is not

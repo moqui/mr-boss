@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     find#PartyCommunicationEvents with the customer audience, else those on the cases the user sees. LogCall
     (template/CustomerServiceCallLog.xml, mantle.request.SupportCaseServices.log#CaseCall after the case's check). A
     recording plays only through Comms, for its owner; linking a case makes none public. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Channel sessions" default-menu-index="3">
     <parameter name="customerPartyId"/>
     <parameter name="channel"/>

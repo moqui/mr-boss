@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The time demo of IronStone Projects (impl-projects.md P6a): data/BossProjectsDemoDataTime.xml calls load#TimeDemo after the
     support desk project SUPP. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="load" noun="TimeDemo" authenticate="anonymous-all" allow-remote="false">
         <description>

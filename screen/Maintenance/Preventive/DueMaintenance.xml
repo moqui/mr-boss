@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     plan's missed due dates into one catch-up or skip its next due date, with a reason (reconcile#MaintenanceSchedule), or, for a
     resource administrator, record a meter's reading (record#MaintenanceMeter). The list says when it stops at its cap. No cost. P19: the list exports CSV
     (Admin's Exports lists it as maintenanceDueList, route maintenanceDue) and a dated row offers its next due as .ics (dueCalendarFile). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Due maintenance" default-menu-index="2">
     <parameter name="organizationPartyId"/>
     <parameter name="assetId"/>

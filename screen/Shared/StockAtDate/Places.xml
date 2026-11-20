@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- StockAtDate's Places tab: each place's opening, receipts, issues, adjustments, moves and closing, with the totals of each
     unit (never across units); an unknown quantity (history before a facility's first movement) shows as Unknown -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Places"
         default-menu-index="1">
     <actions>

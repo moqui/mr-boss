@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     are listed: Tools' telemetry rules and its shared contact points, silences and mute timings are not shown, and their
     transitions (evaluate, deleteShared) are not taken in, so they do not exist on this route. A new rule over a panel
     starts from that panel's menu on a dashboard (New alert rule). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Business alerts" default-menu-include="false">
     <parameter name="view"/>
     <parameter name="state"/>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     open past due, open within target, the rate over the decided and the open past due (an open case past due counts against
     it), cancelled apart and never in the rate, and the paused business time; a queue's row opens its cases. A clock a merge
     ended is never counted (its copy on the kept case is). The export holds the same rows -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Service level compliance" default-menu-index="2">
     <parameter name="organizationPartyId"/>
     <parameter name="requestCategoryId"/>

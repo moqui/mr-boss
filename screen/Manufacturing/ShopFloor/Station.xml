@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     timer running elsewhere switched only after the operator confirms. My work limits the board to the user's assignments. The
     terminal twin is Station.tui.json: the same board, its cards opening OperationExecution, where every action of the card is a
     form. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Station" default-menu-index="1" render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">
     <parameter name="facilityId"/>
     <parameter name="mine"/>

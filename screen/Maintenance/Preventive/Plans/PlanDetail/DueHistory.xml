@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     due dates not yet acted on, coalesced into one catch-up or the next skipped, with a reason; and Correct on a completed one (the
     obligation open again, its work order kept and named not counted), with a reason (reconcile#MaintenanceSchedule). Reads the
     plan itself, so it renders alone. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Due history" default-menu-index="2">
     <parameter name="maintenanceScheduleId"/>
     <parameter name="pageIndex"/>

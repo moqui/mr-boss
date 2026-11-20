@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     recurring opens with the order chosen), edits its schedule, agreement and dates, and pauses, resumes, ends or retries the due
     order, each at the base's revision; a holder of SALES_TEAM_VIEW reads them. Billing each order as it is approved needs the finance
     right. Mantle's SalesRecurrenceServices check everything again. A Shop subscription's base is Commerce's (Subscriptions). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Recurring orders" default-menu-index="4">
     <parameter name="state"/>
     <parameter name="text"/>

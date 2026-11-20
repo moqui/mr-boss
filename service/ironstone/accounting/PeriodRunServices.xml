@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The list read of PeriodRuns: the organization's period runs (mantle.ledger.transaction.AccountingPeriodRun) shaped for
     a form-list. Previews and posts go to mantle.ledger.PeriodRunServices. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Runs" allow-remote="false">
         <description>A page of the organization's period runs, newest first, by kind, period and status: each with its
             kind, period and status names, total, result and failure counts, and who made and posted it. Refuses a user

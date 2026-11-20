@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     role and the free hours; each with the free hours against the hours needed, the weeks short, the skill and role, their current
     projects and, for those who manage money, their cost rate. Staff names the person (an approver allocates it too) and adds them to
     the project in the role. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Staff" default-menu-include="false">
 
     <parameter name="workEffortAllocationId" required="true"/>

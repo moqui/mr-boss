@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     choices are kept in the user's own import folder between the steps (service/ironstone/projects/TimeImportServices.xml). Each row goes
     through store#TimeEntry on its own: a bad row is named, the others are imported; a row of a submitted week fails. Opened from
     TimeEntries' Import; for every internal user (their own time, and the time of those whose weeks they approve). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Import time" default-menu-include="false" server-static="qvt">
 
     <parameter name="importId"/>

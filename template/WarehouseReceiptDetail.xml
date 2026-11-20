@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     receipt and Receive all as expected for a receiver, the supplier and the receipt documents), the lines, the receipts,
     files and conversation. Its parts are template/WarehouseReceiptParts.xml's sections and transitions. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="WarehouseReceipt" condition="appRoot == 'Warehouse'">
             <widgets>

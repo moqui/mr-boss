@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     that store's orders only), the product exception, the facility's location of the type or the built-in default
     (mantle.facility.WarehousePolicyServices.resolve#WarehousePolicy). It reads only, and says what the user may change. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Preview" default-menu-index="4">
     <parameter name="productStoreId"/>
     <parameter name="productId"/>

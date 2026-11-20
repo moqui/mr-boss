@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- InvoiceDetail's Items and taxes tab: the invoice's lines, which a draft's editor adds, changes and removes. It reads
     the invoice when the client loads the tab alone. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Items and taxes"
         default-menu-index="2">
     <parameter name="organizationPartyId"/>

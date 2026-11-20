@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     no feature defaults or delete; store choices narrowed to the user's stores, F47), each through
     ironstone.products.CatalogServices.get#SharedContext; writes need the catalog edit permission, checked again in the
     services. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Category" default-menu-include="false">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd" default-menu-title="Category" default-menu-include="false">
     <parameter name="appRoot"/>
     <parameter name="productCategoryId" required="true"/>
     <always-actions>

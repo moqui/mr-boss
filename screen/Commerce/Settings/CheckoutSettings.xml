@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.product.StoreAdminServices (COMMERCE_VIEW reads, COMMERCE_STORE_EDIT changes, the store's scope). The carriers,
     payment methods and tax authorities the choices come from are their owners' editors (F6): linked for a user who may open
     them (ContextServices.get#OwnerLinks), never mounted. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Checkout" default-menu-index="1">
     <parameter name="productStoreId"/>
     <parameter name="simCountryGeoId"/>

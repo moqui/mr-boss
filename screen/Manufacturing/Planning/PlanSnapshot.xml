@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     and whether it is stale), every suggestion with its method, quantity and unit, what is left to convert, the dates, its state
     and what covers it, and the stock held for inspection; the suggestions export as CSV. A print (html-print) opened from the
     plan's Snapshot; it renders in every mode. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Plan snapshot" default-menu-include="false">
     <parameter name="plantId"/>
     <actions>

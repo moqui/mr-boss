@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     get#WorkCenterLoad, which checks PRODUCTION_VIEW and the organization); a center opens FacilityDetail. New work center, for a resource
     administrator, makes an existing facility a work center or a new line under a plant (mantle.work.RoutingServices
     store#WorkCenter, METHOD_RESOURCES), with its parallel slots (store#WorkCenterCapacity). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Centers" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="plantId"/>

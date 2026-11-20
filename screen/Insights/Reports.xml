@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     A catalog report is an owner's screen: scheduling one for a group waits for its owner to register it as a legacy
     adapter (the framework's ReportLegacyAdapter, P7); dashboards and digests are scheduled in Scheduled reports. P4 replaced the legacy saved-report picker this screen held (F20); saved
     work is SavedReports. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="6" menu-image="sym_o_summarize" menu-image-type="icon">
 
     <parameter name="text"/>

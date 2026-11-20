@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     note (add#StoreRequestNote, never sent to the customer): the header (customer, store, source order, queue, assignee,
     due, status) with Open in Customer Service for a user who works cases there; the description and the conversation.
     Assignment, replies and resolution stay Customer Service's (X7). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="commerceRequestNote">
         <actions>
             <service-call name="mantle.order.StoreOperationsServices.add#StoreRequestNote" in-map="{requestId:requestId, body:body}"/>

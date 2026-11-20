@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     default branch; its branch rules still apply), and New branch for those who may push. A client contact (impl-projects.md P10b)
     reads the list only: no Compare or New merge request (Compare is refused it). Services: ironstone.projects.CodeServices
     get#RepositoryBranches; org.moqui.git.GitServices create#GitRef, delete#GitRef. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Branches" default-menu-index="3" menu-image="sym_o_call_split" menu-image-type="icon">
 
     <transition name="compare"><default-response url="../../Compare"/></transition>

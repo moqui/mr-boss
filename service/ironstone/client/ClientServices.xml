@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.work.ProjectServices get#ClientProjectInfo (which read with authorization disabled, so the answer does not depend on
     the caller's filters) before it writes; only then does it write, with authorization disabled for the Mantle services it
     calls. A check that cannot be made refuses. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== Who and what ========== -->
 

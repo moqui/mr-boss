@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     face image m-avatar shows: a PartyContent PcntFaceImage of the user's party). Everything is the current user's own:
     a quick action on a task checks that the user may change it, and the notifications are read only through
     org.moqui.ui.NotificationServices or for ec.user.userId. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== Today ========== -->
 

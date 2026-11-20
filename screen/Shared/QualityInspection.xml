@@ -36,7 +36,7 @@ along with this software (see the LICENSE.md file). If not, see
     (ironstone.customerservice.ReturnServices.get#InspectionDetail: the return's link): read for A and R, inspect and dispose
     for the borrowed W capability where Warehouse's scope covers the inspection's facility (Warehouse's transitions). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Inspection"
         default-menu-include="false">
     <parameter name="qualityInspectionId" required="true"/>

@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     map#Import, validate#Import, apply#Import, get#ImportReport, get#ImportSample), which dispatches by the registration and
     calls the target's owner as the user. A refusal a person can act on comes back as a reason and is shown. A mount adds no
     field, option or right the target does not have. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Import" default-menu-include="false">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd" default-menu-title="Import" default-menu-include="false">
     <parameter name="appRoot"/>
     <parameter name="targetId"/>
     <parameter name="operationKey"/>

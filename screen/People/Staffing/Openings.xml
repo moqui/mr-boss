@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     is approved first, PositionDetail), and on each row Edit, Open or Close (a closed opening takes no application and keeps its
     applications). Mail intake: an opening's plus tag on the recruiting mailbox (the createApplication mail rule action). The
     assist-prompt "Draft a job description" (the people-job-description skill) is offered here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Openings" default-menu-index="4" menu-image="sym_o_campaign" menu-image-type="icon">
     <parameter name="term"/>
     <parameter name="organizationPartyId"/>

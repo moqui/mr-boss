@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     settingsRoutes gives Admin too). Infrastructure configuration stays Admin's, under its own permission. Later phases add their
     entries and checks. P6: the sending profiles and templates (Comms', Marketing's mount) and the links to Consent and Suppressions
     (design §12). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="1">
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>

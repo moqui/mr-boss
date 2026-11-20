@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     redirect, a closed case's follow-up, template/CustomerServiceLineage.xml), the RMA, order-change and warranty actions (P9-P11) and Knowledge (P12:
     template/CustomerServiceKnowledge.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="caseChoices" read-only="true">
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.get#Choices" in-map="context" out-map="found"/>

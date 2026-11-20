@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     bookings already made that the rules in force no longer allow, kept for review: preview#ResourceBookingPolicy); its availability
     for two weeks (get#ResourceAvailability) and the history of its policies. Read by a policy or resource reader of its
     organization and by its approvers; Mantle checks every action again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Booking policy" default-menu-include="false">
     <parameter name="assetId"/>
     <parameter name="facilityId"/>

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     (M9) and files (M8). People's card (owner contract, impl-people P8, F64; Home has no card registry): for a user with People
     self-service, their employment and the counts of their open People requests and tasks over
     mantle.humanres.PeopleServices.get#SelfService, opening Commons/People/SelfService, which stays out of the menu. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
 
     <transition name="setSetup">

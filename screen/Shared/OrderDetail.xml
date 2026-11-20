@@ -59,7 +59,7 @@ along with this software (see the LICENSE.md file). If not, see
     lines priced by the one resolver with their provenance and entered prices, the shipping charge, X1's tax, validity, history,
     Chatter and Files; P11 adds the sales-order context (mantle.order.SalesOrderServices.get#SalesOrder, asked first: a direct order,
     a quote once placed or another sales order of the scope). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Order" default-menu-include="false">
 
     <parameter name="orderId" required="true"/>

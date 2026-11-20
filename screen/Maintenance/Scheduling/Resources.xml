@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     ResourceRows (resource, type and location, capacity and features, the policy in words, the longest booking, the approvers,
     what blocks it now or next, the requests waiting); Bookability (a resource administrator's: bookable or not, booked at once or by
     its approvers, from when, why; or no longer managed), and the policy record, ResourcePolicyDetail. Mantle checks again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Resources" default-menu-index="1">
     <parameter name="resourceType"/>
     <parameter name="text"/>

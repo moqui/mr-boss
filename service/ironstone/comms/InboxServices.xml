@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     contacts, linked records and invitation, the bulk actions by store, linking a thread to a record, the contact card,
     create from a message and "Sync now". Failure tolerant per piece (AGENTS.md): one account, store, message or target that
     fails is logged by name and the rest is answered. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== The rail ========== -->
 

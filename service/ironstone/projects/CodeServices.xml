@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     Mantle links them to projects and work items (mantle.work.GitServices). Git hosting is a build feature: without it
     get#CodeHosting answers false and the screens say so. A service that reads several parts reads each on its own, so one
     that fails is logged and left empty. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== Hosting and access ========== -->
 

@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     is for those who manage it. The items are as WorkItems shows them (ironstone.projects.WorkItemServices find# and decorate#WorkItemRows,
     which leave out the Restricted items the user may not see). A change of several items takes each on its own: one that fails
     is logged and named, the rest go on. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="MilestoneEstimateFile" allow-remote="false">
         <description>A file of a milestone for MilestoneDetail's estimateFile (SEC-BOS-96): for a viewer of the milestone's gate

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     Requested first: the RMA, customer, source order, requested and received quantities and settlement. A store-filtered
     view of Customer Service's returns (X7): Customer Service authorizes, Accounting settles, Commerce takes no return action.
     A row opens the shared ReturnDetail in Commerce's context. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Returns" default-menu-index="3">
     <parameter name="productStoreId"/>
     <parameter name="term"/>

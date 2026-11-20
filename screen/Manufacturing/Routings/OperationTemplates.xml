@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     template, audit-logged); InstructionVersion (store#OperationInstruction: a dated instruction stored once with its
     checksum, ending the one before); Archive, which blocks new copies only; and the template's conversation and files.
     A routing copies templates from RoutingDetail's Copy operations. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Operation templates" default-menu-include="false">
     <parameter name="organizationPartyId"/>
     <parameter name="workEffortId"/>

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     index is org.moqui.admin.ReadinessServices.find#Settings: each app's settings landing, shown only when the user's own
     groups open its screen and its view permission holds, linked by Admin's mount (Admin.js settingsRoutes; an app's settings
     as its own page). The screen has no transition. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings index" menu-image="sym_o_tune" menu-image-type="icon">
     <parameter name="text"/>
     <parameter name="ownerApp"/>

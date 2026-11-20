@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     items carried to the next sprint, a new one or the backlog), and for a manager Plan in sprints. Each dialog reloads this
     container (background-reload-id), so it works in WorkItems' Backlog and in ProjectDetail's Backlog tab alike. Dragging stays the
     browser's; an item opens WorkItemDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Backlog" default-menu-include="false">
 
     <parameter name="rootWorkEffortId"/>

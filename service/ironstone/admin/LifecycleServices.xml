@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     steps and runs them; these services read the registry Mantle cannot see and check that a step names what its owner registered.
     Projects' assignments, which have no owner service of their own to look up or move in bulk, are a participant here over Projects'
     and Commons' own reassign services. The bodies are Lifecycle.js. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="OwnedResources" allow-remote="false">
         <description>For an offboarding preview and the steps of a lifecycle operation: each registered participant with what userId
             (an identity in the caller's scope) owns of its kind, from the owner's lookup, called as the caller (its own permission

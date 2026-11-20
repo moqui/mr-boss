@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     cycle): Warehouse's dialog under Warehouse, Maintenance's (with the time zone, capacity and booking) under Maintenance
     (impl-maintenance P2). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Children"
         default-menu-index="2">
     <parameter name="facilityId"/>

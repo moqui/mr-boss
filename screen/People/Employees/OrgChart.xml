@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     person's manager from a date (ChangeManager, change#Manager, which refuses self and cyclic reporting, a manager the employer
     does not employ and a stale line); a reader sees the same chart with no action. A tree row fetched as its parent opens shows
     its text; its own reports and actions are on the level opened by its link. A graphic chart is later (design §4). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Org chart" default-menu-index="3" menu-image="sym_o_lan" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="managerPartyId"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     that builds its records (P5's find#ProductionOrders and get#ProductionDashboard, P5's shortages); until then it is null,
     which Home shows as unavailable, never as zero. The Queue's rows (due work and shortages) come the same way. Each phase
     appends its block to get#Home. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Home" allow-remote="false">
         <description>The Summary of the user's selected plant (open, in progress, late, short and completed this month: each
             null where it is not counted) and its Queue of due work and shortages (none until the runs are listed). Refuses a

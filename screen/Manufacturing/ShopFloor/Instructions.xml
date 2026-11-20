@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     acknowledged and recorded what. The acknowledgment is a record of its own (mantle.work.ProductionServices
     record#InstructionStep, after ironstone.manufacturing.AccessServices.check#Record with operate), which Start requires.
     Print opens the operator instructions print (InstructionsPrint). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Instructions" default-menu-include="false" density="handheld">
     <parameter name="operationWorkEffortId" required="true"/>
     <always-actions>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     settings landing with the policies Purchasing depends on read only, the purchase request purposes and the supplier
     categories. For the purchasing administrator (the Settings area); the writes need PURCHASE_POLICY_EDIT. The buying
     policy is Mantle's mantle.order.PurchaseServices. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="PurchasingSettings" allow-remote="false">
         <description>The settings of an organization (SettingsLinks): the buying policy in effect, the request purposes and the
             supplier categories with their rows, and the policies Purchasing reads but does not own (PolicyDependencies):

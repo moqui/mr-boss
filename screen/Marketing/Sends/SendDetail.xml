@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     ExperimentDetail's link, or Set up an A/B test for a draft's editor (Mantle's store#Experiment, which ends an approval). P22: a text
     message send shows its text in place of the subject and body, and its characters, encoding, segments and the profile's cost
     estimate (get#Send smsEstimate) in the Summary and the approver's dialog. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Send" default-menu-include="false">
     <parameter name="campaignSendId" required="true"/>
     <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>

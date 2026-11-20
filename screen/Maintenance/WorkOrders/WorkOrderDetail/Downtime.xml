@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     an open outage is linked, not doubled); and each row's Restore and Correct for a supervisor or resource administrator. Only
     Restore ends an outage: completing or cancelling the work restores nothing, so two work orders on one resource cannot each end
     the other's; a Restore with linked work still open lists it, asks why, and leaves it open (the user's call, Nov 12). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Downtime" default-menu-index="60">
     <parameter name="workEffortId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>

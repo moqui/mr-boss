@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     calendar shortcut (design §1.2), opening the campaign calendar; its review: Upcoming's events and publication dates (the calendar's
     sources), each opening EventDetail or ContentDetail. Follow-up 9: a send (SendDetail, CampaignDelivery) and the Sends cards linked only
     for a user who may open them (sharedLinks and capabilities sendLink, sends); the events manager sees them unlinked. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>

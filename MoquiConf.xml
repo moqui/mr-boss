@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!-- No copyright or license for configuration file, details here are not considered a creative work. -->
-<moqui-conf xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/moqui-conf-3.xsd">
+<moqui-conf xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-moqui-conf.xsd">
     <!-- links to the Comms screens in notifications, mail and push go to BOSS's Comms, which mounts the BasicComms screens -->
     <comms app-root="/qapps/Comms"/>
     <!-- BOSS's settings: price-list-product-limit how many products' price rows the Prices list resolves when no product is

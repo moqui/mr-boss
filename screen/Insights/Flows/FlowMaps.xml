@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     theirs or shared with their groups), each with its organization, what it was copied from and its version. A flow editor
     copies a map for one of their organizations (CopyMap; copy#Map records the source and its version), edits and retires
     their own; anyone makes a map the one Business flows opens for them. A template is never changed. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Maps" default-menu-index="2">
 
     <parameter name="organizationPartyId"/>

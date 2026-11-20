@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     employer's templates of their kind after they commit. HR's: an HR reader reads them, an HR editor changes them (Mantle checks
     PEOPLE_HR_VIEW, PEOPLE_HR_EDIT and the employer on every call); BOSS_PPL_HR_AREA opens it to HR (and to the People
     administrator and ADMIN through their ALWAYS on the root). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Checklists" default-menu-index="5">
     <parameter name="organizationPartyId"/>
     <parameter name="workEffortId"/>

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Work items (design-projects.md §5): the work item list is the default subscreen WorkItems/List, with the Backlog, Timeline and
     Import beside it and WorkItemDetail in its place: the shared work item detail (screen/Shared/WorkItemDetail.xml) in the Projects
     context. SprintDetail, SprintReport (its print) and BacklogTui (the Backlog's terminal twin) are here, out of the menu. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work items" default-menu-index="3" menu-image="sym_o_checklist" menu-image-type="icon">
     <subscreens default-item="List">
         <subscreens-item name="WorkItemDetail" location="component://mr-boss/screen/Shared/WorkItemDetail.xml" menu-include="false"/>

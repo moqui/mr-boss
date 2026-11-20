@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     billable and amount; a totals row last; CSV and XLSX); Print opens the same report in html-print. Over
     mantle.work.ProjectReportServices.get#TimeReport, which reads only the time the user may see (the user's own and their reports',
     that of the projects they manage, everyone's for ADMIN) within the projects they see. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Time" default-menu-index="1" menu-image="sym_o_work_history" menu-image-type="icon">
 
     <parameter name="fromDate"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     view: Open, Drafts, Responses due, Changed since sent, Closed, All; each with its response date, revision, items and its
     suppliers invited and answered), with saved finds; NewQuoteRequest (New RFQ: mantle.order.SourcingServices
     create#QuoteRequest, for a buyer; it opens the draft in QuoteRequestDetail to add its items and invite suppliers). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="RFQs" default-menu-index="1">
     <parameter name="view"/>
     <parameter name="statusId"/>

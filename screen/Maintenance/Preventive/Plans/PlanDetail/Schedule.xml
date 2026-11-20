@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     the baseline, the last accepted reading, the increment and the next threshold, or a reading too old to know), the terms in effect
     with where each value comes from (this plan or the model default), Edit terms for a planner or supervisor (a draft's in place; an
     active plan's from an effective time, with a reason), and the history of the terms. Reads the plan itself when rendered alone. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Schedule" default-menu-index="1">
     <parameter name="maintenanceScheduleId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>

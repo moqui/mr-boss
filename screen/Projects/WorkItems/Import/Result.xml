@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     of up to 100 rows is imported in the request; a larger one runs on as a job, and the step shows how far it is (ImportProgress, on
     the topic workItemImportProgress) until it is done. The user may leave the page; the import goes on. An import that stopped
     shows why and can be run again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Import" default-menu-index="5" menu-image="sym_o_cloud_done" menu-image-type="icon">
 
     <parameter name="importId"/>

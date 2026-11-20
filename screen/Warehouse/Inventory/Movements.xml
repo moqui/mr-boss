@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     chain and the revaluation split or partial move it belongs to, and its export. Unit cost is a column only for financial
     read, whose service answers it, so the export has none otherwise. Posted movements are never edited or deleted;
     corrections are adjustments. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Movements" default-menu-index="2">
     <parameter name="facilityId"/>
     <parameter name="productId"/>

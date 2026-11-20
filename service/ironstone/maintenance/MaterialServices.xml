@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     WorkOrders, Maintenance's own pair as Manufacturing's is. The screen checks the work order (AccessServices.check#Record) before
     each read and posting; the Mantle maintenance verbs (MaintenanceExecutionServices) check their own permission, organization,
     assignment and the stock's facility again. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="MaterialSource" allow-remote="false">
         <description>A work order as Shared/MaterialIssueReceipt shows it in Maintenance: its planned parts as the lines (step,
             needed, issued, returned and left, the free stock of the work organization in the user's facilities to issue from, for

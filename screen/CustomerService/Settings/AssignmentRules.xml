@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     SUPPORT_POLICY_EDIT); AssignmentPreview over preview#Assignment, the same evaluator as assign#Case: which rule a case with
     these facts meets and which agent it would go to now, each agent with why they are or are not eligible. The service
     manager reads and previews; the administrator saves. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Assignment rules" default-menu-index="8">
     <parameter name="organizationPartyId"/>
     <parameter name="assignmentRuleId"/>

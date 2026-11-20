@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (submitExitInterview, mantle.humanres.PeopleServices.submit#ExitInterview), and they and the employer's HR read them back (opted out
     of AI). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <!-- P16 review: the exit interview, once (Mantle checks the task's people, the form and the values) -->
     <transition name="submitExitInterview">
         <actions>

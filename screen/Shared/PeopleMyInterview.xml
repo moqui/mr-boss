@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     and their own scorecard, answered once (submit#Scorecard) and then read back; never the application's stage, source, contact,
     notes or other files, nor another reviewer's scorecard. The scorecard is opted out of AI. A self-service employee opens it by its
     own grant (BOSS_PPL_INTERVIEW_SELF, non-inheritable, data/BossSetupData.xml). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="My interview" default-menu-include="false" menu-image="sym_o_record_voice_over" menu-image-type="icon">
     <parameter name="workEffortId"/>
 

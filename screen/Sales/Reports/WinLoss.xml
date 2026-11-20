@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     lost counts and amounts by currency (never added across currencies), the win rate as won over won and lost opportunities, leads
     disqualified before qualification apart, loss reasons, cycle time and reopenings, and the outcomes behind them. A report reader's
     (SALES_REPORT_VIEW); Mantle checks again. CSV and XLSX of each list; print. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Win/loss" default-menu-index="5" menu-image="sym_o_emoji_events" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="teamPartyId"/>

@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     set their own. No password is chosen here. Disable users (P6, design §4 Users' bulk disable) reviews each chosen identity's
     disable (preview#Lifecycle, each checked on its own) and on confirmation runs one lifecycle operation per identity, the refused
     ones named. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Users" menu-image="sym_o_person" menu-image-type="icon">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

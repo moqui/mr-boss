@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     first in time order, each with its open return task, and End assignment for an HR editor: the receiving custodian, an employee of
     the employer, takes it through return#Equipment, which ends every other holder of the role and completes the return task). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="PeopleEquipment" condition="recordFound &amp;&amp; appRoot == 'People'">
             <actions>

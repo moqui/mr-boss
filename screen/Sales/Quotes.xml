@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     templates (QuoteTemplates; QuoteTemplateDetail, hidden from the menu) and P9 Approvals. Shown to a user who reads
     Sales (the root's menu condition); every read is Mantle's scoped find (mantle.order.SalesQuoteServices.find#Quotes) and every
     write Mantle's guarded quote service. A quote opens at the one OrderDetail route, Sales/Orders/OrderDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quotes" default-menu-index="4" menu-image="sym_o_request_quote" menu-image-type="icon">
     <subscreens default-item="Quotes" always-use-full-path="true">
         <!-- P8: the shared RequestDetail in Sales' RFQ context (template/SalesQuoteRequestDetail.xml), reached from RFQs -->

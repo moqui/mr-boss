@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     store#Adjustment, which a payroll approver approves, and the day's stream then pays nothing more). Payroll's (the payroll
     operator and approver) and the managers' (their reports' rows, read only), BOSS_PPL_HOURS_FOR_PAY; Mantle checks every read and
     change. Preparing changes no money. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Hours for pay" default-menu-index="13" menu-image="sym_o_more_time" menu-image-type="icon">
     <parameter name="payrollGroupId"/>
     <parameter name="timePeriodId"/>

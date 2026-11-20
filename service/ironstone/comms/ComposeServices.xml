@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     party is the user's own (ec.user.userAccount.partyId) whatever the request says, and an email goes only from an account
     the user may send from (get#EmailAccountAccess, checked again by the framework). An attachment is a file these services
     stored for this draft or this user, never a location the browser names. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="Identities" allow-remote="false">
         <description>The identities the user may send as: each identity of an account the user may send from ({value

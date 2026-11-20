@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     and Settings; SectionSettings: the chosen section's settings from its schema, each saved on its own
     (store#ThemeSettings); ThemeSettings: the global settings. Preview makes a preview address on the site's preview host
     to open in a browser (create#ThemePreview); Publish opens ThemeDetail, where the publisher publishes. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Theme as forms" default-menu-include="false">
     <parameter name="themeId" required="true"/>
     <parameter name="template"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     after from Mantle's previews shaped for the screen, a lot's corrections and the user's recent stock changes. The postings
     are mantle.shipment.WarehouseTaskServices' guarded entry points (adjust#Stock, scrap#Asset, correct#LotMetadata,
     repack#Asset), which the screens call after ironstone.warehouse.AccessServices.check#Record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="AdjustmentContext" allow-remote="false">
         <description>Adjustments: the facility (refused outside the user's scope, FACILITY_UNAVAILABLE) and a fixed asset
             (refused outside it, RECORD_UNAVAILABLE) with what is on hand, reserved and free; the adjustment reasons (every

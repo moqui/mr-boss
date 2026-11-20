@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     (the sites' activations). Publish confirms the site, store and validated draft and switches the site's release
     atomically (publish#Theme); Restore makes an earlier release active again (restore#ThemeRelease); each with the active
     revision the user saw and an operation key. Every Mantle service checks the permission and the store again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Theme" default-menu-include="false">
     <parameter name="themeId" required="true"/>
     <parameter name="validate"/>

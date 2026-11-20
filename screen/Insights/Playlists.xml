@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     Register as display opens Admin's RegisterDevice for the playlist (a holder of ADMIN_ACCESS_MANAGE, whose service checks
     it); the devices showing each playlist are listed, read only, to a holder of ADMIN_ACCESS_VIEW or ADMIN_ACCESS_MANAGE
     (Mantle's find#SharedDevices, within their identity scope; another organization's device is not named). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Wall display" default-menu-index="4" menu-image="sym_o_slideshow" menu-image-type="icon">
 
     <parameter name="definitionId"/>

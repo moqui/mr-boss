@@ -30,7 +30,7 @@ along with this software (see the LICENSE.md file). If not, see
     Under the Manufacturing root (impl-manufacturing P8) the record check is ironstone.manufacturing.AccessServices'
     (a production inspection) and the choices are Manufacturing's; the Mantle verbs are the same. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="inspectionChoices" read-only="true">
         <actions>
             <if condition="appRoot == 'Manufacturing'">

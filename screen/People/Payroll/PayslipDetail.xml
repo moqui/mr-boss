@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     with the reason and a pay date, opened in PayRunDetail; the original stays). With legacyKey, a legacy pay record as it was
     recorded, never recalculated. The slip's files (its content host, payroll's alone). Amounts are opted out of AI. Nothing here makes
     an invoice or a payment. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Payslip" default-menu-include="false">
     <parameter name="payslipId"/>
     <parameter name="legacyKey"/>

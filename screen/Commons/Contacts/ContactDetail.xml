@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     shows in its main pane, with Chatter beside the overview from 1440 px. The party is found under the user's filters, so
     another user's personal contact is "not available". With renderMode=html-print (the record's Print) it is a printed
     contact card: the name, organization, contact info, addresses, birthday and about, books and groups, and the notes. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Contact" default-menu-include="false">
 
     <parameter name="partyId" required="true"/>

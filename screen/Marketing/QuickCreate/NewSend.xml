@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     MARKETING_SEND_EDIT; opened from a campaign's page (the shell's recordEntity and recordId), the campaign is fixed once Marketing
     shows it to the user (check#Record), else the user chooses it. It opens the new draft's Compose; the draft reaches no one until it
     is prepared, approved and released (Mantle's create#Send checks the permission, the organization and every record again). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="New send" default-menu-include="false">
     <parameter name="recordEntity"/>
     <parameter name="recordId"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     user's stores): Promotions (the default) and Promotion codes in the menu, PromotionDetail and PromoCodeDetail hidden,
     opened from rows. Every Commerce user reads them; the promotion manager changes them (COMMERCE_PROMOTION_EDIT), checked
     again in mantle.product.StorePromotionServices. Marketing mounts the same screens with its own context later (F24). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Promotions" default-menu-index="7" menu-image="sym_o_local_offer" menu-image-type="icon">
     <subscreens default-item="Promotions" always-use-full-path="true">
         <subscreens-item name="Promotions" location="component://mr-boss/screen/Shared/Promotions.xml" menu-title="Promotions" menu-index="1"/>

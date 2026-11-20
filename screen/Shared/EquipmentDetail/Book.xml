@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     service, method, cost, depreciation and net book value) for a user Accounting's get#AssetBook admits (Accounting read authority
     in its owner organization), read only; the Book actions stay Accounting's dialogs, in Accounting's mount. No book value is read
     for anyone else. Renders nothing outside Maintenance. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Book" default-menu-index="6">
     <parameter name="assetId"/>
     <actions>

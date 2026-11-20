@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     the reason), and Reassign gives the selected inspections to one inspector, naming each result. There is no bulk
     acceptance: each inspection has its own readings and disposition. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Inspections" default-menu-index="1">
     <parameter name="facilityId"/>
     <parameter name="statusId"/>

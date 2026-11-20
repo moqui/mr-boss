@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     requires, and the acknowledgments recorded so far, with the work order, operation and work center for the station. A print
     (html-print) opened from Instructions' Print; it renders in every mode. Read through
     mantle.work.ProductionServices.get#ProductionInstructions after the operation's record check. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Instructions print" default-menu-include="false">
     <parameter name="operationWorkEffortId" required="true"/>
     <actions>

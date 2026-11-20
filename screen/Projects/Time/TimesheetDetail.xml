@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     where the policy needs one, time on no work item, a day off, a closed item, over 12 hours a day) and History (the status
     changes, by whom and when); Chatter, where a return's reason and the answers live, as the right column from 1440 px. Mounted
     under People too (People/Time/TimesheetDetail, impl-people P10): the links and Print follow the mount (appRoot). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Timesheet" default-menu-include="false">
 
     <parameter name="timesheetId" required="true"/>

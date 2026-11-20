@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     applies where a store leaves the setting unset (orders without a store), a store's own settings, which win for that
     store's orders only, and the reservation check. A setting change alone moves no reservation. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reservation policies" default-menu-index="3">
     <parameter name="facilityId"/>
     <parameter name="organizationPartyId"/>

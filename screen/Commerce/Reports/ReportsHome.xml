@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The report catalogue of IronStone Commerce (design-commerce §3; impl-commerce P11): the reports Commerce owns
     (ironstone.commerce.ReportingServices get#ReportCatalogue, the entries it registers for Insights' catalog later): each with
     what it shows, the filters it takes and its export, opening the report. Nothing is run or exported from here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="1">
     <actions>
         <service-call name="ironstone.commerce.ReportingServices.get#ReportCatalogue" out-map="catalogue"

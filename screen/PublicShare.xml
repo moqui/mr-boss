@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     link that takes files, the file drop with the uploader's name. Every transition below calls the public-share service,
     which checks the token again (the route gives it as the token parameter, whatever the request says) and the grant
     open#PublicShare made after the password, before it reads anything; nothing else is read here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         require-authentication="false" default-menu-include="false" default-menu-title="Shared files" render-modes="vue,qvue,tui" server-static="vue,qvue">
 
     <!-- the password (when the link has one), the opening counted, the grant for the calls below -->

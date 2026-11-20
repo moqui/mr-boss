@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     impl-purchasing P8): the supplier's returns from the user's organizations with their RMA, dispatch and credit or
     replacement state, each opening Purchasing's ReturnDetail, from ironstone.purchasing.ReturnServices.find#SupplierReturns
     (a credit's amount for a finance reader only). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Returns" default-menu-index="10">
     <condition>
         <expression>appRoot == 'Purchasing'</expression>

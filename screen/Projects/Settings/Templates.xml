@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     their key, work items, milestones, members and the projects made from them (mantle.work.ProjectServices.get#ProjectTemplates);
     a template opens as a project with the template banner, where it is changed; NewTemplate makes one from scratch or as a copy of
     a project (ironstone.projects.ProjectServices.save#ProjectAsTemplate). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Templates" default-menu-index="4" menu-image="sym_o_style" menu-image-type="icon">
 
     <transition name="projectDetail"><default-response url="//Projects/Projects/ProjectDetail"/></transition>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     other identifier, parent, warranty and comments, with the revision read) for a holder of MAINTENANCE_RESOURCE_EDIT; Move
     (move#MaintenanceEquipment) for one who also holds STOCK_MOVE, its effect (facilities, time zones, parts, bookings, an
     organization change) shown before the move is confirmed. Renders nothing outside Maintenance. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Identity" default-menu-index="1">
     <parameter name="assetId"/>
     <parameter name="moveToFacilityId"/>

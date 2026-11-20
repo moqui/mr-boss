@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     (find#Clocking: their own setting or the employer's default), turned on or off for one, or set to follow the employer again, by
     an HR editor (store#Clocking). Every People user's and a self-service employee's (the time
     area's own grant, BOSS_PPL_TIME); what each reads and may do is Mantle's check. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Attendance" default-menu-index="8" menu-image="sym_o_fact_check" menu-image-type="icon">
     <parameter name="show"/>
     <parameter name="fromDate"/>

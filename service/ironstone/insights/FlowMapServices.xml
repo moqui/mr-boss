@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     a viewer only as far as its owner lets them. Reading is every Insights reader's (INSIGHTS_VIEW); copying and changing a
     map are a flow editor's (INSIGHTS_FLOW_EDIT), on their own map, with the version read. Every write answers a refusal as
     applied false with reasonCode and reason. Nothing here completes a task or changes a business record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Maps" allow-remote="false">
         <description>The flow maps an Insights reader reads (INSIGHTS_VIEW_REQUIRED otherwise): the suite templates and the maps of the
             organizations they see that the report engine lets them read (their own, and those shared with their groups), each with

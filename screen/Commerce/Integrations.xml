@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     IntegrationDetail and ChannelImport (impl-commerce P13), and the product feeds (P14), for the channel operator
     (BOSS_COM_INTEGRATIONS). Each screen reads mantle.product.StoreChannelServices, which checks COMMERCE_CHANNEL_OPERATE and
     the store scope again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Integrations" default-menu-index="8" menu-image="sym_o_fiber_new" menu-image-type="icon">
     <subscreens default-item="Integrations" always-use-full-path="true">
         <!-- P13: the integrations, one integration's binding, messages and retry, and channel import -->

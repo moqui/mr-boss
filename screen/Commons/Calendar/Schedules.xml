@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     Scheduling for a user who has it (impl-maintenance P16; design-drawers-commons §7 Schedules). Maintenance mounts the component
     as its ResourceCalendar, with transitions of its own. The component is Schedules.qvue next
     to this file; its state (view, date, type) is in the URL. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Rooms and equipment" default-menu-index="1" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_meeting_room" menu-image-type="icon">
 
     <parameter name="view"/>

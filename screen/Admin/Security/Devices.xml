@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     RegisterDevice for its route group with newRouteGroupId and newParameterValue (Insights' Playlists, P11), and links one device
     with deviceId (its mount route adminDevice: People's clocking kiosk notice, impl-people follow-up 4), listed whatever its
     state. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Devices" menu-image="sym_o_tv_signin" menu-image-type="icon">
     <parameter name="text"/>
     <parameter name="routeGroupId"/>

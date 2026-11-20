@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     (SUPPORT_POLICY_EDIT); Turn on or rotate and Turn off the public form over create#IntakeToken and remove#IntakeToken; the
     review's Accept and Dismiss over review#HeldRequest (SUPPORT_CASE_EDIT). RouteTest: a dry run of a message to a queue over
     preview#ServiceRoute, writing nothing. No credentials here: accounts are Comms'. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Channel routing" default-menu-index="9">
     <parameter name="organizationPartyId"/>
     <parameter name="testCategoryId"/>

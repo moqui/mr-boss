@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     kiosk, WebrootPublic.qvt.js), with no navigation, menu or account; it empties a half-typed code after a minute and reloads after
     half an hour idle, so a revoked device shows the server's refusal page. Every rule (who keeps the door, the place, the window, once
     per registration, the limit) is Mantle's (mantle.work.EventRegistrationServices, EventCheckIn.js). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Check in" default-menu-include="false" standalone="true" history="false" density="handheld"
         screen-theme-type-enum-id="STT_INTERNAL_QUASAR">
     <parameter name="registrationPolicyId"/>

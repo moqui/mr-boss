@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     inspection hold, match exceptions and the outside-processing cost events, their amounts with financial read). Dispatch,
     return and the output receipt are Warehouse's (SubcontractShipmentDetail); placing the order is Purchasing's. An operation
     outside the user's organizations is "not available". -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Outside processing" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
     <always-actions>

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     Mantle's (mantle/marketing/MarketingAccess.js, from the MARKETING_* and MESSAGE_* permissions), and the menu areas'
     authorizations add theirs. Disabled artifact authorization widens nothing here; each Mantle marketing service checks again.
     No recipient address, token or secret is part of the context. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="Parameters" type="interface">
         <description>The in-parameters the Marketing context services share; each service declares what it returns.</description>
         <in-parameters>

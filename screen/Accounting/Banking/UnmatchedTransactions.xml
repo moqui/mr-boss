@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.account.ReconciliationServices.find#BankLines). Apply rules reconciles only the exact, unambiguous matches
     (apply#Rules); each other line opens on its bank account to be matched by a person. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Open lines"
         default-menu-index="4">
     <parameter name="organizationPartyId"/>

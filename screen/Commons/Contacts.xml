@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     default subscreen Contacts/List, so /qapps/Commons/Contacts is the split and its subscreens ContactDetail (the record on
     its own), Import (the wizard), Duplicates and Compare show in its place: the client loads each screen of the path on its
     own, so a screen with subscreens cannot tell which one is shown. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Contacts" default-menu-index="2" menu-image="sym_o_contacts" menu-image-type="icon">
     <subscreens default-item="List"/>
     <widgets>

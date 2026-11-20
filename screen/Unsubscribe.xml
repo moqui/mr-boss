@@ -31,7 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
     second POST changes nothing; it needs no session token, as a mail provider's POST has none. A GET of /u/<token>/oneClick
     (a mail program that opens the URL) goes to the page. The token is the capability on every call, so the page's own posts
     need no session token either. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         require-authentication="false" default-menu-include="false" default-menu-title="Email preferences" render-modes="vue,qvue,tui" server-static="vue,qvue">
 
     <!-- what the page shows: the organization, the token's list and the party's status on it, the masked address, the

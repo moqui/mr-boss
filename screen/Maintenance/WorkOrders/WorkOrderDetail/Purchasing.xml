@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     nothing), Link an order line (a buyer, equipment work), and Accept outside service (the assigned technician or a supervisor with
     Purchasing's receiving permission: accept#MaintenanceService with a file of the work as evidence; CompleteWork offers the same line).
     Prices only for a buyer or price reader. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Purchasing" default-menu-index="50">
     <parameter name="workEffortId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>

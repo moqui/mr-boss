@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     next two weeks from date (today by default) of mantle.humanres.RecruitingServices.find#Interviews, each interview's time and
     "{applicant} · {opening}", opening its application; Earlier, Today and Later open the calendar two weeks before, today and two
     weeks after. Read only. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Interviews" default-menu-include="false">
     <parameter name="date"/>
     <actions>

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     are maintained under the record's own party checks (ContactServices.check#ContactAccess); consent is read only there, with the
     link to Comms' Consent (template/ConsentRecord.xml), as Commons §16 gives Sales. Invite to Sales (P13, template/SalesInvite.xml)
     for a person who is a contact of a customer account; New lead or opportunity (P4) joins with its phase. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Contact" default-menu-include="false">
     <parameter name="partyId" required="true"/>
     <parameter name="tab"/>

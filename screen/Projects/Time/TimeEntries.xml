@@ -34,7 +34,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.work.TimeServices.resetAndGet#ProjectTimeEntryRates) for a manager of the project who manages money. A transition's
     project falls back to workEffortId when projectTabId is not set (impl-projects.md F43). Log team time (design §8 TeamTime) is
     impl-projects.md §7. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Time entries" default-menu-index="3" menu-image="sym_o_edit_note" menu-image-type="icon">
 
     <parameter name="list"/>

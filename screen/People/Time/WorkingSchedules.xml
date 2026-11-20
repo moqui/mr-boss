@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     WorkingScheduleDetail. An HR editor (PEOPLE_HR_EDIT) starts a dated schedule (New schedule, the one primary: name, employer, time
     zone, holiday calendar and start; no five-day week or holiday calendar is assumed) and copies one (Copy, a new schedule with its
     lines from the new start, never the same identity). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Working schedules" default-menu-index="5" menu-image="sym_o_calendar_view_week" menu-image-type="icon">
     <parameter name="term"/>
     <parameter name="organizationPartyId"/>

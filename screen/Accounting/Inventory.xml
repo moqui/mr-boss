@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
         menu-image="sym_o_inventory_2"
         menu-image-type="icon"
         default-menu-index="9"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <subscreens default-item="InventoryValuation" always-use-full-path="true">
         <subscreens-item name="InventoryValuation"
                 location="component://mr-boss/screen/Shared/InventoryValuation.xml"

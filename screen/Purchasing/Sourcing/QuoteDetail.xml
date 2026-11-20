@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     QuoteAwards over ironstone.purchasing.AwardServices.get#QuoteAwards: an awarded quote's lines with the quantity awarded,
     the request line and requirement each supplies and the RFQ item's demand left, and its purchase order; a quote not
     awarded with the reason. An awarded quote shows here read-only and changes as a purchase order. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quote" default-menu-include="false">
     <parameter name="orderId" required="true"/>
     <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>

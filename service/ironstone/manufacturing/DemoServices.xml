@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Manufacturing demo's steps that Purchasing will own (impl-manufacturing P14): until Purchasing places a service
     purchase order, the subcontracting walk's order is placed here, through Mantle's own order service. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="place" noun="SubcontractOrder" allow-remote="false">
         <description>Demo only, until Purchasing (impl-purchasing) places purchase orders: a draft (OrderOpen)
             purchase order of one of the user's organizations with a service line of a production operation

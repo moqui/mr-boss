@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     public address and its QR code, from the built barcode helper, to download) and LinkObservations (aggregates for a reader of reports
     or an author: clicks, page visits, visitors by key, the share with a key, recipients who clicked, automated fetches set apart; no
     person). A link goes only to its registered destination; nothing of a visitor's request names one. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Tracking link" default-menu-include="false">
     <parameter name="trackingCodeId" required="true"/>
     <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>

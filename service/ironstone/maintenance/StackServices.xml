@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Maintenance's stack providers (design-maintenance §1.4 Comms hooks; impl-maintenance P19), declared on the Maintenance root and
     answered as the user under its authorization, in Stack.js. No cost in either answer. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="lookup" noun="Records" allow-remote="false" read-only="true">
         <implements service="org.moqui.comms.ProviderInterfaces.record#Lookup"/>
         <description>Maintenance's record-lookup provider (Maintenance.xml shell-providers, maintenance.records; design §1.4): work

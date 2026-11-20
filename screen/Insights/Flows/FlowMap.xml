@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     may not read is absent, with nothing named. A flow editor may copy the map for an organization (CopyMap) and edit
     their own. The map's text is shown as text only. Print (P12, design §14 Business map) is this page in html-print: the same
     version, lanes and ordered list. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Flow map" default-menu-index="1">
 
     <parameter name="definitionId"/>

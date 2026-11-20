@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     Downtime, the centers' stops with their maintenance (P11). The shared FacilityDetail and EquipmentDetail, and Projects'
     RequestDetail and WorkItemDetail (P11), are mounted here with the Manufacturing context, hidden from the menu. Open to
     every Manufacturing user; changes check METHOD_RESOURCES, and a rate the cost authority, in Mantle. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work centers" default-menu-index="6" menu-image="sym_o_factory" menu-image-type="icon">
     <subscreens default-item="Centers" always-use-full-path="true">
         <subscreens-item name="FacilityDetail" location="component://mr-boss/screen/Shared/FacilityDetail.xml"

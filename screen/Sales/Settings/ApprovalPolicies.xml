@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     an approver other than its author, which the page says. The approval preview of a quote (preview#Quote) shows here when a quote
     is named (orderId, from OrderDetail's Approval box), with each rule's inputs and the approver it needs; a floor's cost is never
     shown. SALES_CONFIGURE, which Mantle checks with the organization. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Approval rules" default-menu-index="8"
         default-menu-include="ec.user.hasPermission('SALES_CONFIGURE')">
     <parameter name="organizationPartyId"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     organization (or one), from its evidenced consent records: opening and closing subscribers, grants, a merge's carried grants apart,
     withdrawals, expired requests, pending requests and members now; the reasons people gave for leaving; the reach across the lists
     (each person once) and the suppressions in force, apart. A report reader's; Mantle checks again. CSV of each list; print. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Audience growth" default-menu-index="3" menu-image="sym_o_group_add" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="fromDate"/>

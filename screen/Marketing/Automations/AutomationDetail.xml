@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     Simulation (a dry run from a start time, for a person an audience reader chooses: no message, no record), Enrollments (each
     opening EnrollmentDetail) and Decisions. Every change is Mantle's guarded service at the revision read. P22: an automation of a list of phone numbers offers Send SMS
     in place of Send email (a template's text alternative as the text). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Automation" default-menu-include="false">
     <parameter name="marketingAutomationId" required="true"/>
     <parameter name="simulatePartyId"/>

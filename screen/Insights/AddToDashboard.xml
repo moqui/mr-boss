@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     the panel, optionally picks a dashboard of their own, and ironstone.insights.AssistServices.add#AssistPanel saves it through
     Analysis' own checked service, so it needs Insights authoring and the dataset, its class, each field and the engine's guards
     are checked again. Nothing is saved until the user submits; a reader is told who can save it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Add to my dashboard" default-menu-include="false">
 
     <transition name="addPanel" method="post">

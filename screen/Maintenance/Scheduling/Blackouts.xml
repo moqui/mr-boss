@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     StoreBlock (Plan a blackout, a resource administrator's or supervisor's: record#ResourceUnavailability RukPlanned, an end
     required) and each row's Correct (correct#, a new row in force over the one kept) and End (end#: ended now, or withdrawn when not
     begun). Actual outages are Downtime's, linked from here. Open to a work or resource reader; Mantle checks every action again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Blackouts" default-menu-index="3">
     <parameter name="assetId"/>
     <parameter name="facilityId"/>

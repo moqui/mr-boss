@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     Mantle's guarded AudienceServices (MARKETING_AUDIENCE_IMPORT beside MARKETING_AUDIENCE_EDIT and the organization; reading
     MARKETING_AUDIENCE_VIEW); no raw file or address is shell context. Hidden from the Audiences tabs; opened from Lists and
     ListDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Import" default-menu-include="false">
     <parameter name="audienceImportId"/>
     <parameter name="contactListId"/>

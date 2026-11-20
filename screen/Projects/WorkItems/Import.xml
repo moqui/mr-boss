@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     the result with the failed rows and their reasons). Next submits a step's form to its transition, whose answer carries
     importId on to the next step; the file and the choices are kept in the user's own import folder between the steps
     (service/ironstone/projects/WorkItemImportServices.xml). Managers only (BOSS_PROJECTS_MANAGERS in data/BossSetupData.xml). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Import" default-menu-index="3" server-static="qvt" menu-image="sym_o_drive_folder_upload" menu-image-type="icon">
 
     <parameter name="importId"/>

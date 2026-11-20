@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     P15): the equipment's booking policy in words and its availability for two weeks (mantle.work.ResourceBookingServices
     get#ResourceAvailability: its bookings, blackouts and outages kept apart, an event the user may not see named Busy), linking
     its policy record and Blackouts. Renders nothing outside Maintenance. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Schedule" default-menu-index="10">
     <parameter name="assetId"/>
     <actions>

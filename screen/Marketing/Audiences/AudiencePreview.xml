@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     the people, a bucket at a time. An audience reader sees names and whole addresses; an author or a dispatcher (who reach this screen
     past the area's deny, BOSS_MKT_AUDIENCE_PREVIEW) counts and masked addresses only. A preview subscribes no one and is no send
     authority; its identity is what a send is prepared from (P8). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Audience preview" default-menu-index="6">
     <parameter name="topicListId"/>
     <parameter name="listIds"/>

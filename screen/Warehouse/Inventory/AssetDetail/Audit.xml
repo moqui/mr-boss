@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- AssetDetail's audit trail (AssetAudit): every change of the asset's audit-logged fields, newest first, with the user
     and time (ironstone.warehouse.InventoryServices.get#AssetAudit); cost and book fields only for financial read. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Audit" default-menu-index="3">
     <parameter name="assetId" required="true"/>
     <actions>

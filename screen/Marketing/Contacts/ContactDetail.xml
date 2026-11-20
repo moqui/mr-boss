@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     Identity and channels are maintained under the record's own party checks (ContactServices.check#ContactAccess and the shared
     party-write and file permissions); the record's Consent tab links a holder of MARKETING_CONSENT_EDIT to Marketing's Consent mount
     (P3, template/ContactRecord.xml). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Contact" default-menu-include="false">
     <parameter name="partyId" required="true"/>
     <parameter name="tab"/>

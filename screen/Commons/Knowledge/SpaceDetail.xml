@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     space changes them (ironstone.commons.KnowledgeServices update#SpaceSettings, store#SpaceMember, remove#SpaceMember,
     set#PageRestriction, store#PageMember, remove#PageMember); any other user who may read the space sees them. Archiving a
     space is not offered: WikiSpace has no archived state. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Space" default-menu-include="false">
 
     <parameter name="wikiSpaceId" required="true"/>

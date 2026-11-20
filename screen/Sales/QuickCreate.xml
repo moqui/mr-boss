@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     each the host list's own form (template/SalesOpportunityForms.xml, template/SalesAccountForms.xml, template/SalesQuoteForms.xml) or OpportunityDetail's
     activity on a deal the user chooses, posting to the same guarded transition. A user without the capability a kind needs is told
     so; Mantle refuses them anyway. Hidden from the menu. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Create" default-menu-include="false">
     <widgets>
         <subscreens-active/>

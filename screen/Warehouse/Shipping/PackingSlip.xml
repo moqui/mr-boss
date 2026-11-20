@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     each package's box, weight and contents, and one insert per package with the ship-to and "package n of m". Printed as
     html-print (/apps/Warehouse/Shipping/PackingSlip?shipmentId=...&renderMode=html-print); printing posts nothing. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Packing slip" default-menu-include="false">
     <parameter name="shipmentId"/>
     <parameter name="document"/>

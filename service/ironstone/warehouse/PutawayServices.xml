@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     explained, Home's queue counts, the rules with a rule test, and the rule forms' choices. The destinations are
     mantle.facility.PutawayServices', the putaway and the rule changes Mantle's guarded services, which the screens call after
     ironstone.warehouse.AccessServices.check#Record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="PutawayContext" allow-remote="false">
         <description>PutawayQueue and Destination: in the given facility (refused outside the user's scope,
             FACILITY_UNAVAILABLE), the stock waiting in its receiving and staging locations and the stock a disposition released

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- EquipmentDetail's Registrations tab under Maintenance (impl-maintenance P2): the equipment's registrations (a vehicle's plate,
     an inspection licence) with their agency and dates; Add registration (store#MaintenanceRegistration) for a holder of
     MAINTENANCE_RESOURCE_EDIT. Renders nothing outside Maintenance. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Registrations" default-menu-index="5">
     <parameter name="assetId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>

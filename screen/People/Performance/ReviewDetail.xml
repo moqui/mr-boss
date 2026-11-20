@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     agreed in it (Goals) and its files (the review's content host: the reviewer's, development's and, once released, the person's).
     Every text of the assessments, the notes and the acknowledgment is opted out of AI (ai-opt-out, PE-21). Every People user's and a
     self-service employee's by the area's grant. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Review" default-menu-include="false">
     <parameter name="performanceReviewId" required="true"/>
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>

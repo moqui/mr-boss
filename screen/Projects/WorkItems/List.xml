@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
     saved find), the sprint column, the board's sprint group, the bulk Sprint change and the quick-add sprint (the project's open
     sprints, the one in progress first when the find is of the current sprint). The list's state is in the URL; each change answers
     this screen again with it (the keep field, a JSON of the find). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work items" default-menu-include="false">
 
     <parameter name="list"/>

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     credited at the as-of time (ReturnItem, its receipts and ReturnItemBilling), and the amounts requested and credited per
     currency, never added across currencies, withheld without a price or accounting view; cancelled returns counted apart. The
     export holds the same rows -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Return analysis" default-menu-index="5">
     <parameter name="organizationPartyId"/>
     <parameter name="fromDate"/>

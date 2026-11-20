@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     the topics' handlers through the framework (mantle.marketing.CampaignServices approve#MarketingTarget and refuse#MarketingTarget,
     deciding at the revision the notice names: a stale one is refused naming the current one, and the author's own under the
     separation policy); opening a row opens CampaignDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Approvals" default-menu-index="2" menu-image="sym_o_approval" menu-image-type="icon"
         default-menu-include="ec.user.hasPermission('MARKETING_APPROVE')">
     <always-actions>

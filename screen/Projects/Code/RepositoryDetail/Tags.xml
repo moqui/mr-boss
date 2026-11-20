@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     version, or by hand); Link (to a key) and Remove a link for those who may push, Delete for those with the delete right, and
     New tag (annotated when given a message). Services: ironstone.projects.CodeServices get#RepositoryTags, link#RefWorkEffort,
     unlink#RefWorkEffort; org.moqui.git.GitServices create#GitRef, delete#GitRef. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Tags" default-menu-index="4" menu-image="sym_o_tag" menu-image-type="icon">
 
     <transition name="commitDetail"><default-response url="../../CommitDetail"/></transition>

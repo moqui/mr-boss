@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     publishes nothing), Tracking links its links with New link (P15), Events its events with New event (P16: an events manager who also edits
     campaigns) and Link an event (the campaign's editor); Promotions its store promotions with Link a promotion (P19: the campaign's editor
     who also holds Commerce's promotion permission). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Campaign" default-menu-include="false">
     <parameter name="marketingCampaignId" required="true"/>
     <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>

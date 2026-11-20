@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     of the user's organizations, F74), with the audience rule of §2 (no payment details; invoice amounts for ACCOUNTING_VIEW
     or RECEIVABLE_VIEW;
     the credit status, Mantle's get#CustomerCreditStatus, for CUSTOMER_CREDIT_VIEW). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="CustomerActivities" allow-remote="false">
         <description>Customer360's Activities tab in Customer Service (crosscut §3.2): the communication events of the
             customer and its contact people that are on a case the user sees, or with the user's organizations and on no case

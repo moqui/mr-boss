@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     the services check, and the menu areas' authorizations. Disabled artifact authorization widens nothing here. No entity
     filter covers OrderHeader, Request or Agreement (F2), so a purchase record is checked by its buyer and supplier here, and
     by the Mantle service again. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="Parameters" type="interface">
         <description>The in-parameters the Purchasing app services share; each service declares what it returns.</description>
         <in-parameters>

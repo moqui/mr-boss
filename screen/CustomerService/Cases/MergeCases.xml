@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     a retry answers the first result and a case changed since is refused). Each case is checked as the user's with
     SUPPORT_CASE_MANAGE (ironstone.customerservice.AccessServices.check#Record), then mantle.request.SupportCaseServices
     preview#MergeCases and merge#Cases; the merge opens the kept case. A merged case's CaseDetail says where it went. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Merge cases" default-menu-include="false">
     <parameter name="requestId"/>
     <parameter name="targetRequestId"/>

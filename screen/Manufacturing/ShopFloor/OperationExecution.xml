@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.work.ProductionServices start#, pause#, complete#ProductionOperation, record#MachineRuntime,
     override#ProductionOperationStart; TimesheetServices.stop#Timer), which checks again; a refusal names the blocked
     predecessor, check or line and the form keeps what was entered. The terminal renders every field and action as forms. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Operation" default-menu-include="false" density="handheld">
     <parameter name="operationWorkEffortId" required="true"/>
     <always-actions>

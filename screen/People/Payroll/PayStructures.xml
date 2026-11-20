@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     2026); New structure (the one primary: a name, an employer, a currency, never assumed, and a pay basis) needs PAYROLL_EDIT and
     PAYROLL_CONFIGURE, which Mantle checks, and opens the structure, where it is composed, previewed
     and published. Copying is on the structure. No amount is listed. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pay structures" default-menu-index="7">
     <parameter name="term"/>
     <parameter name="state"/>

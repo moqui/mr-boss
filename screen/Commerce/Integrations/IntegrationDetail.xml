@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     failed messages of the page retried with a reason (retry#StoreMessages, each its own transaction and identity, once per
     operation key), with each item's result. An EDI trading partner shows its rejected and quarantined transactions with
     the same retry; its binding is the EDI administrator's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Integration" default-menu-include="false">
     <parameter name="systemMessageRemoteId" required="true"/>
     <parameter name="systemMessageId"/>

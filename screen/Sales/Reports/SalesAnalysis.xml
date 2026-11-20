@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     finance columns are shown over the same rows. The choices and links follow the root the screen is mounted under (appRoot): Sales'
     choices and its Product360 and Customer360, or Accounting's. Exports to CSV and XLSX; prints. No entity read, no cost search and
     no SQL dialog (P1's ported screen read OrderItemSalesSummary itself). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Sales analysis" default-menu-index="2" menu-image="sym_o_table_chart" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="timePeriodId"/>

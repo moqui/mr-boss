@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.admin.LifecycleServices (Provisioning.js), keyed by the change so a retry answers the first operation. The rules
     live here so Mantle does not depend on BOSS; they run as the caller, on a service worker, once the transaction commits, and a
     failure is noted on the change, never undoing it. -->
-<secas xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-eca-3.xsd">
+<secas xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-eca.xsd">
     <seca id="PeopleHireProvisioning" service="mantle.humanres.PeopleServices.hire#Employee" when="tx-commit">
         <condition><expression>employmentChangeId &amp;&amp; accessRequested &amp;&amp; !repeated</expression></condition>
         <actions><service-call name="ironstone.admin.LifecycleServices.request#Provisioning" in-map="{employmentChangeId:employmentChangeId}"/></actions>

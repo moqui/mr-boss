@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     facilities, one receipt with its lines and receipts, the Receive task's line, the choices of NewReceipt and Receive, a
     return's receipt and a supplier's receiving. The postings are mantle.shipment.WarehouseTaskServices' guarded entry points,
     which the screens call after ironstone.warehouse.AccessServices.check#Record with the receive capability. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Receipts" allow-remote="false">
         <description>ReceiptFind and ReceiptList: the incoming purchase, return and transfer shipments received at the user's
             facilities (the chosen one, FACILITY_UNAVAILABLE outside the scope), open by default, by supplier, status, source

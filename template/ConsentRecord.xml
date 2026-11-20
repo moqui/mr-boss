@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     status, Subscribe and Unsubscribe with a note of where the request came from, and Add to a list; the consent of the
     contact as a whole (data processing); Record consent; and the history. Everyone who may see the contact reads the state;
     the changes, the history and the export are for contact admins (ironstone.comms.ConsentServices). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-include="false">
 
     <transition name="consentRecord">

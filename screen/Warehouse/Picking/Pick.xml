@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     recount, on-hand unchanged); PutBack returns the picked stock of a line whose balance was cancelled, only once the
     picker confirms (reverse#Pick); FinishPick finishes a shipment, backordering what is outstanding (finish#Pick). Every
     posting checks the shipment with the pick capability first. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pick" default-menu-index="3">
     <parameter name="workEffortId"/>
     <parameter name="shipmentId"/>

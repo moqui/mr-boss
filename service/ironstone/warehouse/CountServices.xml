@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Warehouse Counts screens' reads and shapes (impl-warehouse P10; Counts.js): each runs the app's facility scope and
     calls Mantle's mantle.product.InventoryCountServices with the user's facilities. The counts' writes are the Mantle
     services themselves, which the screens call after ironstone.warehouse.AccessServices.check#Record with the capability. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="CountList" allow-remote="false">
         <description>Counts: the counts of the user's facilities (or the given one, refused outside the scope:
             FACILITY_UNAVAILABLE) with their progress, filtered by status, mode, assignee and open ones; with view due the

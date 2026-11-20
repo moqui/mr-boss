@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     quantities to send (dispatch) or to bring back (return: what is still at the supplier). No cost or price: the
     instructions go to the supplier. A print (html-print) opened from SubcontractDetail's More menu; it renders in every
     mode. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Instructions" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
     <parameter name="kind"/>

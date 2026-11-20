@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     public binding, read only, with where its body is written: the post's BlogPostDetail, the page's PageDetail, Knowledge) and
     Distribution (the sends drafted from it or prepared with it, the version each read). Every change is
     mantle.marketing.MarketingContentServices'; linking and planning publish nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Content" default-menu-include="false">
     <parameter name="campaignContentId" required="true"/>
     <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>

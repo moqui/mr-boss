@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     requirement and whether it is met; and the same commands: Evaluate a skill (store#Skill, a development editor's, or a manager's
     for their reports) and Find
     available (ironstone.people.ContextServices.find#AvailablePeople over Projects' staffing search). Readers have the list only. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Skills matrix" default-menu-include="false">
     <parameter name="organizationPartyId"/>
     <parameter name="unitPartyId"/>

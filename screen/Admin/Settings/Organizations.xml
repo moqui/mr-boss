@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     OrganizationDetail. CreateOrganization (create#InternalOrganization, ADMIN_SETTINGS_MANAGE) makes the party, its OrgInternal role
     and its parent, which must be one of the user's organizations unless they administer every one; it sets up no accounting,
     membership or secret (Accounting's setup is a SetupLink on OrganizationDetail). Departments and teams are People's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Organizations" menu-image="sym_o_corporate_fare" menu-image-type="icon">
     <parameter name="text"/>
     <parameter name="parentPartyId"/>

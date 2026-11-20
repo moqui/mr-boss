@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="WorkbenchContext" allow-remote="false">
         <description>Read a customer's open receivable items, or a supplier's open payable items (direction payable), and
             the user's settlement draft kept by Mantle behind draftId, shaped for the side's workbench with its labels.

@@ -29,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
       decide#OrderChange at the proposal's revision); ApplyChange (apply#OrderChange with the revisions, the preview's
       version and an operation key, once confirmed); the applied change's stored PDF (its OrderContent) and the confirmation
       email (send#OrderChangeConfirmation). Withdraw is in More. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Order change" default-menu-include="false">
     <parameter name="requestId"/>
     <parameter name="orderId"/>

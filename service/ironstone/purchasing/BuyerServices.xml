@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     P10 unsourced requests, P11 RFQs
     due and quotes expiring, P14 shortfall suggestions with the plan's freshness); until then it is null, which Home shows as
     unavailable, never as zero. BuyerWork's sources come the same way. Each phase appends its block. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Home" allow-remote="false">
         <description>The buyer's counters, each null for a user whose groups do not read it: unsourced requests, RFQs due, quotes to
             compare, quotes expiring, shortfall suggestions (with the plan's run date), approvals waiting, unacknowledged

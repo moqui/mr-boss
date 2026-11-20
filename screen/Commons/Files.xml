@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     (which checks the drive's members and shares, R21, and on the records drive the records: only those the user may see,
     R5) or of service/ironstone/commons/DriveServices.xml over it. A download is sent by ec.web.sendResourceResponse under the file's
     own name (a past version by its location#version, a zip under its folder's name). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Files" default-menu-index="6" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_folder" menu-image-type="icon">
 
     <parameter name="drive"/>

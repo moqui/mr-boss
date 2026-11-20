@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     (MESSAGE_TEMPLATE_EDIT); the mounting root adds nothing but its organization choices and the detail's link (sharedLinks). Copy makes
     an unpublished template; Use (P8) opens the mounting root's Sends with its New send dialog and the template chosen, shown under
     a mount that has Sends (sharedLinks) to a user who writes sends there, for a published promotional template. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Templates" default-menu-index="2">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

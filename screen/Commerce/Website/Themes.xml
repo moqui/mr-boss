@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     or of a release of the store's) and ImportTheme (a package's files, a .tar.gz, as a draft: never validated or published
     here; a Liquid package is refused as an unsupported engine). Each row opens ThemeDetail. Through
     mantle.public.ThemeServices (find#Themes, create#ThemeDraft, import#Theme), which check the permission and the store. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Themes" default-menu-index="3">
     <parameter name="productStoreId"/>
     <parameter name="term"/>

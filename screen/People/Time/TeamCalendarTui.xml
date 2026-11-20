@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     from date (today by default) of mantle.humanres.LeaveServices.get#TeamAbsences, who is out and when, each opening the request
     when the user reads it, and of ScheduleServices.get#TeamShifts, who is on shift (P14); Earlier, Today and Later open the calendar
     two weeks before, today and two weeks after. Read only; never a leave type or a reason. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Team calendar" default-menu-include="false">
     <parameter name="date"/>
     <actions>

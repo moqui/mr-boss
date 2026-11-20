@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     fields (its policy fields with the user and reason) and of its ship-option and payment-gateway bindings, the latest 100
     (mantle.product.StoreAdminServices.get#Store include history), read only. The dated child rows keep their own ended rows
     on their tabs. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="History" default-menu-index="9">
     <actions>
         <if condition="recordFound">

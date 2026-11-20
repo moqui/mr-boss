@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Resources (design-projects.md §9; impl-projects.md P7): the team planner (TeamPlanner.qvue with TeamPlannerTui), the allocations and
     PersonDetail (opened from a person, not in the menu), opening on the planner. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Resources" default-menu-index="7" menu-image="sym_o_group_work" menu-image-type="icon">
     <subscreens default-item="TeamPlanner"/>
     <widgets>

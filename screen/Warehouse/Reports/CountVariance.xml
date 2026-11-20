@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.warehouse.CountServices.get#CountVariance over Mantle's find#CountVariance), each linking to its count's
     review; values with financial read only, and the export holds what the user may see. For count reviewers and adjusters:
     counts not yet submitted are left out, so no counter receives a blind count's quantities. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Count variance" default-menu-index="3">
     <parameter name="facilityId"/>
     <parameter name="physicalInventoryId"/>

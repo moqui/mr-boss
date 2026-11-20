@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     InvoicePrint only, read only, for its own sent invoices (BillingServices get#ClientInvoices), and lands on Invoices; Unbilled, Rates
     and OrderDetail are refused it (BOSS_PROJECTS_INTERNAL in data/BossSetupData.xml), and the team is refused all of Billing
     (BOSS_PROJECTS_BILLING). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Billing" default-menu-index="8" menu-image="sym_o_receipt_long" menu-image-type="icon">
     <subscreens default-item="Unbilled">
         <conditional-default condition="ec.user.userId &amp;&amp; ec.user.hasPermission('PROJECT_CLIENT')" item="Invoices"/>

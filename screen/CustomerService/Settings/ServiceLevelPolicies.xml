@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     case received at a time with a priority is due, on the calendar's working hours less holidays, with a pause. The
     calendars, agreements and bands come from ironstone.customerservice.ConfigurationServices.get#ServiceLevelSettings;
     working hours are kept on AgentTeams and in Commons. An open case keeps the row it began with. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Service levels" default-menu-index="7">
     <parameter name="organizationPartyId"/>
     <parameter name="simulatePolicyId"/>

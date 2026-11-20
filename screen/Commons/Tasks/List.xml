@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     to another day changes the due date as the in-place edit does, keeping its time of day; a click on an empty day adds a task
     due then). On a phone the table scrolls inside its card and the quick-add row stays above it. The list's state is in the
     URL; each change answers this screen again with it (the keep field, a JSON of the find). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Tasks" default-menu-include="false">
 
     <parameter name="list"/>

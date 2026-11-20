@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     administrator (the stored record, its text edited, a send, a consume, a reset, a cancel past any registration) is not
     shown under a mount, its transitions are not taken in and its EditMessageText subscreen is not here, so they do not
     exist on this route. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="System message" default-menu-include="false">
     <parameter name="systemMessageId" required="true"/>
     <parameter name="showContent"/>

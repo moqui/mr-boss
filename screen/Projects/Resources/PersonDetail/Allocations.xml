@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     requested or allocated, then the past and the decided ones (mantle.work.ResourceServices.find#Allocations by partyId through
     ironstone.projects.ResourceServices find#AllocationRows); Edit opens EditAllocation for one the viewer may change, the list opens
     Allocations on the person. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Allocations" default-menu-index="2" menu-image="sym_o_group_work" menu-image-type="icon">
 
     <actions><script><![CDATA[

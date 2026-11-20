@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     Integrations message types at this location, for the integration administrator. Reading needs ADMIN_CONNECTION_VIEW,
     checked by the service. The System screen's own part for the instance administrator (a type created directly) is not
     shown under a mount and its transition is not taken in, so it does not exist on this route: no type is started here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Message types" menu-image="sym_o_schema" menu-image-type="icon">
     <parameter name="term"/>
     <parameter name="direction"/>

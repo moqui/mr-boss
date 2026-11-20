@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.commons.ContactServices get#ImportDraft, store#ImportDraft, save#ImportSource and run#Import: the folder comes from the
     current user, so an importId never opens another user's import, and Back finds what a step saved. The Mantle services
     read the file by its location (fileLocation). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Import" default-menu-index="2" server-static="qvt" menu-image="sym_o_drive_folder_upload" menu-image-type="icon">
 
     <parameter name="importId"/>

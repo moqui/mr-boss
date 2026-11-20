@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- StoreDetail's Search and content tab (design-commerce §3 SearchContent; impl-commerce P2): the store's search documents
     by type and its wiki spaces by content type and locale (mantle.product.StoreAdminServices.store#StoreContentBinding: a
     registered search document of the type, set or removed; a wiki space from a date, never a private one; End). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Search and content" default-menu-index="7">
     <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
     <transition name="saveDocument">

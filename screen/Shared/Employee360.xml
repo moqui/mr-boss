@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
     minutes; issuing again is the reprint; follow-up 4), Reset PIN (a forgotten PIN: a
     new one-time PIN or none) and Revoke badge.
     TimeAndLeave (P12) joins with its phase. Under Insights the Records mount serves no transition of this screen. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Employee" default-menu-include="false">
     <parameter name="partyId"/>
     <parameter name="partyRelationshipId"/>

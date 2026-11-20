@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     statements' rows for print and export. Mantle's report services check the organization and its periods; Reports.js
     shapes their answers. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Catalog" allow-remote="false">
         <description>The reports the user may run, in the design's order, each with its area, what it answers and whether
             its quick options take a fiscal period and a comparison period. A report the user's role may not run is left

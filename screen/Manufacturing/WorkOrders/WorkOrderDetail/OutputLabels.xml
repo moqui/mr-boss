@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     quantity, lot or serial, owner, facility, work order and operation, and a held asset's label saying it is held and not
     accepted, so no label claims acceptance before disposition. kind (finished, secondary, wip) narrows them. A print
     (html-print) opened from the Quantities and By-products tabs; it renders in every mode. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Labels" default-menu-include="false">
     <parameter name="workEffortId"/>
     <parameter name="kind"/>

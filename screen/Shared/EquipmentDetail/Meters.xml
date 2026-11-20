@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     with the latest reading of each, and the recent readings; Record a reading (record#MaintenanceMeter, the one meter writer) for
     a holder of MAINTENANCE_RESOURCE_EDIT: a counting meter refuses a lower reading unless it is a reset with its reason, and one
     time holds one reading. A technician's reading in work joins with P7. Renders nothing outside Maintenance. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Meters" default-menu-index="4">
     <parameter name="assetId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>

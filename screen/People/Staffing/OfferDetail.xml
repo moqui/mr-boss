@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     which address and why not, without the letter's content, and Send the letter again follows a failure. The candidate's signed
     copy of a letter holding pay is payroll's, as the letter, and downloads as a file.
     The amounts are opted out of AI (the user's call of Nov 12, 2026, PE-21). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Offer" default-menu-include="false">
     <parameter name="employmentOfferId"/>
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>

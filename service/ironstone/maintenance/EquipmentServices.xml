@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Maintenance context of the shared EquipmentDetail and of Employee360's AssignedEquipment (impl-maintenance P2; design-maintenance
     §6; Resources.js). Each checks the record through check#Record (the Maintenance root and Mantle's scope) before it reads; the
     writes are Mantle's MaintenanceResourceServices, called by the screens after that check. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Equipment" allow-remote="false" read-only="true">
         <description>EquipmentDetail's Maintenance context: the equipment's identity with its supplier warranty and inherited time
             zone, its parent and parts (those the user reads), its holders now and before, its model's meters with the latest

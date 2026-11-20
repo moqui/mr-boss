@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Customer360's Orders and shipments tab, in the Customer Service context (crosscut §3.2 CustomerOrders; impl-customer-
     service P3): the customer's orders with the user's organizations (a shared customer's other organizations' are left out,
     F74), each with its states and opening OrderDetail, and their shipments, each opening ShipmentDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Orders and shipments" default-menu-index="3">
     <parameter name="customerPartyId"/>
     <condition><expression>appRoot == 'CustomerService'</expression></condition>

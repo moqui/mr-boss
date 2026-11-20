@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     by their campaign; an order's own row only for a reader who may see the order in Sales or Commerce (the others counted). The
     administrator (MARKETING_CONFIGURE) corrects an order's attribution with a reason (TrackingServices correct#OrderAttribution, a
     successor decision). A report reader's; Mantle checks again. CSV of each list; print. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Attribution" default-menu-index="4" menu-image="sym_o_conversion_path" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="fromDate"/>

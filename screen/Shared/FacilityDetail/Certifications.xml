@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     facility's certifications (FacilityCertification) with their dates, registration and audit score, read only; their writer,
     update#FacilityCertification under an owner guard, is left to the phase that needs it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Certifications"
         default-menu-index="5">
     <parameter name="facilityId"/>

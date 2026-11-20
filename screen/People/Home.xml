@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     submitted (last week's missing weeks of the people whose time the user follows: the time keepers of the projects they manage
     and their live reports, mantle.work.TimesheetServices.find#Timesheets missing), for a manager or a time approver, opening
     Timesheets' Missing. People out, payroll exceptions and expiring qualifications (design §1.2) come with P12, P25 and P18. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="asOfDate"/>

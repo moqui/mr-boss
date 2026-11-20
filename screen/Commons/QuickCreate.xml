@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     which the shell adds) as a chip, "remove" loading the form again without it, and "More options" to the full screen.
     Each form's transition creates the record through ironstone.commons.QuickCreateServices and answers JSON messages, so the shell's
     dialog closes (an m-form in it that answers without errors hides it) and the page under it stays. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quick create" default-menu-include="false" server-static="qvt">
 
     <parameter name="kind"/>

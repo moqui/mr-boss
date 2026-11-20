@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Commons Settings (design-drawers-commons.md §11; style-guide §3.9 Settings): the settings pages of Commons, Account,
     Preferences, Notifications, Contact books, Calendars and Sync, with the index of them as the default subscreen
     (Settings/Index), since a screen with subscreens shows its first one when the path ends on it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="10" server-static="qvt" menu-image="sym_o_settings" menu-image-type="icon">
     <subscreens default-item="Index"/>
     <widgets>

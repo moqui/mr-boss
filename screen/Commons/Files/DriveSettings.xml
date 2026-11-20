@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     drive's WebDAV folder and SFTP path (org.moqui.resource.DavServices.get#SyncAddresses with the drive) and, for a
     version-controlled drive, its git clone addresses (GitServices.get#GitCloneUrls), which every member may clone and editors
     push to, by the drive's own permissions. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Drive" default-menu-include="false">
 
     <parameter name="driveId" required="true"/>

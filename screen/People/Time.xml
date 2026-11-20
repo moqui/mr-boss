@@ -43,7 +43,7 @@ along with this software (see the LICENSE.md file). If not, see
     (BOSS_PPL_HOURS_FOR_PAY: denied to the root user group and to self-service), whose services (PayrollInputServices
     get#Reconciliation, prepare#Inputs and store#Adjustment) let payroll reconcile and prepare a pay group's period and a manager read
     their reports' hours, never an amount. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Time &amp; leave" default-menu-index="7" menu-image="sym_o_schedule" menu-image-type="icon">
     <subscreens default-item="Timesheets">
         <!-- P10's time screens, Projects' mounted; WorkingSchedules (menu index 5) and HolidayCalendars (9) are P9's files under Time/,

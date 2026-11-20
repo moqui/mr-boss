@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     later plan is withdrawn), and the policies planned and the last ended are listed (PolicyDates); a field a form does not post
     is kept from the policy in effect, so each phase's section stores its own fields. P18 review R4: a start before a planned policy is
     refused (PLAN_PENDING) unless Withdraw, which the form offers while a policy is planned. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work policy" default-menu-index="2"
         default-menu-include="ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT')">
     <parameter name="organizationPartyId"/>

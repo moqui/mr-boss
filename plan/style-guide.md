@@ -924,7 +924,7 @@ crosscut design's roll-up is the work list.
 
 ### 8.1 Adding an XML element: the checklist
 
-1. The XSD: `framework/xsd/xml-screen-3.xsd` or `xml-form-3.xsd`, with documentation.
+1. The XSD: `framework/xsd/mr-xml-screen.xsd` or `mr-xml-form.xsd`, with documentation.
 2. The qvt macro in `framework/template/screen/ScreenQvt.js` and its mirror in
    `ScreenQvtStatic.js`; a plain fallback in `ScreenHtml.js` for the html render mode; the `tui`
    macro in `ScreenTui.js`, a node of the TUI screen model, and its terminal widget in
@@ -984,7 +984,7 @@ for now.
 | The page shell and its settings | `runtime/components/base/webroot/screen/webroot/qapps.xml`, `includes/WebrootVue.qvt.html.fancy` |
 | Theme resources: style sheets, logo, footer, `STRT_QUASAR_CONFIG`, header plugin slots | `runtime/components/base/webroot/data/WebrootQuasarThemeData.xml` |
 | Vendored libraries, versions and how to upgrade | `runtime/components/base/webroot/screen/webroot/README.md`, `libs/refresh.mjs`, `libs/MANIFEST.json` |
-| The screen and form XML vocabulary | `runtime/components/base/framework/xsd/xml-screen-3.xsd`, `xml-form-3.xsd` |
+| The screen and form XML vocabulary | `runtime/components/base/framework/xsd/mr-xml-screen.xsd`, `mr-xml-form.xsd` |
 | The style decisions this guide continues | `plans/archive/QvtStylePlan.txt` |
 | Render goldens and the browser smoke | `crates/moqui-core/src/script/testdata/screen/qvt/render/`, `crates/moqui-host/tests/gate3_browser.rs` |
 | Status flows (for §5.2) | `runtime/components/base/tools/screen/Tools/StatusFlows.xml` |

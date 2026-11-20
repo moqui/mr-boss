@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     with its facility, its current production assignment (WorkEffortAssetAssign), its availability and its next service
     (ironstone.manufacturing.WorkCenterServices.find#Equipment). A row opens EquipmentDetail with the Manufacturing context.
     No cost or book value. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Equipment" default-menu-index="2">
     <parameter name="text"/>
     <parameter name="plantId"/>

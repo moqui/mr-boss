@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     destination than the suggestion needs a reason, quarantined stock moves only within quarantine, a receiving hold is
     released in storage, and with no destination the stock stays where it is with the reason named. The putaway sheet
     prints the queue (PutawaySheet). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Putaway" default-menu-index="3">
     <parameter name="facilityId"/>
     <parameter name="productId"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     schedule, the shared supply plan's (mantle.product.SupplyPlanningServices.store#PlanSchedule, SUPPLY_PLAN_RUN; the same
     one the SupplyPlanning mounts keep), for a facility of the buying organization; and a preview run before it is enabled
     (previewRun: run#SupplyPlan for the facility now), whose result shows here with a link to the plan. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Plan schedule" default-menu-index="3">
     <parameter name="planFacilityId"/>
     <transition-include name="choices" location="component://mr-boss/template/PurchasingReplenishmentParts.xml"/>

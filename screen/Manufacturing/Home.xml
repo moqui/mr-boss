@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     due work and shortages, and the lookup of a record (lookupType and lookupId, through
     ironstone.manufacturing.AccessServices.check#Record): record links of kinds whose Manufacturing screen is not built yet
     open it here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="lookupType"/>
     <parameter name="lookupId"/>

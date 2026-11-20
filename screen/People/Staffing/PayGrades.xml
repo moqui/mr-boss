@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     employer (New pay grade, the one primary; shared with no employer, for a holder of PEOPLE_ALL_ORGANIZATIONS) and sets a new
     band from a date (New band, on a grade they change), which ends the band before it and changes no salary.
     The amounts are opted out of AI (the user's call of Nov 12, 2026, PE-21). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pay grades" default-menu-index="3" menu-image="sym_o_stairs" menu-image-type="icon">
     <parameter name="term"/>
     <parameter name="payGradeId"/>

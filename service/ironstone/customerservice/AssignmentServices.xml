@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     AgentTeams' participation show and choose from for one of the user's organizations. The saves and the evaluator are
     Mantle's mantle.request.SupportCaseServices (save#AssignmentRule, preview#Assignment, save#ServiceTeamMember), which check
     SUPPORT_POLICY_EDIT or SUPPORT_CASE_MANAGE and the organization themselves. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Rules" allow-remote="false">
         <description>The organization's assignment rules (design AssignmentRules AssignmentRuleList): in effect, starting
             later and drafts, by queue and order, each with its typed conditions, distribution, team and members, working

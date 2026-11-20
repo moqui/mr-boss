@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     imported, the warnings, and the way to the time entries. A file of up to 200 rows is imported in the request; a larger one runs
     on as a job, and the step shows how far it is (ImportProgress, on the topic timeImportProgress) until it is done. An import that
     stopped shows why and can be run again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Import" default-menu-index="3" menu-image="sym_o_cloud_done" menu-image-type="icon">
 
     <parameter name="importId"/>

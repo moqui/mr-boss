@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     MAILBOX: browse, join, leave, delivery, members, settings), their member drop-down by party, and the pickerFolder of Save to
     Files, which names the records drive's folders by their records' titles (Mantle; the rest of the picker is BasicComms'). The
     threads, the reading pane and the rail come from IronStone's inbox-source provider. -->
-<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition-include name="pickerFolder" location="component://mr-boss/template/FilePickerTransitions.xml"/>
     <!-- the users of the mailbox member drop-downs, by party: [{value, label}] -->
     <transition name="searchUsers" read-only="true">

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     (screen/Shared/WorkItemDetail.xml) in People's context, for a lifecycle checklist or equipment return task (its People branch:
     the Commons task rule for its people, the checklist box, read only for an HR reader). A task's links (Employee360's equipment,
     a notification, the checklist's other tasks) open it here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Tasks" default-menu-include="false">
     <subscreens default-item="WorkItemDetail">
         <subscreens-item name="WorkItemDetail" location="component://mr-boss/screen/Shared/WorkItemDetail.xml" menu-include="false"/>

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     shape and a page changed since it was read are refused). A published or scheduled page's values are a publication
     (F78): editable with COMMERCE_PUBLISH too, saved against the page's publication revision, live at once on a published
     page with the site's generation advanced; the key fields are in the audit log (History). Others see the values. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Route and SEO" default-menu-index="2">
     <transition name="saveRoute">
         <actions>

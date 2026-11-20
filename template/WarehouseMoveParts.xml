@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
       mantle.shipment.WarehouseTaskServices.relocate#Assets, which moves each in its own operation; every asset's result
       is a message of its own, so one that cannot move is named and the others move. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="relocateAssets">
         <actions>
             <script>if (appRoot !== 'Warehouse') throw new Error('Stock-location actions require the Warehouse context')</script>

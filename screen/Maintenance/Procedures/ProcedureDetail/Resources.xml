@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     (WorkEffortProduct, consumed), equipment needed (WorkEffortAssetNeeded) and skills (WorkEffortSkillStandard with People's least
     level and, P8, the qualification type that proves it, which assignment checks), each copied to the work made of the procedure. For
     an author: Add requirement and Remove (store#ProcessRequirements). No cost. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Resources" default-menu-index="3">
     <parameter name="workEffortId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>

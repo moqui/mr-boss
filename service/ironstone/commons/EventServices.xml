@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     changed by its organizer or an editor of a calendar that holds it for its editors (not one an attendee put it in to see it), and
     an event an application keeps (People's training session or interview) only in that application; an attendee answers it and
     sets their own reminders. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="EventDetail">
         <description>What EventDetail shows of an event the user may see (found false, or visible false: "not available"): the

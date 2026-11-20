@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     ServiceDefaults; later phases add their pages. For the service administrator, and the service manager, who changes the
     members of the teams they manage (BOSS_CS_SETTINGS); every save is Mantle's mantle.request.SupportCaseServices, which
     checks SUPPORT_POLICY_EDIT or SUPPORT_CASE_MANAGE, and a form shows only to a user who may save it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="10" menu-image="sym_o_settings" menu-image-type="icon">
     <subscreens default-item="SettingsHome" always-use-full-path="true">
         <!-- P13: the survey builder's forms in the Customer Service context (Shared/SurveyForms, SurveyFormDetail; crosscut §2) -->

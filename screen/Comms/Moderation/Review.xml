@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- One review item (design-forum.md ReviewDetail, §13.4): the post as its author wrote it (sanitized), the reports and staff
     notes, and claim, decide and note forms. The revision guards each change: a decision on a stale view is refused by the
     forum and the page shows the current state again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Review" default-menu-include="false">
 
     <parameter name="siteId"/>

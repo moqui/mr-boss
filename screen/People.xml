@@ -68,7 +68,7 @@ along with this software (see the LICENSE.md file). If not, see
     the prompt "Explain this payslip". P29 Reports (every People user's, each report its capability's), Settings'
     Preferences, the hidden LogNote and SendMessage (the Assist answers' response actions, "Log as note" on an application and "Send
     as message") and the people-hire and people-policy-question skills. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="People" menu-image="sym_o_groups" menu-image-type="icon">
 
     <always-actions>

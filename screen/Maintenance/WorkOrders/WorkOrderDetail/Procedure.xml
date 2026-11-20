@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     waits for, a step added under the work order or a group, or a step not yet started removed (the user's call of Nov 12, P7
     review), previewed with the acceptances it invalidates, then confirmed with a reason). Print checklist: the completed
     checklist and exception record (stored when the work is closed). The work order's Complete waits for the required steps. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Procedure" default-menu-index="20">
     <parameter name="workEffortId"/>
     <parameter name="amendStepId"/>

@@ -31,7 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
     makes a payment; only Finalize makes the draft obligations, which Accounting approves, posts and pays, and then issues each final
     slip's statement (the P27 review, the user's call of Nov 13, 2026). P26: an approved run's payslips linked from its header (preview slips in this build), a correction
     run's original slip and reason, and an off-cycle run's adjustments. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pay run" default-menu-include="false">
     <parameter name="payrollRunId"/>
     <parameter name="step"/>

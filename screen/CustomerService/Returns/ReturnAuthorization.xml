@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     label's tracking and the policy's instructions, as of the print time; no amount, cost or internal note. Printed from
     ReturnDetail as html-print (/apps/CustomerService/Returns/ReturnAuthorization?returnId=...&renderMode=html-print);
     printing posts nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Return authorization" default-menu-include="false">
     <parameter name="returnId" required="true"/>
     <actions>

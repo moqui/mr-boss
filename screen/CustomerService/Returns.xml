@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     (Shared/QualityInspection, crosscut §3.19, F38) and ReturnAuthorization (the RMA to print) hidden from the menu; P11: Warranty
     (WarrantyClaims) and WarrantyAssessment, one claim, hidden from the menu. For the agent, manager and return authorizer (BOSS_CS_RETURNS); each list and record limited by
     AccessServices and each action by Mantle's own permission. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Returns" default-menu-index="5" menu-image="sym_o_replay" menu-image-type="icon">
     <subscreens default-item="Returns" always-use-full-path="true">
         <subscreens-item name="ReturnDetail" location="component://mr-boss/screen/Shared/ReturnDetail.xml" menu-include="false"/>

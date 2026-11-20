@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     engine's guards refuse says why; the records are labelled as a sample when more match. A viewer who reads the total and not
     the records is told so; a value the viewer may not read is "not available". The same page is a linear task in the terminal
     and full width on a phone. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Drill" default-menu-include="false">
 
     <parameter name="definitionId" required="true"/>

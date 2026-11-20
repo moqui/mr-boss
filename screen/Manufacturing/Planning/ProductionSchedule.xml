@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     contract (laneList's laneId and shadeList, barList, noticeList, conflicts by barId, and the resource block naming the wording,
     the plant filter, Snapshot and its transitions; Timeline.qvue's header) beside its own fields, and moveOperation takes the
     timeline's laneId and remove (unschedule) too. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Production schedule" default-menu-index="2" render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">
 
     <parameter name="plantId"/>

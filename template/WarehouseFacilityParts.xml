@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     dialog, which Facilities and FacilityDetail's Children tab share. A screen includes each transition it uses by name
     and the section; a parentFacilityId in its context is the new facility's parent. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="facilityChoices" read-only="true">
         <actions>
             <service-call name="ironstone.warehouse.FacilityServices.get#FacilityChoices" in-map="context" out-map="found"/>

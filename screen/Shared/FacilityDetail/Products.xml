@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.facility.FacilityServices.store#ProductFacilityPolicy, which checks the stock planning permissions and keeps
     each change's reason in the audit log. A location policy is removed the same way, so its location can close. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Products"
         default-menu-index="4">
     <parameter name="facilityId"/>

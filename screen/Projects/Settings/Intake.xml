@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     confirmation email). A project's own intake (its address, form link, triage assignee) is in its Settings. Services:
     ironstone.projects.ProjectRequestServices get#IntakeSettingsInfo, store#IntakeTypes, store#RequestCategory, save#IntakeAddress,
     store#PublicForm. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Intake" default-menu-index="8" menu-image="sym_o_inbox" menu-image-type="icon">
 
     <transition name="saveTypes">

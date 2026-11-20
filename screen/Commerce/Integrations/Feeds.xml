@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     the store scope), each with its format, the public address it is served at, the build serving and the last build's
     rows, skips and errors, and NewFeed (store, Shop site, name, address name, a registered format, the store's locale and
     currency, product scope, schedule; store#StoreFeed). A row opens FeedDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Feeds" default-menu-index="5">
     <parameter name="productStoreId"/>
     <parameter name="siteId"/>

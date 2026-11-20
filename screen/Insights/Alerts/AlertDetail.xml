@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     which the root and the Alerts area set). The framework screen's contact points, silences, mute timings, shared items
     and evaluation are Tools' own: they are not shown under Insights' policy and their transitions (addContact,
     addSilence, addMute, removeItem, addRef, removeRef, evaluate) are not taken in, so they do not exist on this route. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Business alert" default-menu-include="false">
     <parameter name="definitionId"/>
     <parameter name="dashboardId"/>

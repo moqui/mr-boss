@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     downloading through RecordFiles' own download transition. As RecordFiles' filesData it first finds the record under the
     user's filters (ChatterServices get#RecordInfo): a record the user may not see shows nothing of it; the files are
     RecordFilesServices get#RecordFiles. Uploads, versions, removing and the records drive folder are the browser's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Files" default-menu-include="false">
 
     <parameter name="recordEntity"/>

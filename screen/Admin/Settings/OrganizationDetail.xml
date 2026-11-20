@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     - Setup: the setup checks of this organization the user may read (org.moqui.admin.ReadinessServices.get#Readiness), each with
       its owner's fix link when the user opens it; Accounting's setup is Accounting's reviewed action, never run by a save here.
     Every refusal is shown as its reason. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Organization" default-menu-include="false">
     <parameter name="organizationPartyId" required="true"/>
 

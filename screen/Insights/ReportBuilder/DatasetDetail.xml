@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     index#BusinessDataset), which check the dataset's own update artifact. The dataset is read by get#BusinessDataset; the
     scope field is the organization field (reportPolicy). The screen's link to the definition editor is Tools' own, not
     shown under a mount, and its transition (definition) is not taken in, so it does not exist on this route. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Dataset" default-menu-include="false">
     <parameter name="datasetId" required="true"/>
 

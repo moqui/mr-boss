@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.request.SupportCaseServices save#ServiceRoute, preview#ServiceRoute, log#CaseCall, review#HeldRequest;
     mantle.request.RequestServices create#IntakeToken, remove#IntakeToken), which the screens and hooks call after these
     checks. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="ServiceRoutes" allow-remote="false">
         <description>ChannelRouting's IntakeRoutes: one of the user's settings organizations' queues with their routes in
             effect (mail, public form, forum, chat; each with its type, sender and automatic-mail rules, acknowledgement and

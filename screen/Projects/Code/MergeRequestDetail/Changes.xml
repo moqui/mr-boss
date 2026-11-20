@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     opens the review dialog (MergeRequestDetail's Review). The terminal: ChangesTui beside this file, the files, one
     file's diff (path), the threads, line comments, replies and resolve (impl-projects.md P11). A client contact (impl-projects.md P10b) gets the diff alone: no threads (the team's review notes), and the
     services refuse it a comment, a resolve and a review (canComment and canReview false hide their controls). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Changes" default-menu-index="3" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_compare" menu-image-type="icon">
 
     <parameter name="review"/>

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The review queue (design-forum.md ReviewQueue, §13.4): pick a site or bound category you moderate, see its open items
     oldest first with what each concerns, open one, or decide several at once (the forum answers per item). Anyone who
     moderates nothing sees a short note; every transition is checked again by the forum. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Moderation" default-menu-include="false">
 
     <parameter name="scope"/>

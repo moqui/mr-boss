@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.party.SupplierServices.get#SupplierFinance for a finance reader (PAYABLE_VIEW or ACCOUNTING_VIEW), read only:
     the payment methods masked (treasury's), the identifications and the tax registrations, each only as Mantle answers them
     for the user. Finance edits them in Accounting's Supplier360. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Payment details" default-menu-index="7">
     <condition>
         <expression>appRoot == 'Purchasing' &amp;&amp; !!purchasingCapabilities?.financeRead</expression>

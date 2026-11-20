@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     each (Add member; a template's members came with it), with End on a row; with hours a week, from and thru the member is also
     allocated on it (mantle.work.ResourceServices.create#Allocation through ironstone.projects.ResourceServices.save#Allocation: allocated at
     once for a Projects manager, else requested; impl-projects.md P7), and the project's allocations are listed below. Next goes on. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Team" default-menu-index="2" menu-image="sym_o_groups" menu-image-type="icon">
 
     <parameter name="workEffortId"/>

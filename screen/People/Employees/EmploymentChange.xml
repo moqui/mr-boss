@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     kind, the HR user's own; style-guide §3.10, the user's call), resumed when the wizard is opened again, with the change's
     operation key; it is discarded when the change is applied or asked for. HR's
     (BOSS_PPL_EMPLOYMENT); an employment outside the user's scope shows "Not available". -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Employment change" default-menu-include="false">
 
     <parameter name="partyRelationshipId"/>

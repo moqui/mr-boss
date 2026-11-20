@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     configuration and readiness) hidden from the menu. Every Commerce user, each list and record limited to their stores
     (ironstone.commerce.ContextServices; a store-limited staff member's own) and read and saved through
     mantle.product.StoreAdminServices, which checks the permission and the store's organization again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Stores" default-menu-index="2" menu-image="sym_o_sell" menu-image-type="icon">
     <subscreens default-item="Stores" always-use-full-path="true">
         <subscreens-item name="StoreDetail" location="component://mr-boss/screen/Commerce/Stores/StoreDetail.xml" menu-include="false"/>

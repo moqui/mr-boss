@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.order.StoreOperationsServices, which checks COMMERCE_ORDER_VIEW and the store scope again; OrderDetail and
     ReturnDetail are the shared screens in Commerce's context, CartDetail Commerce's own, each opened from rows. Cart recovery
     is P10's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Orders" default-menu-index="5" menu-image="sym_o_shopping_cart" menu-image-type="icon">
     <subscreens default-item="Orders" always-use-full-path="true">
         <subscreens-item name="Orders" location="component://mr-boss/screen/Commerce/Orders/Orders.xml" menu-title="Orders" menu-index="1"/>

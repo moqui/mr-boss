@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     into a directory party). From Duplicates it opens in a dialog with Not a duplicate as well (returnTo=duplicates); from the
     contact record and the Contacts bulk action it is a page. Both contacts are found under the user's filters; a pair the
     user may not change both of shows without Merge. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Compare" default-menu-include="false">
 
     <parameter name="partyId" required="true"/>

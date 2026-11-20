@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Quick create › Opportunity (design-sales §12.2): NewOpportunity, the Opportunities list's form, for a holder of
     SALES_OPPORTUNITY_EDIT; it opens the new opportunity's OpportunityDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="New opportunity" default-menu-include="false">
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
     <transition-include name="createOpportunity" location="component://mr-boss/template/SalesOpportunities.xml"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     the dock with the reason, lot or serial, the quarantine location), or for a supplier return the stock sent back, as of
     the print time. Printed from ReturnReceipt and SupplierReturnShipment as html-print
     (/apps/Warehouse/Returns/ReturnSlip?renderMode=html-print); printing posts nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Return slip" default-menu-include="false">
     <parameter name="shipmentId" required="true"/>
     <actions>

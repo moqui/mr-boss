@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     subscription operators (BOSS_COM_ORDERS). Each list reads mantle.order.StoreOperationsServices or, for subscriptions,
     mantle.product.ShopSubscriptionServices' staff part (COMMERCE_ORDER_VIEW and the store scope); Customer360 and
     RequestDetail are the shared screens in Commerce's context, SubscriptionDetail Commerce's own, opened from rows. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Customers" default-menu-index="6" menu-image="sym_o_group" menu-image-type="icon">
     <subscreens default-item="Customers" always-use-full-path="true">
         <subscreens-item name="Customers" location="component://mr-boss/screen/Commerce/Customers/Customers.xml" menu-title="Customers" menu-index="1"/>

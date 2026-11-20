@@ -62,7 +62,7 @@ along with this software (see the LICENSE.md file). If not, see
     then Accounting's mantle.account.InvoiceServices.get#InvoiceFinanceDetail), read only: the overview, the lines and the
     payments; Send with the PASS Billing pay link (Accounting's send#Invoice, which issues the link on the organization's Billing
     site) for a receivables editor. Its widgets and transition are template/SalesHandoffs.xml's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Invoice" default-menu-include="false">
 
     <parameter name="invoiceId" required="true"/>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     are Mantle's mantle.product.QualityServices, through ironstone.warehouse.InspectionServices' reads and the transitions of
     template/WarehouseInspectionParts.xml. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Inspection" default-menu-index="3" menu-image="sym_o_fact_check" menu-image-type="icon">
     <subscreens default-item="Inspections" always-use-full-path="true">
         <subscreens-item name="InspectionTemplates" location="component://mr-boss/screen/Shared/InspectionTemplates.xml"

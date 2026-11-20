@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     first finds the record under the user's filters (ChatterServices get#ChatterData): a record the user may not see shows
     nothing of it. The timeline is get#Timeline and the note log#Note, the services of Chatter.qvue; messages, activities,
     followers and files are the browser's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Chatter" default-menu-include="false">
 
     <parameter name="recordEntity"/>

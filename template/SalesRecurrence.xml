@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     agreement, a zone, a customer, an organization), salesStoreRecurrence (RecurrenceSettings: a new base from an approved order, or a
     base's schedule at its revision), salesChangeRecurrence (RecurrenceAction: pause, resume, end or retry at the revision shown) and
     salesSubscriptionFollowUp (Subscriptions' Follow up, a task on the customer). A screen includes each transition it uses by name. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="salesRecurrenceChoices" read-only="true">
         <actions>
             <service-call name="ironstone.sales.ContextServices.get#Choices" out-map="found"

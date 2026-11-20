@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.work.ProductionServices.get#ProductionCosts and review#ProductionCosts). The frozen estimate shows with
     PRODUCT_COST_VIEW or ACCOUNTING_VIEW, the actual values and ledger links with ACCOUNTING_VIEW only; Mantle leaves out what
     the user may not read. WorkOrderDetail's Costs tab (its directory mounts it; impl-manufacturing F-P6-6). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Costs" default-menu-index="6">
     <parameter name="workEffortId"/>
     <transition name="requestReview">

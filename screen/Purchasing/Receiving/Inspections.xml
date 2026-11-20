@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     receipts (open by default, or all; by status, supplier and order), each opening the shared QualityInspection under
     Receiving, where the holders of the inspect, verify and dispose permissions act and others read. The list records no
     reading. The receipt templates are Settings' Inspection templates. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Inspections" default-menu-index="2">
     <parameter name="view"/>
     <parameter name="statusId"/>

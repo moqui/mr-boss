@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     and a file downloading through Files' own download transition. The same services as Files.qvue (DriveServices
     get#FilesData and list#FolderView over FileServices, which check the drive's members and shares, R21, and on the records
     drive the records the user may see, R5). Uploads, sharing, the views and the details pane are the browser's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Files" default-menu-include="false">
 
     <parameter name="drive"/>

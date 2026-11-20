@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.work.ProductionPlanningServices.schedule#ProductionOperation) with its conflicts, and the preview box applies it, asks
     a supervisor for an override or unschedules it. Execution comes with the shop floor (P10). It reads the run when the client
     loads the tab alone. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Operations" default-menu-index="4">
     <parameter name="workEffortId"/>
     <parameter name="selectedOperationId"/>

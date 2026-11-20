@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     owner wizard's run (Accounting's statement imports and opening open items, Commerce's channel orders) opens its
     owner's place, and a target started here opens the shared wizard (DataImport), each by the mount's routes (Admin.js
     mountRoutes). Reading needs ADMIN_TRANSFER_VIEW or ADMIN_TRANSFER_RUN, checked by the service. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Imports" menu-image="sym_o_upload_file" menu-image-type="icon">
     <parameter name="targetId"/>
     <parameter name="organizationPartyId"/>

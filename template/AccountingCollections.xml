@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     - CollectionDialogs: Record contact and Promise to pay for one customer, from organizationPartyId, customerPartyId,
       customerName, currencyUomId and dialogKey in the context. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="recordActivity">
         <actions>
             <script>if (appRoot !== 'Accounting') throw new Error('This action is not available in ' + appRoot)</script>

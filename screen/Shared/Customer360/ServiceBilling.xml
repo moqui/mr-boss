@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     or RECEIVABLE_VIEW; withheld, never zero), each opening InvoiceDetail; and for a credit reader
     (CUSTOMER_CREDIT_VIEW) its credit with each organization from Mantle's get#CustomerCreditStatus, read only (a credit
     decision is Accounting's). No payment details. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Billing" default-menu-index="4">
     <parameter name="customerPartyId"/>
     <condition><expression>appRoot == 'CustomerService'</expression></condition>

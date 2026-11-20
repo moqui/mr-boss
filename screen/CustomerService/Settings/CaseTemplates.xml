@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     with its drafts as NewCase renders it (desktop and phone in qvt, the terminal in tui), the customer's fields, and a check of
     sample values for both audiences (validate#CaseTemplate). Every save checks SUPPORT_POLICY_EDIT in Mantle; its forms show
     only to a user who may save. A template changes by dated rows, so a case keeps its values with the form as it was. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Case templates" default-menu-index="8">
     <parameter name="organizationPartyId"/>
     <parameter name="formId"/>

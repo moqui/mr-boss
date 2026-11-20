@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     batch done shows its outcome and what it made. The rows, all or the problems, with their CSV. Amounts are opted out of AI. Admin's
     Imports lists the imports (the target payrollExchange, owner route peoplePayrollExchange, payrollExchangeBatchId). Payroll's area;
     Mantle checks PAYROLL_VIEW, PAYROLL_EDIT and, to import, PEOPLE_IMPORT, with the employer. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Payroll exchange" default-menu-index="10" menu-image="sym_o_sync_alt" menu-image-type="icon">
     <parameter name="payrollExchangeBatchId"/>
     <parameter name="exchangeKind"/>

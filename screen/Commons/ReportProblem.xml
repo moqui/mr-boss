@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     message's ids; Mantle's get#MaintenanceProblemSource reads the message under its owner's check and prefills What is wrong and
     Details, and report#MaintenanceProblem reads it again and files a chat message or a mail on the request. A message the user may
     not read prefills nothing and is not sent on. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Report a problem" default-menu-include="false" server-static="qvt">
     <parameter name="recordEntity"/>
     <parameter name="recordId"/>

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     filter sets (MANTLE_USER_ORG's ownerPartyId in filterOrgIds) limits their facilities, and an authorization with none
     (MANTLE_ACTIVE_ORG) leaves every facility of every organization. Capabilities are the Mantle permissions the stock
     services check. Disabled artifact authorization widens nothing here. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="Parameters" type="interface">
         <description>The in-parameters the Warehouse app services share; each service declares what it returns.</description>
         <in-parameters>

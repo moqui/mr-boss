@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     (retry#Recipients, the selected rows or every one); an uncertain delivery is reconciled on RecipientDetail, never retried. An
     operator who manages Admin's mail queue is linked there. The mounting root adds nothing: no organization or capability is taken
     from its context. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Delivery" default-menu-include="false">
     <parameter name="campaignSendId" required="true"/>
     <parameter name="state"/>

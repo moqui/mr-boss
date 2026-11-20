@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     Purchasing row: a receiver receives through Warehouse's receive guard, others see progress), QualityInspection and
     InspectionTemplates (crosscut §3.19 Purchasing row; InspectionTemplates' menu entry is in Settings, design §1).
     Purchasing posts no stock: the Mantle receiving and quality services do. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Receiving" default-menu-index="9" menu-image="sym_o_local_shipping" menu-image-type="icon">
     <subscreens default-item="Receipts" always-use-full-path="true">
         <subscreens-item name="ShipmentDetail" location="component://mr-boss/screen/Shared/ShipmentDetail.xml"

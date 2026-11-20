@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     project and weeks. The bulk decisions on the selected rows (AllocationDecision: Approve, Reject with a reason), each on its own.
     New allocation opens EditAllocation. The tray's Approvals group decides the same requests through the AllocationRequest topic
     (design §8 Context passed). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Allocations" default-menu-index="2" menu-image="sym_o_group_work" menu-image-type="icon">
 
     <parameter name="list"/>

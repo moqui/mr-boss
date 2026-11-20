@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     The stores are those of the user's Marketing organizations within Commerce's store scope; Commerce's promotion permissions decide
     every read and write (Mantle's StorePromotionServices: COMMERCE_VIEW, COMMERCE_PROMOTION_EDIT and the store's scope), and a
     campaign link also asks the campaign's edit. Shown when such a store is configured (the root's menu condition). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Promotions" default-menu-index="5" menu-image="sym_o_local_offer" menu-image-type="icon">
     <always-actions>
         <script>if(!marketing.capabilities.promotionRead)throw new Error('PERMISSION_DENIED: Promotions need Commerce\'s promotion read')</script>

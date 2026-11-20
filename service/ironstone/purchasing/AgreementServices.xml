@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     the Mantle services after AccessServices.check#Record: mantle.party.AgreementServices store#PurchaseAgreement,
     store#AgreementItem, submit#PurchaseAgreement, release#PurchaseAgreement, get#PurchaseAgreementPrint and
     create#AgreementContent, and mantle.order.PurchaseServices.decide#PurchaseApproval with the agreementId. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Agreements" allow-remote="false">
         <description>One page of the purchase agreements and templates of the user's organizations, newest first, by view
             (active, expiring in 30 days, exhausted: an item in effect with nothing left, approval: drafts and changed active

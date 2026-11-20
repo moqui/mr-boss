@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     accepted, pending; the estimate the Approve gate computes (planned parts at the approved standard cost, estimated hours at the
     costing rate; never stored), or why it cannot be priced; the project the cost is charged to; and each source once, with its posting
     state. No person's pay rate. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Costs" default-menu-index="100"
         default-menu-include="ec.user.hasPermission('MAINTENANCE_COST_VIEW')">
     <parameter name="workEffortId"/>

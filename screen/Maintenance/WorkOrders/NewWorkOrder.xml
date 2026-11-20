@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     through create#MaintenanceWorkOrder (MAINTENANCE_PLAN or _SUPERVISE), with an operation key so a second submit answers the first.
     Corrective work, and planned work within the approval threshold, is approved on create; other planned work waits for a
     supervisor. A user who may not create work is told so. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="New work order" default-menu-include="false">
     <parameter name="assetId"/>
     <parameter name="facilityId"/>

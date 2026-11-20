@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     area (the P22 review's call of Nov 12, 2026). P28: Calculated, here or by an external processor (externalProcessing): such a group
     is never calculated here, its inputs exported and its results imported in Payroll exchange, and it may be live with no
     localization once Accounting's payroll-origin projection is in place; changed only while none of its runs is open. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pay groups" default-menu-index="8">
     <parameter name="payrollGroupId"/>
     <parameter name="previewCount"/>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.commons.TaskServices with app projects (get#TaskAccess: the owner, the assignees, the project's team and its managers
     may change an item) and the Mantle services of mantle.work.TaskServices. A bulk change takes each item on its own, in
     its own transaction: one that fails is logged, counted and named, the rest go on. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== The list ========== -->
 

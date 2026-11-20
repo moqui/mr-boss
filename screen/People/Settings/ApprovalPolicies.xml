@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     with the reason) and End (a danger dialog naming the rule), and ResolvePreview (resolve#Approvers: who would decide an
     example request and why, never its requester; a step no one may decide waits). Mantle checks PEOPLE_CONFIGURE and the
     employer on every change. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Approval rules" default-menu-index="2">
     <parameter name="organizationPartyId"/>
     <parameter name="approvalKindEnumId"/>

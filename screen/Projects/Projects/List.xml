@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     by status along the Default flow, every row of the find, a drag moving the project (managers; set#ProjectStatus). Bulk for
     managers: set the manager, put on hold, close. New project opens the NewProject wizard; Timeline opens the Timeline's
     portfolio mode (the projects as bars with their milestones and releases) on the same chip and text. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Projects" default-menu-include="false">
 
     <parameter name="list"/>

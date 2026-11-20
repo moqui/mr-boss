@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     third chip, Labor costing, lists the labor costing rates (RaprCost) read only, which finance administration sets in
     Accounting's Costing policies. Worker pay rates are opted out of AI (the user's call of Nov 12, 2026, PE-21): their column
     (payAmountText), the edit's amount and Which rate's worker rate show an agent's render its placeholder. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Rates" default-menu-index="3" menu-image="sym_o_percent" menu-image-type="icon">
 
     <parameter name="purpose"/>

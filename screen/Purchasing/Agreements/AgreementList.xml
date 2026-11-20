@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     (PURCHASE_ORDER_EDIT) blanket agreement or sourcing template through mantle.party.AgreementServices.store#PurchaseAgreement,
     started from a template when one is chosen (its items, prices and terms; never its releases). It opens the new agreement in
     AgreementDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Agreements" default-menu-index="1">
     <parameter name="view"/>
     <parameter name="vendorPartyId"/>

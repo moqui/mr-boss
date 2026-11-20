@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     - RecordDowntimeForm: the dialog's form (recordValues; recordFixed hides the resource, as the work order's tab gives it);
     - DowntimeRows: the outages (outageList) with their production and work context and each row's Restore and Correct. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="recordDowntime">
         <actions>
             <if condition="workEffortId"><then>

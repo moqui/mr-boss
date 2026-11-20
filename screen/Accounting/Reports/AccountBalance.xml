@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Account balances"
         default-menu-index="10"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <parameter name="organizationPartyId"/>
     <parameter name="timePeriodId"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>

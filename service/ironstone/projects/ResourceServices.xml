@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     projects they see; the Projects managers (BOSS_PROJECT_MANAGER, which holds ALLOCATION_APPROVE) and ADMIN decide, change and
     staff allocations, and a project's own managers request them (design-projects.md §1.1). Costs (a candidate's rate) only for
     those who manage money (TIME_ENTRY_RATE). Clients never reach these screens (impl-projects.md P10). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== The team planner ========== -->
 

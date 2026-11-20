@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     the administrator (BOSS_ADM_OPERATIONS, the whole area: the jobs' and topics' services check ADMIN_OPERATION_VIEW and
     ADMIN_OPERATION_MANAGE themselves, so the reader is told they are not available) and, for Topics and TopicDetail only, the
     configuration administrator (BOSS_ADM_OPERATIONS_TOPICS), who lands on Topics. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Operations" default-menu-index="8" menu-image="sym_o_monitor_heart" menu-image-type="icon">
     <subscreens default-item="Health" always-use-full-path="true">
         <!-- the configuration administrator opens only the topics here: the area starts at them -->

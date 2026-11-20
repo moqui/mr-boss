@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     P5: Segments (index 2) and SegmentDetail (hidden), the audience managers'; AudiencePreview (index 6), which the authors and
     dispatchers also open past the area's deny (BOSS_MKT_AUDIENCE_PREVIEW: an ALWAYS on this screen that does not pass to its other
     subscreens, and an inheritable one on AudiencePreview), its rows masked for them by Mantle's preview#Audience. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Audiences" default-menu-index="3" menu-image="sym_o_groups" menu-image-type="icon">
     <subscreens default-item="Lists" always-use-full-path="true">
         <subscreens-item name="Consent" location="component://mr-boss/screen/Comms/Consent.xml" menu-index="3"/>

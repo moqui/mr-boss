@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     triaged. Below them the adoption queue: open maintenance records with no work order (Manufacturing's maintenance requests, the
     baseline's; Mantle's find#UnmanagedMaintenance), each adopted into a work order, through its request's triage when it has one.
     Report a problem (Commons' quick create) for a holder of MAINTENANCE_REQUEST. No cost. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Requests" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

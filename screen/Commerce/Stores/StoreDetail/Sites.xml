@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     mount whose target is the store, Shop P1), read only, with each one's state, hosts, mount and whether it is served
     (mantle.product.StoreAdminServices.get#StoreSites). Hosts and mounts are the site operator's (store#Mounts); Commerce
     shows them and binds none. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Sites" default-menu-index="2">
     <actions>
         <if condition="recordFound">

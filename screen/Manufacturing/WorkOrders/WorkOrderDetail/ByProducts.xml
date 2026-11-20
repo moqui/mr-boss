@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     by-product is received at its share of that estimate under Accounting's costing policy (impl-manufacturing P15), and the
     actual allocation, each output line's share of the run's cost at the cost close, follows once it is posted
     (mantle.ledger.ProductionCostServices.get#CostClose; amounts with financial read only). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="By-products" default-menu-index="7">
     <parameter name="workEffortId"/>
     <transition name="storeOutput">

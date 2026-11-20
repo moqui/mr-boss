@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     branch, OrderDetail's Warehouse branch and the choices. The postings are Mantle's guarded entry points
     (mantle.shipment.WarehouseTaskServices, mantle.work.ShipmentWorkServices), which the screens call after
     ironstone.warehouse.AccessServices.check#Record with the capability. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Picklists" allow-remote="false">
         <description>Picklists: the shipment loads of the user's facilities (the chosen one, FACILITY_UNAVAILABLE
             outside the scope), open by default, by status, assignee, overdue (started before today) and text (id or name,

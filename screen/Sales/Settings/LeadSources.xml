@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     Built for a second mount (impl-sales §2; impl-marketing P13 mounts it under Marketing/Settings/LeadSources): its context is
     the mounting root's `sales` (get#SharedContext by that root's appRoot), it links only to itself and names no app root.
     SALES_CONFIGURE, which Mantle checks with the organization. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Sources" default-menu-index="4"
         default-menu-include="ec.user.hasPermission('SALES_CONFIGURE')">
     <parameter name="organizationPartyId"/>

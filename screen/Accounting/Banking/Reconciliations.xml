@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     the difference still to explain (ironstone.accounting.BankServices.find#Reconciliations), and Start a statement
     (mantle.account.ReconciliationServices.create#Reconciliation), which opens its ReconciliationDetail. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Statements"
         default-menu-index="3">
     <parameter name="organizationPartyId"/>

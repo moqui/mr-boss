@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     13, 2026: the percentage of the last net, at most the amount, and the amount before a first net). A configuration holder (PAYROLL_EDIT and
     PAYROLL_CONFIGURE, which Mantle checks) changes them at the revision read (store#RecoverySettings; audited). Beside Pay groups,
     payroll's area. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Overpayment recovery" default-menu-index="9">
     <parameter name="organizationPartyId"/>
     <transition name="storeSettings">

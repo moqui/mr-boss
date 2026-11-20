@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     by mantle.request.CaseFeedbackServices.save#InvitationPolicy, which ends the row it replaces): the case types and queues,
     the delay, once per case or per resolution, the feedback form, the channel, the link's days, the reminders, the low score
     and the follow-up team. No transport credentials are here: the mail goes from the organization's address. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Service defaults" default-menu-index="6">
     <parameter name="organizationPartyId"/>
     <transition name="chooseOrganization">

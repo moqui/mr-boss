@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     process (a scrap cost event, no stock movement), an output asset of an open work order scrapped back to it, a process loss
     or rework; and the supervisor's decision on a loss waiting for approval (approve#ProductionException). Free stock outside a
     work order is scrapped in Warehouse's Adjustments. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Scrap and loss" default-menu-index="3">
     <transition name="recordLoss">
         <actions>

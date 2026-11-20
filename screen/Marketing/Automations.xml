@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     Marketing reader who writes, approves or dispatches sends or reads audiences); the area's check asks the capability too
     (automations), so a custom group given Marketing is shown no area its services refuse. Every read and write is
     mantle.marketing.AutomationServices, which checks the permissions and the organization again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Automations" default-menu-index="5" menu-image="sym_o_route" menu-image-type="icon">
     <always-actions>
         <script>if(!marketing.capabilities.automations)throw new Error('PERMISSION_DENIED: Automations are for the Marketing authors, approvers, dispatchers and audience managers')</script>

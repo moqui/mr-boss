@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     user's maintenance scope covers (find#ProcessExecutions, a scoped query, never every organization's): each work order's name,
     target, when it was made, state and outcome, newest first, each opening WorkOrderDetail (which admits a reader of the work). Read
     only. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Usage" default-menu-index="6">
     <parameter name="workEffortId"/>
     <parameter name="pageIndex"/>

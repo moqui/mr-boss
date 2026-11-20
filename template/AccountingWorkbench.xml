@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     (ironstone.accounting.SettlementScreenServices.get#WorkbenchContext or get#SettlementReviewContext), and includes the
     Workbench or Review section with its transitions; workbenchLabels names the side's documents and screens. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="editDraft">
         <actions>
             <service-call name="ironstone.accounting.SettlementScreenServices.edit#SettlementDraft" in-map="context"

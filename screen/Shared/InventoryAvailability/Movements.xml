@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- InventoryAvailability's Movements tab, in the Warehouse context only (crosscut §3.7 Movements, D28): the product's stock
     movements in the facility, each with its source and document (mantle.product.TraceabilityServices.find#Movements
     through ironstone.warehouse.InventoryServices.find#Movements), without cost. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Movements" default-menu-index="6">
     <parameter name="pageIndex"/>
     <condition><expression>appRoot == 'Warehouse'</expression></condition>

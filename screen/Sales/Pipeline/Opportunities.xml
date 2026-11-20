@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     loses the chosen deals, each on its own, naming each refused one. A stage move is not a closure: Won and Lost are
     OpportunityDetail's. P6: the filtered result as CSV or XLSX (the same scoped query, every page, up to its export cap), and Import
     (the shared wizard's `opportunities` target) for a manager who imports. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Opportunities" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     section PurchasingSourcingRfqRoute (one section-include) offers it on the lines shown. Nothing is sourced until an award
     places a quote. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="requestQuotes">
         <actions>
             <set field="rfqKeys" from="String(rfqItemKeys || '').split(',').map((key) =&gt; key.trim()).filter((key) =&gt; key)"/>

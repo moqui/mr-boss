@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The requests demo of IronStone Projects (impl-projects.md P5): data/BossProjectsDemoDataRequests.xml calls load#ProjectRequestsDemo
     after the projects and the mail demo. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="load" noun="ProjectRequestsDemo" authenticate="anonymous-all" allow-remote="false">
         <description>

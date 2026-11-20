@@ -29,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
     without input, and reloads itself after half an hour idle, so a revoked device shows the server's refusal page and a quiet one
     stays seen. A signed-in user who opens it (People's Time area grants) sees that it records punches only on a registered device;
     its punches are refused. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Clocking kiosk" default-menu-include="false" standalone="true" history="false" density="handheld"
         screen-theme-type-enum-id="STT_INTERNAL_QUASAR">
 

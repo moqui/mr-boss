@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (refused while live subscriptions use it, naming the count); only resources whose handlers their component installed.
     Products shows the rows read only. A site's or Forum category's resource is bound by the site operator in PASS
     SiteDetail's subscription binding, never here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Paid access" default-menu-index="21">
     <condition>
         <!-- Product360 admits it in Commerce, and elsewhere for a digital product only (the one kind Shop sells as paid access) -->

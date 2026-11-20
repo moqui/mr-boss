@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     movement since the preview, a closed fiscal period and a double submit are refused or answered once. The Scrap dialog
     (an asset fixed, from AssetDetail, Move and the Lots expiry list) moves free stock to a morgue location when chosen and
     scraps it with a scrap reason through scrap#Asset. Every write checks the record with the adjust capability first. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Adjustments" default-menu-index="6">
     <parameter name="facilityId"/>
     <parameter name="assetId"/>

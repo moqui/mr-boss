@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     report scope (the Reports area's grant but for Home's strip; the user's stores, one asked for in it), a calendar period
     against the one before in the user's zone, amounts per currency (never summed across currencies), its as-of time and
     what it left out; with output csv the same rows, the export audited. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="ReportParameters" type="interface">
         <description>The filters Commerce's reports share (ReportScope): the store (one of the user's; empty, every one of theirs,
             at most 25), the period (interval d, w, M, q or y, a calendar day, week, month, quarter or year; M by default) holding

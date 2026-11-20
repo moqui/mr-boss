@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     timer, machine runtime and completion; Instructions, its instruction as of the work order's release with the acknowledgment
     and the evidence; ProductionTime, a work order's person time and its weeks; and InstructionsPrint, the operator
     instructions print. Each service checks its permission and organization again (mantle.work.ProductionServices). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Shop floor" default-menu-index="3" menu-image="sym_o_speed" menu-image-type="icon">
     <subscreens default-item="Station" always-use-full-path="true"/>
     <widgets>

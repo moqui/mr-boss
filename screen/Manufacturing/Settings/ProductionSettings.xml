@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     with its source, and the dated rows set at that scope. mantle.work.ProductionServices.get#ProductionPolicy reads it
     and store#ProductionPolicy makes a dated change of one form's fields (PRODUCTION_POLICY_EDIT); a released work order
     keeps the policy of its release time. The overhead basis and co-product method are Accounting's costing policies. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Production settings" default-menu-index="1">
     <parameter name="organizationPartyId"/>
     <parameter name="plantId"/>

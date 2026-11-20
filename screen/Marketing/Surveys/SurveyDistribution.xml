@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     respondent's page as the preview shows it), Readiness and Invitations (each invitation send with its topic, state, invited and
     answered counts, opening SendDetail, where it is approved and released as every send). P13: a lead form's Lead handoff (its rule's team
     and mapping and its handoff counts, opening LeadRuleDetail). Every change is Mantle's guarded service. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Distribution" default-menu-include="false">
     <parameter name="formId"/>
     <parameter name="publicationId"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     supplier's quotes with their status, validity and amount (withheld from a user who may not see prices), each opening
     Purchasing's QuoteRequestDetail or QuoteDetail, from ironstone.purchasing.SourcingServices find#QuoteRequests and
     find#SupplierQuotes. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="RFQs &amp; quotes" default-menu-index="11">
     <condition>
         <expression>appRoot == 'Purchasing'</expression>

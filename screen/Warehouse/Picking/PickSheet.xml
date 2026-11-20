@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     picklist's lines in pick-location order with location, product, lot, staging bin and quantity to pick, and boxes for
     picked and short; with combined, one block per shipment by staging bin with a pack column too. Printed from
     PicklistDetail as html-print (/apps/Warehouse/Picking/PickSheet?renderMode=html-print); printing posts nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pick sheet" default-menu-include="false">
     <parameter name="workEffortId"/>
     <parameter name="shipmentId"/>

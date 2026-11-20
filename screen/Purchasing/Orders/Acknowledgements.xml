@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     each with its revision, supplier, when it went out, the response, the requested and promised dates and the last
     reminder; RecordAcknowledgement per row (mantle.order.OrderServices.record#Acknowledgement, entered on the supplier's
     behalf); and SendReminder on the selected rows (send#PurchaseReminder, a result per order and recipient), for a buyer. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Acknowledgements" default-menu-index="2">
     <parameter name="view"/>
     <parameter name="vendorPartyId"/>

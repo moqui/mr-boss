@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     bulk buyer and category changes. Each reads within the user's supplier scope (Purchasing.js) and needs the buying lists
     (listRead); a supplier's profile, buyer and category are written by mantle.party.SupplierServices, which checks
     SUPPLIER_PROFILE_EDIT and the organization itself. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Suppliers" allow-remote="false">
         <description>The suppliers in the user's scope (their organizations' and the shared ones), paged, by name, ID or
             external ID ignoring case, and by category, buyer, approval status or a purchase block, each with the buying

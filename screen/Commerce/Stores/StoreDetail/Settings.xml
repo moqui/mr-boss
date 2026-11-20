@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     typed by its kind (mantle.product.StoreAdminServices.store#StoreSetting: true or false, a number, a percentage or one line
     of text; End). Template, content and URL locations are shown and not set here, so staff choose no resource location;
     the checkout and recovery settings are CheckoutSettings' (P6, P10). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="8">
     <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
     <transition name="saveSetting">

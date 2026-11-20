@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     moves a department's employees to another department; Mantle refuses a cycle, another employer, a stale date and a stale
     revision, and every row is ended and kept, never deleted. A reader sees the same tree with no action.
     A tree row fetched as its parent opens shows its text; a unit is opened from a row of the page (or found by name). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Organization" default-menu-index="2" menu-image="sym_o_account_tree" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="asOfDate"/>

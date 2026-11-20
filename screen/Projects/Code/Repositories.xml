@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     administrators; with an import from a URL for one in the database), Link repository (for a maintainer of the repository who
     manages the project) and, for administrators, Mirror. Without git hosting in the build it says so. A client contact
     (clientUser; impl-projects.md P10b) sees the repositories its projects share with it, under one chip, and no action. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Repositories" default-menu-index="1" menu-image="sym_o_database" menu-image-type="icon">
 
     <parameter name="list"/>

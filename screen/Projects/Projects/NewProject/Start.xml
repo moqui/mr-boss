@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     user by default), start and target dates, who sees it (General or Work group), program and description. Next makes the project
     In Planning (ironstone.projects.ProjectServices.create#NewProject) and carries its workEffortId on; Create now opens it at once. Back on
     a project already made shows what was chosen, whose basics change in the project's settings. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Start" default-menu-index="1" menu-image="sym_o_flag" menu-image-type="icon">
 
     <parameter name="workEffortId"/>

@@ -29,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
     assessments the user reads, the assessor's answers and evidence the trainer's and development's alone, opted out of AI
     (ai-opt-out, PE-21); the person reads their own outcome, score, date and assessor. Every People user's and a self-service
     employee's by the area's grant. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Training session" default-menu-include="false">
     <parameter name="workEffortId"/>
     <parameter name="personTrainingId"/>

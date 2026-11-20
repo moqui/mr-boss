@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     artifact group). The record of the page under it fills the form: equipment, a work center, or a run or operation. The
     transition answers JSON, so the dialog closes, with a link to the stop in Downtime (its Maintenance dialog open for an
     equipment fault). Mantle checks PRODUCTION_OPERATE or PRODUCTION_SUPERVISE and the organization. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Report downtime" default-menu-include="false" server-static="qvt">
     <parameter name="recordEntity"/>
     <parameter name="recordId"/>

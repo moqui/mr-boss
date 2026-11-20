@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     the merge request is open: Comment on a line of the file shown (comment#MergeRequest), a reply to a thread, and Resolve or
     Reopen a thread; the review itself is MergeRequestDetail's Review dialog. A client contact (impl-projects.md P10b) reads the diff
     alone: no threads and no comment. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Changes" default-menu-include="false">
 
     <parameter name="path"/>

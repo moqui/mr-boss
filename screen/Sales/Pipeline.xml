@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     opportunity service. P18: Forecast (a key's calculated pipeline beside the submitted judgement, Mantle's
     mantle.sales.ForecastServices). Leads is built for a second mount (impl-sales §2): Marketing's root mounts it at
     Marketing/Leads with its own context. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pipeline" default-menu-index="2" menu-image="sym_o_trending_up" menu-image-type="icon">
     <subscreens default-item="Opportunities" always-use-full-path="true">
         <subscreens-item name="WorkItemDetail" location="component://mr-boss/screen/Shared/WorkItemDetail.xml" menu-include="false"/>

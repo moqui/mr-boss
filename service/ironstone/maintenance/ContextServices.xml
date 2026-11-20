@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Maintenance app's context (impl-maintenance §2, P1; design-maintenance §1.1, §1.2; Maintenance.js): the shared context every
     Maintenance screen reads in the root's always-actions, the drop-downs and the palette. The access itself is AccessServices';
     the scope is Mantle's (mantle/work/MaintenanceAccess.js). Costs are never part of the context. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="Parameters" type="interface">
         <description>The in-parameters the Maintenance context services share; each service declares what it returns.</description>
         <in-parameters>

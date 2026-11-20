@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Quick create › Campaign (design-marketing §14.3 QuickCampaign): NewCampaign, the Campaigns list's form, for a holder of
     MARKETING_CAMPAIGN_EDIT; it opens the new campaign's CampaignDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="New campaign" default-menu-include="false">
     <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
     <transition-include name="createCampaign" location="component://mr-boss/template/MarketingCampaigns.xml"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     P3): the account's invoices from the organizations of the user's sales scope, newest first, with their totals and what is
     unpaid (get#CustomerSales, Customer360's always-actions), for a finance reader only (ACCOUNTING_VIEW or RECEIVABLE_VIEW, borrowed
     authority); read only, the invoice's number shown without a link until Sales' InvoiceDetail (P14). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Invoices" default-menu-index="4">
     <parameter name="customerPartyId"/>
     <condition><expression>appRoot == 'Sales' &amp;&amp; !!sales?.capabilities?.financeRead</expression></condition>

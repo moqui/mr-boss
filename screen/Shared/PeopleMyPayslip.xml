@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     (BOSS_PPL_PAYSLIP_SELF, non-inheritable, data/BossSetupData.xml). P26 review (the user's call of Nov 12, 2026): with legacyKey, the
     user's own legacy pay record (EmploymentPayHistory, by its key), labelled historical, read only and never recalculated; the
     download asks get#MyPayslipStatement, since get#MyPayslip (the Assistant's tool) names no stored statement's location. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="My payslip" default-menu-include="false" menu-image="sym_o_receipt_long" menu-image-type="icon">
     <parameter name="payslipId"/>
     <parameter name="legacyKey"/>

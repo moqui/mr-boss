@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.insights.ContextServices.store#Settings needs INSIGHTS_SETTINGS_EDIT and an organization in the caller's scope,
     and a refresh is Admin's request#Refresh, checked by the registration's own permission. Instance limits and credentials
     stay Admin's; nothing here raises one. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="12" menu-image="sym_o_settings" menu-image-type="icon">
     <subscreens default-item="AnalyticsSettings"/>
     <widgets><subscreens-panel id="InsightsSettingsPanel" type="tab"/></widgets>

@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Pricing &amp; costs" default-menu-index="5" menu-image="sym_o_sell" menu-image-type="icon">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd" default-menu-title="Pricing &amp; costs" default-menu-index="5" menu-image="sym_o_sell" menu-image-type="icon">
     <subscreens default-item="List">
         <subscreens-item name="List" location="component://mr-boss/screen/Shared/Prices.xml"/>
         <!-- the cost tabs only for a cost reader (PRD-UI-040): the screens refuse anyone else ("Standard-cost read authority is

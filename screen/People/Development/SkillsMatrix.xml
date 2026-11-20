@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     of the user's scope; its cost rate shows only to PAYROLL_VIEW holders for employees (Y2). The terminal twin is SkillsMatrixTui (the
     person and skill list, with the same evaluation and search). Every People user's through the root; the services decide who reads
     whom; denied to a self-service employee (BOSS_PPL_SKILLS). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Skills matrix" default-menu-index="1" menu-image="sym_o_grid_on" menu-image-type="icon"
         render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">
     <parameter name="organizationPartyId"/>

@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     project in projectTabId, so the project is fixed (its column and find field are left out), and the project's sprints are a
     third kind (Sprints). Services: ironstone.projects.PlanningServices find#RoadmapItems, save#PlanItem, update#PlanItemField,
     get#PlanItemStatusOptions. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Roadmap" default-menu-index="1" menu-image="sym_o_travel_explore" menu-image-type="icon">
 
     <parameter name="list"/>

@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
     keeps the list as it was. The rows come from ironstone.commons.ContactServices.find#ContactRows (Mantle's find#Party and the book
     services, with the personal-contact condition): another user's personal contact is never one of them. Print opens the
     list as found with renderMode=html-print, a contact sheet (name, organization, email, phone) of up to 200 rows. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Contacts" default-menu-include="false">
 
     <parameter name="partyId"/>

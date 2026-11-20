@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     hold and amendment reasons with their category, equipment fault, planned stop and approval threshold, each a dated row
     (mantle.work.ProductionServices.find#ProductionReasons and store#ProductionReasons, PRODUCTION_POLICY_EDIT to change).
     A reason is deactivated, never deleted, so the events that name it keep it; a change applies from its date. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reason codes" default-menu-index="2">
     <parameter name="organizationPartyId"/>
     <parameter name="includeInactive"/>

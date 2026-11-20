@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     workerRateShown and workerRateEditable); without them the field is left out and not sent. The worker rate is opted out of AI
     (PE-21: an agent's render shows its placeholder). Each change answers the list
     again (in ProjectDetail's Time tab, with its project), or MyTime's originating person and week. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Time entry" default-menu-include="false">
 
     <parameter name="timeEntryId"/>

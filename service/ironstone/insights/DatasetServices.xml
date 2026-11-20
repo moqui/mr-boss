@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     the viewer, so the engine checks the dataset's own artifact. The report builder's dataset screens are the framework's
     Dashboards screens under Insights' mount and read through org.moqui.report.ReportServices (mr-moqui
     plans/archive/Admin-Screens-Down.md, Track I). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="check" noun="DatasetReadiness" allow-remote="false">
         <description>The readiness contract of a dataset's provider (moqui.server.ReadinessProvider insights.dataset.(id)): admitted with
             its checks passing is ready, waiting for review or retired a warning naming what fails, a missing source unavailable;

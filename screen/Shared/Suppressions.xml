@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     audience editor for an organization of their scope) and who ends a block (MESSAGE_SUPPRESSION_REVIEW alone, with new evidence).
     The mounting root adds nothing: no organization or capability is taken from its context. A new subscription never ends a block;
     the row and its source stay. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Suppressions" default-menu-index="4">
     <parameter name="text"/>
     <parameter name="reasonEnumId"/>

@@ -27,7 +27,7 @@ along with this software (see the LICENSE.md file). If not, see
     warranty claim (RqtWarranty, from WarrantyClaims' New claim or a row of Customer360's Delivered items with its serial,
     assetId, and sale) takes its type's template before the queue's, and after create#Case its serial (else the template's
     serial number), sale and fault go to mantle.request.WarrantyServices.save#WarrantyClaim; it opens WarrantyAssessment. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="New case" default-menu-index="2">
     <parameter name="organizationPartyId"/>
     <parameter name="customerPartyId"/>

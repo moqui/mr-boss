@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     ReturnReceipt and SupplierReturnShipment, the shared shipment screen with the return receipt and supplier return rows
     (crosscut §3.8); ReturnSlip, the RMA receiving slip and the supplier-return slip to print. Open to every Warehouse user;
     each action's Mantle service checks its permission, and authorizing and settling a return are other apps' rights. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Returns" default-menu-index="9" menu-image="sym_o_replay" menu-image-type="icon">
     <subscreens default-item="Returns" always-use-full-path="true">
         <subscreens-item name="ReturnDetail" location="component://mr-boss/screen/Shared/ReturnDetail.xml"

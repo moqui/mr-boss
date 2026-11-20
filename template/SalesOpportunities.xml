@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     mounts Sales' Leads (Marketing's, impl-marketing P13) includes the same ones. A screen includes each transition it uses by name
     (transition-include); the links go through the mounting root's `sales.sharedLinks`. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <!-- a new lead or opportunity (NewLead, NewOpportunity): OpportunityDetail of the new deal under Sales, else the list again -->
     <transition name="createOpportunity">
         <actions>

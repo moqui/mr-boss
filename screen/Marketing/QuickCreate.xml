@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Marketing's quick create (design-marketing §14.3 QuickCreate; impl-marketing P2): the shell's + menu opens these in its
     quick-create frame, one screen a kind (Marketing.xml's quick-create entries): Campaign (P2), List (P3), Event (P16), each the host list's own form posting to the same guarded transition. Hidden from the menu. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Create" default-menu-include="false">
     <widgets>
         <subscreens-active/>

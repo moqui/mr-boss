@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     dates relative to the load, so the Today and Notifications panels and Commons Home have content on the day the demo data
     is loaded, and the demo approval topic's decision services. Only the BOSS_DEMO_* records are written; loading again
     moves their dates to the new day. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="load" noun="CommonsDemo" authenticate="anonymous-all" allow-remote="false">
         <description>Stores john.doe's (EX_JOHN_DOE) demo Today and notifications, dated from now in john.doe's time zone in a

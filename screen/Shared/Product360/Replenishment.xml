@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     in the user's facilities (minimum, maximum, reorder quantity and method) beside the stock on hand there, and its pick
     locations' levels (ironstone.warehouse.InventoryServices.get#ProductStock). The levels are edited on the Stock tab's
     Policy; planning suggestions come with the shared supply plan. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Replenishment" default-menu-index="19">
     <condition>
         <expression>Array.isArray(product360Tabs) &amp;&amp; product360Tabs.includes('Replenishment')</expression>

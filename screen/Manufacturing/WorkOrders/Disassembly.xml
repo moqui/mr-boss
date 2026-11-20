@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     Accounting's forward repost flag that is off for the kit's owner. Confirm: reverse#SupportedAssembly at that preview, with
     an explicit warning; the reversing entries are dated now and the posted history stays. For supervisors
     (PRODUCTION_SUPERVISE), after the asset's record check. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Disassembly" default-menu-include="false">
     <parameter name="assetId"/>
     <parameter name="quantity"/>

@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     members outside the user's organizations are counted, never named. The page is the System screen's (ReviewPrepare and
     ReviewPage). Sealed permissions are left out and counted; allowed IPs, preference values and filter expressions are
     never in it. For the access administrator and the administrator (BOSS_ADM_ACCESS). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Access review" default-menu-include="false">
     <parameter name="groups"/>
     <parameter name="appName"/>

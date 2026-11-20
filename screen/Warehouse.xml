@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     and the administrator group BOSS_WAREHOUSE_ADMIN open it (data/BossSetupData.xml); the Inspection, Counts and Picking
     areas are for their capability groups. ironstone.warehouse.AccessServices.get#SharedContext checks the user and
     resolves their facilities, the selected facility and capabilities for every subscreen; each service checks again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Warehouse" menu-image="sym_o_warehouse" menu-image-type="icon">
 
     <always-actions>

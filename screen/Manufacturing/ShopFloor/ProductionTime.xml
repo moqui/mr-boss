@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     policy, F33), which are Projects' mantle.work.TimesheetServices submit#, approve# and reopen#Timesheet. An approval writes
     the labor cost events and a reopen their reversal under the plant's production policy (laborCostSync). The user's timer
     stops here too. Each action checks the work order through ironstone.manufacturing.AccessServices.check#Record first. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Production time" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
     <always-actions>

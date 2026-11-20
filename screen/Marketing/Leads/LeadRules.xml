@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     handoffs (handed off, failed, waiting). New lead rule (a content author's) picks a lead form without one and opens LeadRuleDetail;
     each row opens its rule. P18: New lead rule also routes an event's registrations or attendances (an offer of one occurrence and its
     trigger), whose leads take the attendee's own name and address. Marketing's own context (`marketing`): the Leads area's `sharedLinks` are Sales'. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Lead rules" default-menu-index="3">
     <parameter name="organizationPartyId"/>
     <parameter name="includeEnded"/>

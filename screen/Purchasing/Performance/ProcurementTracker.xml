@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     through its requirement, RFQ, quotes and award to its purchase order lines, and each order line through receipts,
     inspections, bills, match and payment, a row per order line so split suppliers, orders and bills stay apart. Payments are
     a finance reader's, withheld (never unpaid) for anyone else. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Procurement tracker" default-menu-index="4">
     <parameter name="organizationPartyId"/>
     <parameter name="requestId"/>

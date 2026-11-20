@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     filtered by supplier, plant, state and exceptions. New outside processing (the planner, PRODUCTION_PLAN) asks for an
     operation of a released work order to be done by a supplier (request#SubcontractService), after
     ironstone.manufacturing.AccessServices checks the operation; a buyer converts it in Planning's supply plan. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Outside processing" default-menu-include="false">
     <parameter name="supplierPartyId"/>
     <parameter name="facilityId"/>

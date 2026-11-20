@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (ironstone.commons.CalendarServices.get#CalendarSettings reads the shares only of the calendars the user manages: IronStone R21).
     CalDavInfo: the CalDAV address of the user's calendars and of each one (org.moqui.resource.DavServices.get#SyncAddresses), for a
     phone or a desktop app logged in with an app password (Settings, Sync). Google and Microsoft 365 accounts come later. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Calendars" default-menu-index="5" menu-image="sym_o_calendar_month" menu-image-type="icon">
 
     <transition name="createCalendar">

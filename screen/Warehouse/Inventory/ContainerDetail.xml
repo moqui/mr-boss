@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (ironstone.warehouse.AccessServices.check#Record), then calls mantle.shipment.WarehouseTaskServices'
     attach#AssetToContainer, detach#AssetFromContainer or move#Container with the page's operation key, so a double submit
     answers the first. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Container" default-menu-include="false">
     <parameter name="containerId" required="true"/>
     <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     reminder may go to), recovery sends, delivered, recovered orders (the link used after the latest send and the order
     placed, F130) and their value, and placed, per store and currency and in total per currency. The export holds the same
     rows. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Cart recovery" default-menu-index="3">
     <parameter name="productStoreId"/>
     <parameter name="interval"/>

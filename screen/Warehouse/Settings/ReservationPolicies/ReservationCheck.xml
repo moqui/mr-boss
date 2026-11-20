@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     repairs what the check named through mantle.shipment.WarehouseTaskServices.repair#FacilityReservations, which refuses a
     check the reservations changed since and names each reservation it could not repair. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reservation check" default-menu-index="3">
     <parameter name="productId"/>
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>

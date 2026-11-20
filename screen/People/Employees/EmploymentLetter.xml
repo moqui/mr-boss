@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     the letter is the one stored then, opened from Employee360 and never rendered again. HR's (BOSS_PPL_EMPLOYMENT, with the hire and
     change wizards); Mantle checks PEOPLE_HR_VIEW and the employer. Out of the menu; in another render mode it links to the printed
     page. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Employment letter" default-menu-include="false">
     <parameter name="employmentChangeId" required="true"/>
     <actions><script><![CDATA[

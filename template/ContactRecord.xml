@@ -31,7 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
     are for the owner of a personal contact and contact admins (canEdit); the names and channels (Edit, contact information, addresses)
     also for whom check#ContactAccess gives canEditIdentity alone (a Sales account editor of the contact, impl-sales P4, F98). Call and
     chat come with Comms calls and chat (later); print comes later. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-include="false">
 
     <!-- ========== Edits: each checks the party (check#ContactAccess) and shows the screen again ========== -->

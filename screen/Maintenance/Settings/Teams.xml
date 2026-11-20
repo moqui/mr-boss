@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     MAINTENANCE_SETTINGS_EDIT, which Mantle checks).
     Membership grants nothing in Maintenance. New teams are made in People. Read only for a planner or supervisor (design §2's "P
     read", P8 review: BOSS_MNT_TEAMS opens this tab alone of Settings to their groups): the lists and the defaults as text, no form. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Teams" default-menu-index="3"
         default-menu-include="ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT') || ec.user.hasPermission('MAINTENANCE_PLAN') || ec.user.hasPermission('MAINTENANCE_SUPERVISE')">
     <parameter name="organizationPartyId"/>

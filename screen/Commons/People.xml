@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     (Shared/PeopleMyInterview.xml), an interview panel member's own interview and scorecard, opened from SelfService's My
     interviews. P26: MyPayslip (Shared/PeopleMyPayslip.xml), the user's own issued payslip. Nothing here needs the People root grant: what shows is what mantle.humanres.PeopleServices and RecruitingServices
     admit. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="People" default-menu-include="false" menu-image="sym_o_badge" menu-image-type="icon">
     <subscreens default-item="Employee360">
         <subscreens-item name="Employee360" location="component://mr-boss/screen/Shared/Employee360.xml" menu-include="false"/>

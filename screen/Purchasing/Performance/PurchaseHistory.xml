@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     its document's currency and unit, with the supplier, facility, quantity and lead time. Prices are a supplier-price
     reader's; others see them withheld. A historical price becomes a new order's only through the current price resolver and
     approval. Product360's Purchase history tab shows the same rows for one product. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Purchase history" default-menu-index="5">
     <parameter name="organizationPartyId"/>
     <parameter name="productId"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     of the user's stores' orders; a missing one and another store's are "not available" alike). Read only: the header
     (customer, store, source orders, status) with Open in Customer Service, which authorizes it, and in Accounting, which
     settles it; its lines with what was asked and received and how each is settled. No parallel return workflow. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="CommerceReturn" condition="appRoot == 'Commerce'">
             <widgets>

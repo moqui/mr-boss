@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     refuse and the notification settings. The current user's own notifications only, through
     org.moqui.ui.NotificationServices; the rows are decorated by ironstone.commons.CommonsServices.decorate#Notifications. The
     reading pane from 1440 px comes later. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Notifications" default-menu-index="9" menu-image="sym_o_notifications" menu-image-type="icon">
 
     <parameter name="inboxEnumId"/>

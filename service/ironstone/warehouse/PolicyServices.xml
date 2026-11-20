@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     (get#SharedContext with the facility) and reads through Mantle's WarehousePolicyServices and AssetPoolServices, which
     check the organization and the policy permissions again. Changes go from the screens to the Mantle services directly
     (template/WarehousePolicyParts.xml), after check#Record of the facility with the policyManage capability. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="PolicyContext" allow-remote="false">
         <description>The effective warehouse policy at a facility (or, with none, an organization of the user's), with each
             value's label, text and source (the trace), warnings, and for each family of policyTypes (operation,

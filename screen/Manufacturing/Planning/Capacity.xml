@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     or dates, stops awaiting approval, an open stop or outage) - mantle.work.ProductionPlanningServices.get#WorkCenterLoad, which
     checks PRODUCTION_VIEW and the organization. A center opens FacilityDetail (its offline times) and the production schedule
     of its plant; the list exports as CSV. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Capacity" default-menu-index="3">
     <parameter name="plantId"/>
     <parameter name="text"/>

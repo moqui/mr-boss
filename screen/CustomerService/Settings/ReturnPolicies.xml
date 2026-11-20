@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     the administrator's (RETURN_POLICY_EDIT); ReturnReasons, the organization's dated row per return reason (save#ReturnReason);
     and ReturnPolicyPreview (evaluate#ReturnPolicy): an order's lines against the policies now. With no policy a return is
     manual review; a return keeps the row it was evaluated against. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Return policies" default-menu-index="12">
     <parameter name="organizationPartyId"/>
     <parameter name="previewOrderId"/>

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     crosscut §3.7), Product360 (crosscut §3.5) and PriceExplain (crosscut §3.21, for a price reader) hidden from the menu, each
     in Products' Customer Service context (ironstone.products.CatalogServices.get#SharedContext: no cost or supplier price,
     the customer-serving facilities, F52). Every Customer Service user. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Availability" default-menu-index="7" menu-image="sym_o_visibility" menu-image-type="icon">
     <subscreens default-item="Products" always-use-full-path="true">
         <subscreens-item name="InventoryAvailability" location="component://mr-boss/screen/Shared/InventoryAvailability.xml"

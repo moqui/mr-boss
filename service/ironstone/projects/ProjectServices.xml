@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     project is seen by those who see it, worked by its members and managed (status, settings, team, updates) by its
     ProjectManager and Manager parties, the Projects managers group (BOSS_PROJECT_MANAGER) for the projects it sees, and
     ADMIN (get#ProjectAccess). The money numbers are for those who manage. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== Access ========== -->
 

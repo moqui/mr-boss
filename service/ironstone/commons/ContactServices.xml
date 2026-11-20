@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     permission, which BossSetupData gives the BOSS_CONTACT_ADMIN group and Mantle the ADMIN group). A contact is deleted by
     mantle.party.ContactBookServices.delete#Contacts: removed when nothing refers to it, else disabled and taken out of its
     books; a directory party with a user account or an internal organization role is not deleted. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== Access ========== -->
 

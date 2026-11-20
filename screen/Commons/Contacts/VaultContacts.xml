@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     browser and marked as private. This screen reads nothing on the server and has no transition: a private contact never reaches
     CardDAV, mail address completion or the server's search, since none of them ever sees it. While no vault is open it shows a
     line that opens the vault. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Private contacts" default-menu-include="false" render-modes="vue,qvue,tui" server-static="vue,qvue">
     <widgets>
         <render-mode><text type="qvue" location="component://mr-boss/screen/Commons/Contacts/VaultContacts.qvue" template="false"/><text type="tui" location="component://mr-boss/screen/Commons/Contacts/VaultContacts.tui.json" template="false"/></render-mode>

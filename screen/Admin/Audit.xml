@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     checks ADMIN_AUDIT_VIEW under Admin, and the access log is the report engine's read of the dataset admin-access-log
     for get#AccessLog alone (the dataset is granted to no group), under its row filters. Nothing is changed here: the
     area has no transition that writes. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Audit" default-menu-index="10" menu-image="sym_o_policy" menu-image-type="icon">
     <subscreens default-item="AuditChanges" always-use-full-path="true">
         <!-- the framework's System › Audit changes list (mr-moqui plans/archive/Admin-Screens-Down.md) by location: no grant names

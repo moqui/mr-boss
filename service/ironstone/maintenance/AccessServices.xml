@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     permissions), and the menu areas' authorizations add theirs. Disabled artifact authorization widens nothing here; each Mantle
     service checks again. No entity filter covers WorkEffort, Asset or AssetMaintenance (impl-maintenance F2), so each record is
     checked by its organization here and by the Mantle service again. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Capabilities" allow-remote="false" read-only="true">
         <description>The user's Maintenance capabilities: read (the root grant), each maintenance, work process, resource booking
             and resource policy permission and FACILITY_EDIT (MaintenanceAccess.js permissions), the derived reads (workRead,

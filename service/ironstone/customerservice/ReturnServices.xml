@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     amounts only for the borrowed settlement capability (F), prices for PRICE_VIEW, ACCOUNTING_VIEW or RECEIVABLE_VIEW. The
     writes are Mantle's (mantle.order.ReturnPolicyServices, WarehouseTaskServices, ReturnServices' settlement), called by the
     screens after check#Record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Returns" allow-remote="false">
         <description>Returns' ReturnFind and ReturnList: the customer returns of the user's organizations and customers, by view
             (design Returns: requested, awaiting authorization, authorized and awaiting goods, received and awaiting disposition,

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     Reports/SalesAnalysis, a mount of the same file), PipelineAnalysis and WinLoss. The area is a report reader's: BOSS_SAL_REPORTS denies the root user group
     BOSS_SALES and opens it to the manager and the reader (data/BossSetupSalesData.xml), the administrator and ADMIN through their
     ALWAYS on the root; the root's menu shows it to a holder of SALES_REPORT_VIEW only. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="7" menu-image="sym_o_table_chart" menu-image-type="icon">
     <subscreens default-item="Catalogue"/>
     <widgets><subscreens-active/></widgets>

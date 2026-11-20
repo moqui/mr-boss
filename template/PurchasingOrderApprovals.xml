@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     approver who may decide the step waiting, refuses with a reason through decide#PurchaseApproval, which rejects the order
     (refuseOrder, included by name in Shared/OrderDetail.xml); Approve is the header's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="refuseOrder">
         <actions>
             <service-call name="ironstone.purchasing.AccessServices.check#Record"

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Contacts area of IronStone Marketing (design-marketing §10 Customer360 and ContactDetail; impl-marketing P19): ContactDetail,
     the Commons contact record with Add to list and the consent link, hidden from the menu (Customer360 opens it). The audience
     readers' (design §2: U). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Contacts" default-menu-include="false" menu-image="sym_o_contacts" menu-image-type="icon">
     <always-actions>
         <script>if(!marketing.capabilities.customerRead)throw new Error('PERMISSION_DENIED: Contacts are for Marketing audience readers')</script>

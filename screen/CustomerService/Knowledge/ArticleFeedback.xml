@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     improvement makes one task per article (or links the task given) for the assignee or the source's review team, and the
     article itself never changes; each failure is named. For the knowledge author and the service manager
     (BOSS_CS_ARTICLE_FEEDBACK); the manager reads, the author reviews (SUPPORT_KNOWLEDGE_EDIT). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Article feedback" default-menu-index="2">
     <parameter name="wikiSpaceId"/>
     <parameter name="wikiPageId"/>

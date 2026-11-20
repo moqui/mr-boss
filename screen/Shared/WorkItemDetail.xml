@@ -77,7 +77,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     An item the user may not see is "not available" (IronStone R5, R28; in Projects the project's visibility, impl-projects.md
     F1). The keys of design §1.4 (a, s, t, b, m) wait for a screen-level key binding of the framework. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work item" default-menu-include="false">
 
     <parameter name="workEffortId" required="true"/>

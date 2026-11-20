@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     (the order list, Awaiting approval, NewSalesOrder, OrderBatch), OrderDetail's sales-order context, an order as a record panel host
     and in the palette. P15: Agreements and prices (Agreements, the shared AgreementDetail, Customer prices and Price lists), an
     agreement as a record panel host and in the palette. P18: Pipeline's Forecast, Settings' Targets and Reports' Target attainment. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Sales" menu-image="sym_o_handshake" menu-image-type="icon">
 
     <always-actions>

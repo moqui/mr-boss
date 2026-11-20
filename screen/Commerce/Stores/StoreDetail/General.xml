@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     gateway, the order defaults, the email domain), saved by store#Store for a store manager with a reason for a policy
     change (audit-logged, the History tab); and the reservation group read only, Warehouse's StoreReservation being its one
     editor (F7, X16). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="General" default-menu-index="1">
     <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
     <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>

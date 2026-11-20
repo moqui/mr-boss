@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     with its ReportScope (store, period, currency) over ironstone.commerce.ReportingServices; Channel health with P14. For
     the manager and the store, channel and subscription operators (BOSS_COM_REPORTS). Home's period strip opens Online sales
     with its store and period. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="9" menu-image="sym_o_bar_chart" menu-image-type="icon">
     <subscreens default-item="ReportsHome" always-use-full-path="true">
         <subscreens-item name="ReportsHome" location="component://mr-boss/screen/Commerce/Reports/ReportsHome.xml" menu-title="Reports" menu-index="1"/>

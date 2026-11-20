@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     ordered period in the advanced find, and OrderResults (ironstone.customerservice.CaseServices.find#ServiceOrders): an
     exact id first, a missing and another organization's id answered alike (F30); each row with its customer, date, total,
     the order, fulfillment and payment states and the next delivery, opening OrderDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Orders" default-menu-index="1">
     <parameter name="term"/>
     <parameter name="customerPartyId"/>

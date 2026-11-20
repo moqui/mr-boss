@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     as-of time, period and time zone, its stores and filters, what it left out (in the warning colour), and its export, the
     screen's exportCsv transition with the same parameters (the screen sets exportParameters), which the service audits.
     ReportMissing: the report refused for these choices, with the reason. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="ReportFrame" condition="answer?.asOfText">
             <widgets>

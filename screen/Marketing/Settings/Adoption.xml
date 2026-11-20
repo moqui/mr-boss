@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     each with its own result (adopted, or refused by reason: already owned, changed since it was read, an organization outside the
     scope). Until a record is adopted nothing edits or sends it through Marketing; adoption assigns the owner and nothing else, so
     unknown historical consent stays unknown. The Marketing administrator's (MARKETING_CONFIGURE), as the Settings area is. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Adoption" default-menu-index="2">
     <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>
     <!-- one record to an organization, at the revision read; the result as a message -->

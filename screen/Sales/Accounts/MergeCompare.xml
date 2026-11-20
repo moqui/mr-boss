@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.sales.SalesWorkspaceServices.get#AccountDocumentCounts; quotes count with P7), the one to keep, then Merge through
     Commons' merge#Contacts and Mantle's merge#Parties, whose guards decide again; or Not a duplicate. Opened in a dialog from
     MergeAccounts, for the same managers and administrators (BOSS_SAL_MERGE). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Compare" default-menu-include="false">
     <parameter name="partyId" required="true"/>
     <parameter name="otherPartyId" required="true"/>

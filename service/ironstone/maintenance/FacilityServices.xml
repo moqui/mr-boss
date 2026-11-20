@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Maintenance context of the shared FacilityDetail (impl-maintenance P2; design-maintenance §6; Resources.js), checked
     through check#Record before it reads; facility writes are Mantle's FacilityServices.store#Facility and store#FacilityFeature
     (FACILITY_EDIT), called by the screens after that check. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="FacilityDetail" allow-remote="false" read-only="true">
         <description>FacilityDetail's Maintenance context: the facility's header (type, organization by its owner or nearest
             owning ancestor, its parent only when the user reads it, its own or inherited time zone, capacity and booking,

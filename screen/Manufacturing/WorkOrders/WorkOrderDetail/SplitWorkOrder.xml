@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     at the same method date). Confirm: split#ProductionOrder at the reviewed preview, its operation key made at the first step,
     so a second submit answers the same work orders, then the new work order opens. For planners (PRODUCTION_PLAN); a
     completing backorder also needs PRODUCTION_SUPERVISE. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Split" default-menu-include="false">
     <parameter name="workEffortId"/>
     <parameter name="step"/>

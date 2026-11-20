@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     create#IntakeRequest with the token the route gives (the token parameter, whatever the request says), which checks the token
     again and every field, limits how often the form takes requests and answers only the request's number; nothing else is read
     here. The web protection's request-form rate limit (MoquiConf.xml) holds a client to a few posts a minute. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         require-authentication="false" default-menu-include="false" default-menu-title="Send a request" render-modes="vue,qvue,tui" server-static="vue,qvue">
 
     <!-- Send: the form's fields and its files (contentFile, one or several) -->

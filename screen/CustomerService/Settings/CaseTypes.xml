@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     the organization offers it for cases (ironstone.customerservice.ConfigurationServices.get#ServiceSettings), and Edit over
     mantle.request.SupportCaseServices.save#ServiceRequestType from now: service-enabled (a customer's request of the type
     with no category goes into its default queue and is a case), the customer label, the default queue and priority. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Case types" default-menu-index="4">
     <parameter name="organizationPartyId"/>
     <transition name="chooseOrganization">

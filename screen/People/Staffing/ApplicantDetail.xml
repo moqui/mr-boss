@@ -33,7 +33,7 @@ along with this software (see the LICENSE.md file). If not, see
     editors, Nov 12, 2026): a recruiter changes its time, length, place or note (change#Interview) and cancels it (cancel#Interview)
     on its row here, and Commons' EventDetail shows it read-only. Its invitations go once the change commits (People follow-up 1,
     F358); a failed send shows on its row to its recruiters, with Send again (send#InterviewInvitations; follow-up 1 review). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Applicant" default-menu-include="false">
     <parameter name="employmentApplicationId"/>
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>

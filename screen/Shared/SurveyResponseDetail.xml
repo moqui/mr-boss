@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     impl-marketing P12: a registration with publication scope (Marketing's, mantle.marketing.MarketingFormServices.get#Response) shows a
     response submitted to one of its publications: the answers with the form as of submission, the publication, the respondent as the
     service names them, how it came, the date and the score; no case, no follow-up. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Survey response" default-menu-include="false">
     <parameter name="formResponseId"/>
     <always-actions>

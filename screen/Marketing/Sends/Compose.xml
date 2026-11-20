@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     P22: a text message send (channel SMS) has one text and its variables, with its characters, encoding, segments and the profile's
     cost estimate (get#Send smsEstimate); no subject, body or attachment; its preview is the text as the person gets it, with the
     opt-out line, and its test goes to a number of the test list. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Compose" default-menu-include="false">
     <parameter name="campaignSendId" required="true"/>
     <parameter name="samplePartyId"/>

@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The reports of IronStone Projects (design-projects.md §11; impl-projects.md P9), over mantle.work.ProjectReportServices, which reads
     only the projects, time and money the user may see. Here: the parameters' options and the charts' m-chart configuration with its
     terminal twin (style-guide §3.12, §5.1: series colors in the brand order, read from the CSS variables at render time). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="ChartConfig" allow-remote="false">
         <description>

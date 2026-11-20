@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     SatisfactionResults, ResponseDetail, §9 FeedbackForms, FeedbackFormDetail, ServiceDefaults; Feedback.js): scoped by
     AccessServices (the user's organizations; SatisfactionResults for service management). The forms, the delivery policy,
     the invitations and the follow-up are Mantle's mantle.request.CaseFeedbackServices, which the screens call after these. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="FeedbackForms" allow-remote="false">
         <description>The feedback forms of one of the user's settings organizations (design FeedbackForms FeedbackFormList):
             name, purpose, state (draft, published, changes to publish), version and since when, the rating's scale, whether

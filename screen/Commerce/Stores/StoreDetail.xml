@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.commerce.ContextServices.check#Record (another organization's, an unassigned one for a store-limited staff
     member, and a forged id are not available alike), then read and saved through mantle.product.StoreAdminServices, which
     checks the permission and the store's organization again. A reader sees the same tabs without their actions. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Store" default-menu-include="false">
     <parameter name="productStoreId" required="true"/>
 

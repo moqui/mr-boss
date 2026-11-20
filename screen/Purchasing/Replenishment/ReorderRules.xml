@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     (ReorderFind and ReorderRuleList), SuggestLevels and PlanSchedule, the files of ReorderRules/. Every rule is a
     ProductFacility row kept through Warehouse's store#ProductFacilityPolicy (CX-FACILITY-POLICY); the schedule is the
     shared supply plan's (store#PlanSchedule). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reorder rules" default-menu-index="2">
     <subscreens default-item="Rules" always-use-full-path="true"/>
     <widgets>

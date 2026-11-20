@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     ones kept for provenance. New procedure for an author (WORK_PROCESS_EDIT): a draft, optionally cloned from another procedure
     (new ids, no approval copied). Use procedure for a planner or supervisor on an approved procedure in effect opens New work order
     with it chosen. A planner without the procedure read sees the procedures new work may use. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Procedures" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

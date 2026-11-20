@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     notes are read only by those get#RecordLinkInfo lets see the record: an account's where the reader's organization filters
     reach it (found through mantle.party.UserAccountOrganization, Mantle's identity scope), a group's by an ADMIN_ACCESS_VIEW
     holder (impl-admin F75, the P4 follow-up). Nothing is filed until the user submits. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Log as note" default-menu-include="false">
     <parameter name="entityName"/>
     <parameter name="recordId"/>

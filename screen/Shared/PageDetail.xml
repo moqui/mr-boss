@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     available. impl-marketing P15: a registration with a review (Marketing's) shows its state at the text version, Request review for an
     author and Review (approve or refuse) for an approver, through the services the registration names; publishing does not wait for
     it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Page" default-menu-include="false">
     <parameter name="sitePageId" required="true"/>
     <!-- the page for the tabs, which the client loads on their own (their actions run without this screen's) -->

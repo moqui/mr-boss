@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     none (MANTLE_ACTIVE_ORG) leaves every plant of every organization. Capabilities are the Mantle permissions the
     services check. Disabled artifact authorization widens nothing here. No entity filter covers WorkEffort (F3), so a
     run, operation or routing is checked by its owner and facility here, and by the Mantle verb again. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="define" noun="Parameters" type="interface">
         <description>The in-parameters the Manufacturing app services share; each service declares what it returns.</description>
         <in-parameters>

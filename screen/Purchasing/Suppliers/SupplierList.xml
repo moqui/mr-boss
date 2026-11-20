@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     the existing Supplier360 before mantle.party.SupplierServices.create#Supplier makes one (owned by the organization, in
     the Supplier role, Pending where the buying policy requires approval), and the bulk buyer and category changes of the
     selected suppliers (bulk#SupplierChanges), a result per supplier. Creating and changing need SUPPLIER_PROFILE_EDIT. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Suppliers" default-menu-index="1">
     <parameter name="organizationPartyId"/>
     <parameter name="text"/>

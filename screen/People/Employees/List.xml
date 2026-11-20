@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     private contact, identification or pay, which the service leaves out. The CSV export is the same projection, every row the
     search finds up to the service's cap. Each person opens Employee360. P6: Hire employee, the one primary, for an HR officer
     (the wizards' grant, BOSS_PPL_EMPLOYMENT), and each row's department (its assignment's). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Employees" default-menu-index="1" menu-image="sym_o_badge" menu-image-type="icon">
     <parameter name="term"/>
     <parameter name="organizationPartyId"/>

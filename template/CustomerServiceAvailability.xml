@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     - serviceAvailabilityChoices: the product and facility drop-downs (AccessServices.get#Choices: products, facilities).
     - CustomerServiceStockAtDate: StockAtDate's find in the Customer Service context (crosscut §3.26 Customer Service row):
       product, customer-serving facility, from and as of; no location, lot or owner; then the Places and History tabs. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="serviceAvailabilityChoices" read-only="true">
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.get#Choices" in-map="context" out-map="found"/>

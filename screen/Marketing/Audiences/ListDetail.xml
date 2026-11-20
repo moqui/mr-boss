@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     P7: a public offer's PASS site and opening interval),
     Members (every membership state, filtered, each opening MemberDetail, addresses masked) and Templates (the dated bindings, Bind,
     End). Every change is Mantle's guarded audience service at the revision read. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="List" default-menu-include="false">
     <parameter name="contactListId" required="true"/>
     <parameter name="memberStatus"/>

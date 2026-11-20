@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     a record room's record (the theme value STRT_RECORD_VISIBLE_SERVICE, which BOSS seeds as
     mantle.party.CommunicationServices.get#RecordLinkInfo with checkOnly). A chat message read directly (create from a message)
     is read after get#RoomAccess says the user may read its room. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="RecordLookup">
         <implements service="org.moqui.comms.ProviderInterfaces.record#Lookup"/>

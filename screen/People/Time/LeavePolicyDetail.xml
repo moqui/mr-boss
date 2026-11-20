@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     (store#BlockedInterval: approved leave is not cancelled), runs the accrual (run#Accrual: what is due posts once, a second run
     posts nothing), opens Allocations for it and closes it (no new assignment from then; posted entries kept). Each write names the
     revision read. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Leave policy" default-menu-include="false">
     <parameter name="leavePolicyId"/>
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>

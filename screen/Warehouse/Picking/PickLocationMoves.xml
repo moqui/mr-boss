@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     asset, a quantity and the pick face). Every move is the move guard, move#Stock (STOCK_MOVE): a reservation moves with
     its stock, the location must be open, held stock stays held. Reads are
     ironstone.warehouse.PickingServices.get#PickFaceNeeds. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pick-face moves" default-menu-index="4">
     <parameter name="facilityId"/>
     <transition-include name="pickFaceMove" location="component://mr-boss/template/WarehousePickParts.xml"/>

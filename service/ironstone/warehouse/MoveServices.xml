@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     choose from in one of the user's facilities, the asset being moved, a production run's staging context and the user's
     recent moves. The moves are mantle.shipment.WarehouseTaskServices' guarded entry points, which the screens call after
     ironstone.warehouse.AccessServices.check#Record with the move capability. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="MoveContext" allow-remote="false">
         <description>MoveSelect, MoveContents and MoveConfirm: in the given facility (refused outside the user's scope,
             FACILITY_UNAVAILABLE), the stock with something on hand at a location, in a container or of a product (and lot),

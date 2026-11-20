@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
       a drop-down's options with their email or phone.
     - bulkCases: one change on the selected cases (CaseServices.apply#CaseBatch), its result per case in the message. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="choices" read-only="true">
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.get#Choices" in-map="context" out-map="found"/>

@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     so it is opted out of AI as the rates are (IronStone People PE-21, the user's call of Nov 12, 2026; impl-people P25 review): the
     Cost card and column, and the margin and margin % that give it back from the billable value, with the chart that draws them; an
     agent's render shows "Not shared with AI" there. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Profitability" default-menu-index="6" menu-image="sym_o_trending_up" menu-image-type="icon">
 
     <parameter name="fromDate"/>

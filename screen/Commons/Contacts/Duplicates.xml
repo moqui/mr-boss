@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     side, the field-level choice, Merge) or is marked Not a duplicate (mark#PartyNotDuplicate). Personal contacts never
     appear: the duplicate services skip them and the pairs are directory parties only. For contact admins (the CONTACT_ADMIN
     permission: BOSS_CONTACT_ADMIN or ADMIN). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Duplicates" default-menu-index="3" menu-image="sym_o_content_copy" menu-image-type="icon">
 
     <parameter name="reason"/>

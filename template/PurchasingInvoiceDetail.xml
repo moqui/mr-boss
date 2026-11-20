@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     receipts the bill bills; the payments for a finance reader (withheld otherwise) and the documents. Finance holds,
     approves and pays the bill in Accounting. billChoices is Shared/InvoiceMatch's Purchasing drop-down. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <!-- the Purchasing drop-downs of a shared bill screen (InvoiceMatch's purchase orders), under a name of their own -->
     <transition name="billChoices" read-only="true">
         <actions>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     NewPurchaseRequest (New purchase request: mantle.request.RequestServices.create#PurchaseRequest, for the groups that file
     requests; it opens the draft in RequestDetail to add its lines); and, for a buyer, Source the selected requests, which
     opens RequestSourcing with them. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Purchase requests" default-menu-index="1">
     <parameter name="view"/>
     <parameter name="statusId"/>

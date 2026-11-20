@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     after it when asked: move#TimelineItem), Add dependency (waits for, with a lag) and Remove dependency. Each dialog reloads this
     container (background-reload-id), so it works in WorkItems' Timeline and in ProjectDetail's Plan tab alike. Dragging bars stays
     the browser's; an item opens its detail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Timeline" default-menu-include="false">
 
     <parameter name="rootWorkEffortId"/>

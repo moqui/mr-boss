@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     ChannelSessions (P6) lists the
     calls, chats and mail of the cases and customers. Every
     Customer Service user, each list limited to the cases of their queues and those assigned to them. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Cases" default-menu-index="2" menu-image="sym_o_flag" menu-image-type="icon">
     <subscreens default-item="Cases" always-use-full-path="true">
         <subscreens-item name="CaseDetail" location="component://mr-boss/screen/Shared/RequestDetail.xml" menu-include="false"/>

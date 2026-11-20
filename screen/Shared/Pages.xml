@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     Marketing mount serves the user's organizations, no policy role or template, its contentEdit both editing and publishing);
     mantle.public.ThemeServices.find#SitePages and store#SitePage, with the registration's app, check the permission and the
     site's store or organization again. The Forum's guidelines and about pages are the site's own (PASS Sites) and are not listed. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pages" default-menu-index="1">
     <parameter name="siteId"/>
     <parameter name="term"/>

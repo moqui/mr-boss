@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     impl-purchasing P13): the supplier's purchase agreements and templates with the user's organizations, with their status,
     validity, limit, released and remaining value (withheld from a user who may not see amounts), each opening Purchasing's
     AgreementDetail, from ironstone.purchasing.AgreementServices.find#Agreements. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Agreements" default-menu-index="9">
     <condition>
         <expression>appRoot == 'Purchasing'</expression>

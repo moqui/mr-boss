@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     equipment now and who held it, each opening their Employee360 under Maintenance; Change custodian (change#MaintenanceCustody)
     for a holder of MAINTENANCE_RESOURCE_EDIT: the role's holders end and the new one starts at the date given, now or earlier,
     and People's rule then completes a separation's return task. Renders nothing outside Maintenance. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Assignments" default-menu-index="3">
     <parameter name="assetId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>

@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     rotated; the triage assignee and the default request type; ironstone.projects.ProjectRequestServices get#ProjectIntake,
     save#ProjectIntake, change#IntakeForm). The Billing box comes with P8; components with the plan items of P4. Service: ironstone.projects.ProjectServices get#ProjectSettingsInfo, save#ProjectGeneral, save#ProjectSettingValues,
     set#ProjectTemplateFlag, set#ProjectStatus, delete#EmptyProject. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="13" menu-image="sym_o_settings" menu-image-type="icon">
 
     <transition name="saveGeneral">

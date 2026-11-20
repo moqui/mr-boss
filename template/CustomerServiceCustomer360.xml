@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     with the customer's name, kind and owner (a shared customer says so: only the user's organizations' records show, F74),
     the key numbers (open cases, open orders, open invoices, held orders, each linking to its tab), New case for a case
     editor, the contact record and the order lookup, then the tabs. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="CustomerServiceCustomer" condition="appRoot == 'CustomerService'">
             <widgets>

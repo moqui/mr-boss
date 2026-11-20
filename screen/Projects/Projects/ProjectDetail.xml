@@ -30,7 +30,7 @@ along with this software (see the LICENSE.md file). If not, see
     its totals, impl-projects.md P6b), Money (11, ProjectDetail/Money: the budget, billing, milestone shares, invoices and order of the
     project for those who manage money, impl-projects.md P8b), Files (12) and Settings (13, managers, BOSS_PROJECTS_MANAGERS); the
     Modules box of Settings keeps which are on (WstModules). A project the user may not see is "not available". -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Project" default-menu-include="false">
 
     <parameter name="workEffortId" required="true"/>

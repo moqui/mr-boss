@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.shipment.WarehouseTaskServices.correct#LotMetadata (an extension of the expiry needs the quality manager's lot
     expiry permission and releases no quarantine), and the lot's corrections are listed with their old and new values
     (ironstone.warehouse.AdjustmentServices.get#LotCorrections). An expired or near-expiry lot's stock offers Scrap (P6). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Lots" default-menu-index="3">
     <parameter name="lotId"/>
     <parameter name="text"/>

@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     they manage or (with SALES_TEAM_VIEW) a team or the organization; the team's members' forecasts below it for its manager's review,
     never added to it; product and category allocations reconciled to the forecast. Mantle checks every read and write again and
     names the revision read. Nothing is added across currencies. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Forecast" default-menu-index="3">
     <parameter name="organizationPartyId"/>
     <parameter name="internalPartyId"/>

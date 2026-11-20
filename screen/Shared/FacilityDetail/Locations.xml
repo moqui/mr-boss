@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     administrator adds and edits locations, sets a type's status, and closes a location (Mantle's close#FacilityLocation,
     which refuses while stock or open work is there, naming each) or reopens it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Locations"
         default-menu-index="3">
     <parameter name="facilityId"/>

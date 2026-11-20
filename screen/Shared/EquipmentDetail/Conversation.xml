@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- EquipmentDetail's Conversation tab under Maintenance (impl-maintenance P2, F82): the equipment's messages and activity log
     (chatter on the Asset record, which Maintenance's root serves for equipment its check admits). Renders nothing outside
     Maintenance. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Conversation" default-menu-index="8">
     <parameter name="assetId"/>
     <actions>

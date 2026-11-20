@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
     Changes box lists the order's changes and More offers New change, opening OrderChangeDetail), each without a link until P14 mounts ShipmentDetail and
     InvoiceDetail; History; Chatter and Files. Follow-up 5: Overview's Ships from (the part's facility, the seller's default when it was
     made) and More's Change ships from, on a quote draft and on an order while nothing is reserved or shipped. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="salesChoices" read-only="true">
         <actions>
             <service-call name="ironstone.sales.ContextServices.get#Choices" out-map="found"

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     queue, Edit, End) over mantle.request.SupportCaseServices.save#ServiceQueue: a category the organization owns with its
     effective-dated service row (offered types, visibility, responsible team, fallback assignee). Saving starts a row from
     now and ends the one it replaces; End refuses a queue new cases still go to. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Queues" default-menu-index="2">
     <parameter name="organizationPartyId"/>
     <transition name="chooseOrganization">

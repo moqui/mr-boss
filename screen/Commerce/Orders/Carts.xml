@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     the customer (a guest's cart shows "Guest", never an invented identity), lines, value, activity, its Shop checkout's
     phase and its state (active; abandoned: inactive past the store's delay with no live checkout; checking out; placement
     waiting; a staff cart made by Order again). Recovery is P10's. A row opens CartDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Carts" default-menu-index="2">
     <parameter name="productStoreId"/>
     <parameter name="term"/>

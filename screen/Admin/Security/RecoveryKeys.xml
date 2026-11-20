@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     Commons/Vault.qvue in its recoveryView, on the same session and transitions as Commons › Vault; every step is the
     framework's vault services (/rest/s1/vault/recoveryKeys, /recoveries), which check VAULT_RECOVERY and a recent sign-in
     whatever opens this screen. Every member of a vault is told of a recovery's start and end by the framework. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Recovery keys" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_key" menu-image-type="icon">
 
 

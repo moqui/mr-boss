@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     CloseSolicitation (close#QuoteRequest): the quotes left, cancelled as Not awarded, the regret notice reviewed (its
     message and each recipient) and sent with a result per recipient, the uncovered demand left for the next run, the RFQ
     completed. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Award" default-menu-include="false">
     <parameter name="requestId" required="true"/>
     <parameter name="allocationsText"/>

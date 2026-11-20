@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     scan, the quality checklist and certificate prints, and their drop-downs. Each runs the Manufacturing scope and its record
     check before Mantle's mantle.product.QualityServices reads, which check their permission and organization again. The
     writes are the Mantle verbs, called by the screens' transitions after AccessServices.check#Record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="QualityGates" allow-remote="false">
         <description>A run's quality gates as WorkOrderDetail's Quality tab shows them: each gate (in-process on its
             operation, final on its output) with its template as of the release, sample, state, the inspection that decides

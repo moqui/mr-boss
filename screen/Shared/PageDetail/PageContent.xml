@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.public.ThemeServices.store#SitePage (COMMERCE_THEME_EDIT and the site's store; the page space's restrictUpdate keeps
     every other writer out, F52). The live page changes only when the Publication tab publishes a version. The terminal and
     the plain browser view are PageText, a form of the same save. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Content" default-menu-index="1" render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">
     <transition name="setup" method="get" read-only="true">
         <actions><script><![CDATA[

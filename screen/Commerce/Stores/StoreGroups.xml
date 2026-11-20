@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     group's GroupEdit (description and type), Members (its organization's stores, dated) and Parties (staff of the
     organization, dated), each saved by store#StoreGroup. Groups select stores for reports and bulk work; they share no
     settings, carts, currency totals or promotions. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Store groups" default-menu-index="2">
     <parameter name="productStoreGroupId"/>
     <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>

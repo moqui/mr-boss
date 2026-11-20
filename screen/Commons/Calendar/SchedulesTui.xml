@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     capacity, each opening ResourceDetail, and the bookings of the day (date, else today), each opening its event when the
     user may see it. The same services as Schedules.qvue (ScheduleServices get#Resources and get#ResourceBookings). Booking
     by a click or a drag on the grid is the browser's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Rooms and equipment" default-menu-include="false">
 
     <parameter name="date"/>

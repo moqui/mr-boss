@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     naming each refused one; P8 (BulkWork): it assigns a team and technicians, or a planned window, to each of them on its own
     (act#MaintenanceWorkOrders assign and schedule over schedule#MaintenanceWorkOrder), the result counting the work orders done of
     those chosen and naming each refused one and each qualification warning. New work order for a planner or supervisor. No cost. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work orders" default-menu-index="1">
     <parameter name="savedFind"/>
     <parameter name="text"/>

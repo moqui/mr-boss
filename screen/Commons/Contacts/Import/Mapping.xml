@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     goes back to the preset's mapping. The step form has a field per column, col_0 to col_99 (a step's form is one form-single,
     and its fields are fixed in the screen): a file with more columns keeps the preset's mapping for the rest. saveMapping
     keeps the mapping in the import's draft. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Mapping" default-menu-index="2" server-static="qvt" menu-image="sym_o_merge_type" menu-image-type="icon">
 
     <parameter name="importId"/>

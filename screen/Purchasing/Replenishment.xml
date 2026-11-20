@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     (the rules, SuggestLevels and PlanSchedule), and Products' shared InventoryAvailability with the Purchasing context
     (Summary, Projection and Policy; crosscut §3.7), opened from a reorder rule with its product and facility, so not in the
     menu. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Replenishment" default-menu-index="8" menu-image="sym_o_autorenew" menu-image-type="icon">
     <subscreens default-item="SupplyPlanning" always-use-full-path="true">
         <subscreens-item name="SupplyPlanning" location="component://mr-boss/screen/Shared/SupplyPlanning.xml"

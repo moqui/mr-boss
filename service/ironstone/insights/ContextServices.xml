@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     affordance, never a source. Disabled artifact authorization widens nothing here. P4 adds search#Records, the palette's
     dashboards and saved reports (Registry.js); P10 adds get#Settings and store#Settings, the organization's analytics defaults
     (Settings.js; design §11 Settings). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Context" allow-remote="false">
         <description>Check that the user may open Insights and resolve their context: the capabilities (the INSIGHTS_* permissions
             and whether the copied report screens open), the organization choices (theirs, or every internal organization for the

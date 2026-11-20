@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     why); and Correct (a correction in force over
     the outage kept). With resourceUnavailabilityId its correction history shows. Open to a work or resource reader; Mantle checks
     every action again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Downtime" default-menu-index="3">
     <parameter name="assetId"/>
     <parameter name="facilityId"/>

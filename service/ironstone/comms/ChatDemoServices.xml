@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The chat demo (impl-drawers-commons.md M10): john.doe's rooms, so Comms Chat, the tray's Chat tab and Chatter's Discuss
     show and test with content. data/BossChatDemoData.xml calls load#ChatDemo. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="load" noun="ChatDemo" authenticate="anonymous-all" allow-remote="false">
         <description>

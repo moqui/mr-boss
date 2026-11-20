@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     sends only it. A notice left sending (its email's outcome unknown) is settled as sent or failed with a note
     (resolve#DunningNotice). Dunning runs are the only scheduled reminders: Mantle's past-due email job stays paused. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Dunning"
         default-menu-index="5">
     <parameter name="organizationPartyId"/>

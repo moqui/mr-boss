@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     Rename of the organization's own) with NewWorkType (an Enumeration of WorkType, WktpOrg and a number). MyTime, QuickTime,
     TimeEntries and the import offer these. Service: ironstone.projects.TimeServices get# and store#TimeSettings, change#WorkTypes,
     create#WorkType. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Time" default-menu-index="5" server-static="qvt" menu-image="sym_o_work_history" menu-image-type="icon">
 
     <transition name="savePolicy">

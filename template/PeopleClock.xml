@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     employment only chooses among the user's own). A screen includes the transition by name (transition-include clock) and the
     section (section-include Clock), and reads myClock in its actions. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="clock">
         <actions>
             <service-call name="mantle.humanres.AttendanceServices.record#Punch" out-map="punched"

@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     with its review threads, a .qvue). A merge request the user may not view is "not available". Without git hosting in the
     build it says so. A client contact (clientUser; impl-projects.md P10b) reads a merge request of a repository its project
     shares: no primary action and only the checkout commands in More (the services give it no right to change it). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Merge request" default-menu-include="false">
 
     <parameter name="mergeRequestId" required="true"/>

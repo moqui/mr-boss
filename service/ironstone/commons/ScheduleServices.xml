@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     (WetEvent) with a WorkEffortFacility or WorkEffortAssetAssign row whose status mantle.work.EventServices.book#Resource sets
     by the resource's policy (its approvers, the role BookingApprover: requested until one approves, in Maintenance; booked at
     once without). Each resource's bookings are read on their own: one that fails is logged and named in failedSources. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="Resources">
         <description>The bookable resources, rooms then equipment, narrowed by type (room, equipment or all), text (name, site)

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     BOSS_PROJECT_TEAM, with the managers' screens (WorkItems/Import, Billing, Settings) denied to the team, so their menu
     entries are absent for it (§1.2); and for BOSS_PROJECT_CLIENT, the client contacts (impl-projects.md P10), under the
     BOSS_PROJECT_CLIENT filter set with the internal screens and every write denied (BOSS_PROJECTS_INTERNAL). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Projects" menu-image="sym_o_assignment" menu-image-type="icon">
 
     <always-actions>

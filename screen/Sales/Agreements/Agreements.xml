@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     organizations), paged in the query, with the saved lists Open, Active, Expiring, Drafts, Ended and Templates; found by name or id,
     organization, customer and dates. Each row opens AgreementDetail with its customer, organization, dates, state and an expiry
     badge. New agreement (from terms or a template) for a holder of SALES_AGREEMENT_EDIT; create#SalesAgreement checks again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Agreements" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

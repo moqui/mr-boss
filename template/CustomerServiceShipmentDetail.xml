@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     copy, packages, the orders and returns it carries, the linked cases, and a delivery update to copy into the case's reply
     (the reply is sent from CaseDetail, on the case's conversation). No pick, pack, ship or receive here: a return's receipt
     is ReturnDetail's (P9). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="CustomerServiceShipment" condition="appRoot == 'CustomerService'">
             <widgets>

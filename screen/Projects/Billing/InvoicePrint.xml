@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     vendor, the client, the dates and terms, the lines and the total, and the time behind each line when the project keeps time detail
     on its invoices), every value escaped; under /fop the same as a PDF, and the attachment of the email Send makes. A sibling of
     InvoiceDetail, so the page has none of the detail's header; in another render mode it links to the printed page. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Invoice print" default-menu-include="false">
 
     <parameter name="invoiceId" required="true"/>

@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
       facility, organization, product and day to value (the screen shows Accounting's results after it, with financial
       read), and for a user without it the quantity reports instead. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="reportChoices" read-only="true">
         <actions>
             <service-call name="ironstone.warehouse.ReportServices.get#ReportChoices" in-map="context" out-map="found"/>

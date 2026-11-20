@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     a double submit answers the first. Picks, short picks, put backs and finishing a shipment need pick; the wave, a load's
     edits, finishing a load and a new outgoing shipment need the pick supervisor's loadEdit; a pick-face move needs move. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="pickingChoices" read-only="true">
         <actions>
             <service-call name="ironstone.warehouse.PickingServices.get#PickingChoices" out-map="choiceOut"

@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     Retry a known retryable failure (retry#Recipients). The boxes: Recipient (topic, when selected, the address masked without
     MARKETING_AUDIENCE_VIEW, the consent snapshot, the reason of a skip, a resolution), Attempts (the ledger's, in order, never an
     address in an error) and the receipts. No token or body is shown. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Recipient" default-menu-include="false">
     <parameter name="campaignRecipientId" required="true"/>
     <transition-include name="reconcileRecipient" location="component://mr-boss/template/MarketingSends.xml"/>

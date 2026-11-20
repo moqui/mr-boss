@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     excluded orders with their reason and shortfall) and LoadCreate (create#ShipmentLoadsForOrders with the page's operation
     key and the previewed groups; each group is checked again under its locks and answers its own result, a failed group
     named and the others created). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Create picklists" default-menu-index="2">
     <parameter name="facilityId"/>
     <parameter name="orderIds"/>

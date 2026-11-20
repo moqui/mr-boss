@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     administrator's, as the rest of Settings (BOSS_PPL_SETTINGS); an HR editor sets the clocking default from Who clocks. The other
     preferences of design §12 link to their own editors (leave policies, holidays, approval rules, checklists): Settings links to
     domain editors rather than arbitrary settings. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Preferences" default-menu-index="5">
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/PeopleParts.xml"/>

@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     Conversation and Files (the root admits a request the user sees). Decline shows whom it tells before it is confirmed (preview).
     A chargeable repair's warranty claim (Customer Service's) shows its customer and its lines' products and quantities with Create
     quote, and nothing else of the claim. No case or SLA actions. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="SalesQuoteRequest" condition="appRoot == 'Sales'">
             <widgets>

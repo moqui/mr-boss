@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     create#PurchaseOrder, for a buyer; it opens the draft in OrderDetail); and the selected orders' ApprovePurchaseOrders (a
     purchase approver's decide#PurchaseApproval) and ClosePurchaseOrders (a buyer's close#PurchaseRemainders with a reason),
     each with a result per order (bulk#PurchaseOrderActions). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Purchase orders" default-menu-index="1">
     <parameter name="view"/>
     <parameter name="statusId"/>

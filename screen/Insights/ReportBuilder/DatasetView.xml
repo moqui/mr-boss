@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     viewer reads through the engine's query with the dataset's row filter, to the cap, recorded through audit#Export. Every
     row passes the dataset's row filter in the engine, so a reader of one organization sees and exports only its rows. The
     range, when the request names none, is Insights' (reportPolicy.range). The screen has no other transition. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Preview" default-menu-include="false">
     <parameter name="datasetId"/>
     <parameter name="from"/>

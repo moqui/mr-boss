@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.product.StoreAdminServices.store#StoreParty: a person who works for the store's organization, from a date; End).
     A current row limits that person to their stores and grants no permission (impl-commerce §4). Customers' party rows are
     never listed or written here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Staff" default-menu-index="4">
     <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
     <transition name="saveStaff">

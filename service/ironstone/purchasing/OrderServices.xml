@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     call the Mantle writes (mantle.order.PurchaseServices: create, lines, place, cancel, clone, decide#PurchaseApproval;
     mantle.order.OrderServices: send#PurchaseOrder, get#PurchaseOrderPrint, hold#Order, release#OrderHold,
     close#PurchaseRemainders, accept#ServiceItem) after AccessServices.check#Record. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="PurchaseOrders" allow-remote="false">
         <description>One page of the purchase orders of the user's organizations (quotes are Sourcing's), newest first, by view
             (draft, approval, unsent, open, late, held, closed; P6: unbilled, an order with an accepted receipt no bill covers), status, supplier, facility, organization and text (order, name,

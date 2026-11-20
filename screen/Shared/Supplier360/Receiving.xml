@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     organizations with what is outstanding and late, the supplier's receipts at their facilities with what was accepted and
     rejected, the rejections with their reasons (the quality evidence), and the organizations' returns to it; no price.
     Read by Supplier360's always-actions (ironstone.warehouse.ReceiptServices.get#SupplierReceiving). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Receiving" default-menu-index="4">
     <condition>
         <expression>appRoot == 'Warehouse'</expression>

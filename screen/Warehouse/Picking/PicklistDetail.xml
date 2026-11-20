@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     line's own bin wins, F18; edit#ShipmentLoadMember sets the right one), carrier, due day, quantities and readiness, Add
     order or shipment and Take off (validated: nothing picked); LoadPeople (pickers and supervisors, WorkEffortParty) and
     LoadEquipment (carts and equipment of the facility, WorkEffortAssetAssign) through store#ShipmentLoadAssignment. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Picklist" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
     <transition-include name="pickingChoices" location="component://mr-boss/template/WarehousePickParts.xml"/>

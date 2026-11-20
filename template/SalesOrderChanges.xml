@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     sales scope, posted to OrderChangeDetail's saveChange (mantle.order.OrderChangeServices.save#OrderChange, which admits the change
     operator and the order's editor for these kinds and checks each kind's fields), and its choices (the order's lines, the
     customer's addresses, carriers, products) through Sales' get#Choices. Included by Shared/OrderChangeDetail.xml. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="salesChangeChoices" read-only="true">
         <actions>
             <service-call name="ironstone.sales.ContextServices.get#Choices" out-map="found"

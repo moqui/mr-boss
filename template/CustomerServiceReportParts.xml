@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     screen's exportCsv transition with the same parameters (the screen sets exportParameters), which the service audits.
     ReportOrganization and ReportPeriod: the find fields every report has (organization, queue, team; from, through, as of,
     grouping), as form fields the screens' find forms include. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="ReportFrame" condition="answer?.asOfText">
             <widgets>

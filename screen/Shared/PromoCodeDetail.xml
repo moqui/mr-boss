@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     never deleted, so its usage stays readable. Read and saved through mantle.product.StorePromotionServices (get#PromoCode,
     store#PromoCode, store#PromoCodeParty, expire#PromoCode, find#PromotionUses). The context is the mounting app's registration (service/ironstone/shared/PromotionApps.js; impl-marketing
     P19, F22): Commerce's and Marketing's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Promotion code" default-menu-include="false">
     <parameter name="promoCodeId" required="true"/>
     <always-actions>

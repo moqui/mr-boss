@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     out, D15), with NewBillOfMaterials (store#Bom), Clone revision (clone#Bom: a new method of the product as drafts), the
     legacy import of a product's PatMfgBom rows (import#LegacyBom) and the CSV import with its preview (import#BomCsv: each
     version atomic, a bad one named, kits left out). Nothing here releases; release is the approver's, on the method. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="BOMs" default-menu-include="false">
     <parameter name="organizationPartyId"/>
     <parameter name="text"/>

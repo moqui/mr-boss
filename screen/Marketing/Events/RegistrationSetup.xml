@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     product's own price; capacity, sales dates, places an order may take), its questions (a published registration form of the
     organization, whom they are for, the consent text) and its notices (trigger, template, whom, kind). Each write is Mantle's guarded
     service at the revision read; the event itself is changed in the calendar, under the calendar's own rules. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Registration setup" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
     <parameter name="registrationPolicyId"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     data cannot write as rows, the wiki pages of the content demo, through the wiki services, (P16) the webinar's call link, and
     (follow-up 3) the events' dates and (follow-up 6) the campaigns' and the December send's dates relative to the load. Data, not a
     business service: only data loading or a system administrator runs it. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="load" noun="ContentDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
         <description>Idempotent Marketing content demo for ORG_ZIZI_RETAIL, by fixed ID: the garden blog space (Marketing Author writes
             it) with three posts in the garden news category, two with a published page version and one a draft, the first linked to

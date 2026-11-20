@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     the default subscreen Tasks/List, so /qapps/Commons/Tasks is the list and Tasks/TaskDetail shows in its place: the client
     loads each screen of the path on its own, so a screen with subscreens cannot tell which one is shown. TaskDetail is the shared
     work item detail (screen/Shared/WorkItemDetail.xml) in the Commons context (design-projects.md §5 "Per-app context"). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Tasks" default-menu-index="4" menu-image="sym_o_task_alt" menu-image-type="icon">
     <subscreens default-item="List">
         <subscreens-item name="TaskDetail" location="component://mr-boss/screen/Shared/WorkItemDetail.xml" menu-include="false"/>

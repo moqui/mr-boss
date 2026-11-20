@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     The boxes: the registration (buyer, source, the terms it accepted in that revision's words, its order and payment, the refund,
     the entry code's revision, never the code), its answers (the shared response page) and its history (every action with who,
     when, the states, the code revision and the reason: check-ins from P18 join it). Each write is Mantle's at the revision read. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Registration" default-menu-include="false">
     <parameter name="registrationId" required="true"/>
     <transition-include name="confirmRegistration" location="component://mr-boss/template/MarketingRegistrations.xml"/>

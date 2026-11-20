@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     Opening a row opens its bill, run, budget exception or order, where the decision is made (approve#Payable, with an
     override reason for a Stop; release#InvoiceHold; release#CreditHold), which marks the notification read. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Approvals"
         menu-image="sym_o_approval"
         menu-image-type="icon"

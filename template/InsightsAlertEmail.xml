@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     impl-insights P8, design-insights §8.1): the rule's name, the state of each series told with the recipient's own permitted
     value (the recipient was checked to read what the owner reads), and a link to AlertDetail in Insights, which shows their
     own state after sign-in. No data and Error are said as not known. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <parameter name="title"/>
     <parameter name="link"/>
     <parameter name="events"/>

@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     system's own screens; TransportHealth, the Transport checks of org.moqui.admin.ReadinessServices.get#Readiness the
     viewer may read (the same providers Health shows). Nothing is configured here. Reading needs ADMIN_CONNECTION_VIEW,
     ADMIN_SETTINGS_VIEW or ADMIN_OPERATION_VIEW, checked by the service. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Protocols" menu-image="sym_o_lan" menu-image-type="icon">
 
     <actions>

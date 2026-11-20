@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- AssetDetail's reservations (Reservations): the orders the asset is allocated to, with what is still to issue and what
     was found unavailable; reservations change only through their order and pick flows. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reservations" default-menu-index="2">
     <parameter name="assetId" required="true"/>
     <actions>

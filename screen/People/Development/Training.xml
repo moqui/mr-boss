@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     and assessment form, a published form of the training assessment purpose under People's Forms) and the Courses box (New course,
     Change, End: store#TrainingClass, what passing grants and for how long). Every People user's and a self-service employee's (the
     area's own grant, BOSS_PPL_DEVELOPMENT); what each reads is Mantle's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Training" default-menu-index="3" menu-image="sym_o_cast_for_education" menu-image-type="icon">
     <parameter name="show"/>
     <parameter name="trainingClassId"/>

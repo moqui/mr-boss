@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     who added it, or one the owning app's rule lets change the record's files (get#ContentType's recordRule, catalogCanChange),
     else one holding a grant on the record's entity themselves (ec.artifactExecution.isPermittedOwn, never the app root's
     inherited grant every user of the root has) or a system administrator (SEC-BAP-95). -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="ContentType" allow-remote="false">
         <description>How a record type keeps its files: the content entity of get#RecordLinkInfo (info, its contentEntity map)
             with its primary key fields, the enumeration type of its type field, and the Mantle service that creates a row and

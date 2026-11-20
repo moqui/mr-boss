@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     InviteStaff. When the instance cannot send mail, an invitation or a resend comes back here with revealInvitationId, and
     reveal#InvitationLink makes and shows the acceptance link this once, as text with a copy button, not a link; the showing is
     audited and the link is never stored or shown again (impl-admin §4). Bulk invite is Data import's (P15). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Invitations" menu-image="sym_o_forward_to_inbox" menu-image-type="icon">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

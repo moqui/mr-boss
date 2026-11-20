@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     All), each row with its RMA number, the customer's reference, order, assignee, expiry, the quantities authorized, received,
     rejected and settled, and its status; and the batch for a return authorizer, Authorize or Cancel the selected returns, each
     in its own transaction with a result per return (apply#ReturnBatch). New return opens NewReturn. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Returns" default-menu-index="1">
     <parameter name="view"/>
     <parameter name="text"/>

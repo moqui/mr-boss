@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     billed by currency). New order for a holder of SALES_ORDER_EDIT (create#SalesOrder checks the organization, customer, opportunity
     and store); OrderBatch on the rows' selection approves or closes remainders, each order on its own through Mantle's guarded verbs
     (apply#SalesOrderBatch: approve#Order's credit check runs for each). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Orders" default-menu-index="1">
     <parameter name="text"/>
     <parameter name="organizationPartyId"/>

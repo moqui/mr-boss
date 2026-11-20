@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     transition runs each source as the app root that registered it (Commons), so the Commons authorization and its entity
     filters (MANTLE_ACTIVE_ORG, MANTLE_PRIVATE_CONTACT) apply to the finds here. A source that fails is logged by the shell
     and its group left out. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- the screens of the records, by DataDocument and by entity -->
     <service verb="get" noun="RecordLink">

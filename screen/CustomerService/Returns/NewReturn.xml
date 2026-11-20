@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     the policy preview: the policy row, the expiry an authorization now would have, the fee, the exceptions and who decides),
     then mantle.order.ReturnPolicyServices.submit#CustomerReturn, which opens the return in ReturnDetail. The return is
     requested here, not authorized; Save as draft keeps it created. The quick create's Request return. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="New return" default-menu-index="2">
     <parameter name="customerPartyId"/>
     <parameter name="orderId"/>

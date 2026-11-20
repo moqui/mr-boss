@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     with the user's organizations (a shared customer's other organizations' left out, F74), newest first, each with its RMA
     number, the customer's reference, order, quantities, expiry and status, opening ReturnDetail; Request return opens NewReturn
     for the customer. For the Returns area's groups (ironstone.customerservice.ReturnServices.get#CustomerReturns). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Returns" default-menu-index="4">
     <parameter name="customerPartyId"/>
     <condition><expression>appRoot == 'CustomerService' &amp;&amp; !!customerService?.capabilities?.returns</expression></condition>

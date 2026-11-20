@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     - startTimer, stopTimer, recordTime: the technician's own time (start#, stop#MaintenanceTimer, record#MaintenanceTime);
     - LifecycleActionRow: one action (actionRow; formPrefix names its form): why it is refused, or its form. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="createWorkOrder">
         <actions>
             <service-call name="mantle.work.MaintenanceServices.create#MaintenanceWorkOrder" out-map="created"

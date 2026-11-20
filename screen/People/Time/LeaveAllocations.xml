@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     negative limit), with the count and total; Allocate (the one primary, allocate#Leave) posts it once under the preview's
     operation key, each employee in their own transaction, the refusals named. A balance is never overwritten: a correction is a
     reasoned adjustment. HR's (BOSS_PPL_LEAVE), under Time rather than Settings, as Holidays. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Allocations" default-menu-index="11" menu-image="sym_o_playlist_add" menu-image-type="icon">
     <parameter name="leavePolicyId"/>
     <parameter name="partyRelationshipId"/>

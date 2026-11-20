@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     (create#WikiSpace: database files, or a git repository in the database or on disk; a read-only mirror of a git URL for
     administrators) and Clone (clone#WikiSpace, with or without the history), each opening the new space; a row's settings are
     SpaceDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Spaces" default-menu-index="1" menu-image="sym_o_domain" menu-image-type="icon">
 
     <transition name="createSpace">

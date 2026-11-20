@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     through the root's sharedLinks.
     - NewSegmentForm: the Segments screen's form (design §4 NewSegment). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <!-- a new segment: its SegmentDetail, else the list again -->
     <transition name="createSegment">
         <actions>

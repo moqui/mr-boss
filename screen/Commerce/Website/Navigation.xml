@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     private BOSS address, a reserved path, a loop and a redirect off the site are refused by
     mantle.public.ThemeServices.store#SiteNavigation and again by publish#SiteNavigation. The merchandiser edits
     (COMMERCE_MERCHANDISE), the publisher publishes (COMMERCE_PUBLISH); each service checks the site's store again. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Navigation" default-menu-index="2">
     <parameter name="siteId"/>
     <parameter name="navigationId"/>

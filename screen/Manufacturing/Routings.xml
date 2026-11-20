@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     Find list, NewRouting, CSV import), the shared RoutingDetail with the Manufacturing context (copy operations, the release
     request, notes) and OperationTemplates, the operation catalogue with its published instructions. Open to every
     Manufacturing user; the routing services check METHOD_VIEW, METHOD_EDIT and METHOD_APPROVE. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Routings" default-menu-index="5" menu-image="sym_o_route" menu-image-type="icon">
     <subscreens default-item="Find" always-use-full-path="true">
         <subscreens-item name="Find" menu-title="Routings" menu-index="1"

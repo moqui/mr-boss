@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     names its place, resolved here from its route key (fixRoute, the keys Admin.js mountRoutes gives Admin too); a ready check
     needs none. The organization chosen, or each of the administrator's organizations that uses Sales. P9 adds the defaults and the
     commercial revision, P13 the public app, P19 the scheduled jobs, the mail templates and the approval rules (impl-sales P19). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Readiness" default-menu-index="1"
         default-menu-include="ec.user.hasPermission('SALES_CONFIGURE')">
     <parameter name="organizationPartyId"/>

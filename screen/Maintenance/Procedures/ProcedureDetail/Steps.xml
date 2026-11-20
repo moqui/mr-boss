@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     requirements and its estimate. For an author: Add step, and on each step Up and Down (move#ProcessStep, the keyboard and terminal
     reorder), Edit (store#ProcessStep with its response policy), Waits for (store#ProcessDependency: steps of this procedure; a loop is
     refused) and Remove from new work (its policy ended). A reader sees the same rows without the actions. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Steps" default-menu-index="2">
     <parameter name="workEffortId"/>
     <transition-include name="choices" location="component://mr-boss/template/MaintenanceParts.xml"/>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     Mantle's mantle.request.SupportCaseServices (save#CaseTemplate, save#CaseTemplateField, save#CaseTemplateCondition,
     end#CaseTemplatePart, validate#CaseTemplate, validate#TemplateValues, get#CaseTemplate, get#CaseTemplateValues), which the
     screens call after these. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="find" noun="Templates" allow-remote="false">
         <description>The case templates of one of the user's settings organizations (design CaseTemplates TemplateList): name,
             state (draft, published, changes to publish), the queues using each, its fields by audience, first published and

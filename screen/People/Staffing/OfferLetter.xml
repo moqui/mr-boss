@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     Letters.js, every value escaped; the pay terms for a payroll reader alone). An issued offer's letter is the one stored when it was
     issued, opened from OfferDetail and never rendered again: here it is not shown. A sibling of OfferDetail, out of the menu; in
     another render mode it links to the printed page. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Offer letter" default-menu-include="false">
     <parameter name="employmentOfferId" required="true"/>
     <actions><script><![CDATA[

@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     leads, qualified, won) and the open deals behind the measures. The pipeline dataset's funnel panel (report/boss-sales-pipeline.json,
     the deals of the viewer's scope now) through report-embed, as Home shows it, so the screen declares no server-static template (F66). A report
     reader's (SALES_REPORT_VIEW), as the Reports area is; Mantle checks again. CSV and XLSX of each list; print. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Pipeline analysis" default-menu-index="4" menu-image="sym_o_filter_alt" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="teamPartyId"/>

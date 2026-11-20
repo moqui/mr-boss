@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     ends where the change starts) or ends one, each with a reason (store#CountSchedule after check#Record of the facility
     with policyManage); Counts' Due list reads them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Count schedule" default-menu-index="5">
     <parameter name="includeHistory"/>
     <transition-include name="countChoices" location="component://mr-boss/template/WarehouseCountParts.xml"/>

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     and failed readings, accepted, rejected and held quantity, failure rate, re-inspections, results and the average
     hours to disposition (QualityRows), with totals per unit. The export holds the parameters and columns. Every
     Manufacturing reader reads it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quality" default-menu-index="6">
     <parameter name="organizationPartyId"/>
     <parameter name="facilityId"/>

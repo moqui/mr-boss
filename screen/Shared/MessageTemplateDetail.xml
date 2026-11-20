@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     the preview through the locked renderer with sample values (never a recipient's data); publication at a date with a reason, which
     ends the content in effect then and authorizes no send; the end of the template; the published contents. Every read and write is
     mantle.party.MessageServices (MESSAGE_TEMPLATE_VIEW reads, MESSAGE_TEMPLATE_EDIT writes); the mounting root adds nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Template" default-menu-include="false">
     <parameter name="messageTemplateId" required="true"/>
     <parameter name="sampleText"/>

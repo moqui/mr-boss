@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     ADMIN_CONNECTION_VIEW and ADMIN_CONNECTION_MANAGE (connections, message types), ADMIN_OPERATION_VIEW and
     ADMIN_OPERATION_MANAGE (system messages and their recovery) whatever opens the screens, and Mantle's
     store#PaymentGatewayOrganization the organization too. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Integrations" default-menu-index="6" menu-image="sym_o_hub" menu-image-type="icon">
     <subscreens default-item="Connections" always-use-full-path="true">
         <!-- the operations operator opens no connection: the area starts at the messages -->

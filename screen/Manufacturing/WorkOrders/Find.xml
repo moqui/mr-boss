@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     calendar from the estimated start to the due date. The Selection releases, holds or cancels the selected runs after a
     confirmation (batch#ProductionAction), naming each run that is blocked or failed. New work order opens NewWorkOrder for a
     planner. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work orders" default-menu-include="false">
     <parameter name="text"/>
     <parameter name="facilityId"/>

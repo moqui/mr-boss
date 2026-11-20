@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     What Commons does with a request is the requester's and the assignee's part: comment, submit a draft, edit a draft, cancel
     one's own, reassign when one is the assignee, add a task and files; queues, review and resolution are Customer
     Service's. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="RequestAccess" allow-remote="false">
         <description>Whether the current user may see a request and what part the user has in it: found, visible

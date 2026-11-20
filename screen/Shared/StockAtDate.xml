@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     P3): product, customer-serving facility and the days only (no location, lot or owner), over
     ironstone.customerservice.AvailabilityServices.get#StockAtDate; its find is template/CustomerServiceAvailability.xml's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Stock at date"
         default-menu-index="2">
     <parameter name="asOfDate"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     SupportApp.js): ContactDetail's Invite to support and ServiceDefaults' Support mount settings, scoped by Customer
     Service's access here; Mantle's mantle.party.ExternalAccessServices.invite#Contact and
     mantle.request.SupportCaseServices.save#SupportAppSetting do the work and check their permissions. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="SupportInvite" allow-remote="false">
         <description>What ContactDetail's Invite to support offers for a contact of a customer the user serves: whether the user
             may invite (SUPPORT_CONTACT_INVITE, an organization of theirs with a published Support site, an address of the

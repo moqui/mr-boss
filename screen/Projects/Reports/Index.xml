@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The report index (design-projects.md §11 Reports; style-guide §3.9 Settings layout): a card per report with a line about it and
     its link; Profitability and Utilization only for the Projects managers and ADMIN, who may open them (BOSS_PROJECTS_MANAGERS). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="All reports" default-menu-include="false" server-static="qvt">
     <actions><script><![CDATA[
         isManager = ec.user.isInGroup('BOSS_PROJECT_MANAGER') || ec.user.isInGroup('ADMIN')

@@ -31,7 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
     are permissions, not group names (TIME_ENTRY_RATE for money, TIMESHEET_APPROVE for everyone's time: the projects a Projects
     manager sees); and the people the user may open are their own, the time keepers of the projects they manage and their live
     reports (mantle.work.TimesheetServices.get#LineReports), whose weeks they approve under the organization's line policy. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <!-- ========== The mount's links (People P10) ========== -->
 

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     its maintenance summary and, for a user with financial read only, its book. Assigning it to a load comes with the pick
     lists; maintenance is the Maintenance app's; its files come with the asset files. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="WarehouseEquipment" condition="recordFound &amp;&amp; appRoot == 'Warehouse'">
             <widgets>

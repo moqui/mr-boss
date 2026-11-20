@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Warehouse Home (design-warehouse §3). Each operation queue is counted by the phase that builds its task list; until
     then its counts are null, which Home shows as unavailable, never as zero. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="Home" allow-remote="false">
         <description>The operation queues of the user's selected facility that their capabilities reach, each with its
             ready, waiting, late and backorder counts (null where the queue is not counted), the work assigned to them (the

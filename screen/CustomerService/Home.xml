@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     and the shortcuts (New case, Request return) arrive with their phases, each for the roles the dashboard's panels name.
     P14: each rate's change against the previous period of the same length, and for a user who works queued cases the My and
     Team split (their own cases beside their queues'), all counted in the query. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="lookupType"/>
     <parameter name="lookupId"/>

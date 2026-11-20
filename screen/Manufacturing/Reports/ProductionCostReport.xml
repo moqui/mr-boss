@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     variance, GL transactions and the frozen estimate (CostRows; the money columns are hidden for others, on screen and
     in the export, since the service leaves them out); totals per unit and per currency. Every Manufacturing reader
     reads it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Cost" default-menu-index="7">
     <parameter name="organizationPartyId"/>
     <parameter name="facilityId"/>

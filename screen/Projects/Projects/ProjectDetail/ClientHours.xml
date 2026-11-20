@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     (Time/TimeEntries) is refused a client. Mounted as the tab ClientHours ("Hours") by a moqui.screen.SubscreensItem row of
     data/BossSetupData.xml limited to BOSS_PROJECT_CLIENT, which replaces this file's own item, so no internal user opens or lists
     it; the project is the parent's workEffortId (ProjectDetail checks the client sees it). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Hours" default-menu-index="10" default-menu-include="false">
 
     <actions>

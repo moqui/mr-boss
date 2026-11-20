@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     start, complete, cancel, assign, set the project, priority, due, make or link work items, convert to a project) is for
     those who may work in the request's project (a member, or one who manages it), and for a request with no project for
     the Projects team and managers. The Commons slice of the same requests is service/ironstone/commons/RequestServices.xml. -->
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="get" noun="ProjectRequestAccess" allow-remote="false">
         <description>Whether the user may see a request in Projects (as get#RecordLinkInfo has it) and triage it (canTriage:

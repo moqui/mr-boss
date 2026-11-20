@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     quote context, template/SalesOrderDetail.xml); P11 shows the area in the menu with Orders (OrderFind, OrderList with its saved
     lists, Awaiting approval, NewSalesOrder, OrderBatch) and gives OrderDetail its sales-order context; P14 adds Changes (OrderChanges) and mounts the shared OrderChangeDetail,
     ShipmentDetail and InvoiceDetail in Sales' context. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Orders" default-menu-index="5" menu-image="sym_o_receipt_long" menu-image-type="icon">
     <subscreens default-item="Orders" always-use-full-path="true">
         <!-- P11: the order list, a Sales reader's; Mantle's find#SalesOrders scopes it -->

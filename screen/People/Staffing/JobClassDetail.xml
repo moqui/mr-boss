@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     revision) and removes requirements (store#JobRequirement: a removed one is ended and kept) and ends the class (End job class):
     an ended class keeps its positions and is offered for no new one. The skills matrix opens on the class's people. The assist-prompt "Draft a job description" (design §1.4) waits for its skill file (P16). No pay band is part
     of it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Job class" default-menu-include="false">
     <parameter name="emplPositionClassId"/>
     <!-- the profile: Mantle checks the editor, the title, the work types and the revision read -->

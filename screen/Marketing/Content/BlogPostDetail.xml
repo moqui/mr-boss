@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     published version is what a public blog shows), Categories (add and remove, each checking the space's write right before the
     write; the legacy sent date shown, never this app's record of a send) and Campaign use (its links to campaigns, each with its
     sends; a link's ContentDetail drafts a newsletter). A campaign send never sets the publish date or the page's published version. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Blog post" default-menu-include="false">
     <parameter name="wikiBlogId" required="true"/>
     <transition-include name="choices" location="component://mr-boss/template/MarketingParts.xml"/>

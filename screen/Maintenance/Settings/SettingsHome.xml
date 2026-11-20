@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     a form or tab its phase adds. A user without MAINTENANCE_SETTINGS_EDIT who opens it (ADMIN's areas pass every grant) is told the
     settings are the administrator's. P18: Lookups and Readiness are tabs; the settings other apps keep for Maintenance (the expense
     mapping and labor costing rates in Accounting, booking rules and approvers in Scheduling) are listed with where they are kept. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Settings" default-menu-index="1"
         default-menu-include="ec.user.hasPermission('MAINTENANCE_SETTINGS_EDIT')">
     <parameter name="organizationPartyId"/>

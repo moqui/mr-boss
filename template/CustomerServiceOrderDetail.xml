@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     credit hold's type and reason for a credit reader only; only Accounting releases it); the items with what shipped (prices,
     the total and the stored PDF for a price or finance reader), the shipments with tracking, the invoices (amounts for a
     finance reader), the linked cases, the confirmation and its sends, and the status history. Returns (P9) and order changes (P10) come with their phases; no commercial edit here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="serviceChoices" read-only="true">
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.get#Choices" in-map="context" out-map="found"/>

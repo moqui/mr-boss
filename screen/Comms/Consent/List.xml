@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     a short note, and every transition checks again. Marketing mounts it at Marketing/Audiences/Consent (impl-marketing P3, F50): a
     Marketing consent editor sees and changes their organizations' lists and contacts only, and records consent for one of them
     (ironstone.comms.ConsentServices decides). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Consent" default-menu-include="false">
 
     <parameter name="text"/>

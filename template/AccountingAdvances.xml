@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     queue, then a payment run), never from here; Apply applies a paid advance to one of the employee's claims approved for payment
     (apply#Advance, through ExpensePosting's transition), which needs PAYMENT_EDIT in the organization, which Mantle checks. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <widgets>
         <section name="EmployeeAdvances" condition="view == 'advances'">
             <widgets>

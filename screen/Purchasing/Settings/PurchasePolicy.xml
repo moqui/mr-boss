@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     PolicyDependencies: Accounting's match and budget policies and Warehouse's receiving read only with their owners' links
     (ironstone.purchasing.SettingsServices.get#PurchasingSettings). mantle.order.PurchaseServices.get#PurchasePolicy reads
     it and store#PurchasePolicy makes a dated change of one form's fields (PURCHASE_POLICY_EDIT). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Buying policy" default-menu-index="2">
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>

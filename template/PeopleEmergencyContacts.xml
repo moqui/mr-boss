@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
       fromDateText, revision);
     - canEditContacts: whether the user may add, change and end them (Mantle checks again). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="storeEmergencyContact">
         <actions>
             <service-call name="mantle.humanres.PeopleServices.store#EmergencyContact" out-map="stored"

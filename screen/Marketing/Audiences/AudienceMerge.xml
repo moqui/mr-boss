@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     merge with a reason (merge#Lists names the preview's key, so lists changed since are refused; a second submit answers the first).
     Membership links only: never a party merge; the source rows stay. Hidden from the Audiences tabs; opened from Lists and
     ListDetail. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Merge" default-menu-include="false">
     <parameter name="contactListId"/>
     <parameter name="sourceListIds"/>

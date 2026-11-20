@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     runCheck, through org.moqui.admin.ConfigurationServices.test#Protocol, which checks ADMIN_CONNECTION_MANAGE. The
     readiness and support summary (Operations › SupportSummary, P19) is linked by the mount's routes (Admin.js
     mountRoutes), for a reader of the overview. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Server configuration" menu-image="sym_o_dns" menu-image-type="icon">
     <parameter name="protocolKey"/>
 

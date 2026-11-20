@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     (template/AdminRegistry.js); and requestRefresh, Admin's own, which refuses an organization outside the user's scope
     before the framework's request#Refresh runs the registered operation. For the reader, the operations operator and the
     administrator (BOSS_ADM_OPERATIONS). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Health" menu-image="sym_o_health_and_safety" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="healthGroupEnumId"/>

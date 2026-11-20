@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     "Campaign calendar" projected CalDAV collection on phones (CalendarProjection MarketingCampaigns, read only). The terminal: an agenda
     of the next four weeks (CalendarTui). Every Marketing reader's; the calendar shortcut of design §1.2 (Home's Calendar and the key
     g k), hidden from the menu. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Calendar" default-menu-include="false" menu-image="sym_o_calendar_month" menu-image-type="icon"
         render-modes="vue,qvue,tui,html,qvt" server-static="vue,qvue">
 

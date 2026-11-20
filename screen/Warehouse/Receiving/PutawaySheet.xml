@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     it is, its quantity and the suggested destination or why none fits, in the queue's order (age, then the destination's
     pick sequence), with a column to tick. Printed from Putaway as html-print
     (/apps/Warehouse/Receiving/PutawaySheet?renderMode=html-print); printing posts nothing. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Putaway sheet" default-menu-include="false">
     <parameter name="facilityId" required="true"/>
     <actions>

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     Mantle services themselves, which the screens call after ironstone.warehouse.AccessServices.check#Record with the
     capability. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="get" noun="InspectionList" allow-remote="false">
         <description>Inspections: the inspections of the user's facilities (or the given one, refused outside the scope:
             FACILITY_UNAVAILABLE), open unless a status is given or openOnly is N, by product, inspector, source type and

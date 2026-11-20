@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     - LogCallForm: its form (the case chosen, or the one given as logRequestId), its drop-downs through CaseDetail's
       caseChoices transition (template/CustomerServiceCaseDetail.xml), which a screen showing it includes. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd">
     <transition name="logCaseCall">
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.check#Record"

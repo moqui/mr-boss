@@ -23,7 +23,7 @@ along with this software (see the LICENSE.md file). If not, see
     (transition#ProductionOrder complete, the supervisor, with Finish remainder and the material variance) and the supervisor's
     decisions on a loss or an overproduction waiting for approval (approve#ProductionException); and the output labels. Each
     form carries its own operation key, so a resubmit answers the first. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quantities" default-menu-index="5">
     <parameter name="workEffortId"/>
     <transition name="recordQuantity">

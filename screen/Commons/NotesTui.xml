@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     notes, pinned first, the note open (wikiPageId) with its text, and a form for a new note. The same services as Notes.qvue
     (KnowledgeServices get#NotesList, get#PageView with the same isMyNotes check as its note transition, create#Note), over the
     user's own notes space: another user's note is not found. Editing, tags, history and moving a note are the browser's. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Notes" default-menu-include="false">
 
     <parameter name="wikiPageId"/>

@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     product's stock in the user's facilities by facility, location, lot and status, held stock apart from available
     (ironstone.warehouse.InventoryServices.get#ProductStock). Relocate (impl-warehouse P5) moves the selected rows' assets to
     one location of the facility, each with its own result (template/WarehouseMoveParts.xml relocateAssets). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Locations and lots" default-menu-index="2">
     <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
     <transition-include name="relocateAssets" location="component://mr-boss/template/WarehouseMoveParts.xml"/>

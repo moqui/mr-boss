@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     delivered needs a receipt), bounces and complaints, and the engagement of the accepted recipients who allowed tracking (unique opens and
     clicks, automated fetches apart, conversions), each rate with its denominator; an experiment's variants beside. A report reader's;
     Mantle checks again. CSV of each list; print. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Delivery analysis" default-menu-index="2" menu-image="sym_o_outgoing_mail" menu-image-type="icon">
     <parameter name="organizationPartyId"/>
     <parameter name="fromDate"/>

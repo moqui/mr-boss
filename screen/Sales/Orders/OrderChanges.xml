@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     OrderChangeDetail under Sales. No copy of a proposal into a Sales table (design §6). New change chooses an order of the scope and
     opens OrderChangeDetail's proposal form. For the change operator, the sales approver and the manager (BOSS_SAL_CHANGES; Sales.js
     areas.changes). -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Changes" default-menu-index="2" default-menu-include="sales?.capabilities?.changes">
     <parameter name="orderId"/>
     <parameter name="customerPartyId"/>

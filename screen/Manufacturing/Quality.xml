@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     Templates (Warehouse's shared InspectionTemplates with the Manufacturing context) and ScrapLoss (P7); hidden from the
     menu, the shared QualityInspection with the Manufacturing context, InspectionStation (its operator mode at handheld
     density) and the quality checklist and certificate prints (P8). Each is a file of Quality/ or a subscreens-item here. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Quality" default-menu-index="7" menu-image="sym_o_verified" menu-image-type="icon">
     <subscreens default-item="Inspections" always-use-full-path="true">
         <!-- P8: Warehouse's shared inspection and templates with the Manufacturing context -->

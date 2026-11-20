@@ -31,7 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
       (db-form-include-drafts), in qvt and tui.
     Every save checks the purpose's permission in Mantle (SUPPORT_POLICY_EDIT for case feedback, PEOPLE_CONFIGURE for People's
     purposes); its dialogs show only to a user who may save. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Survey form" default-menu-include="false">
     <parameter name="formId"/>
     <!-- the mounting app's registration: the services each change calls (a request to a transition reads it too) -->

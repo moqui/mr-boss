@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     the action (create, update, or skip as a duplicate of a contact or an earlier row), the matched contact and the row's
     problems, with the counts; the first 200 rows are shown. The matches are among the contacts the user may see.
     confirmPreview notes the preview in the draft; the next step imports. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Preview" default-menu-index="4" server-static="qvt" menu-image="sym_o_visibility" menu-image-type="icon">
 
     <parameter name="importId"/>

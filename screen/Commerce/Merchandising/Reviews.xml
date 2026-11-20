@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     public reply (Reply: reply#Review, or its withdrawal). The store is checked by ironstone.commerce.ContextServices.check#Record,
     and each service checks the permission and the store's organization again. A review's text is the customer's: no editor
     changes it. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reviews" default-menu-index="5">
     <parameter name="productStoreId"/>
     <parameter name="productId"/>

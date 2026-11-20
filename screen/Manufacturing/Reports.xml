@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     MaterialReport, OperationPerformanceReport, LossReport, QualityReport, ProductionCostReport,
     BillOfMaterialsVarianceReport and PlanningReport. Open to every Manufacturing user; each report service decides what it
     shows (PRODUCTION_VIEW; money columns ACCOUNTING_VIEW, left out otherwise). Home's Kpis open them with their filters. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Reports" default-menu-index="12" menu-image="sym_o_assessment" menu-image-type="icon">
     <subscreens default-item="ReportIndex" always-use-full-path="true"/>
     <widgets>
