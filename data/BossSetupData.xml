@@ -4688,10 +4688,11 @@ along with this software (see the LICENSE.md file). If not, see
         (BOSS_INS_REPORT_TOOLS). -->
     <!-- The business-alert topic (design §8.1): private, in Notifications, where someone is expected to act; its message is
         the rule and series ids, the state and the recipient's own permitted value, sent to one user at a time. The engine's
-        ReportAlert topic (Updates) stays Tools' technical alerts'. -->
+        ReportAlert topic (Updates) stays Tools' technical alerts'. reportAlertTopic="Y" marks it a topic a business rule may
+        send to (SEC-TLS-106): without it a rule is refused at save (ALERT_TOPIC_UNAVAILABLE) and in-app recipients skipped. -->
     <moqui.security.user.NotificationTopic topic="InsightsBusinessAlert" inboxEnumId="NinNotifications" description="Business alerts"
             linkTemplate="/qapps/Insights/Alerts/AlertDetail?definitionId=${ruleId}" showAlert="Y" persistOnSend="Y"
-            receiveNotifications="Y" emailNotifications="N" isPrivate="Y" typeString="warning"/>
+            receiveNotifications="Y" emailNotifications="N" isPrivate="Y" typeString="warning" reportAlertTopic="Y"/>
     <!-- The message of an alert sent to a recipient's own account address: the state, the series and a link to AlertDetail -->
     <moqui.basic.email.EmailTemplate emailTemplateId="BOSS_INSIGHTS_ALERT" description="Insights business alert" emailServerId="SYSTEM"
             emailTypeEnumId="EMT_SCREEN_RENDER" bodyScreenLocation="component://mr-boss/template/InsightsAlertEmail.xml"
