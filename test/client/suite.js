@@ -2,6 +2,7 @@
 suite(
     [
         "NotesResponses",
+        "VaultLock",
         "ProjectsPlanningResponses",
         "ProjectsDiffState",
         "ProjectsTimeAsync",

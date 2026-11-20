@@ -40,7 +40,7 @@ Each is at `/qapps/<Name>` and has a design and a record of what is built in [`p
 | App | What it covers | |
 |---|---|---|
 | **Workspace** | | |
-| Commons | Contacts, calendar and schedules, tasks and requests, files, notes and knowledge, your account | [design](plan/design-drawers-commons.md) · [built](plan/impl-drawers-commons.md) |
+| Commons | Contacts, calendar and schedules, tasks and requests, files, notes and knowledge, a vault for passwords and private contacts, your account | [design](plan/design-drawers-commons.md) · [built](plan/impl-drawers-commons.md) |
 | Comms | Email, chat, calls, the conversation on every record, consent | [design](plan/design-drawers-commons.md) · [built](plan/impl-drawers-commons.md) |
 | **Customer-facing** | | |
 | Sales | Leads and opportunities, accounts and contacts, requests for quote, quotes and orders, customer agreements and prices, forecasts | [design](plan/design-sales.md) · [built](plan/impl-sales.md) |

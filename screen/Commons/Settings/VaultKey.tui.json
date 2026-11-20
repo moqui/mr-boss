@@ -1,0 +1,7 @@
+[
+  {
+    "t": "text",
+    "id": "VaultKeyTui",
+    "text": "Your vault key is set up and opened in the browser, in the desktop and mobile apps, or with moqui vault key init on your own computer: its passphrase never reaches the server."
+  }
+]

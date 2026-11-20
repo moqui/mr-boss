@@ -1,0 +1,1920 @@
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Commons Vault (Vault.xml; mr-moqui plans/Vault-Instances.md §3.1 to §3.12, V3), and the user's vault key under Settings
+    (Settings/VaultKey.xml shows this component too: keyView). The vaults of both locks in a column (a locked one shows its lock
+    and its item count, which is all the server knows), the open vault's items by type with a client-side search over names,
+    websites, tags and the fields that are not masked, and an item's page: its fields, a masked value shown only when asked for
+    (Show) or copied (cleared from the clipboard after boss/vault@clipboard-seconds), its websites, tags and notes, its history,
+    Edit, Send a copy, Copy to another vault and Delete. New vault asks for the lock: shared-key (opened by the user's vault
+    key, can be shared) or single-secret (§3.11: the warning in its exact words, how to keep the password or key, a password
+    typed twice and checked here, or a generated key whose last 8 characters are typed back, and the box "I have stored it
+    outside this server"). Members shows each member's key fingerprint (six words, computed in the worker from the key the
+    server gave), which the user compares by another channel before adding someone, before giving a member's changed key access
+    again, and before trusting a vault another user made. Removing a member rotates the vault key (and offers to re-encrypt every
+    item now). Items sent to the user are filed into a vault here. Import reads a Bitwarden JSON export, a KeePass XML or CSV
+    export, or an encrypted vault export, in the browser; Export writes an encrypted export file made here.
+
+    The session (window.BossVaultSession, one per page) holds the vault module's client and what is shown of the open vaults:
+    names, types, websites, tags and the fields that are not masked. Masked values are opened from the worker one item at a
+    time when asked for. Commons › Contacts reads the session's open contact items (Contacts/VaultContacts.qvue). Lock, the
+    idle time (boss/vault@idle-minutes, any use of this page counts) and closing the tab drop every key and all of it.
+    Inputs are plain q-inputs: no draft of a value is kept. -->
+<template><div class="boss-vault" @keydown.capture="touch" @pointerdown.capture="touch">
+    <div v-if="S.failed && !S.config" class="q-pa-lg text-center">
+        <q-icon name="sym_o_error" size="40px" color="negative"></q-icon>
+        <div class="text-h6 q-mt-sm">{{t('The vault could not start')}}</div>
+        <div class="text-body2 m-muted">{{S.failed}}</div>
+        <q-btn flat no-caps color="primary" class="q-mt-sm" :label="t('Try again')" @click="start"></q-btn>
+    </div>
+    <div v-else-if="!S.config || !S.personal" class="q-pa-md">
+        <q-skeleton type="text" width="30%" class="text-h5"></q-skeleton>
+        <q-skeleton type="rect" height="200px" class="q-mt-md"></q-skeleton>
+    </div>
+
+    <!-- ===== Settings › Vault key ===== -->
+    <template v-else-if="keyView">
+        <div class="row items-center q-mb-sm">
+            <div class="col text-h5">{{t('Vault key')}}</div>
+            <q-btn flat no-caps color="primary" icon="sym_o_encrypted" :label="t('Open the vault')" @click="go('/Commons/Vault')"></q-btn>
+        </div>
+        <div class="row q-col-gutter-md">
+            <div class="col-12 col-md-6"><q-card flat bordered><q-card-section>
+                <div class="text-subtitle1 text-weight-medium">{{t('Your vault key')}}</div>
+                <template v-if="!S.personal.hasKey">
+                    <div class="text-body2 q-mt-sm">{{t('Your vault key opens the vaults you share with others and lets people send you items. It is made in this browser under a key passphrase, which is not your sign-in password and never reaches the server.')}}</div>
+                    <q-btn unelevated no-caps color="primary" class="q-mt-md" icon="sym_o_key" :label="t('Set up your vault key')" @click="openSetup('new')"></q-btn>
+                </template>
+                <template v-else>
+                    <div class="text-caption m-muted q-mt-sm">{{t('Fingerprint')}}</div>
+                    <div class="text-h6 boss-vault-words">{{myWords || '…'}}</div>
+                    <div class="text-caption m-muted">{{t('Others compare these words with you before they share a vault with you or send you an item.')}}</div>
+                    <div class="row items-center q-gutter-sm q-mt-md">
+                        <q-chip dense square :class="S.unlocked ? 'm-tonal text-positive' : 'm-tonal text-grey-8'" :icon="S.unlocked ? 'sym_o_lock_open' : 'sym_o_lock'">{{S.unlocked ? t('Unlocked') : t('Locked')}}</q-chip>
+                        <q-btn v-if="!S.unlocked" unelevated no-caps color="primary" :label="t('Unlock')" @click="openUnlock(null)"></q-btn>
+                        <q-btn v-else unelevated no-caps class="m-btn-tonal" icon="sym_o_lock" :label="t('Lock')" @click="lockNow"></q-btn>
+                        <q-btn flat no-caps color="primary" :label="t('Change the passphrase')" @click="openChange"></q-btn>
+                        <q-btn flat dense round icon="more_horiz" :aria-label="t('More')"><q-menu auto-close><q-list dense style="min-width:240px">
+                            <q-item clickable @click="openRecover"><q-item-section avatar><q-icon name="sym_o_password"></q-icon></q-item-section><q-item-section>{{t('Use the recovery code')}}</q-item-section></q-item>
+                            <q-item clickable class="text-negative" @click="openSetup('replace')"><q-item-section avatar><q-icon name="sym_o_key_off" color="negative"></q-icon></q-item-section><q-item-section>{{t('Make a new key')}}</q-item-section></q-item>
+                        </q-list></q-menu></q-btn>
+                    </div>
+                </template>
+                <q-banner v-if="needsFactor" dense rounded class="q-mt-md m-tonal text-warning">{{t('Your vault key needs a sign-in with a second factor.')}}
+                    <template v-slot:action><q-btn flat dense no-caps color="primary" :label="t('Set one up in Account')" @click="go('/Commons/Settings/Account')"></q-btn></template></q-banner>
+            </q-card-section></q-card></div>
+
+            <div class="col-12 col-md-6"><q-card flat bordered><q-card-section>
+                <div class="text-subtitle1 text-weight-medium">{{t('Keys you checked')}}</div>
+                <div class="text-caption m-muted">{{t('The people whose key fingerprint you compared with them. A key that changes is compared again.')}}</div>
+                <div v-if="!S.unlocked && S.personal.hasKey" class="text-body2 m-muted q-mt-sm">{{t('Unlock your vault key to see them.')}}</div>
+                <q-list v-else-if="S.keyChecks.length" dense separator class="q-mt-sm">
+                    <q-item v-for="row in S.keyChecks" :key="row.keyCheckId || row.checked_key_id">
+                        <q-item-section><q-item-label>{{nameOf(row.checked_user_id)}}</q-item-label>
+                            <q-item-label caption class="boss-vault-words">{{checksWords[row.checked_key_id] || '…'}}</q-item-label></q-item-section>
+                        <q-item-section side><q-item-label caption>{{dateText(row.checked_at)}}</q-item-label></q-item-section>
+                    </q-item>
+                </q-list>
+                <div v-else class="text-body2 m-muted q-mt-sm">{{t('None yet.')}}</div>
+            </q-card-section></q-card></div>
+
+            <div class="col-12 col-md-6"><q-card flat bordered><q-card-section>
+                <div class="text-subtitle1 text-weight-medium">{{t('Devices that remember your key')}}</div>
+                <div class="text-body2 m-muted q-mt-sm">{{t('No device remembers your key. In the browser it stays open only in this tab, until the vault locks or the tab closes.')}}</div>
+            </q-card-section></q-card></div>
+        </div>
+    </template>
+
+    <!-- ===== the vault ===== -->
+    <template v-else>
+        <div class="row items-center no-wrap q-mb-sm q-gutter-x-sm">
+            <div class="col text-h5">{{t('Vault')}}</div>
+            <q-input v-if="openVaults.length && !phone" dense outlined clearable v-model="search" :placeholder="t('Search the open vaults')" style="width:280px" autocomplete="off">
+                <template v-slot:prepend><q-icon name="sym_o_search"></q-icon></template></q-input>
+            <q-btn unelevated no-caps :color="current && current.open && writable(current) ? 'primary' : undefined" :class="current && current.open && writable(current) ? '' : 'm-btn-tonal'"
+                    icon="sym_o_add" :label="current && current.open && writable(current) ? t('New item') : t('New vault')"
+                    @click="current && current.open && writable(current) ? openEdit(null) : openMake()"></q-btn>
+            <q-btn flat dense round icon="more_horiz" :aria-label="t('More')"><q-menu auto-close><q-list dense style="min-width:240px">
+                <q-item v-if="current && current.open && writable(current)" clickable @click="openMake"><q-item-section avatar><q-icon name="sym_o_add_box"></q-icon></q-item-section><q-item-section>{{t('New vault')}}</q-item-section></q-item>
+                <q-item clickable :disable="!writableOpen.length" @click="openImport"><q-item-section avatar><q-icon name="sym_o_upload_file"></q-icon></q-item-section><q-item-section>{{t('Import')}}</q-item-section></q-item>
+                <q-item clickable :disable="!openVaults.length" @click="openExport"><q-item-section avatar><q-icon name="sym_o_download"></q-icon></q-item-section><q-item-section>{{t('Export, encrypted')}}</q-item-section></q-item>
+                <q-item clickable @click="openDeliveries"><q-item-section avatar><q-icon name="sym_o_inbox"></q-icon></q-item-section><q-item-section>{{t('Sent to you')}}</q-item-section>
+                    <q-item-section v-if="S.deliveries.length" side><q-badge color="primary">{{S.deliveries.length}}</q-badge></q-item-section></q-item>
+                <q-item clickable @click="go('/Commons/Settings/VaultKey')"><q-item-section avatar><q-icon name="sym_o_key"></q-icon></q-item-section><q-item-section>{{t('Vault key')}}</q-item-section></q-item>
+                <q-item clickable @click="about = true"><q-item-section avatar><q-icon name="sym_o_info"></q-icon></q-item-section><q-item-section>{{t('What the server sees')}}</q-item-section></q-item>
+            </q-list></q-menu></q-btn>
+            <q-btn v-if="anyUnlocked" unelevated no-caps class="m-btn-tonal boss-vault-lock" icon="sym_o_lock" :label="phone ? '' : t('Lock')" @click="lockNow"><q-tooltip>{{t('Lock: forget every key in this tab')}}</q-tooltip></q-btn>
+        </div>
+        <q-input v-if="openVaults.length && phone" dense outlined clearable v-model="search" class="q-mb-sm" :placeholder="t('Search the open vaults')" autocomplete="off">
+            <template v-slot:prepend><q-icon name="sym_o_search"></q-icon></template></q-input>
+
+        <q-banner v-if="S.idleLocked" dense rounded class="q-mb-sm m-tonal text-grey-9 boss-vault-idle">
+            <template v-slot:avatar><q-icon name="sym_o_lock_clock"></q-icon></template>{{fill(t('The vault locked after {minutes} minutes without use.'), {minutes: S.config.idleMinutes})}}</q-banner>
+        <q-banner v-if="S.deliveries.length" dense rounded class="q-mb-sm m-tonal text-primary">
+            <template v-slot:avatar><q-icon name="sym_o_inbox"></q-icon></template>{{fill(t('{count} sent to you, to file into a vault'), {count: S.deliveries.length})}}
+            <template v-slot:action><q-btn flat dense no-caps color="primary" :label="t('See them')" @click="openDeliveries"></q-btn></template></q-banner>
+
+        <div class="row no-wrap items-start">
+            <!-- the vaults -->
+            <div v-if="wide || !current" :class="wide ? 'col-auto q-pr-md' : 'col-12'" :style="wide ? {width: '280px'} : {}">
+                <q-list bordered separator class="rounded-borders">
+                    <q-item v-for="v in S.vaults" :key="v.vaultId" clickable :class="current && current.vaultId === v.vaultId ? (dark ? 'bg-grey-9' : 'bg-blue-1') : ''" @click="selectVault(v.vaultId)">
+                        <q-item-section avatar><q-icon :name="v.open ? 'sym_o_lock_open' : 'sym_o_lock'" :color="v.open ? 'positive' : undefined"></q-icon></q-item-section>
+                        <q-item-section>
+                            <q-item-label class="ellipsis">{{v.open ? (v.name || t('Vault')) : t('Locked vault')}}</q-item-label>
+                            <q-item-label caption>{{lockText(v)}} · {{itemsText(itemCount(v))}}</q-item-label>
+                            <q-item-label v-if="reminder(v)" caption class="text-warning">{{t('Open it once to show its password is still kept')}}</q-item-label>
+                        </q-item-section>
+                    </q-item>
+                </q-list>
+                <div v-if="!S.vaults.length" class="text-center q-pa-lg">
+                    <q-icon name="sym_o_encrypted" size="40px" class="m-muted"></q-icon>
+                    <div class="text-body2 m-muted q-mt-sm">{{t('No vaults yet. A vault keeps passwords, notes, cards and private contacts under a key the server does not hold.')}}</div>
+                    <q-btn unelevated no-caps color="primary" class="q-mt-sm" :label="t('New vault')" @click="openMake"></q-btn>
+                </div>
+            </div>
+
+            <!-- the vault chosen -->
+            <div v-if="wide || current" class="col" style="min-width:0">
+                <div v-if="search && openVaults.length" class="boss-vault-results">
+                    <div class="text-subtitle2 q-mb-xs">{{fill(t('{count} found'), {count: results.length})}}</div>
+                    <q-list bordered separator class="rounded-borders">
+                        <q-item v-for="hit in results" :key="hit.vaultId + hit.item.id" clickable @click="selectItem(hit.vaultId, hit.item.id)">
+                            <q-item-section avatar><q-icon :name="iconOf(hit.item.type)"></q-icon></q-item-section>
+                            <q-item-section><q-item-label>{{hit.item.name}}</q-item-label><q-item-label caption>{{subtitle(hit.item)}} · {{vault(hit.vaultId).name}}</q-item-label></q-item-section>
+                        </q-item>
+                    </q-list>
+                    <div v-if="!results.length" class="text-body2 m-muted q-pa-md">{{t('Nothing matches in the open vaults')}}</div>
+                </div>
+                <div v-else-if="!current" class="text-center q-pa-xl m-muted">
+                    <q-icon name="sym_o_encrypted" size="48px"></q-icon>
+                    <div class="text-body1 q-mt-sm">{{S.vaults.length ? t('Choose a vault') : t('Make your first vault')}}</div>
+                </div>
+
+                <!-- locked -->
+                <div v-else-if="!current.open" class="boss-vault-locked q-pa-md">
+                    <q-btn v-if="!wide" flat dense round icon="arrow_back" class="q-mb-sm" @click="selectVault(null)"></q-btn>
+                    <div class="row items-center q-gutter-sm">
+                        <q-icon name="sym_o_lock" size="32px"></q-icon>
+                        <div class="text-h6">{{t('This vault is locked')}}</div>
+                    </div>
+                    <div class="text-body2 m-muted q-mt-xs">{{lockText(current)}} · {{itemsText(itemCount(current))}}</div>
+                    <div style="max-width:420px" class="q-mt-md">
+                        <template v-if="current.lockEnumId === SINGLE">
+                            <q-input :key="'secret-' + current.vaultId" v-model="unlockForm.secret" outlined dense :type="unlockForm.show ? 'text' : 'password'" autocomplete="off"
+                                    :label="current.secretKindEnumId === 'VsGenerated' ? t('The vault key') : t('The vault password')" @keyup.enter="openCurrent">
+                                <template v-slot:append><q-icon :name="unlockForm.show ? 'sym_o_visibility_off' : 'sym_o_visibility'" class="cursor-pointer" @click="unlockForm.show = !unlockForm.show"></q-icon></template></q-input>
+                        </template>
+                        <template v-else-if="!S.personal.hasKey">
+                            <div class="text-body2">{{t('A shared vault opens with your vault key. Set it up first.')}}</div>
+                            <q-btn flat no-caps color="primary" class="q-mt-xs" :label="t('Set up your vault key')" @click="go('/Commons/Settings/VaultKey')"></q-btn>
+                        </template>
+                        <template v-else-if="!S.unlocked">
+                            <q-input :key="'pass-' + current.vaultId" v-model="unlockForm.passphrase" outlined dense type="password" autocomplete="off" :label="t('Your vault key passphrase')" @keyup.enter="openCurrent"></q-input>
+                        </template>
+                        <div v-if="unlockForm.error" class="text-negative text-body2 q-mt-xs">{{unlockForm.error}}</div>
+                        <div v-if="unlockForm.check.length" class="q-mt-sm">
+                            <div class="text-body2">{{t('This vault\'s member list is signed by people whose key you have not compared yet. Compare one of them:')}}</div>
+                            <q-btn v-for="userId in unlockForm.check" :key="userId" flat no-caps color="primary" :label="fill(t('Compare {name}\'s key'), {name: nameOf(userId)})" @click="openCheck(userId, openCurrent)"></q-btn>
+                        </div>
+                        <q-btn v-if="current.lockEnumId === SINGLE || S.personal.hasKey" unelevated no-caps color="primary" class="q-mt-sm" :loading="unlockForm.busy" :label="t('Open')" @click="openCurrent"></q-btn>
+                    </div>
+                </div>
+
+                <!-- an item -->
+                <div v-else-if="currentItem" class="boss-vault-item">
+                    <div class="row items-start no-wrap q-mb-sm">
+                        <q-btn flat dense round icon="arrow_back" class="q-mr-xs" @click="selectItem(current.vaultId, null)"><q-tooltip>{{t('All items')}}</q-tooltip></q-btn>
+                        <q-icon :name="iconOf(currentItem.type)" size="28px" class="q-mr-sm q-mt-xs"></q-icon>
+                        <div class="col" style="min-width:0">
+                            <div class="text-h5 ellipsis">{{currentItem.name || t('Untitled')}}</div>
+                            <div class="text-caption m-muted">{{typeLabel(currentItem.type)}} · {{current.name}}<span v-if="currentItem.changed"> · {{t('Changed')}} {{dateText(currentItem.changed)}}</span></div>
+                        </div>
+                        <q-btn v-if="writable(current) && !currentItem.broken" unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_edit" :label="t('Edit')" @click="openEdit(currentItem)"></q-btn>
+                        <q-btn flat dense round icon="more_horiz" :aria-label="t('More')"><q-menu auto-close><q-list dense style="min-width:220px">
+                            <q-item clickable @click="openHistory"><q-item-section avatar><q-icon name="sym_o_history"></q-icon></q-item-section><q-item-section>{{t('History')}}</q-item-section></q-item>
+                            <q-item clickable :disable="!S.personal.hasKey || currentItem.broken" @click="openSend"><q-item-section avatar><q-icon name="sym_o_send"></q-icon></q-item-section><q-item-section>{{t('Send a copy')}}</q-item-section></q-item>
+                            <q-item clickable :disable="writableOpen.length < 2 || currentItem.broken" @click="openCopyTo"><q-item-section avatar><q-icon name="sym_o_content_copy"></q-icon></q-item-section><q-item-section>{{t('Copy to another vault')}}</q-item-section></q-item>
+                            <q-separator></q-separator>
+                            <q-item clickable :disable="!writable(current)" class="text-negative" @click="confirmDeleteItem"><q-item-section avatar><q-icon name="sym_o_delete" color="negative"></q-icon></q-item-section><q-item-section>{{t('Delete')}}</q-item-section></q-item>
+                        </q-list></q-menu></q-btn>
+                    </div>
+                    <q-banner v-if="currentItem.broken" dense rounded class="m-tonal text-negative q-mb-sm">{{t('This item does not open with this vault\'s key')}}: {{currentItem.broken}}</q-banner>
+                    <q-list v-else bordered separator class="rounded-borders">
+                        <q-item v-for="field in fieldsOf(currentItem)" :key="field.name" class="boss-vault-field" :data-field="field.name">
+                            <q-item-section>
+                                <q-item-label caption>{{field.label}}</q-item-label>
+                                <q-item-label v-if="!field.masked" :class="field.kind === 'multi-line' ? 'boss-vault-pre' : ''">
+                                    <a v-if="field.kind === 'url'" :href="safeUrl(field.value)" target="_blank" rel="noopener noreferrer">{{field.value}}</a><span v-else>{{field.value}}</span></q-item-label>
+                                <q-item-label v-else class="boss-vault-value" :class="field.kind === 'multi-line' && revealed[field.name] != null ? 'boss-vault-pre' : ''">{{revealed[field.name] != null ? revealed[field.name] : '••••••••••'}}</q-item-label>
+                            </q-item-section>
+                            <q-item-section side><div class="row no-wrap">
+                                <q-btn v-if="field.masked" flat dense round :icon="revealed[field.name] != null ? 'sym_o_visibility_off' : 'sym_o_visibility'" class="boss-vault-show"
+                                        :aria-label="revealed[field.name] != null ? t('Hide') : t('Show')" @click="toggleReveal(field)"><q-tooltip>{{revealed[field.name] != null ? t('Hide') : t('Show')}}</q-tooltip></q-btn>
+                                <q-btn flat dense round icon="sym_o_content_copy" :aria-label="t('Copy')" @click="copyField(field)"><q-tooltip>{{t('Copy')}}</q-tooltip></q-btn>
+                            </div></q-item-section>
+                        </q-item>
+                        <q-item v-if="currentItem.uris.length"><q-item-section><q-item-label caption>{{t('Websites')}}</q-item-label>
+                            <q-item-label v-for="uri in currentItem.uris" :key="uri"><a :href="safeUrl(uri)" target="_blank" rel="noopener noreferrer">{{uri}}</a></q-item-label></q-item-section></q-item>
+                        <q-item v-if="detail && detail.notes"><q-item-section><q-item-label caption>{{t('Notes')}}</q-item-label>
+                            <q-item-label class="boss-vault-pre">{{detail.notes}}</q-item-label></q-item-section></q-item>
+                    </q-list>
+                    <div v-if="currentItem.tags.length" class="row q-gutter-xs q-mt-sm">
+                        <q-chip v-for="tag in currentItem.tags" :key="tag" dense square icon="sym_o_label" class="m-tonal text-primary">{{tag}}</q-chip>
+                    </div>
+                </div>
+
+                <!-- the items of the vault -->
+                <div v-else class="boss-vault-items">
+                    <div class="row items-center no-wrap q-mb-sm">
+                        <q-btn v-if="!wide" flat dense round icon="arrow_back" class="q-mr-xs" @click="selectVault(null)"></q-btn>
+                        <div class="col" style="min-width:0">
+                            <div class="text-h6 ellipsis">{{current.name || t('Vault')}}</div>
+                            <div class="text-caption m-muted">{{lockText(current)}}<span v-if="current.lockEnumId === SHARED"> · {{current.memberList.length === 1 ? t('1 member') : fill(t('{count} members'), {count: current.memberList.length})}} · {{roleText(current.roleEnumId)}}</span></div>
+                        </div>
+                        <q-btn v-if="current.lockEnumId === SHARED" unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_group" :label="t('Members')" @click="openMembers"></q-btn>
+                        <q-btn flat dense round icon="more_horiz" :aria-label="t('More')"><q-menu auto-close><q-list dense style="min-width:220px">
+                            <q-item clickable :disable="!writable(current)" @click="openRename"><q-item-section avatar><q-icon name="sym_o_edit"></q-icon></q-item-section><q-item-section>{{t('Rename')}}</q-item-section></q-item>
+                            <q-separator></q-separator>
+                            <q-item clickable :disable="!manages(current)" class="text-negative" @click="confirmDeleteVault"><q-item-section avatar><q-icon name="sym_o_delete" color="negative"></q-icon></q-item-section><q-item-section>{{t('Delete the vault')}}</q-item-section></q-item>
+                        </q-list></q-menu></q-btn>
+                    </div>
+                    <q-banner v-if="current.warning" dense rounded class="m-tonal text-warning q-mb-sm">{{current.warning}}</q-banner>
+                    <div v-if="current.items.length" class="row q-gutter-xs q-mb-sm">
+                        <q-chip dense square clickable :class="!typeFilter ? 'm-tonal text-primary' : ''" @click="typeFilter = ''">{{t('All')}} · {{current.items.length}}</q-chip>
+                        <q-chip v-for="entry in typeCounts" :key="entry.id" dense square clickable :icon="iconOf(entry.id)" :class="typeFilter === entry.id ? 'm-tonal text-primary' : ''"
+                                @click="typeFilter = entry.id">{{entry.label}} · {{entry.count}}</q-chip>
+                    </div>
+                    <q-list v-if="shownItems.length" bordered separator class="rounded-borders">
+                        <q-item v-for="item in shownItems" :key="item.id" clickable class="boss-vault-row" :data-item="item.id" @click="selectItem(current.vaultId, item.id)">
+                            <q-item-section avatar><q-icon :name="iconOf(item.type)"></q-icon></q-item-section>
+                            <q-item-section><q-item-label class="ellipsis">{{item.name || t('Untitled')}}</q-item-label><q-item-label caption class="ellipsis">{{subtitle(item)}}</q-item-label></q-item-section>
+                        </q-item>
+                    </q-list>
+                    <div v-else class="text-center q-pa-lg">
+                        <q-icon name="sym_o_key" size="40px" class="m-muted"></q-icon>
+                        <div class="text-body2 m-muted q-mt-sm">{{t('No items yet. New item adds a login, a note, a card or a private contact; Import brings in an export of another password manager.')}}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- ===== dialogs ===== -->
+    <!-- a new item, or an item edited: the fields of its type -->
+    <m-dialog v-model="edit.open" :title="edit.item ? t('Edit the item') : t('New item')" width="620">
+        <div class="q-gutter-y-sm">
+            <q-select v-if="!edit.item" v-model="edit.type" outlined dense emit-value map-options :options="typeOptions" :label="t('Type')"></q-select>
+            <q-input v-model="edit.name" outlined dense autocomplete="off" :label="t('Name')"></q-input>
+            <template v-for="field in (typeOf(edit.type) || {fields: []}).fields" :key="field.name">
+                <q-input v-if="field.kind === 'multi-line'" v-model="edit.fields[field.name]" outlined dense autogrow autocomplete="off" type="textarea" :label="field.label"
+                        :input-class="field.masked && !edit.show[field.name] ? 'boss-vault-masked' : ''">
+                    <template v-if="field.masked" v-slot:append><q-icon :name="edit.show[field.name] ? 'sym_o_visibility_off' : 'sym_o_visibility'" class="cursor-pointer" @click="edit.show[field.name] = !edit.show[field.name]"></q-icon></template></q-input>
+                <q-input v-else v-model="edit.fields[field.name]" outlined dense autocomplete="off" :type="field.masked && !edit.show[field.name] ? 'password' : (field.kind === 'date' ? 'date' : 'text')" :label="field.label">
+                    <template v-if="field.masked" v-slot:append>
+                        <q-icon :name="edit.show[field.name] ? 'sym_o_visibility_off' : 'sym_o_visibility'" class="cursor-pointer" @click="edit.show[field.name] = !edit.show[field.name]"></q-icon>
+                        <q-btn v-if="field.kind === 'secret'" flat dense no-caps size="sm" color="primary" :label="t('Generate')" @click="generateFor(field)"></q-btn>
+                    </template></q-input>
+            </template>
+            <q-input v-model="edit.uris" outlined dense autogrow type="textarea" autocomplete="off" :label="t('Websites, one a line')"></q-input>
+            <q-input v-model="edit.tags" outlined dense autocomplete="off" :label="t('Tags, separated by commas')"></q-input>
+            <q-input v-model="edit.notes" outlined dense autogrow type="textarea" autocomplete="off" :label="t('Notes')"></q-input>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Save')" :loading="edit.busy" :disable="!String(edit.name || '').trim()" @click="saveEdit"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <!-- a new vault: the lock, then for a single-secret vault §3.11's steps -->
+    <m-dialog v-model="make.open" :title="t('New vault')" width="640">
+        <div v-if="make.step === 'choose'" class="q-gutter-y-sm">
+            <q-input v-model="make.name" outlined dense autocomplete="off" :label="t('Name')"></q-input>
+            <div class="text-caption m-muted">{{t('The name is sealed with the vault: the server does not see it.')}}</div>
+            <q-option-group v-model="make.lock" :options="lockOptions" type="radio"></q-option-group>
+            <q-input v-if="make.lock === SHARED && S.personal.hasKey && !S.unlocked" v-model="make.passphrase" outlined dense type="password" autocomplete="off" :label="t('Your vault key passphrase')"></q-input>
+            <div v-if="make.lock === SHARED && !S.personal.hasKey" class="text-body2 text-warning">{{t('A shared vault needs your vault key. Set it up in Settings › Vault key first.')}}</div>
+            <div class="text-caption m-muted">{{t('The lock is chosen now and never changes.')}}</div>
+            <div v-if="make.error" class="text-negative text-body2">{{make.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn v-if="make.lock === SINGLE" unelevated no-caps color="primary" :label="t('Next')" :disable="!String(make.name || '').trim()" @click="make.step = 'warn'"></q-btn>
+                <q-btn v-else unelevated no-caps color="primary" :label="t('Make the vault')" :loading="make.busy" :disable="!String(make.name || '').trim() || !S.personal.hasKey" @click="submitMake"></q-btn>
+            </div>
+        </div>
+        <div v-else-if="make.step === 'warn'" class="q-gutter-y-sm boss-vault-warning">
+            <q-banner rounded class="m-tonal text-negative">{{SINGLE_WARNING}}</q-banner>
+            <div class="text-subtitle2">{{t('How to keep the password or key safely')}}</div>
+            <ul class="q-my-none q-pl-lg text-body2">
+                <li>{{t('Keep it in a password manager you already trust that is not on this server, or write it down and keep the paper with your important papers (a safe, a safe-deposit box).')}}</li>
+                <li>{{t('Keep two copies in two places. Never keep the only copy inside this vault, or anywhere on this server.')}}</li>
+                <li>{{t('A generated key is long and random, so it cannot be guessed. Download or print it, then keep it as above.')}}</li>
+            </ul>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Back')" @click="make.step = 'choose'"></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('I understand')" @click="make.step = 'secret'"></q-btn>
+            </div>
+        </div>
+        <div v-else class="q-gutter-y-sm">
+            <q-option-group v-model="make.kind" :options="secretOptions" type="radio" inline @update:model-value="secretKindChanged"></q-option-group>
+            <template v-if="make.kind === 'VsPassword'">
+                <q-input v-model="make.password" outlined dense type="password" autocomplete="new-password" :label="t('Password')"></q-input>
+                <q-input v-model="make.password2" outlined dense type="password" autocomplete="new-password" :label="t('The password again')"></q-input>
+                <div v-if="make.password && passwordProblem(make.password)" class="text-warning text-body2">{{passwordProblem(make.password)}}</div>
+                <div v-else-if="make.password2 && make.password !== make.password2" class="text-warning text-body2">{{t('The two passwords differ')}}</div>
+            </template>
+            <template v-else>
+                <div class="text-caption m-muted">{{t('Your generated key')}}</div>
+                <div class="text-h6 boss-vault-words boss-vault-generated">{{make.key}}</div>
+                <div class="row q-gutter-sm">
+                    <q-btn unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_download" :label="t('Download')" @click="downloadKey(make.key, 'vault-key')"></q-btn>
+                    <q-btn unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_print" :label="t('Print')" @click="printKey(make.key, t('Vault key') + ': ' + make.name)"></q-btn>
+                </div>
+                <q-input v-model="make.typed" outlined dense autocomplete="off" :label="t('Type the last 8 characters of the key, from your printed or saved copy')"></q-input>
+            </template>
+            <q-checkbox v-model="make.stored" :label="t('I have stored it outside this server.')"></q-checkbox>
+            <div v-if="make.error" class="text-negative text-body2">{{make.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Back')" @click="make.step = 'warn'"></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Make the vault')" :loading="make.busy" :disable="!secretReady" @click="submitMake"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <m-dialog v-model="rename.open" :title="t('Rename the vault')" width="480">
+        <div class="q-gutter-y-sm">
+            <q-input v-model="rename.name" outlined dense autocomplete="off" :label="t('Name')" @keyup.enter="submitRename"></q-input>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Rename')" :loading="rename.busy" :disable="!String(rename.name || '').trim()" @click="submitRename"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <!-- the personal key opened, when an action needs it -->
+    <m-dialog v-model="unlockDialog.open" :title="t('Unlock your vault key')" width="480">
+        <div class="q-gutter-y-sm">
+            <q-input v-model="unlockDialog.passphrase" outlined dense type="password" autocomplete="off" :label="t('Your vault key passphrase')" @keyup.enter="submitUnlock"></q-input>
+            <div v-if="unlockDialog.error" class="text-negative text-body2">{{unlockDialog.error}}</div>
+            <div class="row items-center q-gutter-sm">
+                <q-btn flat dense no-caps color="primary" :label="t('Use the recovery code')" @click="unlockDialog.open = false; openRecover()"></q-btn>
+                <div class="col"></div>
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Unlock')" :loading="unlockDialog.busy" @click="submitUnlock"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <!-- a key's fingerprint compared with its owner -->
+    <m-dialog v-model="check.open" :title="fill(t('Compare {name}\'s key'), {name: check.name})" width="520">
+        <div class="q-gutter-y-sm">
+            <div v-if="check.key && !check.key.hasKey" class="text-body2">{{t('They have no vault key yet. Ask them to set one up in Settings › Vault key.')}}</div>
+            <template v-else>
+                <div class="text-body2">{{fill(t('Ask {name} to read their fingerprint to you, on a call or in person, not by email or chat. It must be exactly these words:'), {name: check.name})}}</div>
+                <div class="text-h5 boss-vault-words text-center q-py-sm">{{check.words || '…'}}</div>
+                <q-checkbox v-model="check.match" :label="t('The words match')"></q-checkbox>
+            </template>
+            <div v-if="check.error" class="text-negative text-body2">{{check.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('They match')" :loading="check.busy" :disable="!check.match || !check.words" @click="submitCheck"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <!-- members of a shared vault -->
+    <m-dialog v-model="members.open" :title="t('Members') + (current ? ': ' + (current.name || t('Vault')) : '')" width="720">
+        <div v-if="current" class="q-gutter-y-sm">
+            <q-list bordered separator class="rounded-borders">
+                <q-item v-for="member in memberRows" :key="member.userId">
+                    <q-item-section>
+                        <q-item-label>{{nameOf(member.userId)}}<span v-if="member.me" class="m-muted"> ({{t('you')}})</span></q-item-label>
+                        <q-item-label caption class="boss-vault-words">{{member.words || '…'}}</q-item-label>
+                        <q-item-label v-if="member.changed" caption class="text-warning">{{t('Their vault key changed: compare the new one, then give it access')}}</q-item-label>
+                    </q-item-section>
+                    <q-item-section side><div class="row items-center no-wrap q-gutter-x-xs">
+                        <q-chip dense square class="m-tonal">{{roleText(member.roleEnumId)}}</q-chip>
+                        <q-chip v-if="!member.me && member.checked" dense square icon="sym_o_verified" class="m-tonal text-positive">{{t('Compared')}}</q-chip>
+                        <q-btn v-else-if="!member.me" flat dense no-caps size="sm" color="primary" :label="t('Compare')" @click="openCheck(member.userId, loadMemberKeys)"></q-btn>
+                        <q-btn v-if="member.changed && manages(current)" flat dense no-caps size="sm" color="primary" :label="t('Give access')" @click="regrant(member)"></q-btn>
+                        <q-btn v-if="!member.me && manages(current)" flat dense round size="sm" icon="sym_o_person_remove" color="negative" :aria-label="t('Remove')" @click="members.remove = member"></q-btn>
+                    </div></q-item-section>
+                </q-item>
+            </q-list>
+            <template v-if="manages(current)">
+                <div class="text-subtitle2 q-mt-md">{{t('Add a member')}}</div>
+                <div class="row q-col-gutter-sm items-start">
+                    <div class="col-12 col-sm-7"><m-drop-down id="boss-vault-member" name="memberUserId" :model-value="members.add.userId" server-search :server-min-length="0" allow-empty
+                            :options-url="url('userChoices')" :label="t('Person (people with a vault key)')" @update:model-value="memberChosen"></m-drop-down></div>
+                    <div class="col-12 col-sm-5"><q-select v-model="members.add.role" outlined dense emit-value map-options :options="roleOptions" :label="t('Role')"></q-select></div>
+                </div>
+                <template v-if="members.add.key">
+                    <div class="text-body2">{{fill(t('Ask {name} to read their fingerprint to you, on a call or in person, not by email or chat. It must be exactly these words:'), {name: nameOf(members.add.userId)})}}</div>
+                    <div class="text-h6 boss-vault-words">{{members.add.words || '…'}}</div>
+                    <q-checkbox v-model="members.add.match" :label="t('The words match')"></q-checkbox>
+                </template>
+                <div class="row justify-end"><q-btn unelevated no-caps color="primary" :label="t('Add')" :loading="members.busy" :disable="!members.add.key || !members.add.match" @click="submitAddMember"></q-btn></div>
+            </template>
+            <q-banner v-if="members.remove" rounded class="m-tonal text-negative">
+                {{fill(t('Remove {name}? The vault gets a new key, which they never receive, and every item key is wrapped again. A copy they made of an item before stays theirs: change those passwords at their source.'), {name: nameOf(members.remove.userId)})}}
+                <div><q-checkbox v-model="members.reencrypt" :label="t('Also encrypt every item again now, with new item keys')"></q-checkbox></div>
+                <template v-slot:action>
+                    <q-btn flat no-caps :label="t('Cancel')" @click="members.remove = null"></q-btn>
+                    <q-btn unelevated no-caps color="negative" :label="t('Remove')" :loading="members.busy" @click="submitRemoveMember"></q-btn>
+                </template>
+            </q-banner>
+            <div v-if="members.error" class="text-negative text-body2">{{members.error}}</div>
+        </div>
+    </m-dialog>
+
+    <!-- items sent to the user -->
+    <m-dialog v-model="deliveries.open" :title="t('Sent to you')" width="640">
+        <div class="q-gutter-y-sm">
+            <div v-if="!S.deliveries.length" class="text-body2 m-muted">{{t('Nothing is waiting.')}}</div>
+            <template v-else>
+                <q-select v-model="deliveries.vaultId" outlined dense emit-value map-options :options="writableOptions" :label="t('File into')"></q-select>
+                <div v-if="!writableOpen.length" class="text-body2 text-warning">{{t('Open a vault you may add to first.')}}</div>
+                <q-list bordered separator class="rounded-borders">
+                    <q-item v-for="d in S.deliveries" :key="d.deliveryId">
+                        <q-item-section><q-item-label>{{fill(t('From {name}'), {name: nameOf(d.delivery.sender_id)})}}</q-item-label><q-item-label caption>{{dateText(d.sentDate)}}</q-item-label></q-item-section>
+                        <q-item-section side><div class="row no-wrap q-gutter-x-xs">
+                            <q-btn flat dense no-caps size="sm" color="primary" :label="t('Compare their key')" @click="openCheck(d.delivery.sender_id, null)"></q-btn>
+                            <q-btn unelevated dense no-caps size="sm" color="primary" :label="t('File')" :loading="deliveries.busy === d.deliveryId" :disable="!deliveries.vaultId" @click="submitFile(d)"></q-btn>
+                        </div></q-item-section>
+                    </q-item>
+                </q-list>
+                <div class="text-caption m-muted">{{t('An item opens only when its sender\'s key is one you compared with them.')}}</div>
+            </template>
+            <div v-if="deliveries.error" class="text-negative text-body2">{{deliveries.error}}</div>
+        </div>
+    </m-dialog>
+
+    <!-- a copy of an item sent to someone -->
+    <m-dialog v-model="send.open" :title="t('Send a copy')" width="560">
+        <div class="q-gutter-y-sm">
+            <div class="text-body2">{{t('A copy sealed to their vault key, which only they open. They file it into a vault of their own.')}}</div>
+            <m-drop-down id="boss-vault-send" name="sendUserId" :model-value="send.userId" server-search :server-min-length="0" allow-empty
+                    :options-url="url('userChoices')" :label="t('Person (people with a vault key)')" @update:model-value="sendChosen"></m-drop-down>
+            <template v-if="send.key && !send.checked">
+                <div class="text-body2">{{fill(t('Ask {name} to read their fingerprint to you, on a call or in person, not by email or chat. It must be exactly these words:'), {name: nameOf(send.userId)})}}</div>
+                <div class="text-h6 boss-vault-words">{{send.words || '…'}}</div>
+                <q-checkbox v-model="send.match" :label="t('The words match')"></q-checkbox>
+            </template>
+            <div v-if="send.error" class="text-negative text-body2">{{send.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Send')" :loading="send.busy" :disable="!send.key || (!send.checked && !send.match)" @click="submitSend"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <m-dialog v-model="copyTo.open" :title="t('Copy to another vault')" width="480">
+        <div class="q-gutter-y-sm">
+            <q-select v-model="copyTo.vaultId" outlined dense emit-value map-options :options="writableOptions.filter((o) => !current || o.value !== current.vaultId)" :label="t('Vault')"></q-select>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Copy')" :loading="copyTo.busy" :disable="!copyTo.vaultId" @click="submitCopyTo"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <!-- an item's earlier revisions -->
+    <m-dialog v-model="history.open" :title="t('History') + (currentItem ? ': ' + currentItem.name : '')" width="720">
+        <div v-if="history.busy" class="q-gutter-y-sm"><q-skeleton v-for="n in 3" :key="n" type="text"></q-skeleton></div>
+        <div v-else-if="!history.rows.length" class="text-body2 m-muted">{{t('No earlier versions.')}}</div>
+        <q-list v-else bordered separator class="rounded-borders">
+            <q-item v-for="row in history.rows" :key="row.revision">
+                <q-item-section>
+                    <q-item-label>{{fill(t('Version {n}'), {n: row.revision})}} · {{dateText(row.changedDate)}}</q-item-label>
+                    <q-item-label v-if="history.shown[row.revision]" class="boss-vault-pre text-body2">{{history.shown[row.revision]}}</q-item-label>
+                </q-item-section>
+                <q-item-section side><q-btn flat dense no-caps size="sm" color="primary" :label="history.shown[row.revision] ? t('Hide') : t('Show')" @click="toggleHistory(row)"></q-btn></q-item-section>
+            </q-item>
+        </q-list>
+    </m-dialog>
+
+    <!-- import, read in the browser -->
+    <m-dialog v-model="importer.open" :title="t('Import')" width="640">
+        <div class="q-gutter-y-sm">
+            <div class="text-body2">{{t('A Bitwarden export (JSON, not encrypted), a KeePass export (XML or CSV), or an encrypted vault export. The file is read here in your browser and never sent to the server. Delete an export file that is not encrypted once it is imported: it holds your passwords in the clear.')}}</div>
+            <q-select v-model="importer.vaultId" outlined dense emit-value map-options :options="writableOptions" :label="t('Into the vault')"></q-select>
+            <input type="file" class="boss-vault-file" accept=".json,.xml,.csv,.txt" @change="importFile">
+            <template v-if="importer.parsed">
+                <div class="text-body2">{{importer.parsed.label}} · {{importer.fileName}}</div>
+                <q-input v-if="importer.parsed.format === 'export'" v-model="importer.password" outlined dense type="password" autocomplete="off" :label="t('The export\'s password')"></q-input>
+                <div v-else class="text-body2">{{importSummary}}</div>
+            </template>
+            <q-linear-progress v-if="importer.busy && importer.total" :value="importer.progress / importer.total" color="primary" size="8px" rounded></q-linear-progress>
+            <div v-if="importer.result" class="text-body2 text-positive">{{importer.result}}</div>
+            <div v-if="importer.error" class="text-negative text-body2">{{importer.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Close')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Import')" :loading="importer.busy" :disable="!importer.parsed || !importer.vaultId" @click="submitImport"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <!-- an encrypted export, made in the browser -->
+    <m-dialog v-model="exporter.open" :title="t('Export, encrypted')" width="560">
+        <div class="q-gutter-y-sm">
+            <div class="text-body2">{{t('A file of the vault\'s items, encrypted here under a password of its own: your own backup, which this vault and the moqui vault command open with that password. The server cannot open it, and cannot restore a vault without it.')}}</div>
+            <q-select v-model="exporter.vaultId" outlined dense emit-value map-options :options="openOptions" :label="t('Vault')"></q-select>
+            <q-input v-model="exporter.password" outlined dense type="password" autocomplete="new-password" :label="t('A password for the file')"></q-input>
+            <q-input v-model="exporter.password2" outlined dense type="password" autocomplete="new-password" :label="t('The password again')"></q-input>
+            <div v-if="exporter.password && passwordProblem(exporter.password)" class="text-warning text-body2">{{passwordProblem(exporter.password)}}</div>
+            <div v-else-if="exporter.password2 && exporter.password !== exporter.password2" class="text-warning text-body2">{{t('The two passwords differ')}}</div>
+            <div v-if="exporter.error" class="text-negative text-body2">{{exporter.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Export')" :loading="exporter.busy"
+                        :disable="!exporter.vaultId || !!passwordProblem(exporter.password) || exporter.password !== exporter.password2" @click="submitExport"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <!-- the limits (§3.12) -->
+    <m-dialog v-model="about" :title="t('What the server sees')" width="640">
+        <div class="text-body2 q-gutter-y-sm">
+            <div>{{t('The server keeps each vault\'s id, lock, owner, members and roles, item counts, sizes and dates, and ciphertext. It never sees an item\'s name, type or value, your key passphrase, a vault password or key, or your vault key.')}}</div>
+            <ul class="q-my-none q-pl-lg">
+                <li>{{t('This page runs code the server sends. A server that was changed could send code that takes your passphrase; the desktop and mobile apps carry their own code.')}}</li>
+                <li>{{t('While a vault is open, a script on any page of this server could ask this tab for its items. Lock the vault when you are done.')}}</li>
+                <li>{{t('The server could hold back an item or give an older copy of it. This browser warns when an item comes back older than it saw before.')}}</li>
+                <li>{{t('The server cannot search your vault, sync it to a phone\'s contacts, or restore it without your keys. Your own backup is an encrypted export.')}}</li>
+                <li>{{t('Someone with a copy of the database can try to guess a vault password offline. Use a long one, or a generated key.')}}</li>
+            </ul>
+        </div>
+    </m-dialog>
+
+    <!-- the vault key set up, or made again: passphrase, recovery code, part of it typed back -->
+    <m-dialog v-model="setup.open" :title="setup.mode === 'replace' ? t('Make a new vault key') : t('Set up your vault key')" width="600" persistent>
+        <div v-if="setup.step === 'passphrase'" class="q-gutter-y-sm">
+            <q-banner v-if="setup.mode === 'replace'" rounded class="m-tonal text-warning">{{t('Only if you lost both your passphrase and your recovery code. Your shared vaults stay closed to the new key until another member compares it and gives it access again; your single-secret vaults are not changed.')}}</q-banner>
+            <div class="text-body2">{{t('Your key passphrase is not your sign-in password, and it never leaves this browser. Choose a long one, such as a few unusual words.')}}</div>
+            <q-input v-model="setup.passphrase" outlined dense type="password" autocomplete="new-password" :label="t('Key passphrase')"></q-input>
+            <q-input v-model="setup.passphrase2" outlined dense type="password" autocomplete="new-password" :label="t('The passphrase again')"></q-input>
+            <div v-if="setup.passphrase && passwordProblem(setup.passphrase)" class="text-warning text-body2">{{passwordProblem(setup.passphrase)}}</div>
+            <div v-else-if="setup.passphrase2 && setup.passphrase !== setup.passphrase2" class="text-warning text-body2">{{t('The two passphrases differ')}}</div>
+            <div v-if="setup.error" class="text-negative text-body2">{{setup.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" @click="cancelSetup"></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Next')" :loading="setup.busy" :disable="!!passwordProblem(setup.passphrase) || setup.passphrase !== setup.passphrase2" @click="setupMake"></q-btn>
+            </div>
+        </div>
+        <div v-else-if="setup.step === 'code'" class="q-gutter-y-sm">
+            <div class="text-body2">{{t('Print or save this recovery code and keep it with your important papers. It opens your vault key if you forget the passphrase. Nobody else has it, and it is not shown again.')}}</div>
+            <div class="text-h6 boss-vault-words boss-vault-code">{{setup.code}}</div>
+            <div class="row q-gutter-sm">
+                <q-btn unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_download" :label="t('Download')" @click="downloadKey(setup.code, 'vault-recovery-code')"></q-btn>
+                <q-btn unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_print" :label="t('Print')" @click="printKey(setup.code, t('Vault key recovery code'))"></q-btn>
+            </div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" @click="cancelSetup"></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('I have kept it')" @click="setup.step = 'confirm'"></q-btn>
+            </div>
+        </div>
+        <div v-else-if="setup.step === 'confirm'" class="q-gutter-y-sm">
+            <div class="text-body2">{{fill(t('Type group {n} of your recovery code (the groups are separated by dashes), from your printed or saved copy.'), {n: setup.group + 1})}}</div>
+            <q-input v-model="setup.typed" outlined dense autocomplete="off" :label="fill(t('Group {n}'), {n: setup.group + 1})" @keyup.enter="setupSave"></q-input>
+            <div v-if="setup.error" class="text-negative text-body2">{{setup.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Back')" @click="setup.step = 'code'"></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Finish')" :loading="setup.busy" @click="setupSave"></q-btn>
+            </div>
+        </div>
+        <div v-else class="q-gutter-y-sm">
+            <div class="text-body2">{{t('Your vault key is ready. Its fingerprint:')}}</div>
+            <div class="text-h6 boss-vault-words">{{setup.fingerprint}}</div>
+            <div class="row justify-end"><q-btn unelevated no-caps color="primary" :label="t('Done')" @click="setup.open = false"></q-btn></div>
+        </div>
+    </m-dialog>
+
+    <m-dialog v-model="recover.open" :title="t('Use the recovery code')" width="560">
+        <div class="q-gutter-y-sm">
+            <q-input v-model="recover.code" outlined dense autocomplete="off" :label="t('Recovery code')"></q-input>
+            <q-input v-model="recover.passphrase" outlined dense type="password" autocomplete="new-password" :label="t('A new key passphrase')"></q-input>
+            <q-input v-model="recover.passphrase2" outlined dense type="password" autocomplete="new-password" :label="t('The passphrase again')"></q-input>
+            <div v-if="recover.passphrase && passwordProblem(recover.passphrase)" class="text-warning text-body2">{{passwordProblem(recover.passphrase)}}</div>
+            <div v-if="recover.error" class="text-negative text-body2">{{recover.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Unlock')" :loading="recover.busy"
+                        :disable="!recover.code || !!passwordProblem(recover.passphrase) || recover.passphrase !== recover.passphrase2" @click="submitRecover"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <m-dialog v-model="change.open" :title="t('Change the passphrase')" width="520">
+        <div class="q-gutter-y-sm">
+            <q-input v-if="!S.unlocked" v-model="change.current" outlined dense type="password" autocomplete="off" :label="t('The current passphrase')"></q-input>
+            <q-input v-model="change.passphrase" outlined dense type="password" autocomplete="new-password" :label="t('A new key passphrase')"></q-input>
+            <q-input v-model="change.passphrase2" outlined dense type="password" autocomplete="new-password" :label="t('The passphrase again')"></q-input>
+            <div v-if="change.passphrase && passwordProblem(change.passphrase)" class="text-warning text-body2">{{passwordProblem(change.passphrase)}}</div>
+            <div v-if="change.error" class="text-negative text-body2">{{change.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Change')" :loading="change.busy"
+                        :disable="!!passwordProblem(change.passphrase) || change.passphrase !== change.passphrase2 || (!S.unlocked && !change.current)" @click="submitChange"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+</div></template>
+
+<script>
+const t = (text) => (moqui.l10n && moqui.l10n.localize ? moqui.l10n.localize(text) : text);
+const fill = (text, values) => String(text).replace(/\{(\w+)\}/g, (match, key) => (values[key] == null ? '' : String(values[key])));
+const REST = '/rest/s1/vault';
+// a vault's name lives in an item of this type, so it is sealed and rotated as the items are
+const INFO_TYPE = 'vault-info';
+const SINGLE = 'VlSingleSecret';
+const SHARED = 'VlSharedKey';
+const DAY = 86400000;
+const ROLE_OF = { VrManage: 'manage', VrWrite: 'write', VrRead: 'read' };
+const ICONS = { login: 'sym_o_key', note: 'sym_o_sticky_note_2', card: 'sym_o_credit_card', identity: 'sym_o_badge', contact: 'sym_o_person',
+    'ssh-key': 'sym_o_terminal', 'api-key': 'sym_o_api', 'database-credential': 'sym_o_database', 'tls-key-pair': 'sym_o_verified_user',
+    'registry-login': 'sym_o_inventory_2', 'recovery-code': 'sym_o_password', 'recovery-share': 'sym_o_vpn_key' };
+// plans/Vault-Instances.md §3.11, in its exact words
+const SINGLE_WARNING = 'Only this password opens this vault. It is never sent to the server and it is not stored anywhere. Nobody can open the vault without it: not an administrator, not your organization, not the makers of this software. If you lose it, everything in the vault is lost for good.';
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+const COMMON = ['password', 'passw0rd', 'p@ssw0rd', '123456', '12345678', '123456789', '1234567890', 'qwerty', 'qwertyuiop', 'asdfgh', 'letmein',
+    'welcome', 'iloveyou', 'admin', 'monkey', 'dragon', 'football', 'baseball', 'sunshine', 'princess', 'abc123', '111111', '000000',
+    'trustno1', 'changeme', 'secret', 'master', 'starwars', 'whatever', 'superman', 'correcthorsebatterystaple', 'moqui'];
+
+const hexOf = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+const randomBytes = (n) => { const b = new Uint8Array(n); crypto.getRandomValues(b); return b; };
+const randomId = (prefix) => prefix + '-' + hexOf(randomBytes(12));
+const arr = (value) => (Array.isArray(value) ? value.filter((v) => v != null && v !== '').map((v) => String(v)) : []);
+const reasonOf = (message) => { const m = /reasonCode (\w+)/.exec(String(message || '')); return m ? m[1] : ''; };
+const plainMessage = (message) => String(message || '').replace(/\s*\(reasonCode \w+\)/g, '').trim();
+const messageOf = (err) => (err && err.reasonCode === 'cancelled' ? t('Not confirmed, so nothing was done')
+    : plainMessage(err && err.message ? err.message : (err && err.errors) || String(err)));
+const local = {
+    get(key) { try { return JSON.parse(window.localStorage.getItem(key) || 'null'); } catch (err) { return null; } },
+    set(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (err) { /* a private window keeps nothing */ } }
+};
+
+/** A generated key for a single-secret vault: 256 random bits as Crockford base32 in groups of four. */
+function generatedKey() {
+    const bytes = randomBytes(32);
+    let bits = 0;
+    let value = 0;
+    let out = '';
+    for (const byte of bytes) {
+        value = ((value << 8) | byte) & 0xfffff;
+        bits += 8;
+        while (bits >= 5) { out += CROCKFORD[(value >>> (bits - 5)) & 31]; bits -= 5; }
+    }
+    if (bits > 0) out += CROCKFORD[(value << (5 - bits)) & 31];
+    bytes.fill(0);
+    return out.match(/.{1,4}/g).join('-');
+}
+/** A generated key as it was made, from what the user typed: upper case, the look-alikes read as Crockford does, grouped. */
+function keyText(typed) {
+    const plain = String(typed || '').toUpperCase().replace(/O/g, '0').replace(/[IL]/g, '1').replace(/[^0-9A-Z]/g, '');
+    return (plain.match(/.{1,4}/g) || []).join('-');
+}
+function generatePassword(length) {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789-_.!@#%+=';
+    const limit = 256 - (256 % alphabet.length);
+    const out = [];
+    while (out.length < length) for (const b of randomBytes(length * 2)) { if (b < limit && out.length < length) out.push(alphabet[b % alphabet.length]); }
+    return out.join('');
+}
+/** What is wrong with a password or passphrase, in the user's words; empty when it passes (§3.5, §3.11: length and common words). */
+function passwordProblem(value, username) {
+    const text = String(value || '');
+    if (!text) return t('Enter one');
+    if (text.length < 12) return t('Use at least 12 characters');
+    const lower = text.toLowerCase();
+    if (new Set(text).size < 6) return t('Use more different characters');
+    if (COMMON.some((word) => lower.includes(word))) return t('Do not use a common password or word in it');
+    if (username && String(username).length > 2 && lower.includes(String(username).toLowerCase())) return t('Do not use your username in it');
+    const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((re) => re.test(text)).length;
+    if (text.length < 16 && classes < 3) return t('Use 16 or more characters, or mix letters, digits and symbols');
+    return '';
+}
+
+// ===== import: read in the browser, never sent =====
+const clean = (fields) => {
+    const out = {};
+    for (const [name, value] of Object.entries(fields)) if (value != null && String(value) !== '') out[name] = String(value);
+    return out;
+};
+function toEntry(title, username, password, url, notes, totp, tags) {
+    if (!username && !password && !url) return { v: 1, type: 'note', name: title || t('Untitled'), fields: clean({ text: notes }), notes: '', tags, uris: [] };
+    return { v: 1, type: 'login', name: title || url || t('Untitled'), fields: clean({ username, password, totp }), notes: notes || '', tags, uris: url ? [url] : [] };
+}
+function fromBitwarden(json) {
+    const folders = new Map((json.folders || []).map((folder) => [folder.id, folder.name]));
+    return json.items.map((item) => {
+        const tags = item.folderId && folders.get(item.folderId) ? [folders.get(item.folderId)] : [];
+        const extra = (item.fields || []).filter((field) => field && field.name).map((field) => field.name + ': ' + (field.value == null ? '' : field.value));
+        const notes = [item.notes || ''].concat(extra).filter((line) => line).join('\n');
+        const base = { v: 1, name: item.name || t('Untitled'), notes, tags, uris: [] };
+        if (item.type === 1 && item.login) {
+            return Object.assign(base, { type: 'login', uris: (item.login.uris || []).map((uri) => uri && uri.uri).filter((uri) => uri),
+                fields: clean({ username: item.login.username, password: item.login.password, totp: item.login.totp }) });
+        }
+        if (item.type === 3 && item.card) {
+            const card = item.card;
+            return Object.assign(base, { type: 'card', fields: clean({ cardholder: card.cardholderName, number: card.number,
+                expires: [card.expMonth, card.expYear].filter((part) => part).join('/'), code: card.code }) });
+        }
+        if (item.type === 4 && item.identity) {
+            const id = item.identity;
+            const doc = id.passportNumber ? ['Passport', id.passportNumber] : id.licenseNumber ? ['Driver license', id.licenseNumber] : id.ssn ? ['Social security number', id.ssn] : ['', ''];
+            const more = [id.email ? 'Email: ' + id.email : '', id.phone ? 'Phone: ' + id.phone : '', id.company ? 'Company: ' + id.company : '', id.username ? 'Username: ' + id.username : ''];
+            return Object.assign(base, { type: 'identity', notes: [notes].concat(more).filter((line) => line).join('\n'),
+                fields: clean({ fullName: [id.title, id.firstName, id.middleName, id.lastName].filter((part) => part).join(' '), documentType: doc[0], documentNumber: doc[1],
+                    address: [id.address1, id.address2, id.address3, [id.postalCode, id.city].filter((part) => part).join(' '), id.state, id.country].filter((part) => part).join('\n') }) });
+        }
+        if (item.type === 5 && item.sshKey) return Object.assign(base, { type: 'ssh-key', fields: clean({ privateKey: item.sshKey.privateKey, publicKey: item.sshKey.publicKey }) });
+        return Object.assign(base, { type: 'note', fields: clean({ text: item.notes || '' }), notes: extra.join('\n') });
+    });
+}
+const childText = (node, tag) => { const child = Array.from(node.children).find((c) => c.tagName === tag); return child ? child.textContent : ''; };
+function fromKeePassXml(text) {
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length || !doc.getElementsByTagName('KeePassFile').length) throw new Error(t('This XML file is not a KeePass export'));
+    const out = [];
+    const walk = (group, path) => {
+        const name = childText(group, 'Name');
+        const here = name ? path.concat([name]) : path;
+        for (const node of Array.from(group.children)) {
+            if (node.tagName === 'Group') walk(node, here);
+            else if (node.tagName === 'Entry') {
+                const strings = {};
+                for (const s of Array.from(node.children).filter((c) => c.tagName === 'String')) strings[childText(s, 'Key')] = childText(s, 'Value');
+                // the first group is the database itself
+                out.push(toEntry(strings.Title, strings.UserName, strings.Password, strings.URL, strings.Notes, strings.otp || '', here.length > 1 ? [here.slice(1).join(' / ')] : []));
+            }
+        }
+    };
+    const root = doc.getElementsByTagName('Root')[0];
+    for (const group of Array.from(root ? root.children : []).filter((c) => c.tagName === 'Group')) walk(group, []);
+    return out;
+}
+function parseCsv(text) {
+    const first = text.split(/\r?\n/, 1)[0];
+    const delimiter = [',', ';', '\t'].map((d) => [d, first.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
+    const rows = [];
+    let row = [];
+    let field = '';
+    let quoted = false;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (quoted) {
+            if (ch === '"' && text[i + 1] === '"') { field += '"'; i++; }
+            else if (ch === '"') quoted = false;
+            else field += ch;
+        } else if (ch === '"' && field === '') quoted = true;
+        else if (ch === delimiter) { row.push(field); field = ''; }
+        else if (ch === '\n' || ch === '\r') {
+            if (ch === '\r' && text[i + 1] === '\n') i++;
+            row.push(field);
+            field = '';
+            if (row.some((part) => part !== '')) rows.push(row);
+            row = [];
+        } else field += ch;
+    }
+    row.push(field);
+    if (row.some((part) => part !== '')) rows.push(row);
+    return rows;
+}
+function fromCsv(text) {
+    const rows = parseCsv(text);
+    if (rows.length < 2) throw new Error(t('The file has no rows to import'));
+    const header = rows[0].map((name) => name.trim().toLowerCase());
+    const col = (...names) => header.findIndex((name) => names.includes(name));
+    const at = { title: col('title', 'account', 'name', 'entry'), username: col('username', 'user name', 'login name', 'login', 'login_username'),
+        password: col('password', 'login_password'), url: col('url', 'web site', 'website', 'login_uri'), notes: col('notes', 'comments', 'comment'),
+        totp: col('totp', 'otp', 'login_totp'), group: col('group', 'folder') };
+    if (at.title < 0 && at.username < 0 && at.password < 0) throw new Error(t('The CSV file has no Title, Username or Password column'));
+    return rows.slice(1).map((r) => {
+        const get = (i) => (i >= 0 && r[i] != null ? r[i] : '');
+        const group = get(at.group);
+        return toEntry(get(at.title), get(at.username), get(at.password), get(at.url), get(at.notes), get(at.totp), group && group !== 'Root' ? [group] : []);
+    });
+}
+function parseImport(text) {
+    const trimmed = String(text || '').replace(/^﻿/, '').trim();
+    if (trimmed.startsWith('{')) {
+        let json;
+        try { json = JSON.parse(trimmed); } catch (err) { throw new Error(t('The file is not JSON')); }
+        if (json.format === 'moqui-vault-export') return { format: 'export', label: t('Encrypted vault export'), export: json, items: [] };
+        if (json.encrypted) throw new Error(t('This Bitwarden export is encrypted. Export from Bitwarden again as JSON, not encrypted, to import it here.'));
+        if (Array.isArray(json.items)) return { format: 'bitwarden', label: 'Bitwarden (JSON)', items: fromBitwarden(json) };
+        throw new Error(t('This JSON file is not a Bitwarden export'));
+    }
+    if (trimmed.startsWith('<')) return { format: 'keepass-xml', label: 'KeePass (XML)', items: fromKeePassXml(trimmed) };
+    return { format: 'csv', label: 'KeePass (CSV)', items: fromCsv(trimmed) };
+}
+
+// ===== the session: one per page, shared with Commons › Contacts =====
+function makeSession() {
+    const S = Vue.reactive({ config: null, base: '', loading: false, failed: '', personal: null, unlocked: false, keyChecks: [], vaults: [],
+        deliveries: [], names: {}, lockCount: 0, idleLocked: false, needsFactor: false });
+    let client = null;
+    let starting = null;
+    let locking = false;
+    let pending = null;
+    const opened = new Set();
+    const slot = (vaultId, version) => vaultId + '@' + version;
+    const keyOf = (kind, vaultId) => 'bossVault.' + kind + '.' + ((S.personal && S.personal.userId) || '') + '.' + vaultId;
+    const vault = (vaultId) => S.vaults.find((v) => v.vaultId === vaultId) || null;
+    const enc = encodeURIComponent;
+
+    /** Everything shown of the vaults is dropped: on Lock, on the idle time, or when the worker failed. */
+    function forget(idle) {
+        opened.clear();
+        pending = null;
+        S.unlocked = false;
+        S.idleLocked = !!idle;
+        S.lockCount++;
+        for (const v of S.vaults) Object.assign(v, { open: false, name: '', items: [], entries: [], memberList: [], info: null, warning: '' });
+    }
+    async function ensureClient() {
+        if (client) return client;
+        if (!starting) {
+            starting = (async () => {
+                await moqui.loadScript('/js/vault/VaultClient.js', null, () => !!window.MoquiVaultClient);
+                const c = S.config || {};
+                const made = new window.MoquiVaultClient({ idleMinutes: c.idleMinutes == null ? 15 : c.idleMinutes, clipboardSeconds: c.clipboardSeconds == null ? 30 : c.clipboardSeconds,
+                    wasmIntegrity: c.wasmIntegrity || null, workerIntegrity: c.workerIntegrity || null, onLock: () => forget(!locking) });
+                await made.start();
+                client = Vue.markRaw(made);
+                return client;
+            })().finally(() => { starting = null; });
+        }
+        return starting;
+    }
+    /** A vault service over REST; a refusal for a sign-in that is not recent or strong asks the user to confirm who they are once. */
+    async function api(method, path, body, retried) {
+        const init = { method, credentials: 'same-origin', headers: { Accept: 'application/json' } };
+        let url = REST + path;
+        if (method === 'GET' && body) {
+            const query = Object.entries(body).filter(([, value]) => value != null && value !== '').map(([name, value]) => enc(name) + '=' + enc(value)).join('&');
+            if (query) url += '?' + query;
+        } else if (method !== 'GET') {
+            init.headers['Content-Type'] = 'application/json';
+            init.headers['X-CSRF-Token'] = moqui.sessionToken || '';
+            init.body = JSON.stringify(body || {});
+        }
+        const response = await fetch(url, init);
+        const token = response.headers.get('X-CSRF-Token');
+        if (token && moqui.onSessionToken) moqui.onSessionToken(token);
+        let json = {};
+        try { json = (await response.json()) || {}; } catch (err) { json = {}; }
+        const errors = Array.isArray(json.errors) ? json.errors.join(' ') : json.errors;
+        if (!response.ok || errors) {
+            const message = String(errors || json.message || (t('The server answered') + ' ' + response.status));
+            const reason = reasonOf(message);
+            if (reason === 'strongAuthNeedsFactor') S.needsFactor = true;
+            if (!retried && (reason === 'reauthRequired' || reason === 'strongAuthRequired') && moqui.reauth && moqui.reauth.confirm) {
+                await moqui.reauth.confirm();
+                return api(method, path, body, true);
+            }
+            throw Object.assign(new Error(plainMessage(message)), { reasonCode: reason, status: response.status });
+        }
+        return json;
+    }
+    function screenRequest(name, params) {
+        return moqui.request(S.base + '/' + name, { params: params || {} }).then((result) => result.json || {});
+    }
+    async function init(base) {
+        if (!S.base) S.base = base;
+        if (S.loading) return;
+        S.loading = true;
+        S.failed = '';
+        try {
+            if (!S.config) S.config = await screenRequest('setup');
+            await refresh();
+        } catch (err) {
+            S.failed = messageOf(err);
+        } finally {
+            S.loading = false;
+        }
+    }
+    async function refresh() {
+        S.personal = await api('GET', '/personalKey');
+        await refreshVaults();
+        if (S.personal.hasKey) await refreshDeliveries().catch(() => {});
+    }
+    async function refreshVaults() {
+        const listed = (await api('GET', '/vaults')).vaultList || [];
+        const known = new Map(S.vaults.map((v) => [v.vaultId, v]));
+        S.vaults = listed.map((row) => {
+            const v = known.get(row.vaultId) || { open: false, name: '', items: [], entries: [], memberList: [], info: null, warning: '' };
+            // another member rotated the key: open the vault again for its new version
+            if (v.open && row.keyVersion !== v.keyVersion) Object.assign(v, { open: false, items: [] });
+            return Object.assign(v, { vaultId: row.vaultId, vaultKindEnumId: row.vaultKindEnumId, lockEnumId: row.lockEnumId, roleEnumId: row.roleEnumId,
+                keyVersion: row.keyVersion, revision: row.revision, itemCount: row.itemCount, secretKindEnumId: row.secretKindEnumId,
+                createdDate: row.createdDate, recoveryOn: row.recoveryOn });
+        });
+    }
+    async function refreshChecks() { S.keyChecks = ((await api('GET', '/keyChecks')).keyCheckList || []).map((row) => Vue.markRaw(row)); }
+    async function refreshDeliveries() {
+        S.deliveries = (await api('GET', '/deliveries')).deliveryList || [];
+        await names(S.deliveries.map((d) => d.delivery && d.delivery.sender_id));
+    }
+    async function names(ids) {
+        const missing = Array.from(new Set(ids.filter((id) => id && !(id in S.names))));
+        if (!missing.length) return;
+        let got = {};
+        try { got = (await screenRequest('userNames', { userIds: missing.join(',') })).names || {}; } catch (err) { got = {}; }
+        for (const id of missing) S.names[id] = got[id] || id;
+    }
+    function requireUnlocked() {
+        if (!S.unlocked) throw Object.assign(new Error(t('Unlock your vault key first')), { reasonCode: 'personalLocked' });
+    }
+
+    // ----- the personal key (§3.5) -----
+    async function unlock(passphrase) {
+        const c = await ensureClient();
+        const w = await api('GET', '/personalKey/wrapped');
+        if (!w.hasKey) throw new Error(t('You have no vault key yet'));
+        const out = await c.personalOpen({ personal_key_id: w.personalKeyId, user_id: w.userId, public: w.public, passphrase_wrap: w.passphraseWrap, passphrase });
+        // a wrap under the Argon2id target is wrapped again at it on this open
+        if (out.rewrapped) await api('POST', '/personalKey/rewrap', { personalKeyId: w.personalKeyId, passphraseWrap: out.rewrapped }).catch(() => {});
+        S.unlocked = true;
+        S.idleLocked = false;
+        await refreshChecks();
+    }
+    async function changePassphrase(passphrase) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const made = await c.call('personal_rewrap', { passphrase });
+        await api('POST', '/personalKey/rewrap', { personalKeyId: made.personal_key_id, passphraseWrap: made.passphrase_wrap });
+    }
+    async function unlockWithCode(code, passphrase) {
+        const c = await ensureClient();
+        const w = await api('GET', '/personalKey/wrapped');
+        if (!w.hasKey) throw new Error(t('You have no vault key yet'));
+        await c.personalOpenRecovery({ personal_key_id: w.personalKeyId, user_id: w.userId, public: w.public, recovery_wrap: w.recoveryWrap, recovery_code: String(code || '').trim() });
+        S.unlocked = true;
+        S.idleLocked = false;
+        await changePassphrase(passphrase);
+        await refreshChecks();
+    }
+    /** Whether this sign-in may set up or replace a key, asked before one is made, so the user never keeps a code for a key the
+     * server refuses: a strong, recent sign-in (confirmed now when it is not recent), else the reason. */
+    async function strongReady() {
+        try {
+            await api('GET', '/personalKey/wrapped');
+        } catch (err) {
+            if (err.reasonCode === 'strongAuthNeedsFactor' || err.reasonCode === 'strongAuthRequired' || err.reasonCode === 'cancelled') throw err;
+            // no key yet: the sign-in passed
+        }
+    }
+    /** A new personal key in the worker, not yet sent: its recovery code goes to the user, the key to the server after it. */
+    async function makeKey(passphrase) {
+        if (S.unlocked) await lock();
+        const c = await ensureClient();
+        const id = randomId('pk');
+        const made = await c.personalMake({ personal_key_id: id, user_id: S.personal.userId, passphrase });
+        pending = { id, public: made.public, passphraseWrap: made.passphrase_wrap, recoveryWrap: made.recovery_wrap };
+        return { recoveryCode: made.recovery_code, fingerprint: made.fingerprint };
+    }
+    async function saveKey() {
+        if (!pending) throw new Error(t('Make the key again'));
+        const path = S.personal.hasKey ? '/personalKey/replace' : '/personalKey';
+        await api('POST', path, { personalKeyId: pending.id, public: pending.public, passphraseWrap: pending.passphraseWrap, recoveryWrap: pending.recoveryWrap });
+        pending = null;
+        S.unlocked = true;
+        S.personal = await api('GET', '/personalKey');
+        await refreshChecks();
+    }
+    async function discardKey() { if (pending) { pending = null; await lock(); } }
+
+    // ----- key checks (§3.5) -----
+    const publicOfCheck = (row) => String(row.checked_encrypt || '') + String(row.checked_verify || '');
+    const checked = (userId, publicHex) => S.keyChecks.some((row) => row.checked_user_id === userId && publicOfCheck(row) === publicHex);
+    const publicKeyOf = (userId) => api('GET', '/publicKey', { userId });
+    async function fingerprintOf(publicHex) { return (await (await ensureClient()).fingerprint({ public: publicHex })).fingerprint; }
+    /** A check of the key the server gave for userId, signed in the worker only with the fingerprint the worker computes of it. */
+    async function storeCheck(key, words) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const made = await c.keyCheckMake({ checked_key_id: key.personalKeyId, checked_user_id: key.userId, checked_public: key.public, fingerprint: words, checked_at: Date.now() });
+        await api('POST', '/keyChecks', { check: made });
+        await refreshChecks();
+    }
+
+    // ----- vaults and items -----
+    const remembered = (vaultId) => local.get(keyOf('chain', vaultId));
+    const remember = (vaultId, value) => { if (value && value.member_list_hash) local.set(keyOf('chain', vaultId), value); };
+    const openRow = (vaultId, row) => client.itemOpen({ vault_id: vaultId, item_id: row.vaultItemId, key_version: row.keyVersion,
+        wrapped_item_key: row.wrappedItemKey, sealed_body: row.bodyCipher }).then((out) => out.body);
+    function parseBody(text) {
+        const body = JSON.parse(text);
+        if (!body || typeof body !== 'object') throw new Error(t('Not an item'));
+        return body;
+    }
+    const typeOf = (id) => ((S.config && S.config.itemTypes) || []).find((type) => type.id === id) || null;
+    /** What the page keeps of an item: its name, type, websites, tags and the fields its type does not mask. */
+    function headerOf(row, body) {
+        const type = typeOf(body.type);
+        const shown = {};
+        const fields = body.fields && typeof body.fields === 'object' ? body.fields : {};
+        for (const [name, value] of Object.entries(fields)) {
+            const def = type ? type.fields.find((field) => field.name === name) : null;
+            if (def && !def.masked && value != null && value !== '') shown[name] = String(value);
+        }
+        return { id: row.vaultItemId, row, type: String(body.type || ''), name: String(body.name || ''), uris: arr(body.uris), tags: arr(body.tags), shown,
+            changed: row.lastModifiedDate || row.createdDate || null, broken: '' };
+    }
+    async function openVault(vaultId, secret) {
+        const v = vault(vaultId);
+        if (!v) throw new Error(t('No such vault'));
+        const c = await ensureClient();
+        const got = await api('GET', '/vaults/' + enc(vaultId));
+        Object.assign(v, { keyVersion: got.vault.keyVersion, revision: got.vault.revision, roleEnumId: got.vault.roleEnumId, itemCount: got.vault.itemCount,
+            entries: (got.entries || []).map((entry) => Vue.markRaw(entry)), memberList: got.memberList || [] });
+        if (v.lockEnumId === SINGLE) {
+            if (!opened.has(slot(vaultId, 1))) {
+                if (!secret) throw new Error(v.secretKindEnumId === 'VsGenerated' ? t('Enter the vault key') : t('Enter the vault password'));
+                await c.vaultKeyPasswordOpen({ vault_id: vaultId, key_version: 1, wrap: got.secretWrap, password: v.secretKindEnumId === 'VsGenerated' ? keyText(secret) : secret });
+                opened.add(slot(vaultId, 1));
+            }
+            local.set(keyOf('opened', vaultId), Date.now());
+        } else {
+            requireUnlocked();
+            const wraps = (got.wraps || []).slice().sort((a, b) => a.key_version - b.key_version);
+            if (!wraps.some((wrap) => wrap.key_version === v.keyVersion)) throw new Error(t('You have no access to this vault\'s current key'));
+            for (const wrap of wraps) {
+                if (opened.has(slot(vaultId, wrap.key_version))) continue;
+                // only through the member list's chain, back to a signer whose key this user compared
+                const out = await c.vaultKeyOpen({ entries: got.entries, key_checks: S.keyChecks, wrap, remembered: remembered(vaultId) });
+                opened.add(slot(vaultId, wrap.key_version));
+                remember(vaultId, out.remembered);
+            }
+            if (wraps.some((wrap) => wrap.key_version < v.keyVersion)) api('POST', '/vaults/' + enc(vaultId) + '/ack', { keyVersion: v.keyVersion }).catch(() => {});
+        }
+        await loadItems(v);
+        v.open = true;
+        await names(v.memberList.map((m) => m.userId).concat(v.entries.map((entry) => entry.signer_user_id)));
+        return v;
+    }
+    async function loadItems(v) {
+        await ensureClient();
+        const out = await api('GET', '/vaults/' + enc(v.vaultId) + '/items');
+        if (out.keyVersion) v.keyVersion = out.keyVersion;
+        // the highest revision this browser saw of each item: an older one coming back is told (§3.12)
+        const seen = local.get(keyOf('revisions', v.vaultId)) || {};
+        let older = false;
+        const items = [];
+        v.info = null;
+        for (const row of out.itemList || []) {
+            const raw = Vue.markRaw(row);
+            if ((seen[row.vaultItemId] || 0) > (row.revision || 0)) older = true;
+            seen[row.vaultItemId] = Math.max(seen[row.vaultItemId] || 0, row.revision || 0);
+            try {
+                const body = parseBody(await openRow(v.vaultId, row));
+                if (body.type === INFO_TYPE) { v.info = raw; v.name = String(body.name || ''); continue; }
+                items.push(headerOf(raw, body));
+            } catch (err) {
+                items.push({ id: row.vaultItemId, row: raw, type: '', name: t('An item that does not open'), uris: [], tags: [], shown: {}, changed: null, broken: messageOf(err) });
+            }
+        }
+        local.set(keyOf('revisions', v.vaultId), seen);
+        items.sort((a, b) => a.name.localeCompare(b.name));
+        v.items = items;
+        v.itemCount = (out.itemList || []).length;
+        v.warning = older ? t('The server gave an older copy of an item than this browser saw before. Someone may have put back old data.') : '';
+    }
+    async function itemBody(vaultId, itemId) {
+        const v = vault(vaultId);
+        const item = v && v.items.find((entry) => entry.id === itemId);
+        if (!item) throw new Error(t('No such item'));
+        return parseBody(await openRow(vaultId, item.row));
+    }
+    /** An item sealed in the worker and stored; fresh gives it a new item key (decision (c) after a removal). */
+    async function saveItem(vaultId, item, body, fresh) {
+        const v = vault(vaultId);
+        const c = await ensureClient();
+        const row = item ? item.row : null;
+        const id = row ? row.vaultItemId : randomId('vi');
+        const args = { vault_id: vaultId, item_id: id, key_version: v.keyVersion, body: JSON.stringify(body) };
+        if (row && !fresh) Object.assign(args, { wrapped_item_key: row.wrappedItemKey, wrapped_key_version: row.keyVersion });
+        const sealed = await c.itemSeal(args);
+        const stored = { keyVersion: v.keyVersion, wrappedItemKey: sealed.wrapped_item_key, bodyCipher: sealed.sealed_body };
+        if (row) await api('PUT', '/items/' + enc(id), Object.assign({ expectedRevision: row.revision }, stored));
+        else await api('POST', '/vaults/' + enc(vaultId) + '/items', Object.assign({ vaultItemId: id }, stored));
+        return id;
+    }
+    async function deleteItem(vaultId, itemId) {
+        await api('DELETE', '/items/' + enc(itemId));
+        await loadItems(vault(vaultId));
+    }
+    async function makeVault(name, lockId, secretKind, secret) {
+        const c = await ensureClient();
+        const id = randomId('v');
+        if (lockId === SINGLE) {
+            await c.vaultKeyNew({ vault_id: id, key_version: 1 });
+            opened.add(slot(id, 1));
+            const secretWrap = await c.vaultKeyPasswordWrap({ vault_id: id, key_version: 1, password: secret });
+            await api('POST', '/vaults', { vaultId: id, vaultKindEnumId: 'VkPersonal', lockEnumId: SINGLE, secretKindEnumId: secretKind, secretWrap });
+            local.set(keyOf('opened', id), Date.now());
+        } else {
+            requireUnlocked();
+            const me = S.personal;
+            const members = [{ user_id: me.userId, role: 'manage', key_id: me.personalKeyId, public: me.public }];
+            const entry = await c.keyVersionFirst({ vault_id: id, members, key_checks: S.keyChecks });
+            await c.vaultKeyNew({ vault_id: id, key_version: 1 });
+            opened.add(slot(id, 1));
+            const wrap = await c.vaultKeyWrapMember({ vault_id: id, key_version: 1, member_user_id: me.userId, member_key_id: me.personalKeyId,
+                member_public: me.public, key_checks: S.keyChecks });
+            await api('POST', '/vaults', { vaultId: id, vaultKindEnumId: 'VkPersonal', lockEnumId: SHARED, recoveryOn: 'N', entry, memberWraps: [wrap] });
+            remember(id, await c.chainVerify({ entries: [entry], key_checks: S.keyChecks, remembered: null }));
+        }
+        await refreshVaults();
+        const v = vault(id);
+        await saveItem(id, null, { v: 1, type: INFO_TYPE, name });
+        const got = await api('GET', '/vaults/' + enc(id));
+        Object.assign(v, { entries: (got.entries || []).map((entry) => Vue.markRaw(entry)), memberList: got.memberList || [] });
+        await loadItems(v);
+        v.open = true;
+        return id;
+    }
+    async function renameVault(vaultId, name) {
+        const v = vault(vaultId);
+        await saveItem(vaultId, v.info ? { row: v.info } : null, { v: 1, type: INFO_TYPE, name });
+        await loadItems(v);
+    }
+    async function deleteVault(vaultId) {
+        await api('DELETE', '/vaults/' + enc(vaultId));
+        await refreshVaults();
+    }
+
+    // ----- members (§3.9) -----
+    async function afterMembers(vaultId) {
+        const v = vault(vaultId);
+        const got = await api('GET', '/vaults/' + enc(vaultId));
+        remember(vaultId, await client.chainVerify({ entries: got.entries, key_checks: S.keyChecks, remembered: remembered(vaultId) }));
+        Object.assign(v, { keyVersion: got.vault.keyVersion, revision: got.vault.revision, entries: (got.entries || []).map((entry) => Vue.markRaw(entry)),
+            memberList: got.memberList || [] });
+        await names(v.memberList.map((m) => m.userId));
+    }
+    /** A member added, or a member's changed key given access: the next member list signed here and the vault key wrapped to them. */
+    async function setMember(vaultId, key, role) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const got = await api('GET', '/vaults/' + enc(vaultId));
+        const latest = got.entries[got.entries.length - 1];
+        const members = latest.members.filter((m) => m.user_id !== key.userId).concat([{ user_id: key.userId, role, key_id: key.personalKeyId, public: key.public }]);
+        const entry = await c.keyVersionNext({ entries: got.entries, key_checks: S.keyChecks, members, version: latest.version, revision: latest.revision + 1,
+            remembered: remembered(vaultId) });
+        const wrap = await c.vaultKeyWrapMember({ vault_id: vaultId, key_version: latest.version, member_user_id: key.userId, member_key_id: key.personalKeyId,
+            member_public: key.public, key_checks: S.keyChecks });
+        await api('POST', '/vaults/' + enc(vaultId) + '/members', { expectedRevision: got.vault.revision, entry, wrap });
+        await afterMembers(vaultId);
+    }
+    /** A member removed: the vault key rotated, every item key wrapped again and the remaining members' wraps remade, in one change. */
+    async function removeMember(vaultId, userId, reencrypt) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const v = vault(vaultId);
+        const got = await api('GET', '/vaults/' + enc(vaultId));
+        const listed = (await api('GET', '/vaults/' + enc(vaultId) + '/items')).itemList || [];
+        const latest = got.entries[got.entries.length - 1];
+        const rotated = await c.vaultRotate({ entries: got.entries, key_checks: S.keyChecks, members: latest.members.filter((m) => m.user_id !== userId),
+            items: listed.map((row) => ({ item_id: row.vaultItemId, wrapped_item_key: row.wrappedItemKey })), remembered: remembered(vaultId) });
+        opened.add(slot(vaultId, rotated.key_version));
+        await api('POST', '/vaults/' + enc(vaultId) + '/removeMember', { userId, expectedRevision: got.vault.revision, entry: rotated.entry,
+            itemKeys: rotated.item_keys, memberWraps: rotated.member_wraps });
+        v.keyVersion = rotated.key_version;
+        await afterMembers(vaultId);
+        await loadItems(v);
+        if (reencrypt) {
+            const rows = v.items.filter((item) => !item.broken).concat(v.info ? [{ row: v.info }] : []);
+            for (const item of rows) await saveItem(vaultId, item, parseBody(await openRow(vaultId, item.row)), true);
+            await loadItems(v);
+        }
+    }
+
+    // ----- deliveries -----
+    async function fileDelivery(delivery, vaultId) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const out = await c.call('delivery_open', { delivery: delivery.delivery, sender_public: delivery.senderPublic, key_checks: S.keyChecks });
+        let body = null;
+        try { body = parseBody(out.value); } catch (err) { body = null; }
+        if (!body || !body.type || body.type === INFO_TYPE) body = { v: 1, type: 'note', name: t('Sent to you'), fields: { text: String(out.value) } };
+        await saveItem(vaultId, null, body);
+        await api('POST', '/deliveries/' + enc(delivery.deliveryId) + '/file', {});
+        await loadItems(vault(vaultId));
+        await refreshDeliveries();
+    }
+    async function sendItem(vaultId, itemId, key) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const body = await itemBody(vaultId, itemId);
+        const sent = await c.call('delivery_send', { delivery_id: randomId('dl'), to_user_id: key.userId, to_key_id: key.personalKeyId, to_public: key.public,
+            purpose: 'item', value: JSON.stringify(body), key_checks: S.keyChecks });
+        await api('POST', '/deliveries', { delivery: sent });
+    }
+
+    // ----- export and import -----
+    async function exportVault(vaultId, password) {
+        const c = await ensureClient();
+        const v = vault(vaultId);
+        const exportId = randomId('export');
+        await c.vaultKeyNew({ vault_id: exportId, key_version: 1 });
+        opened.add(slot(exportId, 1));
+        const wrap = await c.vaultKeyPasswordWrap({ vault_id: exportId, key_version: 1, password });
+        const rows = (v.info ? [v.info] : []).concat(v.items.filter((item) => !item.broken).map((item) => item.row));
+        const items = [];
+        for (const row of rows) {
+            const itemId = exportId + '-' + (items.length + 1);
+            const sealed = await c.itemSeal({ vault_id: exportId, item_id: itemId, key_version: 1, body: await openRow(vaultId, row) });
+            items.push({ item_id: itemId, wrapped_item_key: sealed.wrapped_item_key, sealed_body: sealed.sealed_body });
+        }
+        return JSON.stringify({ format: 'moqui-vault-export', v: 1, export_id: exportId, key_version: 1, created: Date.now(), wrap, items });
+    }
+    async function readExport(json, password) {
+        const c = await ensureClient();
+        if (!opened.has(slot(json.export_id, 1))) {
+            await c.vaultKeyPasswordOpen({ vault_id: json.export_id, key_version: 1, wrap: json.wrap, password });
+            opened.add(slot(json.export_id, 1));
+        }
+        const out = [];
+        for (const row of json.items || []) {
+            const body = parseBody((await c.itemOpen({ vault_id: json.export_id, item_id: row.item_id, key_version: 1, wrapped_item_key: row.wrapped_item_key,
+                sealed_body: row.sealed_body })).body);
+            if (body.type !== INFO_TYPE) out.push(body);
+        }
+        return out;
+    }
+    async function importItems(vaultId, items, progress) {
+        let done = 0;
+        let failed = 0;
+        for (const body of items) {
+            try { await saveItem(vaultId, null, body); done++; } catch (err) { failed++; console.warn('Vault import: an item was not stored: ' + messageOf(err)); }
+            if (progress) progress(done + failed);
+        }
+        await loadItems(vault(vaultId));
+        return { done, failed };
+    }
+
+    async function lock() {
+        locking = true;
+        try {
+            if (client) await client.lock();
+            else forget(false);
+        } finally {
+            locking = false;
+        }
+    }
+    const touch = () => { if (client && (S.unlocked || opened.size)) client.touch(); };
+    const copy = async (text) => (await ensureClient()).copy(text);
+    const anyOpen = () => opened.size > 0;
+    const lastOpened = (vaultId) => local.get(keyOf('opened', vaultId));
+
+    return { S, api, init, refresh, refreshVaults, refreshDeliveries, refreshChecks, names, unlock, changePassphrase, unlockWithCode, strongReady, makeKey, saveKey, discardKey,
+        checked, publicKeyOf, fingerprintOf, storeCheck, openVault, loadItems, itemBody, saveItem, deleteItem, makeVault, renameVault, deleteVault,
+        setMember, removeMember, fileDelivery, sendItem, exportVault, readExport, importItems, lock, touch, copy, typeOf, vault, anyOpen, lastOpened,
+        openRow, parseBody, INFO_TYPE };
+}
+const session = window.BossVaultSession || (window.BossVaultSession = makeSession());
+
+module.exports = {
+    name: 'BossVault',
+    data() {
+        return {
+            S: session.S, SINGLE, SHARED, SINGLE_WARNING, search: '', typeFilter: '', revealed: {}, detail: null, myWords: '', checksWords: {},
+            unlockForm: { passphrase: '', secret: '', show: false, busy: false, error: '', check: [] },
+            unlockDialog: { open: false, passphrase: '', busy: false, error: '', then: null },
+            edit: { open: false, item: null, type: 'login', name: '', fields: {}, show: {}, uris: '', tags: '', notes: '', busy: false },
+            make: { open: false, step: 'choose', name: '', lock: SHARED, passphrase: '', kind: 'VsPassword', password: '', password2: '', key: '', typed: '', stored: false, busy: false, error: '' },
+            rename: { open: false, name: '', busy: false },
+            check: { open: false, userId: '', name: '', key: null, words: '', match: false, busy: false, error: '', then: null },
+            members: { open: false, keys: {}, words: {}, busy: false, error: '', remove: null, reencrypt: true, add: { userId: null, key: null, words: '', match: false, role: 'write' } },
+            deliveries: { open: false, vaultId: null, busy: '', error: '' },
+            send: { open: false, userId: null, key: null, words: '', checked: false, match: false, busy: false, error: '' },
+            copyTo: { open: false, vaultId: null, busy: false },
+            history: { open: false, busy: false, rows: [], shown: {} },
+            importer: { open: false, vaultId: null, fileName: '', parsed: null, password: '', busy: false, progress: 0, total: 0, result: '', error: '' },
+            exporter: { open: false, vaultId: null, password: '', password2: '', busy: false, error: '' },
+            about: false,
+            setup: { open: false, mode: 'new', step: 'passphrase', passphrase: '', passphrase2: '', code: '', group: 0, typed: '', fingerprint: '', busy: false, error: '' },
+            recover: { open: false, code: '', passphrase: '', passphrase2: '', busy: false, error: '' },
+            change: { open: false, current: '', passphrase: '', passphrase2: '', busy: false, error: '' }
+        };
+    },
+    computed: {
+        phone() { return this.$q.screen.lt.sm; },
+        wide() { return this.$q.screen.gt.sm; },
+        dark() { return this.$q.dark.isActive; },
+        pathList() { return this.$root.currentPathList || []; },
+        keyView() { return this.pathList.includes('VaultKey'); },
+        screenIndex() { const at = this.pathList.lastIndexOf(this.keyView ? 'VaultKey' : 'Vault'); return at; },
+        screenPath() { return this.$root.basePath + '/' + (this.screenIndex >= 0 ? this.pathList.slice(0, this.screenIndex + 1) : ['Commons', 'Vault']).join('/'); },
+        linkPath() { return this.$root.linkBasePath + '/' + (this.screenIndex >= 0 ? this.pathList.slice(0, this.screenIndex + 1) : ['Commons', 'Vault']).join('/'); },
+        params() { return this.$root.currentParameters || {}; },
+        current() { return this.params.vaultId ? session.vault(this.params.vaultId) : null; },
+        currentItem() { return this.current && this.current.open && this.params.itemId ? this.current.items.find((item) => item.id === this.params.itemId) || null : null; },
+        needsFactor() { return this.S.needsFactor; },
+        anyUnlocked() { return this.S.unlocked || this.S.vaults.some((v) => v.open); },
+        openVaults() { return this.S.vaults.filter((v) => v.open); },
+        writableOpen() { return this.openVaults.filter((v) => this.writable(v)); },
+        writableOptions() { return this.writableOpen.map((v) => ({ value: v.vaultId, label: v.name || t('Vault') })); },
+        openOptions() { return this.openVaults.map((v) => ({ value: v.vaultId, label: v.name || t('Vault') })); },
+        typeOptions() { return ((this.S.config && this.S.config.itemTypes) || []).map((type) => ({ value: type.id, label: type.label })); },
+        roleOptions() { return [{ value: 'read', label: t('Read') }, { value: 'write', label: t('Write') }, { value: 'manage', label: t('Manage') }]; },
+        lockOptions() {
+            return [{ value: SHARED, label: t('Shared key: opened by your vault key. You can share it, and each member keeps access of their own.') },
+                { value: SINGLE, label: t('Single secret: one password or generated key, yours only. It cannot be shared, and nobody can recover it for you.') }];
+        },
+        secretOptions() { return [{ value: 'VsPassword', label: t('A password') }, { value: 'VsGenerated', label: t('A generated key') }]; },
+        secretReady() {
+            const m = this.make;
+            if (!m.stored) return false;
+            if (m.kind === 'VsGenerated') return m.typed.length > 0 && keyText(m.typed).replace(/-/g, '').slice(-8) === m.key.replace(/-/g, '').slice(-8) && keyText(m.typed).replace(/-/g, '').length >= 8;
+            return !passwordProblem(m.password, this.S.config && this.S.config.username) && m.password === m.password2;
+        },
+        typeCounts() {
+            if (!this.current) return [];
+            const counts = new Map();
+            for (const item of this.current.items) counts.set(item.type, (counts.get(item.type) || 0) + 1);
+            return Array.from(counts.entries()).map(([id, count]) => ({ id, count, label: this.typeLabel(id) })).sort((a, b) => a.label.localeCompare(b.label));
+        },
+        shownItems() { return this.current ? this.current.items.filter((item) => !this.typeFilter || item.type === this.typeFilter) : []; },
+        results() {
+            const text = String(this.search || '').trim().toLowerCase();
+            if (!text) return [];
+            const hits = [];
+            for (const v of this.openVaults) for (const item of v.items) {
+                const hay = [item.name, this.typeLabel(item.type)].concat(item.uris, item.tags, Object.values(item.shown)).join('\n').toLowerCase();
+                if (hay.includes(text)) hits.push({ vaultId: v.vaultId, item });
+            }
+            return hits.slice(0, 200);
+        },
+        memberRows() {
+            const v = this.current;
+            if (!v) return [];
+            const latest = v.entries.length ? v.entries[v.entries.length - 1] : { members: [] };
+            return v.memberList.map((m) => {
+                const listed = latest.members.find((entry) => entry.user_id === m.userId) || {};
+                const active = this.members.keys[m.userId];
+                return { userId: m.userId, roleEnumId: m.roleEnumId, me: m.userId === this.S.personal.userId, public: listed.public || '',
+                    words: this.members.words[m.userId] || '', checked: !!listed.public && session.checked(m.userId, listed.public),
+                    changed: !!(active && active.hasKey && listed.public && active.public !== listed.public) };
+            });
+        },
+        importSummary() {
+            const parsed = this.importer.parsed;
+            if (!parsed) return '';
+            const counts = new Map();
+            for (const item of parsed.items) counts.set(item.type, (counts.get(item.type) || 0) + 1);
+            return this.itemsText(parsed.items.length) + ': ' + Array.from(counts.entries()).map(([type, count]) => this.typeLabel(type) + ' ' + count).join(', ');
+        }
+    },
+    watch: {
+        'S.lockCount'() { this.forgetShown(); },
+        'params.itemId'() { this.revealed = {}; this.detail = null; this.loadDetail(); },
+        'params.vaultId'() { this.unlockForm.error = ''; this.unlockForm.check = []; this.unlockForm.secret = ''; this.typeFilter = ''; },
+        'S.unlocked'(open) { if (open) this.loadKeyWords(); },
+        'S.keyChecks'() { this.loadKeyWords(); },
+        'S.personal'() { this.loadKeyWords(); }
+    },
+    methods: {
+        t, fill,
+        passwordProblem(value) { return passwordProblem(value, this.S.config && this.S.config.username); },
+        url(name) { return this.screenPath + '/' + name; },
+        go(path) { this.$root.setUrl(this.$root.linkBasePath + path); },
+        nameOf(userId) { return this.S.names[userId] || userId || ''; },
+        vault(vaultId) { return session.vault(vaultId) || {}; },
+        typeOf(id) { return session.typeOf(id); },
+        typeLabel(id) { const type = session.typeOf(id); return type ? type.label : (id || t('Item')); },
+        iconOf(id) { return ICONS[id] || 'sym_o_lock'; },
+        writable(v) { return !!v && (v.lockEnumId === SINGLE || v.roleEnumId === 'VrManage' || v.roleEnumId === 'VrWrite'); },
+        manages(v) { return !!v && (v.lockEnumId === SINGLE || v.roleEnumId === 'VrManage'); },
+        roleText(roleId) { return { VrManage: t('Manage'), VrWrite: t('Write'), VrRead: t('Read') }[roleId] || roleId || ''; },
+        lockText(v) { return v.lockEnumId === SINGLE ? (v.secretKindEnumId === 'VsGenerated' ? t('Single secret, a generated key') : t('Single secret, a password')) : t('Shared key'); },
+        itemsText(count) { return count === 1 ? t('1 item') : fill(t('{count} items'), { count }); },
+        itemCount(v) { return v.open ? v.items.length : Math.max(0, (v.itemCount || 0) - (v.lockEnumId ? 1 : 0)); },
+        reminder(v) {
+            if (v.lockEnumId !== SINGLE) return false;
+            const last = session.lastOpened(v.vaultId) || (v.createdDate ? new Date(v.createdDate).getTime() : Date.now());
+            return Date.now() - Number(last) > 30 * DAY;
+        },
+        subtitle(item) { return item.shown.username || item.shown.email || item.shown.organization || item.shown.cardholder || item.uris[0] || this.typeLabel(item.type); },
+        dateText(value) {
+            if (value == null || value === '') return '';
+            const date = new Date(typeof value === 'number' || /^\d+$/.test(String(value)) ? Number(value) : value);
+            return isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
+        },
+        safeUrl(value) { const text = String(value || '').trim(); return /^https?:\/\//i.test(text) ? text : (/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(text) ? 'https://' + text : null); },
+        fieldsOf(item) {
+            const type = session.typeOf(item.type);
+            const out = [];
+            for (const field of type ? type.fields : []) {
+                if (field.masked) out.push(Object.assign({}, field, { value: null }));
+                else if (item.shown[field.name] != null) out.push(Object.assign({}, field, { value: item.shown[field.name] }));
+            }
+            return out;
+        },
+        notify(message) { moqui.notifyMessages([{ type: 'success', message }]); },
+        fail(err) { moqui.notifyMessages(null, messageOf(err)); },
+        touch() { session.touch(); },
+        start() { return session.init(this.screenPath); },
+        setParams(params) { this.$root.setUrl(this.linkPath + (Object.keys(params).length ? '?' + moqui.objToSearch(params) : '')); },
+        selectVault(vaultId) { this.search = ''; this.setParams(vaultId ? { vaultId } : {}); },
+        selectItem(vaultId, itemId) { this.search = ''; this.setParams(itemId ? { vaultId, itemId } : { vaultId }); },
+        /** What a lock drops from this page too: shown values, forms holding values, open dialogs. */
+        forgetShown() {
+            this.revealed = {};
+            this.detail = null;
+            this.history = { open: false, busy: false, rows: [], shown: {} };
+            this.edit = Object.assign(this.edit, { open: false, fields: {}, show: {}, notes: '' });
+            this.importer.open = false;
+            this.exporter.open = false;
+            this.send.open = false;
+            this.copyTo.open = false;
+            this.members.open = false;
+            this.unlockForm.passphrase = '';
+            this.unlockForm.secret = '';
+            this.checksWords = {};
+        },
+        async loadKeyWords() {
+            const p = this.S.personal;
+            if (!p || !p.hasKey || !this.keyView) return;
+            try {
+                this.myWords = await session.fingerprintOf(p.public);
+                const words = {};
+                for (const row of this.S.keyChecks) words[row.checked_key_id] = await session.fingerprintOf(String(row.checked_encrypt) + String(row.checked_verify));
+                this.checksWords = words;
+                await session.names(this.S.keyChecks.map((row) => row.checked_user_id));
+            } catch (err) { this.fail(err); }
+        },
+        async loadDetail() {
+            const item = this.currentItem;
+            if (!item || item.broken) return;
+            try {
+                const body = await session.itemBody(this.current.vaultId, item.id);
+                if (this.currentItem === item) this.detail = { notes: String(body.notes || '') };
+            } catch (err) { this.fail(err); }
+        },
+        // ----- opening -----
+        async openCurrent() {
+            const v = this.current;
+            if (!v || this.unlockForm.busy) return;
+            this.unlockForm.busy = true;
+            this.unlockForm.error = '';
+            this.unlockForm.check = [];
+            try {
+                if (v.lockEnumId === SHARED && !this.S.unlocked) {
+                    await session.unlock(this.unlockForm.passphrase);
+                    this.unlockForm.passphrase = '';
+                }
+                await session.openVault(v.vaultId, this.unlockForm.secret);
+                this.unlockForm.secret = '';
+                this.loadDetail();
+            } catch (err) {
+                const message = messageOf(err);
+                this.unlockForm.error = /does not open/.test(message) ? (v.lockEnumId === SINGLE ? t('That does not open this vault') : t('That passphrase does not open your vault key')) : message;
+                if (/has been checked|has not been checked/.test(message)) {
+                    const me = this.S.personal.userId;
+                    this.unlockForm.check = Array.from(new Set((v.entries || []).map((entry) => entry.signer_user_id).filter((id) => id && id !== me)));
+                    await session.names(this.unlockForm.check);
+                }
+            } finally {
+                this.unlockForm.busy = false;
+            }
+        },
+        openUnlock(then) { this.unlockDialog = { open: true, passphrase: '', busy: false, error: '', then }; },
+        async submitUnlock() {
+            const d = this.unlockDialog;
+            d.busy = true;
+            d.error = '';
+            try {
+                await session.unlock(d.passphrase);
+                d.open = false;
+                d.passphrase = '';
+                if (d.then) d.then();
+            } catch (err) {
+                d.error = /does not open/.test(messageOf(err)) ? t('That passphrase does not open your vault key') : messageOf(err);
+            } finally { d.busy = false; }
+        },
+        async needUnlocked(then) {
+            if (this.S.unlocked) return true;
+            if (!this.S.personal.hasKey) { this.fail(t('Set up your vault key first, in Settings › Vault key')); return false; }
+            this.openUnlock(then);
+            return false;
+        },
+        lockNow() { session.lock().then(() => this.notify(t('Locked'))); },
+        // ----- an item -----
+        async toggleReveal(field) {
+            if (this.revealed[field.name] != null) { delete this.revealed[field.name]; this.revealed = Object.assign({}, this.revealed); return; }
+            try {
+                const body = await session.itemBody(this.current.vaultId, this.currentItem.id);
+                const value = body.fields && body.fields[field.name] != null ? String(body.fields[field.name]) : '';
+                this.revealed = Object.assign({}, this.revealed, { [field.name]: value });
+            } catch (err) { this.fail(err); }
+        },
+        async copyField(field) {
+            try {
+                let value = field.value;
+                if (field.masked) {
+                    const body = await session.itemBody(this.current.vaultId, this.currentItem.id);
+                    value = body.fields && body.fields[field.name] != null ? String(body.fields[field.name]) : '';
+                }
+                await session.copy(value);
+                this.notify(field.masked ? fill(t('Copied; cleared from the clipboard in {seconds} s'), { seconds: this.S.config.clipboardSeconds }) : t('Copied'));
+            } catch (err) { this.fail(err); }
+        },
+        async openEdit(item) {
+            const v = this.current;
+            if (!v || !v.open) return;
+            const e = { open: true, item, type: 'login', name: '', fields: {}, show: {}, uris: '', tags: '', notes: '', busy: false };
+            if (item) {
+                try {
+                    const body = await session.itemBody(v.vaultId, item.id);
+                    Object.assign(e, { type: String(body.type || 'note'), name: String(body.name || ''), fields: Object.assign({}, body.fields || {}),
+                        uris: arr(body.uris).join('\n'), tags: arr(body.tags).join(', '), notes: String(body.notes || '') });
+                } catch (err) { this.fail(err); return; }
+            } else if (this.typeFilter && session.typeOf(this.typeFilter)) e.type = this.typeFilter;
+            this.edit = e;
+        },
+        generateFor(field) { this.edit.fields[field.name] = generatePassword(20); this.edit.show[field.name] = true; },
+        async saveEdit() {
+            const e = this.edit;
+            const v = this.current;
+            if (!v || e.busy) return;
+            e.busy = true;
+            try {
+                const type = session.typeOf(e.type);
+                const fields = {};
+                for (const field of type ? type.fields : []) if (e.fields[field.name] != null && String(e.fields[field.name]) !== '') fields[field.name] = String(e.fields[field.name]);
+                // a field an import brought that the type does not know is kept as it was
+                for (const [name, value] of Object.entries(e.fields)) if (!(name in fields) && !(type && type.fields.some((f) => f.name === name)) && value != null && value !== '') fields[name] = String(value);
+                const body = { v: 1, type: e.type, name: String(e.name).trim(), fields, notes: String(e.notes || ''),
+                    tags: String(e.tags || '').split(',').map((tag) => tag.trim()).filter((tag) => tag),
+                    uris: String(e.uris || '').split(/\r?\n/).map((uri) => uri.trim()).filter((uri) => uri) };
+                const id = await session.saveItem(v.vaultId, e.item, body);
+                await session.loadItems(v);
+                this.edit = Object.assign(e, { open: false, fields: {}, notes: '' });
+                this.selectItem(v.vaultId, id);
+                this.revealed = {};
+                this.loadDetail();
+                this.notify(t('Saved'));
+            } catch (err) {
+                if (/changed since|stale|revision/i.test(messageOf(err))) { await session.loadItems(v).catch(() => {}); this.fail(t('The item was changed elsewhere: open it again and make your change there')); }
+                else this.fail(err);
+            } finally { e.busy = false; }
+        },
+        confirmDeleteItem() {
+            const v = this.current;
+            const item = this.currentItem;
+            this.$q.dialog({ title: t('Delete the item'), message: fill(t('Delete {name}? Its history goes too.'), { name: item.name || t('Untitled') }),
+                ok: { label: t('Delete'), color: 'negative', unelevated: true, noCaps: true }, cancel: { label: t('Cancel'), flat: true, noCaps: true } })
+                .onOk(() => session.deleteItem(v.vaultId, item.id).then(() => { this.selectItem(v.vaultId, null); this.notify(t('Deleted')); }, (err) => this.fail(err)));
+        },
+        async openHistory() {
+            const item = this.currentItem;
+            this.history = { open: true, busy: true, rows: [], shown: {} };
+            try {
+                this.history.rows = (await session.api('GET', '/items/' + encodeURIComponent(item.id) + '/history')).historyList || [];
+            } catch (err) { this.fail(err); }
+            this.history.busy = false;
+        },
+        async toggleHistory(row) {
+            if (this.history.shown[row.revision]) { this.history.shown = Object.assign({}, this.history.shown, { [row.revision]: '' }); return; }
+            try {
+                const body = session.parseBody(await session.openRow(this.current.vaultId, row));
+                const type = session.typeOf(body.type);
+                const lines = [String(body.name || '')].concat(Object.entries(body.fields || {}).map(([name, value]) => {
+                    const def = type ? type.fields.find((f) => f.name === name) : null;
+                    return (def ? def.label : name) + ': ' + value;
+                }));
+                if (body.notes) lines.push(t('Notes') + ': ' + body.notes);
+                this.history.shown = Object.assign({}, this.history.shown, { [row.revision]: lines.join('\n') });
+            } catch (err) { this.fail(/locked/.test(messageOf(err)) ? t('That version is under a key this browser no longer holds') : err); }
+        },
+        openCopyTo() { this.copyTo = { open: true, vaultId: null, busy: false }; },
+        async submitCopyTo() {
+            this.copyTo.busy = true;
+            try {
+                const body = await session.itemBody(this.current.vaultId, this.currentItem.id);
+                const id = await session.saveItem(this.copyTo.vaultId, null, body);
+                await session.loadItems(session.vault(this.copyTo.vaultId));
+                this.copyTo.open = false;
+                this.selectItem(this.copyTo.vaultId, id);
+                this.notify(t('Copied to the vault'));
+            } catch (err) { this.fail(err); }
+            this.copyTo.busy = false;
+        },
+        // ----- vaults -----
+        openMake() {
+            this.make = { open: true, step: 'choose', name: '', lock: this.S.personal.hasKey ? SHARED : SINGLE, passphrase: '', kind: 'VsPassword', password: '', password2: '',
+                key: '', typed: '', stored: false, busy: false, error: '' };
+        },
+        secretKindChanged(kind) { if (kind === 'VsGenerated' && !this.make.key) this.make.key = generatedKey(); this.make.stored = false; this.make.typed = ''; },
+        async submitMake() {
+            const m = this.make;
+            if (m.busy) return;
+            m.busy = true;
+            m.error = '';
+            try {
+                if (m.lock === SHARED && !this.S.unlocked) { await session.unlock(m.passphrase); m.passphrase = ''; }
+                const secret = m.lock === SINGLE ? (m.kind === 'VsGenerated' ? m.key : m.password) : null;
+                const id = await session.makeVault(String(m.name).trim(), m.lock, m.kind, secret);
+                this.make = { open: false, step: 'choose', name: '', lock: SHARED, passphrase: '', kind: 'VsPassword', password: '', password2: '', key: '', typed: '', stored: false, busy: false, error: '' };
+                this.selectVault(id);
+                this.notify(t('The vault is made'));
+            } catch (err) {
+                m.error = /does not open/.test(messageOf(err)) ? t('That passphrase does not open your vault key') : messageOf(err);
+            } finally { m.busy = false; }
+        },
+        openRename() { this.rename = { open: true, name: this.current.name || '', busy: false }; },
+        async submitRename() {
+            this.rename.busy = true;
+            try { await session.renameVault(this.current.vaultId, String(this.rename.name).trim()); this.rename.open = false; } catch (err) { this.fail(err); }
+            this.rename.busy = false;
+        },
+        confirmDeleteVault() {
+            const v = this.current;
+            this.$q.dialog({ title: t('Delete the vault'), message: fill(t('Delete {name} and its {count} items, for every member? This cannot be undone.'), { name: v.name || t('the vault'), count: v.items.length }),
+                ok: { label: t('Delete'), color: 'negative', unelevated: true, noCaps: true }, cancel: { label: t('Cancel'), flat: true, noCaps: true } })
+                .onOk(() => session.deleteVault(v.vaultId).then(() => { this.selectVault(null); this.notify(t('Deleted')); }, (err) => this.fail(err)));
+        },
+        downloadKey(text, name) { moqui.saveBlob(name + '.txt', new Blob([text + '\n'], { type: 'text/plain' })); },
+        printKey(text, title) {
+            const win = window.open('', '_blank', 'noopener=no,width=640,height=400');
+            if (!win) { this.fail(t('The print window was blocked: download the file and print it instead')); return; }
+            const doc = win.document;
+            doc.title = title;
+            const heading = doc.createElement('h2');
+            heading.textContent = title;
+            const pre = doc.createElement('pre');
+            pre.style.fontSize = '20px';
+            pre.textContent = text;
+            doc.body.appendChild(heading);
+            doc.body.appendChild(pre);
+            win.focus();
+            win.print();
+        },
+        // ----- key checks -----
+        async openCheck(userId, then) {
+            await session.names([userId]);
+            this.check = { open: true, userId, name: this.nameOf(userId), key: null, words: '', match: false, busy: false, error: '', then };
+            if (!(await this.needUnlocked(() => this.openCheck(userId, then)))) { this.check.open = false; return; }
+            try {
+                const key = await session.publicKeyOf(userId);
+                this.check.key = key;
+                if (key.hasKey) this.check.words = await session.fingerprintOf(key.public);
+            } catch (err) { this.check.error = messageOf(err); }
+        },
+        async submitCheck() {
+            const c = this.check;
+            c.busy = true;
+            try {
+                await session.storeCheck(c.key, c.words);
+                c.open = false;
+                this.notify(fill(t('{name}\'s key is compared'), { name: c.name }));
+                if (c.then) c.then();
+            } catch (err) { c.error = messageOf(err); }
+            c.busy = false;
+        },
+        // ----- members -----
+        async openMembers() {
+            if (!(await this.needUnlocked(() => this.openMembers()))) return;
+            this.members = { open: true, keys: {}, words: {}, busy: false, error: '', remove: null, reencrypt: true, add: { userId: null, key: null, words: '', match: false, role: 'write' } };
+            this.loadMemberKeys();
+        },
+        async loadMemberKeys() {
+            const v = this.current;
+            if (!v) return;
+            const latest = v.entries.length ? v.entries[v.entries.length - 1] : { members: [] };
+            for (const m of latest.members) {
+                try { this.members.words = Object.assign({}, this.members.words, { [m.user_id]: await session.fingerprintOf(m.public) }); } catch (err) { /* left blank */ }
+                if (m.user_id === this.S.personal.userId) continue;
+                try { this.members.keys = Object.assign({}, this.members.keys, { [m.user_id]: await session.publicKeyOf(m.user_id) }); } catch (err) { /* not shown as changed */ }
+            }
+        },
+        async memberChosen(userId) {
+            this.members.add = { userId, key: null, words: '', match: false, role: this.members.add.role };
+            if (!userId) return;
+            try {
+                await session.names([userId]);
+                const key = await session.publicKeyOf(userId);
+                if (!key.hasKey) { this.members.error = t('They have no vault key yet. Ask them to set one up in Settings › Vault key.'); return; }
+                this.members.error = '';
+                this.members.add.key = key;
+                this.members.add.words = await session.fingerprintOf(key.public);
+                this.members.add.match = session.checked(userId, key.public);
+            } catch (err) { this.members.error = messageOf(err); }
+        },
+        async submitAddMember() {
+            const add = this.members.add;
+            this.members.busy = true;
+            this.members.error = '';
+            try {
+                if (!session.checked(add.userId, add.key.public)) await session.storeCheck(add.key, add.words);
+                await session.setMember(this.current.vaultId, add.key, add.role);
+                this.members.add = { userId: null, key: null, words: '', match: false, role: add.role };
+                await this.loadMemberKeys();
+                this.notify(t('Added'));
+            } catch (err) { this.members.error = messageOf(err); }
+            this.members.busy = false;
+        },
+        /** A member whose vault key changed: their new key, once compared, given access at their role (§3.10 for a shared vault). */
+        async regrant(member) {
+            const key = this.members.keys[member.userId];
+            if (!key || !session.checked(member.userId, key.public)) { this.openCheck(member.userId, () => this.regrant(member)); return; }
+            this.members.busy = true;
+            this.members.error = '';
+            try {
+                await session.setMember(this.current.vaultId, key, ROLE_OF[member.roleEnumId] || 'read');
+                await this.loadMemberKeys();
+                this.notify(fill(t('{name}\'s new key has access'), { name: this.nameOf(member.userId) }));
+            } catch (err) { this.members.error = messageOf(err); }
+            this.members.busy = false;
+        },
+        async submitRemoveMember() {
+            const member = this.members.remove;
+            this.members.busy = true;
+            this.members.error = '';
+            try {
+                await session.removeMember(this.current.vaultId, member.userId, this.members.reencrypt);
+                this.members.remove = null;
+                await this.loadMemberKeys();
+                this.notify(fill(t('{name} is removed and the vault has a new key'), { name: this.nameOf(member.userId) }));
+            } catch (err) {
+                const message = messageOf(err);
+                this.members.error = /has not been checked/.test(message) ? t('Compare the key of every member who stays first') : message;
+            }
+            this.members.busy = false;
+        },
+        // ----- deliveries and sending -----
+        async openDeliveries() {
+            if (!(await this.needUnlocked(() => this.openDeliveries()))) return;
+            this.deliveries = { open: true, vaultId: this.writableOpen.length ? (this.current && this.writable(this.current) && this.current.open ? this.current.vaultId : this.writableOpen[0].vaultId) : null, busy: '', error: '' };
+            session.refreshDeliveries().catch((err) => { this.deliveries.error = messageOf(err); });
+        },
+        async submitFile(d) {
+            this.deliveries.busy = d.deliveryId;
+            this.deliveries.error = '';
+            try { await session.fileDelivery(d, this.deliveries.vaultId); this.notify(t('Filed')); } catch (err) {
+                const message = messageOf(err);
+                this.deliveries.error = /has not been checked|key changed/.test(message) ? fill(t('Compare {name}\'s key first'), { name: this.nameOf(d.delivery.sender_id) }) : message;
+            }
+            this.deliveries.busy = '';
+        },
+        async openSend() {
+            if (!(await this.needUnlocked(() => this.openSend()))) return;
+            this.send = { open: true, userId: null, key: null, words: '', checked: false, match: false, busy: false, error: '' };
+        },
+        async sendChosen(userId) {
+            Object.assign(this.send, { userId, key: null, words: '', checked: false, match: false, error: '' });
+            if (!userId) return;
+            try {
+                await session.names([userId]);
+                const key = await session.publicKeyOf(userId);
+                if (!key.hasKey) { this.send.error = t('They have no vault key yet. Ask them to set one up in Settings › Vault key.'); return; }
+                this.send.key = key;
+                this.send.words = await session.fingerprintOf(key.public);
+                this.send.checked = session.checked(userId, key.public);
+            } catch (err) { this.send.error = messageOf(err); }
+        },
+        async submitSend() {
+            const s = this.send;
+            s.busy = true;
+            s.error = '';
+            try {
+                if (!s.checked) await session.storeCheck(s.key, s.words);
+                await session.sendItem(this.current.vaultId, this.currentItem.id, s.key);
+                s.open = false;
+                this.notify(fill(t('Sent to {name}'), { name: this.nameOf(s.userId) }));
+            } catch (err) { s.error = messageOf(err); }
+            s.busy = false;
+        },
+        // ----- import and export -----
+        openImport() {
+            this.importer = { open: true, vaultId: this.current && this.current.open && this.writable(this.current) ? this.current.vaultId : (this.writableOpen[0] || {}).vaultId || null,
+                fileName: '', parsed: null, password: '', busy: false, progress: 0, total: 0, result: '', error: '' };
+        },
+        importFile(event) {
+            const file = event.target.files && event.target.files[0];
+            Object.assign(this.importer, { parsed: null, result: '', error: '', fileName: file ? file.name : '' });
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try { this.importer.parsed = parseImport(reader.result); } catch (err) { this.importer.error = messageOf(err); }
+            };
+            reader.onerror = () => { this.importer.error = t('The file could not be read'); };
+            reader.readAsText(file);
+        },
+        async submitImport() {
+            const im = this.importer;
+            im.busy = true;
+            im.error = '';
+            im.result = '';
+            try {
+                const items = im.parsed.format === 'export' ? await session.readExport(im.parsed.export, im.password) : im.parsed.items;
+                im.total = items.length;
+                im.progress = 0;
+                const out = await session.importItems(im.vaultId, items, (n) => { im.progress = n; });
+                im.result = fill(t('{done} imported'), { done: out.done }) + (out.failed ? ', ' + fill(t('{failed} not imported'), { failed: out.failed }) : '');
+                im.parsed = null;
+                im.password = '';
+            } catch (err) {
+                im.error = /does not open/.test(messageOf(err)) ? t('That password does not open the export') : messageOf(err);
+            }
+            im.busy = false;
+        },
+        openExport() {
+            this.exporter = { open: true, vaultId: this.current && this.current.open ? this.current.vaultId : (this.openVaults[0] || {}).vaultId || null, password: '', password2: '', busy: false, error: '' };
+        },
+        async submitExport() {
+            const ex = this.exporter;
+            ex.busy = true;
+            ex.error = '';
+            try {
+                const text = await session.exportVault(ex.vaultId, ex.password);
+                const name = (session.vault(ex.vaultId).name || 'vault').replace(/[^\w.-]+/g, '-');
+                moqui.saveBlob(name + '-' + new Date().toLocaleDateString('en-CA') + '.moquivault.json', new Blob([text], { type: 'application/json' }));
+                this.exporter = { open: false, vaultId: null, password: '', password2: '', busy: false, error: '' };
+                this.notify(t('Exported'));
+            } catch (err) { ex.error = messageOf(err); ex.busy = false; }
+        },
+        // ----- the vault key -----
+        openSetup(mode) {
+            this.setup = { open: true, mode, step: 'passphrase', passphrase: '', passphrase2: '', code: '', group: 0, typed: '', fingerprint: '', busy: false, error: '' };
+        },
+        async setupMake() {
+            const s = this.setup;
+            s.busy = true;
+            s.error = '';
+            try {
+                await session.strongReady();
+                const made = await session.makeKey(s.passphrase);
+                const groups = made.recoveryCode.split('-');
+                Object.assign(s, { step: 'code', code: made.recoveryCode, fingerprint: made.fingerprint, passphrase: '', passphrase2: '',
+                    group: 1 + Math.floor(Math.random() * Math.max(1, groups.length - 1)) % groups.length });
+            } catch (err) { s.error = messageOf(err); }
+            s.busy = false;
+        },
+        async setupSave() {
+            const s = this.setup;
+            const groups = s.code.split('-');
+            if (String(s.typed || '').trim().toUpperCase() !== String(groups[s.group] || '').toUpperCase()) { s.error = t('That is not that group of the code. Check your copy.'); return; }
+            s.busy = true;
+            s.error = '';
+            try {
+                await session.saveKey();
+                Object.assign(s, { step: 'done', code: '', typed: '' });
+                this.loadKeyWords();
+            } catch (err) { s.error = messageOf(err); }
+            s.busy = false;
+        },
+        cancelSetup() {
+            session.discardKey();
+            this.setup = { open: false, mode: 'new', step: 'passphrase', passphrase: '', passphrase2: '', code: '', group: 0, typed: '', fingerprint: '', busy: false, error: '' };
+        },
+        openRecover() { this.recover = { open: true, code: '', passphrase: '', passphrase2: '', busy: false, error: '' }; },
+        async submitRecover() {
+            const r = this.recover;
+            r.busy = true;
+            r.error = '';
+            try {
+                await session.unlockWithCode(r.code, r.passphrase);
+                this.recover = { open: false, code: '', passphrase: '', passphrase2: '', busy: false, error: '' };
+                this.notify(t('Unlocked, with your new passphrase'));
+            } catch (err) { r.error = /does not open/.test(messageOf(err)) ? t('That recovery code does not open your vault key') : messageOf(err); r.busy = false; }
+        },
+        openChange() { this.change = { open: true, current: '', passphrase: '', passphrase2: '', busy: false, error: '' }; },
+        async submitChange() {
+            const c = this.change;
+            c.busy = true;
+            c.error = '';
+            try {
+                if (!this.S.unlocked) await session.unlock(c.current);
+                await session.changePassphrase(c.passphrase);
+                this.change = { open: false, current: '', passphrase: '', passphrase2: '', busy: false, error: '' };
+                this.notify(t('The passphrase is changed'));
+            } catch (err) { c.error = /does not open/.test(messageOf(err)) ? t('That passphrase does not open your vault key') : messageOf(err); c.busy = false; }
+        }
+    },
+    mounted() {
+        this.start().then(() => { this.loadKeyWords(); this.loadDetail(); });
+    }
+};
+</script>
+
+<style>
+.boss-vault-words { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.02em; word-break: break-word; }
+.boss-vault-pre { white-space: pre-wrap; word-break: break-word; }
+.boss-vault-value { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+.boss-vault-masked { -webkit-text-security: disc; }
+</style>

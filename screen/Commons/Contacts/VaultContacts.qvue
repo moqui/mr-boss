@@ -1,0 +1,79 @@
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The private contacts of the open vaults (VaultContacts.xml), under the Contacts list: the contact items of the vaults open in
+    this page (window.BossVaultSession, Commons/Vault.qvue), matched in the browser against the list's search text and letter, each
+    with its name, organization, email and phone, a lock and "In your vault"; a row opens the item in Commons › Vault. They are
+    shown for the scopes All and My contacts only, never sent anywhere, and gone when the vault locks. No session or no open
+    vault: one line, Open your vault to see your private contacts here. -->
+<template><div class="boss-vault-contacts q-mt-sm" v-if="shown">
+    <div v-if="!anyOpen" class="text-caption m-muted q-px-sm">
+        <q-icon name="sym_o_lock" size="xs"></q-icon> {{t('Private contacts in your vault show here while it is open.')}}
+        <a href="#" class="text-primary" @click.prevent="openVault">{{t('Open your vault')}}</a>
+    </div>
+    <template v-else>
+        <div class="text-caption text-weight-medium q-px-sm q-pt-xs row items-center q-gutter-x-xs">
+            <q-icon name="sym_o_lock" size="xs"></q-icon><span>{{fill(t('Private, in your vault · {count}'), {count: rows.length})}}</span>
+        </div>
+        <q-list dense separator>
+            <q-item v-for="row in rows" :key="row.vaultId + row.id" clickable class="boss-vault-contact" :data-item="row.id" @click="openItem(row)">
+                <q-item-section avatar><m-avatar :name="row.name" size="32px"></m-avatar></q-item-section>
+                <q-item-section>
+                    <q-item-label class="row no-wrap items-center q-gutter-x-xs"><span class="ellipsis">{{row.name}}</span>
+                        <q-chip dense square class="m-tonal text-primary q-my-none" icon="sym_o_lock">{{t('In your vault')}}</q-chip></q-item-label>
+                    <q-item-label v-if="row.organization" caption class="ellipsis">{{row.organization}}</q-item-label>
+                    <q-item-label v-if="row.second" caption class="ellipsis">{{row.second}}</q-item-label>
+                </q-item-section>
+            </q-item>
+        </q-list>
+        <div v-if="!rows.length" class="text-caption m-muted q-px-sm">{{t('No private contacts match')}}</div>
+    </template>
+</div></template>
+
+<script>
+const t = (text) => (moqui.l10n && moqui.l10n.localize ? moqui.l10n.localize(text) : text);
+const fill = (text, values) => String(text).replace(/\{(\w+)\}/g, (match, key) => (values[key] == null ? '' : String(values[key])));
+
+module.exports = {
+    name: 'BossVaultContacts',
+    inject: { mScreen: { default: null } },
+    computed: {
+        query() { return this.mScreen ? this.mScreen.parameters || {} : {}; },
+        session() { return window.BossVaultSession || null; },
+        // private contacts are the user's own: shown with All and My contacts, not a book's or the directory's list
+        shown() { const scope = this.query.scope || 'all'; return (scope === 'all' || scope === 'mine') && !this.query.contactBookGroupId; },
+        vaults() { return this.session ? this.session.S.vaults.filter((v) => v.open) : []; },
+        anyOpen() { return this.vaults.length > 0; },
+        rows() {
+            const text = String(this.query.text || '').trim().toLowerCase();
+            const letter = String(this.query.letter || '').toUpperCase();
+            const out = [];
+            for (const v of this.vaults) for (const item of v.items) {
+                if (item.type !== 'contact') continue;
+                const f = item.shown || {};
+                const name = f.fullName || item.name || t('Untitled');
+                const row = { vaultId: v.vaultId, id: item.id, name, organization: f.organization || '', second: [f.email, f.phone].filter((part) => part).join(' · ') };
+                if (letter && name.trim().charAt(0).toUpperCase() !== letter) continue;
+                if (text && ![name, item.name, f.organization, f.email, f.phone].concat(item.tags || []).join('\n').toLowerCase().includes(text)) continue;
+                out.push(row);
+            }
+            return out.sort((a, b) => a.name.localeCompare(b.name));
+        }
+    },
+    methods: {
+        t, fill,
+        openVault() { this.$root.setUrl(this.$root.linkBasePath + '/Commons/Vault'); },
+        openItem(row) { this.$root.setUrl(this.$root.linkBasePath + '/Commons/Vault?' + moqui.objToSearch({ vaultId: row.vaultId, itemId: row.id })); }
+    }
+};
+</script>

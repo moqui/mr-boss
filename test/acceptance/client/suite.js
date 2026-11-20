@@ -73,7 +73,8 @@ suite(
         "WarehouseReceiptFinishWalk",
         "ManufacturingWorkOrdersPhone",
         "SalesBoardWalk",
-        "MarketingCheckInWalk"
+        "MarketingCheckInWalk",
+        "VaultPersonal"
     ],
     {
         server: {
@@ -92,7 +93,8 @@ suite(
                 "ManufacturingScheduleFixtures",
                 "ManufacturingShopFloorFixtures",
                 "InsightsClientFixtures",
-                "MarketingCheckInFixtures"
+                "MarketingCheckInFixtures",
+                "VaultClientFixtures"
             ],
             conf: "conf/MoquiDevConf.xml",
             // the walks that send (invoices, reminders, the close) keep their mail in the capture (docs/Build-Test.md)

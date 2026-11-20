@@ -43,6 +43,10 @@ along with this software (see the LICENSE.md file). If not, see
                 <label type="p" text="Phones and desktop apps reading your calendars, tasks, contacts and files, each with an app password of its own." style="m-muted"/>
                 <link url="../Sync" text="Sync" icon="sym_o_sync"/>
             </box-body></container-box></row-col>
+            <row-col md="4" sm="6"><container-box><box-header title="Vault key"/><box-body>
+                <label type="p" text="The key that opens the vaults you share and the items people send you, its recovery code and fingerprint, and the keys you compared." style="m-muted"/>
+                <link url="../VaultKey" text="Vault key" icon="sym_o_key"/>
+            </box-body></container-box></row-col>
             <row-col md="4" sm="6"><container-box><box-header title="Mail and chat"/><box-body>
                 <label type="p" text="Mail accounts, identities and signatures, rules, out of office, text blocks, chat and calls are set in Comms." style="m-muted"/>
                 <render-mode><text type="qvt"><![CDATA[<m-link href="/qapps/Comms/Settings"><q-btn dense unelevated no-caps class="m-btn-tonal" icon="sym_o_forum">]]></text><text type="tui" template="false">[]</text></render-mode>

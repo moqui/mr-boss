@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     and phone) with row selection and the bulk actions (add to group, add to book, remove from this book, export vCard or CSV,
     merge exactly two, delete); the main pane is the contact record of partyId (template/ContactRecord.xml), or the first row
     side by side. container-split select-parameter="partyId": below 1024 px the list shows alone until a contact is chosen,
-    then the record with a back button.
+    then the record with a back button. Below the rows, the private contacts of the user's open vaults, merged and marked in the
+    browser (VaultContacts, mr-moqui plans/Vault-Instances.md §3.6).
 
     The URL holds partyId (and the record's tab); the side list's find (scope, group, text, letter) is kept in the session
     (bossContactsFind) when a find gives it (find=Y, or a scope or text in the URL), so choosing a row or editing the record
@@ -309,6 +310,10 @@ along with this software (see the LICENSE.md file). If not, see
                     </widgets></section>
                     <label text="${shownCount} of ${rowCount} shown; narrow the list with the search or a letter." type="p"
                             style="text-caption m-muted q-px-sm q-mt-xs" condition="hasMore"/>
+                    <!-- the private contacts of the user's open vaults, merged in the browser and marked (Contacts/VaultContacts.qvue): they
+                        never reach the server, so never CardDAV, mail completion or search (mr-moqui plans/Vault-Instances.md §3.6) -->
+                    <dynamic-container id="ContactsVaultContacts" transition="../VaultContacts"
+                            parameter-map="{text:findText, letter:findLetter, scope:findScope, contactBookGroupId:findGroupId}"/>
                 </split-side>
                 <split-main>
                     <section-include name="ContactRecordSection" location="component://mr-boss/template/ContactRecord.xml"/>

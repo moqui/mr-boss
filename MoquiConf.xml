@@ -4,8 +4,13 @@
     <!-- links to the Comms screens in notifications, mail and push go to BOSS's Comms, which mounts the BasicComms screens -->
     <comms app-root="/qapps/Comms"/>
     <!-- BOSS's settings: price-list-product-limit how many products' price rows the Prices list resolves when no product is
-        chosen (the first by id with matching rows; choose a product, organization or store for the rest; SEC-BAP-109) -->
-    <boss price-list-product-limit="100"/>
+        chosen (the first by id with matching rows; choose a product, organization or store for the rest; SEC-BAP-109).
+        vault: Commons › Vault in the browser (mr-moqui plans/Vault-Instances.md §3.6): idle-minutes how long an open vault
+        stays open with no use before it locks (its keys dropped from the worker; 0 never), clipboard-seconds after how long a
+        copied value is cleared from the clipboard when it still holds it -->
+    <boss price-list-product-limit="100">
+        <vault idle-minutes="15" clipboard-seconds="30"/>
+    </boss>
     <!-- the public page of a file or folder shared by link (design-drawers-commons.md §9 PublicShare; impl R16): /s/<token> in
         the public shell, after the token check; screen/PublicShare.xml checks the token again in every call. The unsubscribe
         page of a list email (§16 Unsubscribe): /u/<token>, the List-Unsubscribe URL too: the RFC 8058 one-click POST to it runs

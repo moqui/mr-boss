@@ -1,0 +1,7 @@
+[
+  {
+    "t": "text",
+    "id": "VaultTui",
+    "text": "Your vault opens in the browser, in the desktop and mobile apps, or with the moqui vault command on your own computer: its keys and values never reach the server, so the terminal does not show them."
+  }
+]

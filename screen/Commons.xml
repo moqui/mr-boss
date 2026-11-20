@@ -131,6 +131,7 @@ along with this software (see the LICENSE.md file). If not, see
             <key keys="g l" label="Calendar" screen="Commons/Calendar"/>
             <key keys="g f" label="Files" screen="Commons/Files"/>
             <key keys="g n" label="Notes" screen="Commons/Notes"/>
+            <key keys="g v" label="Vault" screen="Commons/Vault"/>
         </keymap>
 
         <account-menu-item label="Preferences" icon="sym_o_tune" screen="Commons/Settings/Preferences" sequence="10"/>

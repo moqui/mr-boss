@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Commons Vault (mr-moqui plans/Vault-Instances.md §3, §5 and phase V3; docs/security/Vaults.md): the user's personal vaults of
+    both locks, their items by type, search, an item's page (show, copy, history), making a vault (single-secret with §3.11's
+    steps, or shared-key), members with their key fingerprints, items sent to the user, import from Bitwarden and KeePass exports,
+    an encrypted export, and Lock. The component is Vault.qvue next to this file; Settings/VaultKey shows the same component on the
+    user's vault key (set up, unlock, passphrase, recovery code, fingerprint, the keys this user checked).
+
+    Every key stays in the vault module's worker (webroot js/vault/VaultClient.js and VaultWorker.js, moqui_vault.wasm): the page
+    asks it for one item at a time and calls the framework's vault services over REST (/rest/s1/vault,
+    org.moqui.security.VaultServices), which store ciphertext and signed records and check their caller themselves. The server
+    never sees an item's name, type or value, a key passphrase, a vault password or key. The transitions here give the page only
+    what is not secret: the settings (boss/vault@idle-minutes, @clipboard-seconds), the item types (VaultItemType), the integrity
+    hashes of the worker and the module, and the names of people with a vault key to add as members or send an item to. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Vault" default-menu-index="9" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_encrypted" menu-image-type="icon">
+
+    <parameter name="vaultId"/>
+    <parameter name="itemId"/>
+
+    <!-- the settings, the item types and the integrity hashes (SRI: sha256 of the file, base64) the page loads the module with -->
+    <transition name="setup" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const base = 'component://webroot/screen/webroot/js/vault/'
+            const sri = (location) => {
+                try {
+                    const hex = String(ec.resource.digest(location, 'sha256') || '')
+                    if (!/^[0-9a-f]{64}$/.test(hex)) return null
+                    let latin = ''
+                    for (let i = 0; i < 64; i += 2) latin += String.fromCharCode(parseInt(hex.substring(i, i + 2), 16))
+                    return 'sha256-' + btoa(latin)
+                } catch (err) {
+                    ec.logger.warn('Vault: no integrity hash for ' + location + ': ' + err)
+                    return null
+                }
+            }
+            const number = (selector, fallback) => {
+                const value = Number(ec.factory.getConfValue(selector))
+                return Number.isFinite(value) && value >= 0 ? value : fallback
+            }
+            const types = ec.entity.find('moqui.security.vault.VaultItemType').orderBy('sequenceNum').disableAuthz().useCache(true).list()
+            const fields = ec.entity.find('moqui.security.vault.VaultItemTypeField').orderBy('sequenceNum').disableAuthz().useCache(true).list()
+            const kinds = {VfText: 'text', VfSecret: 'secret', VfUrl: 'url', VfTotp: 'totp', VfMultiLine: 'multi-line', VfDate: 'date', VfFileName: 'file-name'}
+            const itemTypes = Array.from(types).map((type) => ({id: type.vaultItemTypeId, label: ec.l10n.localize(type.description || type.vaultItemTypeId),
+                fields: Array.from(fields).filter((field) => field.vaultItemTypeId === type.vaultItemTypeId).map((field) => ({name: field.fieldName,
+                    label: ec.l10n.localize(field.label || field.fieldName), kind: kinds[field.fieldKindEnumId] || 'text', masked: field.masked === 'Y'}))}))
+            ec.web.sendJsonResponse({userId: ec.user.userId, username: ec.user.username, idleMinutes: number('boss/vault@idle-minutes', 15),
+                clipboardSeconds: number('boss/vault@clipboard-seconds', 30), itemTypes: itemTypes,
+                wasmIntegrity: sri(base + 'moqui_vault.wasm'), workerIntegrity: sri(base + 'VaultWorker.js')})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <!-- people with a vault key, by name or username, to add as a member or send an item to: {value (userId), label} -->
+    <transition name="userChoices" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const text = String(term || '').trim()
+            const cf = ec.entity.conditionFactory
+            let find = ec.entity.find('moqui.security.UserAccount').condition('disabled', 'not-equals', 'Y').orderBy('username').limit(50).disableAuthz()
+            if (text) find = find.condition(cf.makeCondition([cf.makeCondition('username', 'like', '%' + text + '%').ignoreCase(),
+                cf.makeCondition('userFullName', 'like', '%' + text + '%').ignoreCase()], 'or'))
+            const accounts = Array.from(find.list()).filter((account) => account.userId !== ec.user.userId)
+            const ids = accounts.map((account) => account.userId)
+            const keyed = new Set(ids.length ? Array.from(ec.entity.find('moqui.security.vault.VaultPersonalKey').condition('userId', 'in', ids)
+                .condition('statusId', 'VpkActive').disableAuthz().list()).map((key) => key.userId) : [])
+            ec.web.sendJsonResponse(accounts.filter((account) => keyed.has(account.userId)).slice(0, 20).map((account) => ({value: account.userId,
+                label: (account.userFullName ? account.userFullName + ' (' + account.username + ')' : account.username)})))
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the names of users the page shows (members, senders, the keys this user checked): userIds a comma list, at most 200 -->
+    <transition name="userNames" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const ids = String(userIds || '').split(',').map((id) => id.trim()).filter((id) => id).slice(0, 200)
+            const names = {}
+            if (ids.length) for (const account of Array.from(ec.entity.find('moqui.security.UserAccount').condition('userId', 'in', ids).disableAuthz().list()))
+                names[account.userId] = account.userFullName ? account.userFullName + ' (' + account.username + ')' : account.username
+            ec.web.sendJsonResponse({names: names})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets>
+        <render-mode><text type="qvue" location="component://mr-boss/screen/Commons/Vault.qvue" template="false"/>
+            <text type="tui" location="component://mr-boss/screen/Commons/Vault.tui.json" template="false"/></render-mode>
+    </widgets>
+</screen>
