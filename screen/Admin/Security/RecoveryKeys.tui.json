@@ -1,0 +1,7 @@
+[
+  {
+    "t": "text",
+    "id": "RecoveryKeysTui",
+    "text": "Recovery keys are made, and recoveries started and shared, in the browser or with moqui vault recovery on your own computer: the shares and the combined key never reach the server."
+  }
+]

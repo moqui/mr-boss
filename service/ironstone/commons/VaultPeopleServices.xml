@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The people Commons › Vault, Settings › Vault key and Admin › Security › Recovery keys name (screen/Commons/Vault.xml and the
+    screens that take in its transitions; mr-moqui plans/Vault-Instances.md §3.5, §3.10). Never a key or a value: who may be
+    added to a vault or sent an item (people the user may reach with an active vault key), the names of the people the user's
+    own vault records name, the holders a recovery key may be split to, and the groups it may be kept for. People are found
+    only as Chatter's people search finds them (ironstone.shared.ChatterServices.search#Users: the users the apps'
+    chat-target providers refuse are left out, as ones that do not exist; SEC-COM-01). -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+
+    <service verb="search" noun="VaultPeople" allow-remote="false">
+        <description>People the user may reach (search#Users) who have an active vault key, by name or username, as options
+            {value (userId), label}; with recoveryHolders, only those who also hold VAULT_RECOVERY through a group, to split a
+            recovery key to (the server refuses any other holder again).</description>
+        <in-parameters>
+            <parameter name="term"/>
+            <parameter name="recoveryHolders" type="Boolean" default="false"/>
+        </in-parameters>
+        <out-parameters><parameter name="optionList" type="List"/></out-parameters>
+        <actions><script><![CDATA[
+            const found = ec.service.sync().name('ironstone.shared.ChatterServices.search#Users').parameters({term: term || '', limit: 50}).call()
+            const users = Array.from(found?.userList || []).filter((user) => user.id !== ec.user.userId)
+            const ids = users.map((user) => user.id)
+            let keyed = new Set()
+            let holders = null
+            const wasDisabled = ec.artifactExecution.disableAuthz()
+            try {
+                if (ids.length) keyed = new Set(Array.from(ec.entity.find('moqui.security.vault.VaultPersonalKey').condition('userId', 'in', ids)
+                    .condition('statusId', 'VpkActive').list()).map((key) => key.userId))
+                if (recoveryHolders && ids.length) {
+                    const now = ec.user.nowTimestamp
+                    const groups = Array.from(ec.entity.find('moqui.security.UserGroupPermission').condition('userPermissionId', 'VAULT_RECOVERY')
+                        .conditionDate('fromDate', 'thruDate', now).list()).map((row) => row.userGroupId)
+                    holders = new Set(groups.length ? Array.from(ec.entity.find('moqui.security.UserGroupMember').condition('userGroupId', 'in', groups)
+                        .condition('userId', 'in', ids).conditionDate('fromDate', 'thruDate', now).list()).map((row) => row.userId) : [])
+                }
+            } finally {
+                if (!wasDisabled) ec.artifactExecution.enableAuthz()
+            }
+            optionList = users.filter((user) => keyed.has(user.id) && (!holders || holders.has(user.id))).slice(0, 20)
+                .map((user) => ({value: user.id, label: user.label}))
+        ]]></script></actions>
+    </service>
+
+    <service verb="get" noun="VaultUserNames" allow-remote="false">
+        <description>The names of the users the caller's own vault records name (userIds, at most 200): the members of the
+            vaults they are a member of, the signers of those vaults' member lists, the senders of their deliveries, the users
+            whose keys they checked, and the makers and holders of the recovery keys and the people of the recoveries. Any
+            other id, and a user the apps' chat-target providers refuse to the caller, is answered as itself, as one with no
+            name.</description>
+        <in-parameters><parameter name="userIds"/></in-parameters>
+        <out-parameters><parameter name="names" type="Map"/></out-parameters>
+        <actions><script><![CDATA[
+            const asked = String(userIds || '').split(',').map((id) => id.trim()).filter((id) => id).slice(0, 200)
+            names = {}
+            if (!asked.length || !ec.user.userId) return
+            const me = ec.user.userId
+            const known = new Set([me])
+            const wasDisabled = ec.artifactExecution.disableAuthz()
+            try {
+                const find = (entity) => ec.entity.find('moqui.security.vault.' + entity)
+                const vaultIds = Array.from(new Set(Array.from(find('VaultMember').condition('userId', me).list()).map((row) => row.vaultId)
+                    .concat(Array.from(find('Vault').condition('ownerUserId', me).list()).map((row) => row.vaultId))))
+                if (vaultIds.length) {
+                    for (const row of Array.from(find('VaultMember').condition('vaultId', 'in', vaultIds).list())) known.add(row.userId)
+                    for (const row of Array.from(find('VaultKeyVersion').condition('vaultId', 'in', vaultIds).list())) known.add(row.signerUserId)
+                }
+                for (const row of Array.from(find('VaultDelivery').condition('recipientUserId', me).list())) known.add(row.senderId)
+                for (const row of Array.from(find('VaultKeyCheck').condition('checkerUserId', me).list())) known.add(row.checkedUserId)
+                for (const row of Array.from(find('VaultRecoveryKey').list())) known.add(row.makerUserId)
+                for (const row of Array.from(find('VaultRecoveryHolder').list())) known.add(row.userId)
+                if (ec.user.hasPermission('VAULT_RECOVERY')) for (const row of Array.from(find('VaultRecoverySession').list())) {
+                    known.add(row.subjectUserId)
+                    known.add(row.holderUserId)
+                }
+            } finally {
+                if (!wasDisabled) ec.artifactExecution.enableAuthz()
+            }
+            const ids = asked.filter((id) => known.has(id))
+            if (!ids.length) return
+            const checked = ec.service.sync().name('org.moqui.chat.ChatServices.get#RefusedUsers').parameters({userIdList: ids, hook: 'chat-target'}).call()
+            const refused = new Set(checked ? Array.from(checked.refusedUserIdList || []) : ids)
+            const reach = ids.filter((id) => id === me || !refused.has(id))
+            if (!reach.length) return
+            const accounts = ec.entity.find('moqui.security.UserAccount').condition('userId', 'in', reach).disableAuthz().list()
+            for (const account of Array.from(accounts))
+                names[account.userId] = account.userFullName ? account.userFullName + ' (' + account.username + ')' : account.username
+        ]]></script></actions>
+    </service>
+
+    <service verb="search" noun="RecoveryGroups" allow-remote="false">
+        <description>The user groups that hold VAULT_RECOVERY, which a recovery key may be kept for (its userGroupId), by id or
+            description, as options {value, label}.</description>
+        <in-parameters><parameter name="term"/></in-parameters>
+        <out-parameters><parameter name="optionList" type="List"/></out-parameters>
+        <actions><script><![CDATA[
+            const text = String(term || '').trim().toLowerCase()
+            const wasDisabled = ec.artifactExecution.disableAuthz()
+            try {
+                const ids = Array.from(new Set(Array.from(ec.entity.find('moqui.security.UserGroupPermission').condition('userPermissionId', 'VAULT_RECOVERY')
+                    .conditionDate('fromDate', 'thruDate', ec.user.nowTimestamp).list()).map((row) => row.userGroupId)))
+                const groups = ids.length ? Array.from(ec.entity.find('moqui.security.UserGroup').condition('userGroupId', 'in', ids).list()) : []
+                optionList = groups.map((group) => ({value: group.userGroupId, label: group.description || group.userGroupId}))
+                    .filter((option) => !text || option.label.toLowerCase().includes(text) || option.value.toLowerCase().includes(text)).slice(0, 50)
+            } finally {
+                if (!wasDisabled) ec.artifactExecution.enableAuthz()
+            }
+        ]]></script></actions>
+    </service>
+</services>

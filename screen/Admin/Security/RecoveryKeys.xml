@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Admin › Security › Recovery keys (mr-moqui plans/Vault-Instances.md §3.10, §5 and phase V4; docs/security/Vaults.md,
+    "Organization recovery"): the organization's vault recovery keys, each with the group or instance it is kept for, how many of
+    its holders a recovery takes, its maker, its holders (a holder whose vault key was replaced since can no longer open their
+    share) and its state, a used key shown as "Used, replace"; New recovery key, made and split in the browser among holders who
+    hold VAULT_RECOVERY, each one's key fingerprint compared by the maker; and the recoveries in progress, to the holders: Start a
+    recovery (a member's new key compared first; the starter's tab keeps the session's ephemeral key until Finish), Seal my share
+    (the starter's key and the member's new key compared first), Finish (the shares combined in the browser, the vault key
+    opened through the recovery key's wrap and given to the member's new key) and Cancel. The component is
+    Commons/Vault.qvue in its recoveryView, on the same session and transitions as Commons › Vault; every step is the
+    framework's vault services (/rest/s1/vault/recoveryKeys, /recoveries), which check VAULT_RECOVERY and a recent sign-in
+    whatever opens this screen. Every member of a vault is told of a recovery's start and end by the framework. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Recovery keys" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_key" menu-image-type="icon">
+
+    <always-actions>
+        <!-- a page loaded here: the vault worker's Content-Security-Policy, as Commons › Vault and System › Vaults have -->
+        <script>if (ec.web &amp;&amp; ec.web.response) ec.web.response.setHeader("Content-Security-Policy",
+            "frame-ancestors 'none'; form-action 'self'; worker-src 'self' blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'")</script>
+    </always-actions>
+
+    <transition-include name="setup" location="component://mr-boss/screen/Commons/Vault.xml"/>
+    <transition-include name="userChoices" location="component://mr-boss/screen/Commons/Vault.xml"/>
+    <transition-include name="userNames" location="component://mr-boss/screen/Commons/Vault.xml"/>
+    <transition-include name="groupChoices" location="component://mr-boss/screen/Commons/Vault.xml"/>
+
+    <widgets>
+        <render-mode><text type="qvue" location="component://mr-boss/screen/Commons/Vault.qvue" template="false"/>
+            <text type="tui" location="component://mr-boss/screen/Admin/Security/RecoveryKeys.tui.json" template="false"/></render-mode>
+    </widgets>
+</screen>

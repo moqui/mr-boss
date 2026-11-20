@@ -30,7 +30,7 @@ along with this software (see the LICENSE.md file). If not, see
     time when asked for. Commons › Contacts reads the session's open contact items (Contacts/VaultContacts.qvue). Lock, the
     idle time (boss/vault@idle-minutes, any use of this page counts) and closing the tab drop every key and all of it.
     Inputs are plain q-inputs: no draft of a value is kept. -->
-<template><div class="boss-vault" @keydown.capture="touch" @pointerdown.capture="touch">
+<template><div class="boss-vault">
     <div v-if="S.failed && !S.config" class="q-pa-lg text-center">
         <q-icon name="sym_o_error" size="40px" color="negative"></q-icon>
         <div class="text-h6 q-mt-sm">{{t('The vault could not start')}}</div>
@@ -41,6 +41,60 @@ along with this software (see the LICENSE.md file). If not, see
         <q-skeleton type="text" width="30%" class="text-h5"></q-skeleton>
         <q-skeleton type="rect" height="200px" class="q-mt-md"></q-skeleton>
     </div>
+
+    <!-- ===== Admin › Security › Recovery keys ===== -->
+    <template v-else-if="recoveryView">
+        <div class="row items-center q-mb-sm q-gutter-x-sm">
+            <div class="col text-h5">{{t('Recovery keys')}}</div>
+            <q-chip v-if="S.personal.hasKey" dense square :class="S.unlocked ? 'm-tonal text-positive' : 'm-tonal text-grey-8'" :icon="S.unlocked ? 'sym_o_lock_open' : 'sym_o_lock'">{{S.unlocked ? t('Your vault key is unlocked') : t('Your vault key is locked')}}</q-chip>
+            <q-btn v-if="anyUnlocked" unelevated no-caps class="m-btn-tonal" icon="sym_o_lock" :label="t('Lock')" @click="lockNow"></q-btn>
+            <q-btn unelevated no-caps color="primary" icon="sym_o_add" :label="t('New recovery key')" :disable="!S.config.recoveryHolder || !S.personal.hasKey" @click="openMakeKey">
+                <q-tooltip v-if="!S.config.recoveryHolder">{{t('Making a recovery key needs the vault recovery permission, which an administrator grants through a group.')}}</q-tooltip></q-btn>
+        </div>
+        <div class="text-body2 m-muted q-mb-md">{{t('The organization\'s recovery keys give a member of a shared vault with recovery on their vault back after they lost both their key passphrase and their recovery code. Each key is split among its holders: a recovery takes as many of them as the key needs, each in their own browser. A key used for a recovery was rebuilt whole in one browser, so it is replaced.')}}</div>
+        <div v-if="!S.recoveryKeys.length" class="text-body2 m-muted q-pa-md">{{t('No recovery keys yet.')}}</div>
+        <q-list v-else bordered separator class="rounded-borders boss-vault-recovery-keys">
+            <q-item v-for="key in S.recoveryKeys" :key="key.recoveryKeyId" :data-key="key.recoveryKeyId">
+                <q-item-section>
+                    <q-item-label class="row items-center q-gutter-x-sm">
+                        <span class="text-weight-medium">{{fill(t('{k} of {n} holders'), {k: key.record.k, n: key.record.n})}}</span>
+                        <q-chip v-if="key.used" dense square icon="sym_o_warning" class="m-tonal text-warning q-my-none">{{t('Used, replace')}}</q-chip>
+                        <q-chip v-else dense square class="m-tonal text-positive q-my-none">{{t('Active')}}</q-chip>
+                    </q-item-label>
+                    <q-item-label caption>{{keptFor(key)}} · {{fill(t('Made by {name}'), {name: nameOf(key.record.maker_user_id)})}}<span v-if="key.usedDate"> · {{t('Used')}} {{dateText(key.usedDate)}}</span></q-item-label>
+                    <q-item-label caption>{{t('Holders')}}: <span v-for="(holder, i) in key.holders" :key="holder.userId">{{i ? ', ' : ''}}{{nameOf(holder.userId)}}<span v-if="!holder.keyActive" class="text-warning"> ({{t('key replaced: their share no longer opens')}})</span></span></q-item-label>
+                    <q-item-label caption class="m-muted">{{key.recoveryKeyId}}</q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                    <q-btn flat dense no-caps size="sm" color="primary" :label="t('Start a recovery')" :disable="key.used || !holdsShare(key)" @click="openStartRecovery(key)"></q-btn>
+                </q-item-section>
+            </q-item>
+        </q-list>
+        <div class="text-subtitle1 text-weight-medium q-mt-lg">{{t('Recoveries')}}</div>
+        <div v-if="!S.config.recoveryHolder" class="text-body2 m-muted">{{t('The recoveries in progress show to the holders of a recovery key.')}}</div>
+        <div v-else-if="!S.recoverySessions.length" class="text-body2 m-muted">{{t('No recovery is in progress.')}}</div>
+        <q-list v-else bordered separator class="rounded-borders boss-vault-recoveries">
+            <q-item v-for="row in S.recoverySessions" :key="row.recoverySessionId" :data-session="row.recoverySessionId">
+                <q-item-section>
+                    <q-item-label>{{fill(t('{member}\'s new key, for vault {vault}'), {member: nameOf(row.session.subject_user_id), vault: row.vaultName || row.session.vault_id})}}</q-item-label>
+                    <q-item-label caption>{{fill(t('Started by {name}'), {name: nameOf(row.session.holder_user_id)})}} · {{t('New key')}} <span class="boss-vault-words">{{row.subjectFingerprint}}</span></q-item-label>
+                    <q-item-label caption>{{t('Shares sealed')}}: {{(row.deliveredBy || []).map((id) => nameOf(id)).join(', ') || t('none yet')}}</q-item-label>
+                </q-item-section>
+                <q-item-section side><div class="row no-wrap q-gutter-x-xs">
+                    <q-btn v-if="row.session.holder_user_id !== S.personal.userId && !(row.deliveredBy || []).includes(S.personal.userId)" unelevated dense no-caps size="sm" color="primary"
+                            :label="t('Seal my share')" :loading="recovery.busy === row.recoverySessionId" @click="submitShare(row)"></q-btn>
+                    <q-btn v-if="row.session.holder_user_id === S.personal.userId" unelevated dense no-caps size="sm" color="primary" :label="t('Finish')"
+                            :loading="recovery.busy === row.recoverySessionId" @click="submitFinish(row)"></q-btn>
+                    <q-btn flat dense no-caps size="sm" color="negative" :label="t('Cancel')" @click="submitCancelRecovery(row)"></q-btn>
+                </div></q-item-section>
+            </q-item>
+        </q-list>
+        <div v-if="recovery.error" class="text-negative text-body2 q-mt-sm">{{recovery.error}}</div>
+        <div v-if="recovery.check.length" class="q-mt-sm">
+            <div class="text-body2">{{t('Compare the key of one of the vault\'s managers first: it anchors the vault\'s member list in your browser.')}}</div>
+            <q-btn v-for="userId in recovery.check" :key="userId" flat no-caps color="primary" :label="fill(t('Compare {name}\'s key'), {name: nameOf(userId)})" @click="openCheck(userId, null)"></q-btn>
+        </div>
+    </template>
 
     <!-- ===== Settings › Vault key ===== -->
     <template v-else-if="keyView">
@@ -132,7 +186,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <q-item-section avatar><q-icon :name="v.open ? 'sym_o_lock_open' : 'sym_o_lock'" :color="v.open ? 'positive' : undefined"></q-icon></q-item-section>
                         <q-item-section>
                             <q-item-label class="ellipsis">{{v.open ? (v.name || t('Vault')) : t('Locked vault')}}</q-item-label>
-                            <q-item-label caption>{{lockText(v)}} · {{itemsText(itemCount(v))}}</q-item-label>
+                            <q-item-label caption>{{lockText(v)}} · {{itemsText(itemCount(v))}}<span v-if="v.recoveryOn === 'Y'"> · {{t('recovery on')}}</span></q-item-label>
                             <q-item-label v-if="reminder(v)" caption class="text-warning">{{t('Open it once to show its password is still kept')}}</q-item-label>
                         </q-item-section>
                     </q-item>
@@ -244,8 +298,6 @@ along with this software (see the LICENSE.md file). If not, see
                         </div>
                         <q-btn v-if="current.lockEnumId === SHARED" unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_group" :label="t('Members')" @click="openMembers"></q-btn>
                         <q-btn flat dense round icon="more_horiz" :aria-label="t('More')"><q-menu auto-close><q-list dense style="min-width:220px">
-                            <q-item clickable :disable="!writable(current)" @click="openRename"><q-item-section avatar><q-icon name="sym_o_edit"></q-icon></q-item-section><q-item-section>{{t('Rename')}}</q-item-section></q-item>
-                            <q-separator></q-separator>
                             <q-item clickable :disable="!manages(current)" class="text-negative" @click="confirmDeleteVault"><q-item-section avatar><q-icon name="sym_o_delete" color="negative"></q-icon></q-item-section><q-item-section>{{t('Delete the vault')}}</q-item-section></q-item>
                         </q-list></q-menu></q-btn>
                     </div>
@@ -351,16 +403,6 @@ along with this software (see the LICENSE.md file). If not, see
         </div>
     </m-dialog>
 
-    <m-dialog v-model="rename.open" :title="t('Rename the vault')" width="480">
-        <div class="q-gutter-y-sm">
-            <q-input v-model="rename.name" outlined dense autocomplete="off" :label="t('Name')" @keyup.enter="submitRename"></q-input>
-            <div class="row justify-end q-gutter-sm">
-                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
-                <q-btn unelevated no-caps color="primary" :label="t('Rename')" :loading="rename.busy" :disable="!String(rename.name || '').trim()" @click="submitRename"></q-btn>
-            </div>
-        </div>
-    </m-dialog>
-
     <!-- the personal key opened, when an action needs it -->
     <m-dialog v-model="unlockDialog.open" :title="t('Unlock your vault key')" width="480">
         <div class="q-gutter-y-sm">
@@ -396,7 +438,7 @@ along with this software (see the LICENSE.md file). If not, see
     <m-dialog v-model="members.open" :title="t('Members') + (current ? ': ' + (current.name || t('Vault')) : '')" width="720">
         <div v-if="current" class="q-gutter-y-sm">
             <q-list bordered separator class="rounded-borders">
-                <q-item v-for="member in memberRows" :key="member.userId">
+                <q-item v-for="member in memberRows.filter((row) => !row.recovery)" :key="member.userId">
                     <q-item-section>
                         <q-item-label>{{nameOf(member.userId)}}<span v-if="member.me" class="m-muted"> ({{t('you')}})</span></q-item-label>
                         <q-item-label caption class="boss-vault-words">{{member.words || '…'}}</q-item-label>
@@ -425,6 +467,19 @@ along with this software (see the LICENSE.md file). If not, see
                 </template>
                 <div class="row justify-end"><q-btn unelevated no-caps color="primary" :label="t('Add')" :loading="members.busy" :disable="!members.add.key || !members.add.match" @click="submitAddMember"></q-btn></div>
             </template>
+            <div class="text-subtitle2 q-mt-md">{{t('Organization recovery')}}</div>
+            <template v-if="recoveryMember">
+                <div class="text-body2">{{t('On: the organization\'s recovery key can give a member who lost their key and recovery code their access again. Every member is told of a recovery.')}}
+                    <span v-if="recoveryKeyRow(recoveryMember) && recoveryKeyRow(recoveryMember).used" class="text-warning">{{t('Its key was used for a recovery: replace it.')}}</span></div>
+            </template>
+            <div v-else class="text-body2">{{t('Off: only the members can give a member who lost their key access again.')}}</div>
+            <div v-if="manages(current)" class="row q-col-gutter-sm items-center">
+                <div class="col-12 col-sm-7"><q-select v-model="members.recoveryKeyId" outlined dense emit-value map-options :options="recoveryOptions"
+                        :label="recoveryMember ? t('Replace it with') : t('Recovery key')"></q-select></div>
+                <div class="col-12 col-sm-5"><q-btn unelevated no-caps color="primary" :label="recoveryMember ? t('Replace the recovery key') : t('Turn recovery on')"
+                        :disable="!members.recoveryKeyId" :loading="members.busy" @click="submitRecoveryOn"></q-btn></div>
+            </div>
+            <div class="text-caption m-muted">{{t('A recovery holder needs this vault\'s id')}}: <span class="boss-vault-words">{{current.vaultId}}</span></div>
             <q-banner v-if="members.remove" rounded class="m-tonal text-negative">
                 {{fill(t('Remove {name}? The vault gets a new key, which they never receive, and every item key is wrapped again. A copy they made of an item before stays theirs: change those passwords at their source.'), {name: nameOf(members.remove.userId)})}}
                 <div><q-checkbox v-model="members.reencrypt" :label="t('Also encrypt every item again now, with new item keys')"></q-checkbox></div>
@@ -518,7 +573,7 @@ along with this software (see the LICENSE.md file). If not, see
             <div v-if="importer.result" class="text-body2 text-positive">{{importer.result}}</div>
             <div v-if="importer.error" class="text-negative text-body2">{{importer.error}}</div>
             <div class="row justify-end q-gutter-sm">
-                <q-btn flat no-caps :label="t('Close')" v-close-popup></q-btn>
+                <q-btn flat no-caps :label="t('Close')" @click="closeImport"></q-btn>
                 <q-btn unelevated no-caps color="primary" :label="t('Import')" :loading="importer.busy" :disable="!importer.parsed || !importer.vaultId" @click="submitImport"></q-btn>
             </div>
         </div>
@@ -628,24 +683,81 @@ along with this software (see the LICENSE.md file). If not, see
             </div>
         </div>
     </m-dialog>
+
+    <!-- a recovery key made: its holders, each key compared, and how many a recovery takes -->
+    <m-dialog v-model="makeKey.open" :title="t('New recovery key')" width="640">
+        <div class="q-gutter-y-sm">
+            <div class="text-body2">{{t('Made in this browser: split among its holders, one share sealed to each one\'s vault key, and then forgotten here. The holders hold the vault recovery permission; you compare each one\'s key fingerprint with them first.')}}</div>
+            <m-drop-down id="boss-vault-holder" name="holderUserId" :model-value="makeKey.pick" server-search :server-min-length="0" allow-empty
+                    :options-url="url('userChoices') + '?holders=true'" :label="t('Add a holder')" @update:model-value="holderChosen"></m-drop-down>
+            <q-list v-if="makeKey.holders.length" bordered separator class="rounded-borders">
+                <q-item v-for="holder in makeKey.holders" :key="holder.userId">
+                    <q-item-section><q-item-label>{{nameOf(holder.userId)}}<span v-if="holder.userId === S.personal.userId" class="m-muted"> ({{t('you')}})</span></q-item-label>
+                        <q-item-label caption class="boss-vault-words">{{holder.words}}</q-item-label></q-item-section>
+                    <q-item-section side><div class="row no-wrap items-center q-gutter-x-xs">
+                        <q-chip v-if="holder.checked" dense square icon="sym_o_verified" class="m-tonal text-positive">{{t('Compared')}}</q-chip>
+                        <q-btn v-else flat dense no-caps size="sm" color="primary" :label="t('Compare')" @click="openCheck(holder.userId, refreshHolders)"></q-btn>
+                        <q-btn flat dense round size="sm" icon="close" :aria-label="t('Remove')" @click="makeKey.holders = makeKey.holders.filter((h) => h !== holder)"></q-btn>
+                    </div></q-item-section>
+                </q-item>
+            </q-list>
+            <div class="row q-col-gutter-sm">
+                <div class="col-6"><q-input v-model.number="makeKey.k" type="number" outlined dense :label="t('Holders a recovery takes')" :min="2" :max="makeKey.holders.length || 2"></q-input></div>
+                <div class="col-6"><m-drop-down id="boss-vault-group" name="userGroupId" v-model="makeKey.userGroupId" server-search :server-min-length="0" allow-empty
+                        :options-url="url('groupChoices')" :label="t('Kept for the group')"></m-drop-down></div>
+            </div>
+            <div v-if="makeKey.error" class="text-negative text-body2">{{makeKey.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Make the recovery key')" :loading="makeKey.busy"
+                        :disable="makeKey.holders.length < 2 || makeKey.k < 2 || makeKey.k > makeKey.holders.length || makeKey.holders.some((h) => !h.checked)" @click="submitMakeKey"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
+    <!-- a recovery started: the vault, the member and their new key, compared first -->
+    <m-dialog v-model="startRec.open" :title="t('Start a recovery')" width="600">
+        <div class="q-gutter-y-sm">
+            <div class="text-body2">{{t('The member made a new vault key after losing their passphrase and recovery code. Ask them for the vault\'s id, compare their new key with them, and keep this tab open until the recovery is finished: the other holders seal their shares to it.')}}</div>
+            <q-input v-model="startRec.vaultId" outlined dense autocomplete="off" :label="t('Vault id')"></q-input>
+            <m-drop-down id="boss-vault-subject" name="subjectUserId" :model-value="startRec.userId" server-search :server-min-length="0" allow-empty
+                    :options-url="url('userChoices')" :label="t('The member')" @update:model-value="subjectChosen"></m-drop-down>
+            <template v-if="startRec.key">
+                <div class="text-body2">{{fill(t('Ask {name} to read their fingerprint to you, on a call or in person, not by email or chat. It must be exactly these words:'), {name: nameOf(startRec.userId)})}}</div>
+                <div class="text-h6 boss-vault-words">{{startRec.words || '…'}}</div>
+                <q-checkbox v-if="!startRec.checked" v-model="startRec.match" :label="t('The words match')"></q-checkbox>
+            </template>
+            <div v-if="startRec.error" class="text-negative text-body2">{{startRec.error}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Start')" :loading="startRec.busy"
+                        :disable="!startRec.key || !String(startRec.vaultId || '').trim() || (!startRec.checked && !startRec.match)" @click="submitStartRecovery"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
 </div></template>
 
 <script>
 const t = (text) => (moqui.l10n && moqui.l10n.localize ? moqui.l10n.localize(text) : text);
 const fill = (text, values) => String(text).replace(/\{(\w+)\}/g, (match, key) => (values[key] == null ? '' : String(values[key])));
 const REST = '/rest/s1/vault';
-// a vault's name lives in an item of this type, so it is sealed and rotated as the items are
+// the name item of the vaults Commons made before vault headers (a vault-info item): read for its name, never listed
 const INFO_TYPE = 'vault-info';
 const SINGLE = 'VlSingleSecret';
 const SHARED = 'VlSharedKey';
 const DAY = 86400000;
+// a tab hidden this long locks the vault (or sooner, at the idle time)
+const HIDDEN_LOCK_MS = 5 * 60000;
+// an import file larger than this is refused before it is read
+const IMPORT_MAX_BYTES = 10 * 1024 * 1024;
+const RECOVERY_PREFIX = 'recovery:';
+const EXPORT_ID = /^export-[0-9a-f]{24}$/;
 const ROLE_OF = { VrManage: 'manage', VrWrite: 'write', VrRead: 'read' };
 const ICONS = { login: 'sym_o_key', note: 'sym_o_sticky_note_2', card: 'sym_o_credit_card', identity: 'sym_o_badge', contact: 'sym_o_person',
     'ssh-key': 'sym_o_terminal', 'api-key': 'sym_o_api', 'database-credential': 'sym_o_database', 'tls-key-pair': 'sym_o_verified_user',
     'registry-login': 'sym_o_inventory_2', 'recovery-code': 'sym_o_password', 'recovery-share': 'sym_o_vpn_key' };
 // plans/Vault-Instances.md §3.11, in its exact words
 const SINGLE_WARNING = 'Only this password opens this vault. It is never sent to the server and it is not stored anywhere. Nobody can open the vault without it: not an administrator, not your organization, not the makers of this software. If you lose it, everything in the vault is lost for good.';
-const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const COMMON = ['password', 'passw0rd', 'p@ssw0rd', '123456', '12345678', '123456789', '1234567890', 'qwerty', 'qwertyuiop', 'asdfgh', 'letmein',
     'welcome', 'iloveyou', 'admin', 'monkey', 'dragon', 'football', 'baseball', 'sunshine', 'princess', 'abc123', '111111', '000000',
     'trustno1', 'changeme', 'secret', 'master', 'starwars', 'whatever', 'superman', 'correcthorsebatterystaple', 'moqui'];
@@ -662,22 +774,8 @@ const local = {
     get(key) { try { return JSON.parse(window.localStorage.getItem(key) || 'null'); } catch (err) { return null; } },
     set(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (err) { /* a private window keeps nothing */ } }
 };
+const isRecoveryMember = (userId) => String(userId || '').startsWith(RECOVERY_PREFIX);
 
-/** A generated key for a single-secret vault: 256 random bits as Crockford base32 in groups of four. */
-function generatedKey() {
-    const bytes = randomBytes(32);
-    let bits = 0;
-    let value = 0;
-    let out = '';
-    for (const byte of bytes) {
-        value = ((value << 8) | byte) & 0xfffff;
-        bits += 8;
-        while (bits >= 5) { out += CROCKFORD[(value >>> (bits - 5)) & 31]; bits -= 5; }
-    }
-    if (bits > 0) out += CROCKFORD[(value << (5 - bits)) & 31];
-    bytes.fill(0);
-    return out.match(/.{1,4}/g).join('-');
-}
 /** A generated key as it was made, from what the user typed: upper case, the look-alikes read as Crockford does, grouped. */
 function keyText(typed) {
     const plain = String(typed || '').toUpperCase().replace(/O/g, '0').replace(/[IL]/g, '1').replace(/[^0-9A-Z]/g, '');
@@ -710,53 +808,78 @@ const clean = (fields) => {
     for (const [name, value] of Object.entries(fields)) if (value != null && String(value) !== '') out[name] = String(value);
     return out;
 };
-function toEntry(title, username, password, url, notes, totp, tags) {
-    if (!username && !password && !url) return { v: 1, type: 'note', name: title || t('Untitled'), fields: clean({ text: notes }), notes: '', tags, uris: [] };
-    return { v: 1, type: 'login', name: title || url || t('Untitled'), fields: clean({ username, password, totp }), notes: notes || '', tags, uris: url ? [url] : [] };
+// a field another password manager kept hidden: kept as a field of its own, which the page shows masked
+const customName = (name) => 'custom: ' + String(name || '').trim();
+function toEntry(title, username, password, url, notes, totp, tags, hidden) {
+    const extra = hidden || {};
+    if (!username && !password && !url && !Object.keys(extra).length) return { v: 1, type: 'note', name: title || t('Untitled'), fields: clean({ text: notes }), notes: '', tags, uris: [] };
+    return { v: 1, type: 'login', name: title || url || t('Untitled'), fields: Object.assign(clean({ username, password, totp }), clean(extra)), notes: notes || '', tags,
+        uris: url ? [url] : [] };
 }
 function fromBitwarden(json) {
     const folders = new Map((json.folders || []).map((folder) => [folder.id, folder.name]));
     return json.items.map((item) => {
         const tags = item.folderId && folders.get(item.folderId) ? [folders.get(item.folderId)] : [];
-        const extra = (item.fields || []).filter((field) => field && field.name).map((field) => field.name + ': ' + (field.value == null ? '' : field.value));
+        const custom = (item.fields || []).filter((field) => field && field.name);
+        // Bitwarden's custom field types: 0 text, 1 hidden, 2 boolean, 3 linked
+        const hidden = {};
+        for (const field of custom.filter((f) => f.type === 1)) hidden[customName(field.name)] = field.value;
+        const extra = custom.filter((f) => f.type !== 1 && f.type !== 3).map((field) => field.name + ': ' + (field.value == null ? '' : field.value));
         const notes = [item.notes || ''].concat(extra).filter((line) => line).join('\n');
         const base = { v: 1, name: item.name || t('Untitled'), notes, tags, uris: [] };
         if (item.type === 1 && item.login) {
             return Object.assign(base, { type: 'login', uris: (item.login.uris || []).map((uri) => uri && uri.uri).filter((uri) => uri),
-                fields: clean({ username: item.login.username, password: item.login.password, totp: item.login.totp }) });
+                fields: Object.assign(clean({ username: item.login.username, password: item.login.password, totp: item.login.totp }), clean(hidden)) });
         }
         if (item.type === 3 && item.card) {
             const card = item.card;
-            return Object.assign(base, { type: 'card', fields: clean({ cardholder: card.cardholderName, number: card.number,
-                expires: [card.expMonth, card.expYear].filter((part) => part).join('/'), code: card.code }) });
+            return Object.assign(base, { type: 'card', fields: Object.assign(clean({ cardholder: card.cardholderName, number: card.number,
+                expires: [card.expMonth, card.expYear].filter((part) => part).join('/'), code: card.code }), clean(hidden)) });
         }
         if (item.type === 4 && item.identity) {
             const id = item.identity;
             const doc = id.passportNumber ? ['Passport', id.passportNumber] : id.licenseNumber ? ['Driver license', id.licenseNumber] : id.ssn ? ['Social security number', id.ssn] : ['', ''];
             const more = [id.email ? 'Email: ' + id.email : '', id.phone ? 'Phone: ' + id.phone : '', id.company ? 'Company: ' + id.company : '', id.username ? 'Username: ' + id.username : ''];
             return Object.assign(base, { type: 'identity', notes: [notes].concat(more).filter((line) => line).join('\n'),
-                fields: clean({ fullName: [id.title, id.firstName, id.middleName, id.lastName].filter((part) => part).join(' '), documentType: doc[0], documentNumber: doc[1],
-                    address: [id.address1, id.address2, id.address3, [id.postalCode, id.city].filter((part) => part).join(' '), id.state, id.country].filter((part) => part).join('\n') }) });
+                fields: Object.assign(clean({ fullName: [id.title, id.firstName, id.middleName, id.lastName].filter((part) => part).join(' '), documentType: doc[0], documentNumber: doc[1],
+                    address: [id.address1, id.address2, id.address3, [id.postalCode, id.city].filter((part) => part).join(' '), id.state, id.country].filter((part) => part).join('\n') }), clean(hidden)) });
         }
-        if (item.type === 5 && item.sshKey) return Object.assign(base, { type: 'ssh-key', fields: clean({ privateKey: item.sshKey.privateKey, publicKey: item.sshKey.publicKey }) });
-        return Object.assign(base, { type: 'note', fields: clean({ text: item.notes || '' }), notes: extra.join('\n') });
+        if (item.type === 5 && item.sshKey) return Object.assign(base, { type: 'ssh-key', fields: Object.assign(clean({ privateKey: item.sshKey.privateKey, publicKey: item.sshKey.publicKey }), clean(hidden)) });
+        return Object.assign(base, { type: 'note', fields: Object.assign(clean({ text: item.notes || '' }), clean(hidden)), notes: extra.join('\n') });
     });
 }
 const childText = (node, tag) => { const child = Array.from(node.children).find((c) => c.tagName === tag); return child ? child.textContent : ''; };
+const STANDARD_KEEPASS = ['Title', 'UserName', 'Password', 'URL', 'Notes', 'otp'];
 function fromKeePassXml(text) {
     const doc = new DOMParser().parseFromString(text, 'application/xml');
     if (doc.getElementsByTagName('parsererror').length || !doc.getElementsByTagName('KeePassFile').length) throw new Error(t('This XML file is not a KeePass export'));
+    // the Recycle Bin's entries were deleted in KeePass: left out
+    const meta = doc.getElementsByTagName('Meta')[0];
+    const binUuid = meta ? childText(meta, 'RecycleBinUUID') : '';
     const out = [];
     const walk = (group, path) => {
         const name = childText(group, 'Name');
+        const uuid = childText(group, 'UUID');
+        if ((binUuid && uuid && uuid === binUuid) || (path.length && name === 'Recycle Bin')) return;
         const here = name ? path.concat([name]) : path;
         for (const node of Array.from(group.children)) {
             if (node.tagName === 'Group') walk(node, here);
             else if (node.tagName === 'Entry') {
                 const strings = {};
-                for (const s of Array.from(node.children).filter((c) => c.tagName === 'String')) strings[childText(s, 'Key')] = childText(s, 'Value');
+                const hidden = {};
+                const notes = [];
+                for (const s of Array.from(node.children).filter((c) => c.tagName === 'String')) {
+                    const key = childText(s, 'Key');
+                    const valueNode = Array.from(s.children).find((c) => c.tagName === 'Value');
+                    const value = valueNode ? valueNode.textContent : '';
+                    if (STANDARD_KEEPASS.includes(key)) strings[key] = value;
+                    // a custom string KeePass protects stays masked; the others go in the notes
+                    else if (valueNode && /^true$/i.test(valueNode.getAttribute('Protected') || '')) hidden[customName(key)] = value;
+                    else if (value) notes.push(key + ': ' + value);
+                }
+                const allNotes = [strings.Notes || ''].concat(notes).filter((line) => line).join('\n');
                 // the first group is the database itself
-                out.push(toEntry(strings.Title, strings.UserName, strings.Password, strings.URL, strings.Notes, strings.otp || '', here.length > 1 ? [here.slice(1).join(' / ')] : []));
+                out.push(toEntry(strings.Title, strings.UserName, strings.Password, strings.URL, allNotes, strings.otp || '', here.length > 1 ? [here.slice(1).join(' / ')] : [], hidden));
             }
         }
     };
@@ -804,8 +927,9 @@ function fromCsv(text) {
         const get = (i) => (i >= 0 && r[i] != null ? r[i] : '');
         const group = get(at.group);
         return toEntry(get(at.title), get(at.username), get(at.password), get(at.url), get(at.notes), get(at.totp), group && group !== 'Root' ? [group] : []);
-    });
+    }).filter((entry, i) => !/recycle bin/i.test(get0(rows[i + 1], at.group)));
 }
+const get0 = (row, i) => (i >= 0 && row && row[i] != null ? row[i] : '');
 function parseImport(text) {
     const trimmed = String(text || '').replace(/^﻿/, '').trim();
     if (trimmed.startsWith('{')) {
@@ -823,7 +947,7 @@ function parseImport(text) {
 // ===== the session: one per page, shared with Commons › Contacts =====
 function makeSession() {
     const S = Vue.reactive({ config: null, base: '', loading: false, failed: '', personal: null, unlocked: false, keyChecks: [], vaults: [],
-        deliveries: [], names: {}, lockCount: 0, idleLocked: false, needsFactor: false });
+        deliveries: [], names: {}, lockCount: 0, idleLocked: false, needsFactor: false, recoveryKeys: [], recoverySessions: [] });
     let client = null;
     let starting = null;
     let locking = false;
@@ -833,33 +957,65 @@ function makeSession() {
     const keyOf = (kind, vaultId) => 'bossVault.' + kind + '.' + ((S.personal && S.personal.userId) || '') + '.' + vaultId;
     const vault = (vaultId) => S.vaults.find((v) => v.vaultId === vaultId) || null;
     const enc = encodeURIComponent;
+    const blank = () => ({ open: false, name: '', items: [], entries: [], memberList: [], info: null, warning: '' });
 
-    /** Everything shown of the vaults is dropped: on Lock, on the idle time, or when the worker failed. */
+    /** Everything shown of the vaults is dropped: on Lock, on the idle time, a hidden tab, a lost sign-in, or a worker that failed. */
     function forget(idle) {
         opened.clear();
         pending = null;
         S.unlocked = false;
         S.idleLocked = !!idle;
         S.lockCount++;
-        for (const v of S.vaults) Object.assign(v, { open: false, name: '', items: [], entries: [], memberList: [], info: null, warning: '' });
+        for (const v of S.vaults) Object.assign(v, blank());
     }
+    /** VaultClient.js, its worker and the module, each loaded with the integrity hash the server gave; none is loaded without one. */
     async function ensureClient() {
         if (client) return client;
         if (!starting) {
             starting = (async () => {
-                await moqui.loadScript('/js/vault/VaultClient.js', null, () => !!window.MoquiVaultClient);
                 const c = S.config || {};
+                const integrity = c.integrity || {};
+                if (!integrity.client || !integrity.worker || !integrity.wasm) throw new Error(t('The vault module has no integrity hash here, so it is not loaded'));
+                // each file's URL names its hash, so a copy an earlier version left in the browser's cache is never what is checked
+                const fresh = (file, hash) => '/js/vault/' + file + '?v=' + encodeURIComponent(hash.replace(/^sha256-/, ''));
+                if (!window.MoquiVaultClient) {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = fresh('VaultClient.js', integrity.client);
+                        script.integrity = integrity.client;
+                        script.crossOrigin = 'anonymous';
+                        script.onload = resolve;
+                        script.onerror = () => reject(new Error(t('The vault module could not be loaded')));
+                        document.head.appendChild(script);
+                    });
+                }
                 const made = new window.MoquiVaultClient({ idleMinutes: c.idleMinutes == null ? 15 : c.idleMinutes, clipboardSeconds: c.clipboardSeconds == null ? 30 : c.clipboardSeconds,
-                    wasmIntegrity: c.wasmIntegrity || null, workerIntegrity: c.workerIntegrity || null, onLock: () => forget(!locking) });
+                    wasmIntegrity: integrity.wasm, workerIntegrity: integrity.worker, workerUrl: window.location.origin + fresh('VaultWorker.js', integrity.worker),
+                    wasmUrl: window.location.origin + fresh('moqui_vault.wasm', integrity.wasm), onLock: () => forget(!locking) });
                 await made.start();
+                // a call that trapped locks the module (VaultWorker.js): the page forgets what it showed too. The arguments go as
+                // plain JSON: a Vue proxy (the key checks, a chosen key) cannot be posted to a worker
+                const call = made.call.bind(made);
+                made.call = async (op, args) => {
+                    try {
+                        return await call(op, args == null ? args : JSON.parse(JSON.stringify(args)));
+                    } catch (err) {
+                        if (/was locked/.test(String(err && err.message))) forget(false);
+                        throw err;
+                    }
+                };
                 client = Vue.markRaw(made);
                 return client;
             })().finally(() => { starting = null; });
         }
         return starting;
     }
-    /** A vault service over REST; a refusal for a sign-in that is not recent or strong asks the user to confirm who they are once. */
-    async function api(method, path, body, retried) {
+    /**
+     * A vault service over REST. A refusal for a sign-in that is not recent or strong asks the user to confirm who they are
+     * once (not when quiet); a lost sign-in (401) locks the vault.
+     */
+    async function api(method, path, body, options) {
+        const o = options || {};
         const init = { method, credentials: 'same-origin', headers: { Accept: 'application/json' } };
         let url = REST + path;
         if (method === 'GET' && body) {
@@ -873,6 +1029,10 @@ function makeSession() {
         const response = await fetch(url, init);
         const token = response.headers.get('X-CSRF-Token');
         if (token && moqui.onSessionToken) moqui.onSessionToken(token);
+        if (response.status === 401) {
+            await lock();
+            throw Object.assign(new Error(t('You are signed out: the vault is locked')), { reasonCode: 'signedOut', status: 401 });
+        }
         let json = {};
         try { json = (await response.json()) || {}; } catch (err) { json = {}; }
         const errors = Array.isArray(json.errors) ? json.errors.join(' ') : json.errors;
@@ -880,9 +1040,9 @@ function makeSession() {
             const message = String(errors || json.message || (t('The server answered') + ' ' + response.status));
             const reason = reasonOf(message);
             if (reason === 'strongAuthNeedsFactor') S.needsFactor = true;
-            if (!retried && (reason === 'reauthRequired' || reason === 'strongAuthRequired') && moqui.reauth && moqui.reauth.confirm) {
+            if (!o.retried && !o.quiet && (reason === 'reauthRequired' || reason === 'strongAuthRequired') && moqui.reauth && moqui.reauth.confirm) {
                 await moqui.reauth.confirm();
-                return api(method, path, body, true);
+                return api(method, path, body, Object.assign({}, o, { retried: true }));
             }
             throw Object.assign(new Error(plainMessage(message)), { reasonCode: reason, status: response.status });
         }
@@ -908,18 +1068,19 @@ function makeSession() {
     async function refresh() {
         S.personal = await api('GET', '/personalKey');
         await refreshVaults();
+        await refreshRecoveryKeys().catch(() => {});
         if (S.personal.hasKey) await refreshDeliveries().catch(() => {});
     }
     async function refreshVaults() {
         const listed = (await api('GET', '/vaults')).vaultList || [];
         const known = new Map(S.vaults.map((v) => [v.vaultId, v]));
         S.vaults = listed.map((row) => {
-            const v = known.get(row.vaultId) || { open: false, name: '', items: [], entries: [], memberList: [], info: null, warning: '' };
+            const v = known.get(row.vaultId) || blank();
             // another member rotated the key: open the vault again for its new version
             if (v.open && row.keyVersion !== v.keyVersion) Object.assign(v, { open: false, items: [] });
             return Object.assign(v, { vaultId: row.vaultId, vaultKindEnumId: row.vaultKindEnumId, lockEnumId: row.lockEnumId, roleEnumId: row.roleEnumId,
                 keyVersion: row.keyVersion, revision: row.revision, itemCount: row.itemCount, secretKindEnumId: row.secretKindEnumId,
-                createdDate: row.createdDate, recoveryOn: row.recoveryOn });
+                createdDate: row.createdDate, recoveryOn: row.recoveryOn, headerCipher: row.headerCipher || '' });
         });
     }
     async function refreshChecks() { S.keyChecks = ((await api('GET', '/keyChecks')).keyCheckList || []).map((row) => Vue.markRaw(row)); }
@@ -927,8 +1088,17 @@ function makeSession() {
         S.deliveries = (await api('GET', '/deliveries')).deliveryList || [];
         await names(S.deliveries.map((d) => d.delivery && d.delivery.sender_id));
     }
+    async function refreshRecoveryKeys() {
+        S.recoveryKeys = ((await api('GET', '/recoveryKeys')).recoveryKeyList || []).map((row) => Vue.markRaw(row));
+        await names(S.recoveryKeys.flatMap((row) => [row.record.maker_user_id].concat(row.holders.map((h) => h.userId))));
+    }
+    async function refreshRecoverySessions() {
+        if (!(S.config && S.config.recoveryHolder)) { S.recoverySessions = []; return; }
+        S.recoverySessions = ((await api('GET', '/recoveries')).sessionList || []).map((row) => Vue.markRaw(row));
+        await names(S.recoverySessions.flatMap((row) => [row.session.subject_user_id, row.session.holder_user_id].concat(row.deliveredBy || [])));
+    }
     async function names(ids) {
-        const missing = Array.from(new Set(ids.filter((id) => id && !(id in S.names))));
+        const missing = Array.from(new Set(ids.filter((id) => id && !isRecoveryMember(id) && !(id in S.names))));
         if (!missing.length) return;
         let got = {};
         try { got = (await screenRequest('userNames', { userIds: missing.join(',') })).names || {}; } catch (err) { got = {}; }
@@ -945,7 +1115,7 @@ function makeSession() {
         if (!w.hasKey) throw new Error(t('You have no vault key yet'));
         const out = await c.personalOpen({ personal_key_id: w.personalKeyId, user_id: w.userId, public: w.public, passphrase_wrap: w.passphraseWrap, passphrase });
         // a wrap under the Argon2id target is wrapped again at it on this open
-        if (out.rewrapped) await api('POST', '/personalKey/rewrap', { personalKeyId: w.personalKeyId, passphraseWrap: out.rewrapped }).catch(() => {});
+        if (out.rewrapped) await api('POST', '/personalKey/rewrap', { personalKeyId: w.personalKeyId, passphraseWrap: out.rewrapped }, { quiet: true }).catch(() => {});
         S.unlocked = true;
         S.idleLocked = false;
         await refreshChecks();
@@ -953,7 +1123,7 @@ function makeSession() {
     async function changePassphrase(passphrase) {
         requireUnlocked();
         const c = await ensureClient();
-        const made = await c.call('personal_rewrap', { passphrase });
+        const made = await c.personalRewrap({ passphrase });
         await api('POST', '/personalKey/rewrap', { personalKeyId: made.personal_key_id, passphraseWrap: made.passphrase_wrap });
     }
     async function unlockWithCode(code, passphrase) {
@@ -969,12 +1139,16 @@ function makeSession() {
     /** Whether this sign-in may set up or replace a key, asked before one is made, so the user never keeps a code for a key the
      * server refuses: a strong, recent sign-in (confirmed now when it is not recent), else the reason. */
     async function strongReady() {
-        try {
-            await api('GET', '/personalKey/wrapped');
-        } catch (err) {
-            if (err.reasonCode === 'strongAuthNeedsFactor' || err.reasonCode === 'strongAuthRequired' || err.reasonCode === 'cancelled') throw err;
-            // no key yet: the sign-in passed
+        let key = await api('GET', '/personalKey');
+        if (key.fetchAllowed) return;
+        if (moqui.reauth && moqui.reauth.confirm) {
+            await moqui.reauth.confirm();
+            key = await api('GET', '/personalKey');
+            if (key.fetchAllowed) return;
         }
+        S.needsFactor = true;
+        throw Object.assign(new Error(t('Your vault key needs a sign-in with a password and a second factor, SSO or a paired device: set up a second factor in Account first')),
+            { reasonCode: 'strongAuthNeedsFactor' });
     }
     /** A new personal key in the worker, not yet sent: its recovery code goes to the user, the key to the server after it. */
     async function makeKey(passphrase) {
@@ -1013,24 +1187,32 @@ function makeSession() {
     // ----- vaults and items -----
     const remembered = (vaultId) => local.get(keyOf('chain', vaultId));
     const remember = (vaultId, value) => { if (value && value.member_list_hash) local.set(keyOf('chain', vaultId), value); };
-    const openRow = (vaultId, row) => client.itemOpen({ vault_id: vaultId, item_id: row.vaultItemId, key_version: row.keyVersion,
-        wrapped_item_key: row.wrappedItemKey, sealed_body: row.bodyCipher }).then((out) => out.body);
+    /** The organization recovery keys a vault's member lists name (recovery:<id>), for the module to check their makers. */
+    function recoveryKeysFor(entries) {
+        const ids = new Set();
+        for (const entry of entries || []) for (const m of entry.members || []) if (isRecoveryMember(m.user_id)) ids.add(m.user_id.slice(RECOVERY_PREFIX.length));
+        return S.recoveryKeys.filter((row) => ids.has(row.recoveryKeyId)).map((row) => ({ record: row.record, maker_public: row.makerPublic }));
+    }
+    const openArgs = (vaultId, row) => ({ vault_id: vaultId, item_id: row.vaultItemId, key_version: row.keyVersion, wrapped_item_key: row.wrappedItemKey,
+        sealed_body: row.bodyCipher });
+    const openRow = (vaultId, row) => client.itemOpen(openArgs(vaultId, row)).then((out) => out.body);
     function parseBody(text) {
         const body = JSON.parse(text);
         if (!body || typeof body !== 'object') throw new Error(t('Not an item'));
         return body;
     }
     const typeOf = (id) => ((S.config && S.config.itemTypes) || []).find((type) => type.id === id) || null;
-    /** What the page keeps of an item: its name, type, websites, tags and the fields its type does not mask. */
-    function headerOf(row, body) {
-        const type = typeOf(body.type);
+    /** What the page keeps of an item for its lists: from the module's summary (never a masked field or the notes), the fields its
+     * type shows unmasked. */
+    function headerOf(row, summary) {
+        const type = typeOf(summary.type);
         const shown = {};
-        const fields = body.fields && typeof body.fields === 'object' ? body.fields : {};
+        const fields = summary.fields && typeof summary.fields === 'object' ? summary.fields : {};
         for (const [name, value] of Object.entries(fields)) {
             const def = type ? type.fields.find((field) => field.name === name) : null;
             if (def && !def.masked && value != null && value !== '') shown[name] = String(value);
         }
-        return { id: row.vaultItemId, row, type: String(body.type || ''), name: String(body.name || ''), uris: arr(body.uris), tags: arr(body.tags), shown,
+        return { id: row.vaultItemId, row, type: String(summary.type || ''), name: String(summary.name || ''), uris: arr(summary.uris), tags: arr(summary.tags), shown,
             changed: row.lastModifiedDate || row.createdDate || null, broken: '' };
     }
     async function openVault(vaultId, secret) {
@@ -1039,11 +1221,12 @@ function makeSession() {
         const c = await ensureClient();
         const got = await api('GET', '/vaults/' + enc(vaultId));
         Object.assign(v, { keyVersion: got.vault.keyVersion, revision: got.vault.revision, roleEnumId: got.vault.roleEnumId, itemCount: got.vault.itemCount,
-            entries: (got.entries || []).map((entry) => Vue.markRaw(entry)), memberList: got.memberList || [] });
+            headerCipher: got.vault.headerCipher || '', recoveryOn: got.vault.recoveryOn, entries: (got.entries || []).map((entry) => Vue.markRaw(entry)),
+            memberList: got.memberList || [] });
         if (v.lockEnumId === SINGLE) {
             if (!opened.has(slot(vaultId, 1))) {
                 if (!secret) throw new Error(v.secretKindEnumId === 'VsGenerated' ? t('Enter the vault key') : t('Enter the vault password'));
-                await c.vaultKeyPasswordOpen({ vault_id: vaultId, key_version: 1, wrap: got.secretWrap, password: v.secretKindEnumId === 'VsGenerated' ? keyText(secret) : secret });
+                await openSingle(c, v, got, secret);
                 opened.add(slot(vaultId, 1));
             }
             local.set(keyOf('opened', vaultId), Date.now());
@@ -1051,24 +1234,61 @@ function makeSession() {
             requireUnlocked();
             const wraps = (got.wraps || []).slice().sort((a, b) => a.key_version - b.key_version);
             if (!wraps.some((wrap) => wrap.key_version === v.keyVersion)) throw new Error(t('You have no access to this vault\'s current key'));
+            const recoveryKeys = recoveryKeysFor(got.entries);
             for (const wrap of wraps) {
                 if (opened.has(slot(vaultId, wrap.key_version))) continue;
                 // only through the member list's chain, back to a signer whose key this user compared
-                const out = await c.vaultKeyOpen({ entries: got.entries, key_checks: S.keyChecks, wrap, remembered: remembered(vaultId) });
+                const out = await c.vaultKeyOpen({ entries: got.entries, key_checks: S.keyChecks, recovery_keys: recoveryKeys, wrap, remembered: remembered(vaultId) });
                 opened.add(slot(vaultId, wrap.key_version));
                 remember(vaultId, out.remembered);
             }
-            if (wraps.some((wrap) => wrap.key_version < v.keyVersion)) api('POST', '/vaults/' + enc(vaultId) + '/ack', { keyVersion: v.keyVersion }).catch(() => {});
+            if (wraps.some((wrap) => wrap.key_version < v.keyVersion)) api('POST', '/vaults/' + enc(vaultId) + '/ack', { keyVersion: v.keyVersion }, { quiet: true }).catch(() => {});
         }
         await loadItems(v);
         v.open = true;
         await names(v.memberList.map((m) => m.userId).concat(v.entries.map((entry) => entry.signer_user_id)));
         return v;
     }
+    /** A single-secret vault's key: a generated key by HKDF, a password by Argon2id. A wrap the open raised to the Argon2id target,
+     * and a generated key a page wrapped as a password before, are stored again (update#VaultSecretWrap) when this sign-in may. */
+    async function openSingle(c, v, got, secret) {
+        const vaultId = v.vaultId;
+        const wrap = got.secretWrap || {};
+        const store = (secretWrap, kind) => api('PUT', '/vaults/' + enc(vaultId) + '/secretWrap', Object.assign({ expectedRevision: v.revision, secretWrap },
+            kind ? { secretKindEnumId: kind } : {}), { quiet: true }).then((out) => { if (out.revision) v.revision = out.revision; }, (err) => {
+            console.info('Vault: the vault\'s wrap is kept as it was until a strong sign-in: ' + messageOf(err));
+        });
+        if (v.secretKindEnumId === 'VsGenerated') {
+            const generated = keyText(secret);
+            if (wrap.m_kib == null) {
+                await c.vaultKeyGeneratedOpen({ vault_id: vaultId, key_version: 1, wrap, generated });
+                return;
+            }
+            // made by this page before the module had the generated-key wrap: opened as a password, then wrapped as it should be
+            await c.vaultKeyPasswordOpen({ vault_id: vaultId, key_version: 1, wrap, password: generated });
+            const again = await c.vaultKeyGeneratedWrap({ vault_id: vaultId, key_version: 1, generated });
+            await store(again.wrap, 'VsGenerated');
+            return;
+        }
+        const out = await c.vaultKeyPasswordOpen({ vault_id: vaultId, key_version: 1, wrap, password: secret });
+        if (out.rewrapped) await store(out.rewrapped, null);
+    }
     async function loadItems(v) {
-        await ensureClient();
+        const c = await ensureClient();
         const out = await api('GET', '/vaults/' + enc(v.vaultId) + '/items');
         if (out.keyVersion) v.keyVersion = out.keyVersion;
+        // the vault's name, from its header (sealed under the current key version)
+        if (v.headerCipher) {
+            try {
+                const header = (await c.headerOpen({ vault_id: v.vaultId, key_version: v.keyVersion, header_cipher: v.headerCipher })).header;
+                let parsed = null;
+                try { parsed = JSON.parse(header); } catch (err) { parsed = null; }
+                v.name = String(parsed && typeof parsed === 'object' ? parsed.name || '' : header);
+            } catch (err) {
+                v.name = '';
+                console.warn('Vault: the header does not open: ' + messageOf(err));
+            }
+        }
         // the highest revision this browser saw of each item: an older one coming back is told (§3.12)
         const seen = local.get(keyOf('revisions', v.vaultId)) || {};
         let older = false;
@@ -1079,9 +1299,15 @@ function makeSession() {
             if ((seen[row.vaultItemId] || 0) > (row.revision || 0)) older = true;
             seen[row.vaultItemId] = Math.max(seen[row.vaultItemId] || 0, row.revision || 0);
             try {
-                const body = parseBody(await openRow(v.vaultId, row));
-                if (body.type === INFO_TYPE) { v.info = raw; v.name = String(body.name || ''); continue; }
-                items.push(headerOf(raw, body));
+                // the masked names of every type: the summary leaves them out whatever the item's type says it is
+                const masked = ((S.config && S.config.itemTypes) || []).flatMap((type) => type.fields.filter((field) => field.masked).map((field) => field.name));
+                const summary = await c.itemSummary(Object.assign(openArgs(v.vaultId, row), { masked: Array.from(new Set(masked)) }));
+                if (summary.type === INFO_TYPE) {
+                    v.info = raw;
+                    if (!v.headerCipher) v.name = String(summary.name || '');
+                    continue;
+                }
+                items.push(headerOf(raw, summary));
             } catch (err) {
                 items.push({ id: row.vaultItemId, row: raw, type: '', name: t('An item that does not open'), uris: [], tags: [], shown: {}, changed: null, broken: messageOf(err) });
             }
@@ -1098,17 +1324,21 @@ function makeSession() {
         if (!item) throw new Error(t('No such item'));
         return parseBody(await openRow(vaultId, item.row));
     }
-    /** An item sealed in the worker and stored; fresh gives it a new item key (decision (c) after a removal). */
+    /**
+     * An item sealed in the worker and stored. Its item key is used again only when it was made at the current key version
+     * (itemKeyVersion): the first write after a rotation makes a new one, which the update says (decision (c)); fresh makes a
+     * new one in any case.
+     */
     async function saveItem(vaultId, item, body, fresh) {
         const v = vault(vaultId);
         const c = await ensureClient();
         const row = item ? item.row : null;
         const id = row ? row.vaultItemId : randomId('vi');
         const args = { vault_id: vaultId, item_id: id, key_version: v.keyVersion, body: JSON.stringify(body) };
-        if (row && !fresh) Object.assign(args, { wrapped_item_key: row.wrappedItemKey, wrapped_key_version: row.keyVersion });
+        if (row && !fresh) Object.assign(args, { wrapped_item_key: row.wrappedItemKey, wrapped_key_version: row.keyVersion, item_key_version: row.itemKeyVersion });
         const sealed = await c.itemSeal(args);
         const stored = { keyVersion: v.keyVersion, wrappedItemKey: sealed.wrapped_item_key, bodyCipher: sealed.sealed_body };
-        if (row) await api('PUT', '/items/' + enc(id), Object.assign({ expectedRevision: row.revision }, stored));
+        if (row) await api('PUT', '/items/' + enc(id), Object.assign({ expectedRevision: row.revision, newItemKey: !!sealed.new_item_key }, stored));
         else await api('POST', '/vaults/' + enc(vaultId) + '/items', Object.assign({ vaultItemId: id }, stored));
         return id;
     }
@@ -1116,17 +1346,43 @@ function makeSession() {
         await api('DELETE', '/items/' + enc(itemId));
         await loadItems(vault(vaultId));
     }
-    async function makeVault(name, lockId, secretKind, secret) {
+    /** A generated key for a new single-secret vault, made in the module with the vault key: shown once, wrapped by HKDF. */
+    async function prepareGenerated() {
         const c = await ensureClient();
-        const id = randomId('v');
+        const vaultId = randomId('v');
+        await c.vaultKeyNew({ vault_id: vaultId, key_version: 1 });
+        opened.add(slot(vaultId, 1));
+        const made = await c.vaultKeyGeneratedWrap({ vault_id: vaultId, key_version: 1 });
+        return { vaultId, generated: made.generated, wrap: made.wrap };
+    }
+    async function discardPrepared(prepared) {
+        if (!prepared || !client) return;
+        opened.delete(slot(prepared.vaultId, 1));
+        await client.vaultKeyForget({ vault_id: prepared.vaultId, key_version: 1 }).catch(() => {});
+    }
+    /** A vault made: its name sealed in its header; single-secret by a password (secret) or the generated key prepared. */
+    async function makeVault(name, lockId, secretKind, secret, prepared) {
+        const c = await ensureClient();
+        const header = JSON.stringify({ v: 1, name });
+        let id;
         if (lockId === SINGLE) {
-            await c.vaultKeyNew({ vault_id: id, key_version: 1 });
-            opened.add(slot(id, 1));
-            const secretWrap = await c.vaultKeyPasswordWrap({ vault_id: id, key_version: 1, password: secret });
-            await api('POST', '/vaults', { vaultId: id, vaultKindEnumId: 'VkPersonal', lockEnumId: SINGLE, secretKindEnumId: secretKind, secretWrap });
+            let secretWrap;
+            if (secretKind === 'VsGenerated') {
+                if (!prepared) throw new Error(t('Make the generated key again'));
+                id = prepared.vaultId;
+                secretWrap = prepared.wrap;
+            } else {
+                id = randomId('v');
+                await c.vaultKeyNew({ vault_id: id, key_version: 1 });
+                opened.add(slot(id, 1));
+                secretWrap = await c.vaultKeyPasswordWrap({ vault_id: id, key_version: 1, password: secret });
+            }
+            const headerCipher = (await c.headerSeal({ vault_id: id, key_version: 1, header })).header_cipher;
+            await api('POST', '/vaults', { vaultId: id, vaultKindEnumId: 'VkPersonal', lockEnumId: SINGLE, secretKindEnumId: secretKind, secretWrap, headerCipher });
             local.set(keyOf('opened', id), Date.now());
         } else {
             requireUnlocked();
+            id = randomId('v');
             const me = S.personal;
             const members = [{ user_id: me.userId, role: 'manage', key_id: me.personalKeyId, public: me.public }];
             const entry = await c.keyVersionFirst({ vault_id: id, members, key_checks: S.keyChecks });
@@ -1134,79 +1390,130 @@ function makeSession() {
             opened.add(slot(id, 1));
             const wrap = await c.vaultKeyWrapMember({ vault_id: id, key_version: 1, member_user_id: me.userId, member_key_id: me.personalKeyId,
                 member_public: me.public, key_checks: S.keyChecks });
-            await api('POST', '/vaults', { vaultId: id, vaultKindEnumId: 'VkPersonal', lockEnumId: SHARED, recoveryOn: 'N', entry, memberWraps: [wrap] });
+            const headerCipher = (await c.headerSeal({ vault_id: id, key_version: 1, header })).header_cipher;
+            await api('POST', '/vaults', { vaultId: id, vaultKindEnumId: 'VkPersonal', lockEnumId: SHARED, recoveryOn: 'N', entry, memberWraps: [wrap], headerCipher });
             remember(id, await c.chainVerify({ entries: [entry], key_checks: S.keyChecks, remembered: null }));
         }
         await refreshVaults();
         const v = vault(id);
-        await saveItem(id, null, { v: 1, type: INFO_TYPE, name });
         const got = await api('GET', '/vaults/' + enc(id));
         Object.assign(v, { entries: (got.entries || []).map((entry) => Vue.markRaw(entry)), memberList: got.memberList || [] });
         await loadItems(v);
         v.open = true;
         return id;
     }
-    async function renameVault(vaultId, name) {
-        const v = vault(vaultId);
-        await saveItem(vaultId, v.info ? { row: v.info } : null, { v: 1, type: INFO_TYPE, name });
-        await loadItems(v);
-    }
     async function deleteVault(vaultId) {
         await api('DELETE', '/vaults/' + enc(vaultId));
         await refreshVaults();
     }
 
-    // ----- members (§3.9) -----
+    // ----- members (§3.9) and recovery on a vault (§3.10) -----
     async function afterMembers(vaultId) {
         const v = vault(vaultId);
         const got = await api('GET', '/vaults/' + enc(vaultId));
-        remember(vaultId, await client.chainVerify({ entries: got.entries, key_checks: S.keyChecks, remembered: remembered(vaultId) }));
-        Object.assign(v, { keyVersion: got.vault.keyVersion, revision: got.vault.revision, entries: (got.entries || []).map((entry) => Vue.markRaw(entry)),
-            memberList: got.memberList || [] });
+        remember(vaultId, await client.chainVerify({ entries: got.entries, key_checks: S.keyChecks, recovery_keys: recoveryKeysFor(got.entries),
+            remembered: remembered(vaultId) }));
+        Object.assign(v, { keyVersion: got.vault.keyVersion, revision: got.vault.revision, recoveryOn: got.vault.recoveryOn, headerCipher: got.vault.headerCipher || '',
+            entries: (got.entries || []).map((entry) => Vue.markRaw(entry)), memberList: got.memberList || [] });
         await names(v.memberList.map((m) => m.userId));
     }
-    /** A member added, or a member's changed key given access: the next member list signed here and the vault key wrapped to them. */
-    async function setMember(vaultId, key, role) {
+    /**
+     * The next member list at the same key version, with `member` (a person's key or a recovery key) in it at `role`, and the vault
+     * key wrapped to them. When the change leaves a wrap of this key version without a manager's signature (a manager's key
+     * changed or a manager demoted), the server names the member whose wrap to remake: each is wrapped again here, to their key
+     * in the list, and the change is sent again with them (rewraps), at most once a member.
+     */
+    async function changeMembers(vaultId, member, recoveryKeys) {
         requireUnlocked();
         const c = await ensureClient();
         const got = await api('GET', '/vaults/' + enc(vaultId));
         const latest = got.entries[got.entries.length - 1];
-        const members = latest.members.filter((m) => m.user_id !== key.userId).concat([{ user_id: key.userId, role, key_id: key.personalKeyId, public: key.public }]);
-        const entry = await c.keyVersionNext({ entries: got.entries, key_checks: S.keyChecks, members, version: latest.version, revision: latest.revision + 1,
-            remembered: remembered(vaultId) });
-        const wrap = await c.vaultKeyWrapMember({ vault_id: vaultId, key_version: latest.version, member_user_id: key.userId, member_key_id: key.personalKeyId,
-            member_public: key.public, key_checks: S.keyChecks });
-        await api('POST', '/vaults/' + enc(vaultId) + '/members', { expectedRevision: got.vault.revision, entry, wrap });
+        const keys = recoveryKeysFor(got.entries).concat(recoveryKeys || []);
+        const members = latest.members.filter((m) => m.user_id !== member.user_id).concat([member]);
+        const entry = await c.keyVersionNext({ entries: got.entries, key_checks: S.keyChecks, recovery_keys: keys, members, version: latest.version,
+            revision: latest.revision + 1, remembered: remembered(vaultId) });
+        const wrap = await c.vaultKeyWrapMember({ vault_id: vaultId, key_version: latest.version, member_user_id: member.user_id, member_key_id: member.key_id,
+            member_public: member.public, key_checks: S.keyChecks, recovery_keys: keys });
+        const rewraps = [];
+        for (let tries = 0; tries <= members.length; tries++) {
+            try {
+                await api('POST', '/vaults/' + enc(vaultId) + '/members', Object.assign({ expectedRevision: got.vault.revision, entry, wrap },
+                    rewraps.length ? { rewraps } : {}));
+                break;
+            } catch (err) {
+                const named = /Remake (\S+?)'s wrap/.exec(String(err.message || ''));
+                const listed = named && members.find((m) => m.user_id === named[1]);
+                if (!listed || rewraps.some((w) => w.member_user_id === listed.user_id)) throw err;
+                rewraps.push(await c.vaultKeyWrapMember({ vault_id: vaultId, key_version: latest.version, member_user_id: listed.user_id,
+                    member_key_id: listed.key_id, member_public: listed.public, key_checks: S.keyChecks, recovery_keys: keys }));
+            }
+        }
         await afterMembers(vaultId);
+        return rewraps.map((w) => w.member_user_id);
     }
-    /** A member removed: the vault key rotated, every item key wrapped again and the remaining members' wraps remade, in one change. */
-    async function removeMember(vaultId, userId, reencrypt) {
+    /** A member added, or a member's changed key given access (§3.10: another member gives a member's new key the vault key). */
+    const setMember = (vaultId, key, role) => changeMembers(vaultId, { user_id: key.userId, role, key_id: key.personalKeyId, public: key.public });
+    /** Recovery turned on: the organization's recovery key listed as a manager, its maker's key checked here first. */
+    async function recoveryOn(vaultId, keyRow) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const record = { record: keyRow.record, maker_public: keyRow.makerPublic };
+        const member = await c.recoveryMember(Object.assign({ key_checks: S.keyChecks }, record));
+        return changeMembers(vaultId, member, [record]);
+    }
+    /**
+     * A rotation: the next key version without `dropUserId` (and with `add`, a recovery key that replaces a used one), every item
+     * key wrapped again, every remaining member's wrap remade and the header sealed again, sent in one change. When the server
+     * refuses it, the new key version is forgotten here, so nothing of it is used.
+     */
+    async function rotate(vaultId, dropUserId, add, recoveryKeys) {
         requireUnlocked();
         const c = await ensureClient();
         const v = vault(vaultId);
         const got = await api('GET', '/vaults/' + enc(vaultId));
         const listed = (await api('GET', '/vaults/' + enc(vaultId) + '/items')).itemList || [];
         const latest = got.entries[got.entries.length - 1];
-        const rotated = await c.vaultRotate({ entries: got.entries, key_checks: S.keyChecks, members: latest.members.filter((m) => m.user_id !== userId),
-            items: listed.map((row) => ({ item_id: row.vaultItemId, wrapped_item_key: row.wrappedItemKey })), remembered: remembered(vaultId) });
+        const keys = recoveryKeysFor(got.entries).concat(recoveryKeys || []);
+        const members = latest.members.filter((m) => m.user_id !== dropUserId).concat(add ? [add] : []);
+        const rotated = await c.vaultRotate({ entries: got.entries, key_checks: S.keyChecks, recovery_keys: keys, members,
+            items: listed.map((row) => ({ item_id: row.vaultItemId, wrapped_item_key: row.wrappedItemKey })), header_cipher: got.vault.headerCipher || null,
+            remembered: remembered(vaultId) });
+        try {
+            await api('POST', '/vaults/' + enc(vaultId) + '/removeMember', Object.assign({ userId: dropUserId, expectedRevision: got.vault.revision,
+                entry: rotated.entry, itemKeys: rotated.item_keys, memberWraps: rotated.member_wraps }, rotated.header_cipher ? { headerCipher: rotated.header_cipher } : {}));
+        } catch (err) {
+            await c.vaultKeyForget({ vault_id: vaultId, key_version: rotated.key_version }).catch(() => {});
+            throw err;
+        }
         opened.add(slot(vaultId, rotated.key_version));
-        await api('POST', '/vaults/' + enc(vaultId) + '/removeMember', { userId, expectedRevision: got.vault.revision, entry: rotated.entry,
-            itemKeys: rotated.item_keys, memberWraps: rotated.member_wraps });
         v.keyVersion = rotated.key_version;
         await afterMembers(vaultId);
         await loadItems(v);
+    }
+    /** A member removed: the vault key rotated; with reencrypt, every item sealed again under a new item key now (decision (c)). */
+    async function removeMember(vaultId, userId, reencrypt) {
+        await rotate(vaultId, userId, null, null);
         if (reencrypt) {
+            const v = vault(vaultId);
             const rows = v.items.filter((item) => !item.broken).concat(v.info ? [{ row: v.info }] : []);
             for (const item of rows) await saveItem(vaultId, item, parseBody(await openRow(vaultId, item.row)), true);
             await loadItems(v);
         }
+    }
+    /** A used recovery key replaced by another in one rotation, so the vault key the recovering browser saw is replaced too. */
+    async function replaceRecovery(vaultId, oldMemberId, keyRow) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const record = { record: keyRow.record, maker_public: keyRow.makerPublic };
+        const member = await c.recoveryMember(Object.assign({ key_checks: S.keyChecks }, record));
+        await rotate(vaultId, oldMemberId, member, [record]);
     }
 
     // ----- deliveries -----
     async function fileDelivery(delivery, vaultId) {
         requireUnlocked();
         const c = await ensureClient();
-        const out = await c.call('delivery_open', { delivery: delivery.delivery, sender_public: delivery.senderPublic, key_checks: S.keyChecks });
+        const out = await c.deliveryOpen({ delivery: delivery.delivery, sender_public: delivery.senderPublic, key_checks: S.keyChecks });
         let body = null;
         try { body = parseBody(out.value); } catch (err) { body = null; }
         if (!body || !body.type || body.type === INFO_TYPE) body = { v: 1, type: 'note', name: t('Sent to you'), fields: { text: String(out.value) } };
@@ -1219,7 +1526,7 @@ function makeSession() {
         requireUnlocked();
         const c = await ensureClient();
         const body = await itemBody(vaultId, itemId);
-        const sent = await c.call('delivery_send', { delivery_id: randomId('dl'), to_user_id: key.userId, to_key_id: key.personalKeyId, to_public: key.public,
+        const sent = await c.deliverySend({ delivery_id: randomId('dl'), to_user_id: key.userId, to_key_id: key.personalKeyId, to_public: key.public,
             purpose: 'item', value: JSON.stringify(body), key_checks: S.keyChecks });
         await api('POST', '/deliveries', { delivery: sent });
     }
@@ -1230,30 +1537,40 @@ function makeSession() {
         const v = vault(vaultId);
         const exportId = randomId('export');
         await c.vaultKeyNew({ vault_id: exportId, key_version: 1 });
-        opened.add(slot(exportId, 1));
-        const wrap = await c.vaultKeyPasswordWrap({ vault_id: exportId, key_version: 1, password });
-        const rows = (v.info ? [v.info] : []).concat(v.items.filter((item) => !item.broken).map((item) => item.row));
-        const items = [];
-        for (const row of rows) {
-            const itemId = exportId + '-' + (items.length + 1);
-            const sealed = await c.itemSeal({ vault_id: exportId, item_id: itemId, key_version: 1, body: await openRow(vaultId, row) });
-            items.push({ item_id: itemId, wrapped_item_key: sealed.wrapped_item_key, sealed_body: sealed.sealed_body });
+        try {
+            const wrap = await c.vaultKeyPasswordWrap({ vault_id: exportId, key_version: 1, password });
+            const rows = v.items.filter((item) => !item.broken).map((item) => item.row);
+            const items = [];
+            for (const row of rows) {
+                const itemId = exportId + '-' + (items.length + 1);
+                const sealed = await c.itemSeal({ vault_id: exportId, item_id: itemId, key_version: 1, body: await openRow(vaultId, row) });
+                items.push({ item_id: itemId, wrapped_item_key: sealed.wrapped_item_key, sealed_body: sealed.sealed_body });
+            }
+            return JSON.stringify({ format: 'moqui-vault-export', v: 1, export_id: exportId, key_version: 1, created: Date.now(), wrap, items });
+        } finally {
+            await c.vaultKeyForget({ vault_id: exportId, key_version: 1 }).catch(() => {});
         }
-        return JSON.stringify({ format: 'moqui-vault-export', v: 1, export_id: exportId, key_version: 1, created: Date.now(), wrap, items });
     }
+    /** An encrypted export's items, opened with its password. Its id is an export's, never a vault's this page knows, and its key
+     * is opened for this read only. */
     async function readExport(json, password) {
         const c = await ensureClient();
-        if (!opened.has(slot(json.export_id, 1))) {
-            await c.vaultKeyPasswordOpen({ vault_id: json.export_id, key_version: 1, wrap: json.wrap, password });
-            opened.add(slot(json.export_id, 1));
+        const exportId = String(json.export_id || '');
+        if (!EXPORT_ID.test(exportId) || vault(exportId) || opened.has(slot(exportId, 1))) throw new Error(t('This file is not an export this page can read'));
+        // a key of that id left open by anything before is dropped first, so only this password opens it
+        await c.vaultKeyForget({ vault_id: exportId, key_version: 1 }).catch(() => {});
+        try {
+            await c.vaultKeyPasswordOpen({ vault_id: exportId, key_version: 1, wrap: json.wrap, password });
+            const out = [];
+            for (const row of json.items || []) {
+                const body = parseBody((await c.itemOpen({ vault_id: exportId, item_id: String(row.item_id), key_version: 1, wrapped_item_key: row.wrapped_item_key,
+                    sealed_body: row.sealed_body })).body);
+                if (body.type !== INFO_TYPE) out.push(body);
+            }
+            return out;
+        } finally {
+            await c.vaultKeyForget({ vault_id: exportId, key_version: 1 }).catch(() => {});
         }
-        const out = [];
-        for (const row of json.items || []) {
-            const body = parseBody((await c.itemOpen({ vault_id: json.export_id, item_id: row.item_id, key_version: 1, wrapped_item_key: row.wrapped_item_key,
-                sealed_body: row.sealed_body })).body);
-            if (body.type !== INFO_TYPE) out.push(body);
-        }
-        return out;
     }
     async function importItems(vaultId, items, progress) {
         let done = 0;
@@ -1264,6 +1581,72 @@ function makeSession() {
         }
         await loadItems(vault(vaultId));
         return { done, failed };
+    }
+
+    // ----- organization recovery (§3.10; Admin › Security › Recovery keys) -----
+    const myHolder = (keyRow) => keyRow.holders.find((h) => h.userId === (S.personal && S.personal.userId)) || null;
+    /** A recovery key made here, split k of the holders (each key checked here), its shares sealed to them, then forgotten here. */
+    async function makeRecoveryKey(k, holders, userGroupId) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const made = await c.recoveryMake({ recovery_key_id: randomId('rk'), k, key_checks: S.keyChecks,
+            holders: holders.map((h) => ({ user_id: h.userId, key_id: h.personalKeyId, public: h.public })) });
+        await api('POST', '/recoveryKeys', Object.assign({ record: made.record, shares: made.shares }, userGroupId ? { userGroupId } : {}));
+        await refreshRecoveryKeys();
+    }
+    /** A recovery started by this holder for a member's new key (checked here): its ephemeral key stays in this tab's worker. */
+    async function startRecovery(keyRow, vaultId, subjectKey) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const held = myHolder(keyRow);
+        if (!held || !held.held) throw new Error(t('You hold no share of this recovery key'));
+        const session = await c.recoverySessionStart({ session_id: randomId('rs'), record: keyRow.record, maker_public: keyRow.makerPublic, held: held.held,
+            vault_id: vaultId, subject_user_id: subjectKey.userId, subject_key_id: subjectKey.personalKeyId, subject_public: subjectKey.public, key_checks: S.keyChecks });
+        await api('POST', '/recoveries', { session });
+        await refreshRecoverySessions();
+    }
+    /** This holder's share sealed to another holder's recovery: the starter's and the member's new keys checked here first. */
+    async function deliverShare(row) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const keyRow = S.recoveryKeys.find((k) => k.recoveryKeyId === row.session.recovery_key_id);
+        const held = keyRow && myHolder(keyRow);
+        if (!held || !held.held) throw new Error(t('You hold no share of this recovery key'));
+        const share = await c.recoveryShareDeliver({ record: keyRow.record, maker_public: keyRow.makerPublic, held: held.held, session: row.session,
+            session_holder_public: row.holderPublic, session_holder: row.holderShare, key_checks: S.keyChecks });
+        await api('POST', '/recoveries/' + enc(row.recoverySessionId) + '/shares', { share });
+        await refreshRecoverySessions();
+    }
+    /** The starter ends the recovery: the shares combined here, the vault key opened through the recovery key's wrap, and the next
+     * member list signed by the recovery key giving the member their new key; the module keeps nothing of it after. */
+    async function finishRecovery(row) {
+        requireUnlocked();
+        const c = await ensureClient();
+        const sessionId = row.recoverySessionId;
+        const open = await api('GET', '/recoveries/' + enc(sessionId));
+        const keys = recoveryKeysFor(open.entries);
+        // a holder who is also a member may have that key version open: the module opens it again through the recovery key only
+        // with no copy of it held, so the member's copy is forgotten first, before the combine (any call between the combine and
+        // the rekey drops the combined key); the vault opens again from the member's own wrap
+        const wrapVersion = open.recoveryWrap && open.recoveryWrap.key_version;
+        if (wrapVersion != null && opened.has(slot(open.session.vault_id, wrapVersion))) {
+            await c.vaultKeyForget({ vault_id: open.session.vault_id, key_version: wrapVersion });
+            opened.delete(slot(open.session.vault_id, wrapVersion));
+            const v = vault(open.session.vault_id);
+            if (v) Object.assign(v, blank());
+        }
+        await c.recoveryCombine({ session_id: sessionId, record: open.record, maker_public: open.makerPublic, held: open.held, deliveries: open.deliveries,
+            key_checks: S.keyChecks });
+        await c.recoveryOpenVault({ entries: open.entries, key_checks: S.keyChecks, recovery_keys: keys, session_id: sessionId, wrap: open.recoveryWrap });
+        const rekeyed = await c.recoveryRekey({ session_id: sessionId, entries: open.entries, key_checks: S.keyChecks, recovery_keys: keys });
+        await api('POST', '/recoveries/' + enc(sessionId) + '/complete', { expectedRevision: open.revision, entry: rekeyed.entry, wrap: rekeyed.wrap,
+            rewraps: rekeyed.rewraps || [] });
+        await refreshRecoverySessions();
+        await refreshRecoveryKeys();
+    }
+    async function cancelRecovery(row) {
+        await api('POST', '/recoveries/' + enc(row.recoverySessionId) + '/cancel', {});
+        await refreshRecoverySessions();
     }
 
     async function lock() {
@@ -1279,13 +1662,31 @@ function makeSession() {
     const copy = async (text) => (await ensureClient()).copy(text);
     const anyOpen = () => opened.size > 0;
     const lastOpened = (vaultId) => local.get(keyOf('opened', vaultId));
+    // a tab hidden a while locks; on its return, a lost sign-in locks at the first answer
+    let hiddenTimer = null;
+    document.addEventListener('visibilitychange', () => {
+        clearTimeout(hiddenTimer);
+        if (!anyOpen() && !S.unlocked) return;
+        if (document.visibilityState === 'hidden') {
+            const idle = S.config && S.config.idleMinutes > 0 ? S.config.idleMinutes * 60000 : HIDDEN_LOCK_MS;
+            hiddenTimer = setTimeout(() => lock(), Math.min(HIDDEN_LOCK_MS, idle));
+        } else api('GET', '/personalKey', null, { quiet: true }).catch(() => {});
+    });
 
-    return { S, api, init, refresh, refreshVaults, refreshDeliveries, refreshChecks, names, unlock, changePassphrase, unlockWithCode, strongReady, makeKey, saveKey, discardKey,
-        checked, publicKeyOf, fingerprintOf, storeCheck, openVault, loadItems, itemBody, saveItem, deleteItem, makeVault, renameVault, deleteVault,
-        setMember, removeMember, fileDelivery, sendItem, exportVault, readExport, importItems, lock, touch, copy, typeOf, vault, anyOpen, lastOpened,
-        openRow, parseBody, INFO_TYPE };
+    return { S, api, init, refresh, refreshVaults, refreshDeliveries, refreshChecks, refreshRecoveryKeys, refreshRecoverySessions, names, unlock,
+        changePassphrase, unlockWithCode, strongReady, makeKey, saveKey, discardKey, checked, publicKeyOf, fingerprintOf, storeCheck, openVault, loadItems,
+        itemBody, saveItem, deleteItem, prepareGenerated, discardPrepared, makeVault, deleteVault, setMember, recoveryOn, removeMember, replaceRecovery,
+        fileDelivery, sendItem, exportVault, readExport, importItems, makeRecoveryKey, startRecovery, deliverShare, finishRecovery, cancelRecovery, myHolder,
+        lock, touch, copy, typeOf, vault, anyOpen, lastOpened, openRow, parseBody, INFO_TYPE };
 }
 const session = window.BossVaultSession || (window.BossVaultSession = makeSession());
+
+const blankMake = () => ({ open: false, step: 'choose', name: '', lock: SHARED, passphrase: '', kind: 'VsPassword', password: '', password2: '', key: '',
+    typed: '', stored: false, busy: false, error: '' });
+const blankMembers = () => ({ open: false, keys: {}, words: {}, busy: false, error: '', remove: null, reencrypt: true, recoveryKeyId: null,
+    add: { userId: null, key: null, words: '', match: false, role: 'write' } });
+// a generated key prepared for New vault, outside Vue's data: its vault key is in the worker until the vault is made or the dialog closes
+let prepared = null;
 
 module.exports = {
     name: 'BossVault',
@@ -1295,10 +1696,13 @@ module.exports = {
             unlockForm: { passphrase: '', secret: '', show: false, busy: false, error: '', check: [] },
             unlockDialog: { open: false, passphrase: '', busy: false, error: '', then: null },
             edit: { open: false, item: null, type: 'login', name: '', fields: {}, show: {}, uris: '', tags: '', notes: '', busy: false },
-            make: { open: false, step: 'choose', name: '', lock: SHARED, passphrase: '', kind: 'VsPassword', password: '', password2: '', key: '', typed: '', stored: false, busy: false, error: '' },
-            rename: { open: false, name: '', busy: false },
+            make: blankMake(),
             check: { open: false, userId: '', name: '', key: null, words: '', match: false, busy: false, error: '', then: null },
-            members: { open: false, keys: {}, words: {}, busy: false, error: '', remove: null, reencrypt: true, add: { userId: null, key: null, words: '', match: false, role: 'write' } },
+            members: blankMembers(),
+            recovery: { busy: '', error: '', check: [] },
+            makeKey: { open: false, pick: null, holders: [], k: 2, userGroupId: null, busy: false, error: '' },
+            startRec: { open: false, keyRow: null, vaultId: '', userId: null, key: null, words: '', checked: false, match: false, busy: false, error: '' },
+            seq: 0,
             deliveries: { open: false, vaultId: null, busy: '', error: '' },
             send: { open: false, userId: null, key: null, words: '', checked: false, match: false, busy: false, error: '' },
             copyTo: { open: false, vaultId: null, busy: false },
@@ -1317,7 +1721,8 @@ module.exports = {
         dark() { return this.$q.dark.isActive; },
         pathList() { return this.$root.currentPathList || []; },
         keyView() { return this.pathList.includes('VaultKey'); },
-        screenIndex() { const at = this.pathList.lastIndexOf(this.keyView ? 'VaultKey' : 'Vault'); return at; },
+        recoveryView() { return this.pathList.includes('RecoveryKeys'); },
+        screenIndex() { return this.pathList.lastIndexOf(this.recoveryView ? 'RecoveryKeys' : (this.keyView ? 'VaultKey' : 'Vault')); },
         screenPath() { return this.$root.basePath + '/' + (this.screenIndex >= 0 ? this.pathList.slice(0, this.screenIndex + 1) : ['Commons', 'Vault']).join('/'); },
         linkPath() { return this.$root.linkBasePath + '/' + (this.screenIndex >= 0 ? this.pathList.slice(0, this.screenIndex + 1) : ['Commons', 'Vault']).join('/'); },
         params() { return this.$root.currentParameters || {}; },
@@ -1366,10 +1771,21 @@ module.exports = {
             return v.memberList.map((m) => {
                 const listed = latest.members.find((entry) => entry.user_id === m.userId) || {};
                 const active = this.members.keys[m.userId];
-                return { userId: m.userId, roleEnumId: m.roleEnumId, me: m.userId === this.S.personal.userId, public: listed.public || '',
+                return { userId: m.userId, roleEnumId: m.roleEnumId, me: m.userId === this.S.personal.userId, public: listed.public || '', recovery: isRecoveryMember(m.userId),
                     words: this.members.words[m.userId] || '', checked: !!listed.public && session.checked(m.userId, listed.public),
                     changed: !!(active && active.hasKey && listed.public && active.public !== listed.public) };
             });
+        },
+        recoveryMember() {
+            const v = this.current;
+            const latest = v && v.entries.length ? v.entries[v.entries.length - 1] : null;
+            const member = latest ? latest.members.find((m) => isRecoveryMember(m.user_id)) : null;
+            return member ? member.user_id : null;
+        },
+        recoveryOptions() {
+            const now = this.recoveryMember ? this.recoveryMember.slice(RECOVERY_PREFIX.length) : null;
+            return this.S.recoveryKeys.filter((key) => !key.used && key.recoveryKeyId !== now).map((key) => ({ value: key.recoveryKeyId,
+                label: this.keptFor(key) + ' · ' + fill(t('{k} of {n} holders'), { k: key.record.k, n: key.record.n }) + ' · ' + fill(t('made by {name}'), { name: this.nameOf(key.record.maker_user_id) }) }));
         },
         importSummary() {
             const parsed = this.importer.parsed;
@@ -1381,6 +1797,7 @@ module.exports = {
     },
     watch: {
         'S.lockCount'() { this.forgetShown(); },
+        'make.open'(open) { if (!open) this.dropPrepared(); },
         'params.itemId'() { this.revealed = {}; this.detail = null; this.loadDetail(); },
         'params.vaultId'() { this.unlockForm.error = ''; this.unlockForm.check = []; this.unlockForm.secret = ''; this.typeFilter = ''; },
         'S.unlocked'(open) { if (open) this.loadKeyWords(); },
@@ -1401,8 +1818,11 @@ module.exports = {
         manages(v) { return !!v && (v.lockEnumId === SINGLE || v.roleEnumId === 'VrManage'); },
         roleText(roleId) { return { VrManage: t('Manage'), VrWrite: t('Write'), VrRead: t('Read') }[roleId] || roleId || ''; },
         lockText(v) { return v.lockEnumId === SINGLE ? (v.secretKindEnumId === 'VsGenerated' ? t('Single secret, a generated key') : t('Single secret, a password')) : t('Shared key'); },
+        keptFor(key) { return key.userGroupId ? fill(t('For {group}'), { group: key.userGroupId }) : (key.instanceId ? fill(t('For instance {id}'), { id: key.instanceId }) : t('For the organization')); },
+        recoveryKeyRow(memberId) { const id = String(memberId || '').slice(RECOVERY_PREFIX.length); return this.S.recoveryKeys.find((key) => key.recoveryKeyId === id) || null; },
+        holdsShare(key) { const held = session.myHolder(key); return !!(held && held.held && held.keyActive); },
         itemsText(count) { return count === 1 ? t('1 item') : fill(t('{count} items'), { count }); },
-        itemCount(v) { return v.open ? v.items.length : Math.max(0, (v.itemCount || 0) - (v.lockEnumId ? 1 : 0)); },
+        itemCount(v) { return v.open ? v.items.length : (v.itemCount || 0); },
         reminder(v) {
             if (v.lockEnumId !== SINGLE) return false;
             const last = session.lastOpened(v.vaultId) || (v.createdDate ? new Date(v.createdDate).getTime() : Date.now());
@@ -1422,6 +1842,8 @@ module.exports = {
                 if (field.masked) out.push(Object.assign({}, field, { value: null }));
                 else if (item.shown[field.name] != null) out.push(Object.assign({}, field, { value: item.shown[field.name] }));
             }
+            // a field the type does not name (another password manager's hidden field) is shown masked
+            for (const name of (this.detail && this.detail.extra) || []) out.push({ name, label: name.replace(/^custom: /, ''), kind: 'secret', masked: true, value: null });
             return out;
         },
         notify(message) { moqui.notifyMessages([{ type: 'success', message }]); },
@@ -1431,21 +1853,32 @@ module.exports = {
         setParams(params) { this.$root.setUrl(this.linkPath + (Object.keys(params).length ? '?' + moqui.objToSearch(params) : '')); },
         selectVault(vaultId) { this.search = ''; this.setParams(vaultId ? { vaultId } : {}); },
         selectItem(vaultId, itemId) { this.search = ''; this.setParams(itemId ? { vaultId, itemId } : { vaultId }); },
-        /** What a lock drops from this page too: shown values, forms holding values, open dialogs. */
+        /** What a lock drops from this page too: shown values, every form that holds a value or a secret, and every dialog. */
         forgetShown() {
             this.revealed = {};
             this.detail = null;
             this.history = { open: false, busy: false, rows: [], shown: {} };
-            this.edit = Object.assign(this.edit, { open: false, fields: {}, show: {}, notes: '' });
-            this.importer.open = false;
-            this.exporter.open = false;
-            this.send.open = false;
-            this.copyTo.open = false;
-            this.members.open = false;
-            this.unlockForm.passphrase = '';
-            this.unlockForm.secret = '';
+            this.edit = { open: false, item: null, type: 'login', name: '', fields: {}, show: {}, uris: '', tags: '', notes: '', busy: false };
+            this.importer = { open: false, vaultId: null, fileName: '', parsed: null, password: '', busy: false, progress: 0, total: 0, result: '', error: '' };
+            this.exporter = { open: false, vaultId: null, password: '', password2: '', busy: false, error: '' };
+            this.make = blankMake();
+            this.members = blankMembers();
+            this.send = { open: false, userId: null, key: null, words: '', checked: false, match: false, busy: false, error: '' };
+            this.copyTo = { open: false, vaultId: null, busy: false };
+            this.unlockForm = { passphrase: '', secret: '', show: false, busy: false, error: '', check: [] };
+            this.unlockDialog = { open: false, passphrase: '', busy: false, error: '', then: null };
+            this.check = { open: false, userId: '', name: '', key: null, words: '', match: false, busy: false, error: '', then: null };
+            this.setup = { open: false, mode: 'new', step: 'passphrase', passphrase: '', passphrase2: '', code: '', group: 0, typed: '', fingerprint: '', busy: false, error: '' };
+            this.recover = { open: false, code: '', passphrase: '', passphrase2: '', busy: false, error: '' };
+            this.change = { open: false, current: '', passphrase: '', passphrase2: '', busy: false, error: '' };
+            this.makeKey = { open: false, pick: null, holders: [], k: 2, userGroupId: null, busy: false, error: '' };
+            this.startRec = { open: false, keyRow: null, vaultId: '', userId: null, key: null, words: '', checked: false, match: false, busy: false, error: '' };
             this.checksWords = {};
+            this.myWords = '';
+            prepared = null;
         },
+        // any use of the page counts: dialogs render outside this component's element, so the document is listened to
+        onActivity() { session.touch(); },
         async loadKeyWords() {
             const p = this.S.personal;
             if (!p || !p.hasKey || !this.keyView) return;
@@ -1462,7 +1895,9 @@ module.exports = {
             if (!item || item.broken) return;
             try {
                 const body = await session.itemBody(this.current.vaultId, item.id);
-                if (this.currentItem === item) this.detail = { notes: String(body.notes || '') };
+                const type = session.typeOf(body.type);
+                const extra = Object.keys(body.fields || {}).filter((name) => !(type && type.fields.some((field) => field.name === name)));
+                if (this.currentItem === item) this.detail = { notes: String(body.notes || ''), extra };
             } catch (err) { this.fail(err); }
         },
         // ----- opening -----
@@ -1616,10 +2051,24 @@ module.exports = {
         },
         // ----- vaults -----
         openMake() {
-            this.make = { open: true, step: 'choose', name: '', lock: this.S.personal.hasKey ? SHARED : SINGLE, passphrase: '', kind: 'VsPassword', password: '', password2: '',
-                key: '', typed: '', stored: false, busy: false, error: '' };
+            this.dropPrepared();
+            this.make = Object.assign(blankMake(), { open: true, lock: this.S.personal.hasKey ? SHARED : SINGLE });
         },
-        secretKindChanged(kind) { if (kind === 'VsGenerated' && !this.make.key) this.make.key = generatedKey(); this.make.stored = false; this.make.typed = ''; },
+        async secretKindChanged(kind) {
+            this.make.stored = false;
+            this.make.typed = '';
+            if (kind !== 'VsGenerated' || this.make.key) return;
+            try {
+                prepared = await session.prepareGenerated();
+                this.make.key = prepared.generated;
+            } catch (err) { this.make.error = messageOf(err); }
+        },
+        dropPrepared() {
+            const was = prepared;
+            prepared = null;
+            if (was) session.discardPrepared(was);
+            if (this.make.key) this.make.key = '';
+        },
         async submitMake() {
             const m = this.make;
             if (m.busy) return;
@@ -1627,20 +2076,15 @@ module.exports = {
             m.error = '';
             try {
                 if (m.lock === SHARED && !this.S.unlocked) { await session.unlock(m.passphrase); m.passphrase = ''; }
-                const secret = m.lock === SINGLE ? (m.kind === 'VsGenerated' ? m.key : m.password) : null;
-                const id = await session.makeVault(String(m.name).trim(), m.lock, m.kind, secret);
-                this.make = { open: false, step: 'choose', name: '', lock: SHARED, passphrase: '', kind: 'VsPassword', password: '', password2: '', key: '', typed: '', stored: false, busy: false, error: '' };
+                const secret = m.lock === SINGLE && m.kind === 'VsPassword' ? m.password : null;
+                const id = await session.makeVault(String(m.name).trim(), m.lock, m.kind, secret, m.kind === 'VsGenerated' ? prepared : null);
+                prepared = null;
+                this.make = blankMake();
                 this.selectVault(id);
                 this.notify(t('The vault is made'));
             } catch (err) {
                 m.error = /does not open/.test(messageOf(err)) ? t('That passphrase does not open your vault key') : messageOf(err);
             } finally { m.busy = false; }
-        },
-        openRename() { this.rename = { open: true, name: this.current.name || '', busy: false }; },
-        async submitRename() {
-            this.rename.busy = true;
-            try { await session.renameVault(this.current.vaultId, String(this.rename.name).trim()); this.rename.open = false; } catch (err) { this.fail(err); }
-            this.rename.busy = false;
         },
         confirmDeleteVault() {
             const v = this.current;
@@ -1689,31 +2133,34 @@ module.exports = {
         // ----- members -----
         async openMembers() {
             if (!(await this.needUnlocked(() => this.openMembers()))) return;
-            this.members = { open: true, keys: {}, words: {}, busy: false, error: '', remove: null, reencrypt: true, add: { userId: null, key: null, words: '', match: false, role: 'write' } };
+            this.members = Object.assign(blankMembers(), { open: true });
+            session.refreshRecoveryKeys().catch(() => {});
             this.loadMemberKeys();
         },
         async loadMemberKeys() {
             const v = this.current;
             if (!v) return;
             const latest = v.entries.length ? v.entries[v.entries.length - 1] : { members: [] };
-            for (const m of latest.members) {
+            for (const m of latest.members.filter((member) => !isRecoveryMember(member.user_id))) {
                 try { this.members.words = Object.assign({}, this.members.words, { [m.user_id]: await session.fingerprintOf(m.public) }); } catch (err) { /* left blank */ }
                 if (m.user_id === this.S.personal.userId) continue;
                 try { this.members.keys = Object.assign({}, this.members.keys, { [m.user_id]: await session.publicKeyOf(m.user_id) }); } catch (err) { /* not shown as changed */ }
             }
         },
         async memberChosen(userId) {
+            const seq = ++this.seq;
             this.members.add = { userId, key: null, words: '', match: false, role: this.members.add.role };
             if (!userId) return;
             try {
                 await session.names([userId]);
                 const key = await session.publicKeyOf(userId);
+                const words = key.hasKey ? await session.fingerprintOf(key.public) : '';
+                // an answer for a person chosen before is dropped
+                if (seq !== this.seq || this.members.add.userId !== userId || key.userId !== userId) return;
                 if (!key.hasKey) { this.members.error = t('They have no vault key yet. Ask them to set one up in Settings › Vault key.'); return; }
                 this.members.error = '';
-                this.members.add.key = key;
-                this.members.add.words = await session.fingerprintOf(key.public);
-                this.members.add.match = session.checked(userId, key.public);
-            } catch (err) { this.members.error = messageOf(err); }
+                Object.assign(this.members.add, { key, words, match: session.checked(userId, key.public) });
+            } catch (err) { if (seq === this.seq) this.members.error = messageOf(err); }
         },
         async submitAddMember() {
             const add = this.members.add;
@@ -1738,6 +2185,22 @@ module.exports = {
                 await session.setMember(this.current.vaultId, key, ROLE_OF[member.roleEnumId] || 'read');
                 await this.loadMemberKeys();
                 this.notify(fill(t('{name}\'s new key has access'), { name: this.nameOf(member.userId) }));
+            } catch (err) { this.members.error = messageOf(err); }
+            this.members.busy = false;
+        },
+        /** Recovery turned on with the key chosen (its maker's key compared first), or a used recovery key replaced by it. */
+        async submitRecoveryOn() {
+            const keyRow = this.S.recoveryKeys.find((key) => key.recoveryKeyId === this.members.recoveryKeyId);
+            if (!keyRow) return;
+            const maker = keyRow.record.maker_user_id;
+            if (maker !== this.S.personal.userId && !session.checked(maker, keyRow.makerPublic)) { this.openCheck(maker, () => this.submitRecoveryOn()); return; }
+            this.members.busy = true;
+            this.members.error = '';
+            try {
+                if (this.recoveryMember) await session.replaceRecovery(this.current.vaultId, this.recoveryMember, keyRow);
+                else await session.recoveryOn(this.current.vaultId, keyRow);
+                this.members.recoveryKeyId = null;
+                this.notify(t('Organization recovery is on'));
             } catch (err) { this.members.error = messageOf(err); }
             this.members.busy = false;
         },
@@ -1776,16 +2239,18 @@ module.exports = {
             this.send = { open: true, userId: null, key: null, words: '', checked: false, match: false, busy: false, error: '' };
         },
         async sendChosen(userId) {
+            const seq = ++this.seq;
             Object.assign(this.send, { userId, key: null, words: '', checked: false, match: false, error: '' });
             if (!userId) return;
             try {
                 await session.names([userId]);
                 const key = await session.publicKeyOf(userId);
+                const words = key.hasKey ? await session.fingerprintOf(key.public) : '';
+                // an answer for a person chosen before is dropped
+                if (seq !== this.seq || this.send.userId !== userId || key.userId !== userId) return;
                 if (!key.hasKey) { this.send.error = t('They have no vault key yet. Ask them to set one up in Settings › Vault key.'); return; }
-                this.send.key = key;
-                this.send.words = await session.fingerprintOf(key.public);
-                this.send.checked = session.checked(userId, key.public);
-            } catch (err) { this.send.error = messageOf(err); }
+                Object.assign(this.send, { key, words, checked: session.checked(userId, key.public) });
+            } catch (err) { if (seq === this.seq) this.send.error = messageOf(err); }
         },
         async submitSend() {
             const s = this.send;
@@ -1808,9 +2273,11 @@ module.exports = {
             const file = event.target.files && event.target.files[0];
             Object.assign(this.importer, { parsed: null, result: '', error: '', fileName: file ? file.name : '' });
             if (!file) return;
+            if (file.size > IMPORT_MAX_BYTES) { this.importer.error = t('The file is larger than 10 MB: export a smaller part'); return; }
             const reader = new FileReader();
             reader.onload = () => {
-                try { this.importer.parsed = parseImport(reader.result); } catch (err) { this.importer.error = messageOf(err); }
+                // the parsed items hold values: kept out of Vue's reactivity, and dropped on Close and Lock
+                try { this.importer.parsed = Vue.markRaw(parseImport(reader.result)); } catch (err) { this.importer.error = messageOf(err); }
             };
             reader.onerror = () => { this.importer.error = t('The file could not be read'); };
             reader.readAsText(file);
@@ -1831,7 +2298,11 @@ module.exports = {
             } catch (err) {
                 im.error = /does not open/.test(messageOf(err)) ? t('That password does not open the export') : messageOf(err);
             }
+            im.password = '';
             im.busy = false;
+        },
+        closeImport() {
+            this.importer = { open: false, vaultId: null, fileName: '', parsed: null, password: '', busy: false, progress: 0, total: 0, result: '', error: '' };
         },
         openExport() {
             this.exporter = { open: true, vaultId: this.current && this.current.open ? this.current.vaultId : (this.openVaults[0] || {}).vaultId || null, password: '', password2: '', busy: false, error: '' };
@@ -1882,6 +2353,100 @@ module.exports = {
             session.discardKey();
             this.setup = { open: false, mode: 'new', step: 'passphrase', passphrase: '', passphrase2: '', code: '', group: 0, typed: '', fingerprint: '', busy: false, error: '' };
         },
+        // ----- organization recovery (Admin › Security › Recovery keys) -----
+        openMakeKey() {
+            if (!this.S.unlocked) { this.openUnlock(() => this.openMakeKey()); return; }
+            const me = this.S.personal;
+            this.makeKey = { open: true, pick: null, holders: [{ userId: me.userId, personalKeyId: me.personalKeyId, public: me.public, words: this.myWords, checked: true }],
+                k: 2, userGroupId: null, busy: false, error: '' };
+            if (!this.myWords) session.fingerprintOf(me.public).then((words) => { this.myWords = words; this.makeKey.holders[0].words = words; }, () => {});
+        },
+        async holderChosen(userId) {
+            this.makeKey.pick = null;
+            if (!userId || this.makeKey.holders.some((h) => h.userId === userId)) return;
+            try {
+                await session.names([userId]);
+                const key = await session.publicKeyOf(userId);
+                if (!key.hasKey || key.userId !== userId) { this.makeKey.error = t('They have no vault key yet. Ask them to set one up in Settings › Vault key.'); return; }
+                this.makeKey.error = '';
+                this.makeKey.holders.push({ userId, personalKeyId: key.personalKeyId, public: key.public, words: await session.fingerprintOf(key.public),
+                    checked: session.checked(userId, key.public) });
+            } catch (err) { this.makeKey.error = messageOf(err); }
+        },
+        refreshHolders() { for (const h of this.makeKey.holders) h.checked = h.userId === this.S.personal.userId || session.checked(h.userId, h.public); },
+        async submitMakeKey() {
+            const mk = this.makeKey;
+            mk.busy = true;
+            mk.error = '';
+            try {
+                await session.makeRecoveryKey(Number(mk.k), mk.holders, mk.userGroupId || null);
+                this.makeKey = { open: false, pick: null, holders: [], k: 2, userGroupId: null, busy: false, error: '' };
+                this.notify(t('The recovery key is made and split among its holders'));
+            } catch (err) { mk.error = messageOf(err); }
+            mk.busy = false;
+        },
+        openStartRecovery(keyRow) {
+            if (!this.S.unlocked) { this.openUnlock(() => this.openStartRecovery(keyRow)); return; }
+            this.startRec = { open: true, keyRow, vaultId: '', userId: null, key: null, words: '', checked: false, match: false, busy: false, error: '' };
+        },
+        async subjectChosen(userId) {
+            const seq = ++this.seq;
+            Object.assign(this.startRec, { userId, key: null, words: '', checked: false, match: false, error: '' });
+            if (!userId) return;
+            try {
+                await session.names([userId]);
+                const key = await session.publicKeyOf(userId);
+                const words = key.hasKey ? await session.fingerprintOf(key.public) : '';
+                if (seq !== this.seq || this.startRec.userId !== userId || key.userId !== userId) return;
+                if (!key.hasKey) { this.startRec.error = t('They have no vault key yet: they make a new one in Settings › Vault key first.'); return; }
+                Object.assign(this.startRec, { key, words, checked: session.checked(userId, key.public) });
+            } catch (err) { if (seq === this.seq) this.startRec.error = messageOf(err); }
+        },
+        async submitStartRecovery() {
+            const r = this.startRec;
+            r.busy = true;
+            r.error = '';
+            try {
+                if (!r.checked) await session.storeCheck(r.key, r.words);
+                await session.startRecovery(r.keyRow, String(r.vaultId).trim(), r.key);
+                r.open = false;
+                this.notify(t('The recovery is started: keep this tab open while the other holders seal their shares'));
+            } catch (err) { r.error = messageOf(err); }
+            r.busy = false;
+        },
+        /** This holder's share sealed to a recovery: the starter's key and the member's new key compared first. */
+        async submitShare(row) {
+            if (!this.S.unlocked) { this.openUnlock(() => this.submitShare(row)); return; }
+            for (const [userId, publicHex] of [[row.session.holder_user_id, row.holderPublic], [row.session.subject_user_id, row.session.subject_public]]) {
+                if (!session.checked(userId, publicHex)) { this.openCheck(userId, () => this.submitShare(row)); return; }
+            }
+            this.recovery = { busy: row.recoverySessionId, error: '', check: [] };
+            try { await session.deliverShare(row); this.notify(t('Your share is sealed to the recovery')); } catch (err) { this.recovery.error = messageOf(err); }
+            this.recovery.busy = '';
+        },
+        async submitFinish(row) {
+            if (!this.S.unlocked) { this.openUnlock(() => this.submitFinish(row)); return; }
+            this.recovery = { busy: row.recoverySessionId, error: '', check: [] };
+            try {
+                await session.finishRecovery(row);
+                this.notify(t('The member\'s new key has the vault: every member is told. Replace the recovery key now.'));
+            } catch (err) {
+                const message = messageOf(err);
+                this.recovery.error = /was not started here/.test(message) ? t('This recovery was started in another tab, or before this tab locked: cancel it and start it again') : message;
+                if (/has been checked|has not been checked/.test(message)) {
+                    const open = await session.api('GET', '/recoveries/' + encodeURIComponent(row.recoverySessionId)).catch(() => null);
+                    const ids = Array.from(new Set(((open && open.entries) || []).map((entry) => entry.signer_user_id).filter((id) => id && !isRecoveryMember(id) && id !== this.S.personal.userId)));
+                    await session.names(ids);
+                    this.recovery.check = ids;
+                }
+            }
+            this.recovery.busy = '';
+        },
+        submitCancelRecovery(row) {
+            this.$q.dialog({ title: t('Cancel the recovery'), message: fill(t('Cancel the recovery of {name}\'s access? The shares sealed to it are dropped.'), { name: this.nameOf(row.session.subject_user_id) }),
+                ok: { label: t('Cancel the recovery'), color: 'negative', unelevated: true, noCaps: true }, cancel: { label: t('Keep it'), flat: true, noCaps: true } })
+                .onOk(() => session.cancelRecovery(row).then(() => this.notify(t('Cancelled')), (err) => this.fail(err)));
+        },
         openRecover() { this.recover = { open: true, code: '', passphrase: '', passphrase2: '', busy: false, error: '' }; },
         async submitRecover() {
             const r = this.recover;
@@ -1907,9 +2472,21 @@ module.exports = {
         }
     },
     mounted() {
-        this.start().then(() => { this.loadKeyWords(); this.loadDetail(); });
+        document.addEventListener('keydown', this.onActivity, true);
+        document.addEventListener('pointerdown', this.onActivity, true);
+        this.start().then(() => {
+            this.loadKeyWords();
+            this.loadDetail();
+            if (this.recoveryView) session.refreshRecoverySessions().catch((err) => { this.recovery.error = messageOf(err); });
+        });
+    },
+    beforeUnmount() {
+        document.removeEventListener('keydown', this.onActivity, true);
+        document.removeEventListener('pointerdown', this.onActivity, true);
+        this.dropPrepared();
     }
 };
+
 </script>
 
 <style>

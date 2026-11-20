@@ -6,7 +6,7 @@
 // filed into their own vault. A removal: the vault key is rotated, the removed member gets nothing, a write at the old key version
 // is refused, and the remaining member opens the new version. A recovery: a forgotten passphrase is replaced with the recovery
 // code; a member who lost both makes a new key, which opens nothing until another member compares it and gives it access again.
-// Organization recovery (§3.10, phase V4) is a step of its own, skipped while V4's services are not on the server.
+// Organization recovery (§3.10, phase V4): two holders recover the vault to a member's new key, which opens it.
 // Run: ./moq accept mr-boss --spec VaultPersonal
 const RUN = String(Date.now())
 const USERS = [
@@ -46,12 +46,13 @@ const store = (user, vaultId, keyVersion, itemId, body) => {
 const openItem = (who, vaultId, row) => JSON.parse((who.c || who).call("item_open", {vault_id: vaultId, item_id: row.vaultItemId, key_version: row.keyVersion,
     wrapped_item_key: row.wrappedItemKey, sealed_body: row.bodyCipher}).body)
 // a member opens a shared vault's current key through its member list, as Commons › Vault does
-const openShared = (user, vaultId) => {
+const openShared = (user, vaultId, recoveryKeys) => {
     const vault = api(user, "GET", `/vaults/${vaultId}`)
     if (!vault.wraps) return {ok: false, error: JSON.stringify(vault).slice(0, 300)}
     const wrap = vault.wraps.find((w) => w.key_version === vault.vault.keyVersion)
     if (!wrap) return {ok: false, error: "no wrap of the current key version"}
-    const opened = user.c.try("vault_key_open", {entries: vault.entries, key_checks: checks(user), wrap, remembered: user.remembered[vaultId] || null})
+    const opened = user.c.try("vault_key_open", {entries: vault.entries, key_checks: checks(user), recovery_keys: recoveryKeys || [], wrap,
+        remembered: user.remembered[vaultId] || null})
     if (opened.ok) user.remembered[vaultId] = opened.result.remembered
     return Object.assign(opened, {vault})
 }
@@ -298,21 +299,97 @@ feature("a recovery: Ben's forgotten passphrase is replaced with his recovery co
     }
 })
 
-// Organization recovery (§3.10, phase V4): a holder with VAULT_RECOVERY and a recent sign-in, with k of n holders' shares, recovers
-// a shared-key vault that has recovery on to a member's new personal key, and every member is told. V4's services are not on this
-// binary yet; when they are (/rest/s1/vault/recoveryKeys and /recoveries), this step is written against them: a holder makes the
-// recovery key (create#VaultRecoveryKey, its shares sealed to the holders), Ana turns recovery on for the vault (the vault crate's
-// recovery_wrap, signed by her as a manager), Ana loses her key, the holders deliver their shares (recovery_share_deliver), one
-// combines them (recovery_combine), opens the vault (recovery_open_vault) and wraps it to Ana's new key, and Ana and Cal see the
-// recovery event.
-feature("organization recovery: k holders recover a shared vault to a member's new key, and every member is told", {
+// Organization recovery (§3.10, phase V4), as Admin › Security › Recovery keys and Commons › Vault's Members do it: Cal makes a
+// recovery key split 2 of 2 between Ben and herself (each key compared), Ana turns recovery on for the shared vault after
+// comparing the key's maker, then loses her key and makes a new one; Cal starts the recovery after comparing Ana's new key, Ben
+// compares Cal's and Ana's new keys and seals his share to it, and Cal finishes it: the shares combined in her client, the vault
+// key opened through the recovery key's wrap and given to Ana's new key (and, Ana having been a manager whose wraps no longer
+// carry a manager's signature, Cal's wrap remade). Ana's new client opens the vault through the recovery key's signed member
+// list and reads the item; the recovery is an event, and the key is marked used.
+feature("organization recovery: two holders recover the shared vault to Ana's new key, which opens it", {
     when() {
-        const probe = u.ana.s.request("GET", "/rest/s1/vault/recoveryKeys", {accept: "json"})
-        if (probe.status === 404) skip("V4's recovery services are not on this server (GET /rest/s1/vault/recoveryKeys is 404): this step waits for V4")
-        skip("V4's recovery services are on this server: write this step against them (plans/Vault-Instances.md §3.10)")
-        return {}
+        const {ana, ben, cal} = u
+        const held = (user, id) => api(user, "GET", "/recoveryKeys").recoveryKeyList.find((k) => k.recoveryKeyId === id).holders.find((h) => h.userId === user.userId).held
+        const ok = (answer, what) => {
+            if (answer.status >= 400 || answer.errors) throw new Error(`${what}: ${JSON.stringify(answer).slice(0, 400)}`)
+            return answer
+        }
+        // Cal makes the recovery key, after comparing Ben's key
+        check(cal, ben)
+        const recoveryKeyId = `vp-rk-${RUN}`
+        const made = cal.c.call("recovery_make", {recovery_key_id: recoveryKeyId, k: 2, key_checks: checks(cal),
+            holders: [ben, cal].map((h) => ({user_id: h.userId, key_id: h.keyId, public: h.public}))})
+        ok(api(cal, "POST", "/recoveryKeys", {record: made.record, shares: made.shares}), "create#VaultRecoveryKey")
+        const keyRow = api(ana, "GET", "/recoveryKeys").recoveryKeyList.find((k) => k.recoveryKeyId === recoveryKeyId)
+        const recoveryKeys = [{record: keyRow.record, maker_public: keyRow.makerPublic}]
+
+        // Ana turns recovery on (Cal's key compared before, in the recovery step)
+        const vault0 = api(ana, "GET", `/vaults/${s.shared}`)
+        const latest = vault0.entries[vault0.entries.length - 1]
+        const recoveryMember = ana.c.call("recovery_member", {record: keyRow.record, maker_public: keyRow.makerPublic, key_checks: checks(ana)})
+        const entry = ana.c.call("key_version_next", {entries: vault0.entries, key_checks: checks(ana), recovery_keys: recoveryKeys,
+            members: latest.members.concat([recoveryMember]), version: latest.version, revision: latest.revision + 1})
+        const wrap = ana.c.call("vault_key_wrap_member", {vault_id: s.shared, key_version: latest.version, member_user_id: recoveryMember.user_id,
+            member_key_id: recoveryMember.key_id, member_public: recoveryMember.public, key_checks: checks(ana), recovery_keys: recoveryKeys})
+        ok(api(ana, "POST", `/vaults/${s.shared}/members`, {expectedRevision: vault0.vault.revision, entry, wrap}), "add#VaultMember (recovery on)")
+        const recoveryOn = api(ana, "GET", `/vaults/${s.shared}`).vault.recoveryOn
+
+        // Ana loses her passphrase and recovery code: a new key
+        ana.c.close()
+        ana.c = vault.client()
+        ana.remembered = {}
+        ana.keyId = `vp-ana-2-${RUN}`
+        const remade = ana.c.call("personal_make", {personal_key_id: ana.keyId, user_id: ana.userId, passphrase: `ana's second pass phrase ${RUN}`})
+        ana.public = remade.public
+        ok(api(ana, "POST", "/personalKey/replace", {personalKeyId: ana.keyId, public: remade.public, passphraseWrap: remade.passphrase_wrap,
+            recoveryWrap: remade.recovery_wrap}), "replace#PersonalKey")
+
+        // Cal compares Ana's new key and starts the recovery; Ben compares Cal's and Ana's new keys and seals his share
+        check(cal, ana)
+        const sessionId = `vp-rs-${RUN}`
+        const session = cal.c.call("recovery_session_start", {session_id: sessionId, record: keyRow.record, maker_public: keyRow.makerPublic,
+            held: held(cal, recoveryKeyId), vault_id: s.shared, subject_user_id: ana.userId, subject_key_id: ana.keyId, subject_public: ana.public,
+            key_checks: checks(cal)})
+        ok(api(cal, "POST", "/recoveries", {session}), "start#VaultRecovery")
+        check(ben, cal)
+        check(ben, ana)
+        const row = api(ben, "GET", "/recoveries").sessionList.find((r) => r.recoverySessionId === sessionId)
+        const share = ben.c.call("recovery_share_deliver", {record: keyRow.record, maker_public: keyRow.makerPublic, held: held(ben, recoveryKeyId),
+            session: row.session, session_holder_public: row.holderPublic, session_holder: row.holderShare, key_checks: checks(ben)})
+        ok(api(ben, "POST", `/recoveries/${sessionId}/shares`, {share}), "deliver#VaultRecoveryShare")
+
+        // Cal finishes it in her client
+        const open = api(cal, "GET", `/recoveries/${sessionId}`)
+        // Cal is a member too, with that key version open: forgotten before the combine, as Admin › Security › Recovery keys does
+        cal.c.call("vault_key_forget", {vault_id: s.shared, key_version: open.recoveryWrap.key_version})
+        cal.c.call("recovery_combine", {session_id: sessionId, record: open.record, maker_public: open.makerPublic, held: open.held,
+            deliveries: open.deliveries, key_checks: checks(cal)})
+        const calChecks = checks(cal)
+        cal.c.call("recovery_open_vault", {entries: open.entries, key_checks: calChecks, recovery_keys: recoveryKeys, session_id: sessionId, wrap: open.recoveryWrap})
+        const rekeyed = cal.c.call("recovery_rekey", {session_id: sessionId, entries: open.entries, key_checks: calChecks, recovery_keys: recoveryKeys})
+        const completed = api(cal, "POST", `/recoveries/${sessionId}/complete`, {expectedRevision: open.revision, entry: rekeyed.entry, wrap: rekeyed.wrap,
+            rewraps: rekeyed.rewraps})
+
+        // Ana's new client compares the recovery key's maker, opens the vault and reads the item
+        check(ana, cal)
+        const anaOpened = openShared(ana, s.shared, recoveryKeys)
+        const anaRow = api(ana, "GET", `/vaults/${s.shared}/items`).itemList.find((i) => i.vaultItemId === s.item)
+        const calOpened = openShared(cal, s.shared, recoveryKeys)
+        const events = api(ana, "GET", `/vaults/${s.shared}/events`).eventList.map((e) => e.eventTypeEnumId)
+        const used = api(ana, "GET", "/recoveryKeys").recoveryKeyList.find((k) => k.recoveryKeyId === recoveryKeyId).used
+        return {recoveryOn, completed, anaOpened, anaRead: openItem(ana, s.shared, anaRow), calOpened, events, used, rewraps: (rekeyed.rewraps || []).map((w) => w.member_user_id)}
     },
-    then() {
-        true
+    then({recoveryOn, completed, anaOpened, anaRead, calOpened, events, used, rewraps}) {
+        recoveryOn == "Y"
+        completed.revision > 0
+        anaOpened.ok == true
+        anaRead.fields.password == "hunter2-very-secret"
+        // Ana's old key had signed Cal's wrap: the recovery remade it, and Cal still opens the vault
+        rewraps.includes(u.cal.userId)
+        calOpened.ok == true
+        events.includes("VeRecoveryStarted")
+        events.includes("VeRecoveryShared")
+        events.includes("VeRecovery")
+        used == true
     }
 })

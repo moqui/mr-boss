@@ -3,7 +3,9 @@
 // with the same parameters that make one when they are left out; and a private contact, a contact item in the user's vault, never
 // reaches CardDAV: the user's address book over the DAV server (Mantle's contact adapter) lists the same cards, with the same
 // collection tag, after the item is stored as before it. The item's body is stored here as the hex of its bytes, so a server that
-// read vault items would find the name; the browser stores it sealed (test/client/Commons/VaultLock.spec.js).
+// read vault items would find the name; the browser stores it sealed. These are the server's half of the plan's V3 rules (its
+// regression row names them for mr-boss); the client's half, that Contacts merges a private contact with no request carrying it,
+// is test/client/Commons/VaultLock.spec.js.
 // Run: ./moq test mr-boss --spec VaultCommons
 const RUN = String(Date.now()).slice(-9)
 const USERNAME = "vc.ana." + RUN

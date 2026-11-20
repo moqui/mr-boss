@@ -16,7 +16,9 @@ along with this software (see the LICENSE.md file). If not, see
     server runs with and the groups' sign-in rules (the default); IdentityProviders, the sign-in providers, and
     IdentityProviderDetail, one provider's configuration, mappings and test (contextual); Devices, the shared devices
     (P18: a registered browser that opens one route group as a display account; its services check ADMIN_ACCESS_VIEW and
-    ADMIN_ACCESS_MANAGE and the caller's identity scope). For the
+    ADMIN_ACCESS_MANAGE and the caller's identity scope); RecoveryKeys, the organization's vault recovery keys, their holders
+    and the recoveries in progress (mr-moqui plans/Vault-Instances.md V4, §3.10; the vault services check VAULT_RECOVERY and a
+    recent sign-in themselves). For the
     access administrator, the configuration administrator, the integration administrator and the administrator
     (BOSS_ADM_SECURITY): each screen shows a viewer what the framework's services answer them, since those check
     ADMIN_SETTINGS_VIEW or ADMIN_ACCESS_VIEW (the policy), ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE (the groups' rules, the
@@ -36,6 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="IdentityProviderDetail" location="component://tools/screen/System/Security/IdentityProviderDetail.xml"
                 menu-include="false"/>
         <subscreens-item name="Devices" location="component://mr-boss/screen/Admin/Security/Devices.xml" menu-title="Devices" menu-index="3"/>
+        <subscreens-item name="RecoveryKeys" location="component://mr-boss/screen/Admin/Security/RecoveryKeys.xml" menu-title="Recovery keys" menu-index="4"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="AdminSecurityPanel" type="tab"/>

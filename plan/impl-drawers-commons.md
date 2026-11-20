@@ -905,3 +905,32 @@ of `crates/moqui-vault` in a worker). The design is that plan's §3 and §5; the
   recovery by the recovery code and by another member; organization recovery waits for V4).
 - **Not built here.** BOSS Admin › Security's recovery keys (V4). A strict content security policy for the vault screens: the
   framework has no per-screen policy, and the `/qapps` page is served with the default one.
+
+### Review fixes and V4, Nov 20, 2026
+
+After the review of V3 and with mr-moqui's V4 merged (its client ops for Commons › Vault among them):
+
+- **People.** `userChoices` and `userNames` are `service/ironstone/commons/VaultPeopleServices.xml`: people found as Chatter's people
+  search finds them (the chat-target refusals, SEC-COM-01) with an active vault key, and names only of the users the caller's own
+  vault records name.
+- **The worker.** VaultClient.js, its worker and the module are each loaded with their integrity hash, at a URL that names it (a
+  copy an earlier version left in the cache is never what is checked); without a hash the vault does not start. The arguments
+  cross to the worker as plain JSON. The vault screens set the worker's Content-Security-Policy as System › Vaults does.
+- **Generated keys and headers.** A generated key is the module's (HKDF, `vault_key_generated_wrap`), shown once; a vault made
+  before with it wrapped as a password is wrapped again on its next open, and a password's wrap raised to the Argon2id target is
+  stored (`update#VaultSecretWrap`), each when the sign-in is strong enough. A vault's name is its sealed header, carried by each
+  rotation; a `vault-info` item of a vault made before is still read. Renaming is gone: no service changes a header.
+- **Members.** A change that strands wraps (a manager's key changed) is sent again with the wraps the server names remade; a
+  removal the server refuses forgets its new key version; the first write after a rotation makes a new item key. Members turns
+  organization recovery on, or replaces a used recovery key in one rotation.
+- **Lists** hold the module's item summaries (never a masked field or notes). Another manager's hidden fields import as masked
+  fields; KeePass's Recycle Bin is left out; an import file is at most 10 MB; an encrypted export reads only as an export.
+- **Locking.** Any use of the page or its dialogs keeps it open; a tab hidden for five minutes (or the idle time), a lost
+  sign-in, and a worker that failed lock it; a lock clears every form and closes every dialog.
+- **Admin › Security › Recovery keys** (`screen/Admin/Security/RecoveryKeys.xml`, the same component): the recovery keys with
+  their holders and state ("Used, replace"), New recovery key, and the recoveries in progress (Start, Seal my share, Finish,
+  Cancel).
+- **Tests.** VaultLock (offline, over `test/client/pages/VaultStandIn.js`) also checks the Contacts merge sends nothing, the
+  export check, a refused removal's rollback, the stranded wraps and decision (c). VaultPersonal's organization recovery step
+  runs against V4's services.
+

@@ -23,31 +23,43 @@ along with this software (see the LICENSE.md file). If not, see
     org.moqui.security.VaultServices), which store ciphertext and signed records and check their caller themselves. The server
     never sees an item's name, type or value, a key passphrase, a vault password or key. The transitions here give the page only
     what is not secret: the settings (boss/vault@idle-minutes, @clipboard-seconds), the item types (VaultItemType), the integrity
-    hashes of the worker and the module, and the names of people with a vault key to add as members or send an item to. -->
+    hashes of VaultClient.js, its worker and the module, the people with a vault key the user may reach, and the names of the
+    people the user's own vault records name (service/ironstone/commons/VaultPeopleServices.xml). Its always-actions give the page
+    the vault worker's Content-Security-Policy, as System › Vaults does. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Vault" default-menu-index="9" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_encrypted" menu-image-type="icon">
 
     <parameter name="vaultId"/>
     <parameter name="itemId"/>
 
-    <!-- the settings, the item types and the integrity hashes (SRI: sha256 of the file, base64) the page loads the module with -->
+    <always-actions>
+        <!-- a page loaded at a vault screen: the worker runs from a blob: URL and compiles the wasm module (as System › Vaults) -->
+        <script>if (ec.web &amp;&amp; ec.web.response) ec.web.response.setHeader("Content-Security-Policy",
+            "frame-ancestors 'none'; form-action 'self'; worker-src 'self' blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'")</script>
+    </always-actions>
+
+    <!-- the settings, the item types and the integrity hashes (SRI: sha256 of the file, base64) the page loads VaultClient.js,
+        its worker and the module with; the page refuses to start the vault when any is missing -->
     <transition name="setup" method="get" read-only="true">
         <actions><script><![CDATA[
             const base = 'component://webroot/screen/webroot/js/vault/'
-            const sri = (location) => {
+            const sri = (file) => {
                 try {
-                    const hex = String(ec.resource.digest(location, 'sha256') || '')
+                    const hex = String(ec.resource.digest(base + file, 'sha256') || '')
                     if (!/^[0-9a-f]{64}$/.test(hex)) return null
                     let latin = ''
                     for (let i = 0; i < 64; i += 2) latin += String.fromCharCode(parseInt(hex.substring(i, i + 2), 16))
                     return 'sha256-' + btoa(latin)
                 } catch (err) {
-                    ec.logger.warn('Vault: no integrity hash for ' + location + ': ' + err)
+                    ec.logger.warn('Vault: no integrity hash for ' + file + ': ' + err)
                     return null
                 }
             }
+            // a setting left empty takes its default: never 0 for an empty value, which would turn the idle lock off
             const number = (selector, fallback) => {
-                const value = Number(ec.factory.getConfValue(selector))
+                const given = ec.factory.getConfValue(selector)
+                if (given == null || String(given).trim() === '') return fallback
+                const value = Number(given)
                 return Number.isFinite(value) && value >= 0 ? value : fallback
             }
             const types = ec.entity.find('moqui.security.vault.VaultItemType').orderBy('sequenceNum').disableAuthz().useCache(true).list()
@@ -57,37 +69,35 @@ along with this software (see the LICENSE.md file). If not, see
                 fields: Array.from(fields).filter((field) => field.vaultItemTypeId === type.vaultItemTypeId).map((field) => ({name: field.fieldName,
                     label: ec.l10n.localize(field.label || field.fieldName), kind: kinds[field.fieldKindEnumId] || 'text', masked: field.masked === 'Y'}))}))
             ec.web.sendJsonResponse({userId: ec.user.userId, username: ec.user.username, idleMinutes: number('boss/vault@idle-minutes', 15),
-                clipboardSeconds: number('boss/vault@clipboard-seconds', 30), itemTypes: itemTypes,
-                wasmIntegrity: sri(base + 'moqui_vault.wasm'), workerIntegrity: sri(base + 'VaultWorker.js')})
+                clipboardSeconds: number('boss/vault@clipboard-seconds', 30), itemTypes: itemTypes, recoveryHolder: ec.user.hasPermission('VAULT_RECOVERY'),
+                integrity: {client: sri('VaultClient.js'), worker: sri('VaultWorker.js'), wasm: sri('moqui_vault.wasm')}})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
 
-    <!-- people with a vault key, by name or username, to add as a member or send an item to: {value (userId), label} -->
+    <!-- people with a vault key the user may reach, to add as a member or send an item to: [{value (userId), label}];
+        holders=true: those who also hold VAULT_RECOVERY, to split a recovery key to -->
     <transition name="userChoices" method="get" read-only="true">
         <actions><script><![CDATA[
-            const text = String(term || '').trim()
-            const cf = ec.entity.conditionFactory
-            let find = ec.entity.find('moqui.security.UserAccount').condition('disabled', 'not-equals', 'Y').orderBy('username').limit(50).disableAuthz()
-            if (text) find = find.condition(cf.makeCondition([cf.makeCondition('username', 'like', '%' + text + '%').ignoreCase(),
-                cf.makeCondition('userFullName', 'like', '%' + text + '%').ignoreCase()], 'or'))
-            const accounts = Array.from(find.list()).filter((account) => account.userId !== ec.user.userId)
-            const ids = accounts.map((account) => account.userId)
-            const keyed = new Set(ids.length ? Array.from(ec.entity.find('moqui.security.vault.VaultPersonalKey').condition('userId', 'in', ids)
-                .condition('statusId', 'VpkActive').disableAuthz().list()).map((key) => key.userId) : [])
-            ec.web.sendJsonResponse(accounts.filter((account) => keyed.has(account.userId)).slice(0, 20).map((account) => ({value: account.userId,
-                label: (account.userFullName ? account.userFullName + ' (' + account.username + ')' : account.username)})))
+            const out = ec.service.sync().name('ironstone.commons.VaultPeopleServices.search#VaultPeople')
+                .parameters({term: term || '', recoveryHolders: String(holders) === 'true'}).call()
+            ec.web.sendJsonResponse(ec.message.hasError() ? [] : Array.from(out?.optionList || []))
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
-    <!-- the names of users the page shows (members, senders, the keys this user checked): userIds a comma list, at most 200 -->
+    <!-- the names of the users the user's own vault records name: userIds a comma list -->
     <transition name="userNames" method="get" read-only="true">
         <actions><script><![CDATA[
-            const ids = String(userIds || '').split(',').map((id) => id.trim()).filter((id) => id).slice(0, 200)
-            const names = {}
-            if (ids.length) for (const account of Array.from(ec.entity.find('moqui.security.UserAccount').condition('userId', 'in', ids).disableAuthz().list()))
-                names[account.userId] = account.userFullName ? account.userFullName + ' (' + account.username + ')' : account.username
-            ec.web.sendJsonResponse({names: names})
+            const out = ec.service.sync().name('ironstone.commons.VaultPeopleServices.get#VaultUserNames').parameter('userIds', userIds || '').call()
+            ec.web.sendJsonResponse({names: ec.message.hasError() ? {} : (out?.names || {})})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the groups a recovery key may be kept for (they hold VAULT_RECOVERY): [{value, label}] -->
+    <transition name="groupChoices" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.commons.VaultPeopleServices.search#RecoveryGroups').parameter('term', term || '').call()
+            ec.web.sendJsonResponse(ec.message.hasError() ? [] : Array.from(out?.optionList || []))
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
