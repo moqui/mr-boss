@@ -109,6 +109,9 @@ Read mr-moqui's [AGENTS.md](https://github.com/moqui/mr-moqui/blob/master/AGENTS
   and what is left), `research-<app>.md`, and for the apps reviewed so far `ui-review-<app>.md`
   (the [convention](plan/design-doc-guide.md#ui-review-and-refinement-phase)).
 - [`docs/`](docs/) has implementation notes for Accounting, Manufacturing, Products and Warehouse.
+- [docs/security/Attack-Surface-Apps-BOSS.md](docs/security/Attack-Surface-Apps-BOSS.md) is the security map of the
+  apps and the Mantle services staff reach, part of mr-moqui's
+  [attack surface](https://github.com/moqui/mr-moqui/blob/master/docs/security/Attack-Surface.md).
 - `screen/<App>/`, `service/`, `entity/` and `data/` are the apps; `skill/` has the Assist skills and `report/` the
   datasets, dashboards, reports and alerts Insights loads.
 - Tests are in two suites, described in [test/README.md](test/README.md):
