@@ -26,6 +26,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="storeConditions" location="component://tools/screen/Dashboards/DatasetFields.xml"/>
 
     <widgets>
+        <!-- the steward widens only the documents Insights groups alone read (BOSS_INS_DATASET_WIDEN, SEC-TLS-92) -->
+        <label type="p" style="text-caption m-muted" text="New fields go only to documents Insights alone reads; a document another app also reads gets new fields from that app's administrator."/>
         <include-screen location="component://tools/screen/Dashboards/DatasetFields.xml" share-scope="true"/>
     </widgets>
 </screen>

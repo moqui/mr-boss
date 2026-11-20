@@ -329,3 +329,24 @@ feature("the dataset's readiness and index refresh are in Admin's registries, th
         indexed >= 2
     }
 })
+
+// the steward adds a field to a document only Insights groups read (MantleSalesOrderPart, the sales orders dataset's), by its
+// widen grant of those groups (BOSS_INS_DATASET_WIDEN; SEC-TLS-92); the field is taken away again after
+feature("the steward adds a field to the sales orders dataset, whose document only Insights groups read (SEC-TLS-92)", {
+    when() {
+        const fieldsOf = () => system(() => Array.from(ec.entity.find("moqui.entity.document.DataDocumentField")
+            .condition({dataDocumentId: "MantleSalesOrderPart", fieldPath: "orderHeader:externalId"}).useCache(false).list()))
+        const added = asUser(users.steward, () => refusal(R + "store#BusinessDatasetFields",
+            {datasetId: salesId, fields: [{fieldPath: "orderHeader:externalId", fieldNameAlias: "insWidenExternalId"}]}))
+        const after = fieldsOf()
+        const removed = after.length ? asUser(users.steward, () => refusal(R + "store#BusinessDatasetFields",
+            {datasetId: salesId, fields: [{fieldSeqId: after[0].fieldSeqId, remove: true}]})) : "none added"
+        return {added, after: after.length, removed, left: fieldsOf().length}
+    },
+    then({added, after, removed, left}) {
+        added == ""
+        after == 1
+        removed == ""
+        left == 0
+    }
+})

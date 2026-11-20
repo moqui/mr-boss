@@ -2631,6 +2631,19 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_INS_SHARE_DISPLAY_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
                 authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <!-- Adding fields to a document's readers (the steward): the engine widens a document only for a group whose own grant holds
+        that group's widen artifact (org.moqui.report.widen.<userGroupId>, SEC-TLS-92), never by its share grant. The steward
+        holds the four Insights groups' alone, so it adds fields to the documents only Insights groups read (MantleInventoryAsset,
+        MantleSalesOrderItem, MantleSalesOrderPart); a document an app's group also reads stays closed to it, by the owner's
+        decision, and is widened by that app's administrator. -->
+    <artifactGroups artifactGroupId="BOSS_INS_DATASET_WIDEN" description="Insights: adding fields to the documents the Insights groups read">
+        <artifacts artifactName="org.moqui.report.widen.BOSS_INSIGHTS_READ" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.widen.BOSS_INSIGHTS_AUTHOR" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.widen.BOSS_INSIGHTS_DISTRIBUTE" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.widen.BOSS_INSIGHTS_FLOW" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_WIDEN_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
     <!-- Saving a dataset definition (the steward): the engine's own check (definitions.rs, org.moqui.report.dataset update), which
         reads no dataset; P3 guards index#BusinessDataset by the dataset's update artifact. -->
     <artifactGroups artifactGroupId="BOSS_INS_DATASET_EDIT" description="Insights: saving business dataset definitions">
