@@ -70,6 +70,8 @@ along with this software (see the LICENSE.md file). If not, see
                     label: ec.l10n.localize(field.label || field.fieldName), kind: kinds[field.fieldKindEnumId] || 'text', masked: field.masked === 'Y'}))}))
             ec.web.sendJsonResponse({userId: ec.user.userId, username: ec.user.username, idleMinutes: number('boss/vault@idle-minutes', 15),
                 clipboardSeconds: number('boss/vault@clipboard-seconds', 30), itemTypes: itemTypes, recoveryHolder: ec.user.hasPermission('VAULT_RECOVERY'),
+                // the module is built on demand (scripts/vault-wasm.sh, run by ./moq build), not kept in git
+                moduleBuilt: ec.resource.getLocationReference(base + 'moqui_vault.wasm').getExists(),
                 integrity: {client: sri('VaultClient.js'), worker: sri('VaultWorker.js'), wasm: sri('moqui_vault.wasm')}})
         ]]></script></actions>
         <default-response type="none"/>

@@ -975,6 +975,7 @@ function makeSession() {
             starting = (async () => {
                 const c = S.config || {};
                 const integrity = c.integrity || {};
+                if (c.moduleBuilt === false) throw new Error(t('The vault module is not built: ./moq build or scripts/vault-wasm.sh'));
                 if (!integrity.client || !integrity.worker || !integrity.wasm) throw new Error(t('The vault module has no integrity hash here, so it is not loaded'));
                 // each file's URL names its hash, so a copy an earlier version left in the browser's cache is never what is checked
                 const fresh = (file, hash) => '/js/vault/' + file + '?v=' + encodeURIComponent(hash.replace(/^sha256-/, ''));
