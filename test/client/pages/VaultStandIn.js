@@ -42,10 +42,24 @@
             store.vaults[v.vaultId] = v;
             return { vaultId: v.vaultId, revision: 1 };
         }
+        // the devices that remember the key (Settings › Vault key), as list#VaultDeviceMemories and forget#VaultDeviceMemory answer
+        if (path === "/deviceMemories" && method === "GET") return { deviceMemoryList: store.memories || [] };
+        if (parts[0] === "deviceMemories" && parts[1] && method === "DELETE") {
+            store.memories = (store.memories || []).filter((m) => m.deviceMemoryId !== parts[1]);
+            return { ended: true };
+        }
         const v = parts[0] === "vaults" ? store.vaults[parts[1]] : null;
         if (parts[0] === "vaults" && !v) return refuse("No vault " + parts[1]);
         if (v && parts.length === 2) return { vault: vaultJson(v), entries: v.entries, memberList: members(v), secretWrap: v.secretWrap,
             wraps: v.wraps.filter((w) => w.member_user_id === store.user) };
+        // a rename: the header sealed again, from the revision read (update#VaultHeader)
+        if (v && parts[2] === "header" && method === "PUT") {
+            if (store.fail.headerOnce) { store.fail.headerOnce = false; v.revision++; }
+            if (body.expectedRevision !== v.revision) return refuse("The vault changed since you read it (revision " + v.revision + "): read it again");
+            v.headerCipher = body.headerCipher;
+            v.revision++;
+            return { revision: v.revision };
+        }
         if (v && parts[2] === "items" && method === "GET") return { keyVersion: v.keyVersion, itemList: Object.values(store.items).filter((i) => i.vaultId === v.vaultId) };
         if (v && parts[2] === "items" && method === "POST") {
             store.items[body.vaultItemId] = Object.assign({}, body, { vaultId: v.vaultId, revision: 1, itemKeyVersion: body.keyVersion, createdDate: Date.now() });

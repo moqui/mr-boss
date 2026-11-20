@@ -24,19 +24,15 @@ along with this software (see the LICENSE.md file). If not, see
     never sees an item's name, type or value, a key passphrase, a vault password or key. The transitions here give the page only
     what is not secret: the settings (boss/vault@idle-minutes, @clipboard-seconds), the item types (VaultItemType), the integrity
     hashes of VaultClient.js, its worker and the module, the people with a vault key the user may reach, and the names of the
-    people the user's own vault records name (service/ironstone/commons/VaultPeopleServices.xml). Its always-actions give the page
-    the vault worker's Content-Security-Policy, as System › Vaults does. -->
+    people the user's own vault records name (service/ironstone/commons/VaultPeopleServices.xml). Its path names Vault, so the page gets
+    the framework's vault screens' Content-Security-Policy (vault@screen-policy), loads as a page of its own, and in the desktop and
+    mobile apps may call their native vault, as Settings/VaultKey, Contacts/VaultContacts and Admin › Security › Recovery keys. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Vault" default-menu-index="9" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_encrypted" menu-image-type="icon">
 
     <parameter name="vaultId"/>
     <parameter name="itemId"/>
 
-    <always-actions>
-        <!-- a page loaded at a vault screen: the worker runs from a blob: URL and compiles the wasm module (as System › Vaults) -->
-        <script>if (ec.web &amp;&amp; ec.web.response) ec.web.response.setHeader("Content-Security-Policy",
-            "frame-ancestors 'none'; form-action 'self'; worker-src 'self' blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'")</script>
-    </always-actions>
 
     <!-- the settings, the item types and the integrity hashes (SRI: sha256 of the file, base64) the page loads VaultClient.js,
         its worker and the module with; the page refuses to start the vault when any is missing -->

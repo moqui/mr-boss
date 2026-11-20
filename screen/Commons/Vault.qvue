@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     and its item count, which is all the server knows), the open vault's items by type with a client-side search over names,
     websites, tags and the fields that are not masked, and an item's page: its fields, a masked value shown only when asked for
     (Show) or copied (cleared from the clipboard after boss/vault@clipboard-seconds), its websites, tags and notes, its history,
-    Edit, Send a copy, Copy to another vault and Delete. New vault asks for the lock: shared-key (opened by the user's vault
+    Edit, Send a copy, Copy to another vault and Delete; a vault's Rename seals its name again (update#VaultHeader). New vault asks for the lock: shared-key (opened by the user's vault
     key, can be shared) or single-secret (§3.11: the warning in its exact words, how to keep the password or key, a password
     typed twice and checked here, or a generated key whose last 8 characters are typed back, and the box "I have stored it
     outside this server"). Members shows each member's key fingerprint (six words, computed in the worker from the key the
@@ -29,7 +29,13 @@ along with this software (see the LICENSE.md file). If not, see
     names, types, websites, tags and the fields that are not masked. Masked values are opened from the worker one item at a
     time when asked for. Commons › Contacts reads the session's open contact items (Contacts/VaultContacts.qvue). Lock, the
     idle time (boss/vault@idle-minutes, any use of this page counts) and closing the tab drop every key and all of it.
-    Inputs are plain q-inputs: no draft of a value is kept. -->
+    Inputs are plain q-inputs: no draft of a value is kept. The client keeps the highest revision it saw of each item
+    (revisionsSeen; the desktop and mobile apps across runs, and they refuse to open an older one).
+
+    In the desktop and mobile apps VaultClient.js calls the app's native vault, and the app may remember the open key on the
+    device (V5): "Remember on this device for…" once the key is open, "Open from this device", "Forget on this device", each
+    from the click the app asks for; the page's Lock forgets it too, the idle lock does not. Settings › Vault key lists the
+    devices that remember the key (/rest/s1/vault/deviceMemories) and takes one off. -->
 <template><div class="boss-vault">
     <div v-if="S.failed && !S.config" class="q-pa-lg text-center">
         <q-icon name="sym_o_error" size="40px" color="negative"></q-icon>
@@ -144,7 +150,23 @@ along with this software (see the LICENSE.md file). If not, see
 
             <div class="col-12 col-md-6"><q-card flat bordered><q-card-section>
                 <div class="text-subtitle1 text-weight-medium">{{t('Devices that remember your key')}}</div>
-                <div class="text-body2 m-muted q-mt-sm">{{t('No device remembers your key. In the browser it stays open only in this tab, until the vault locks or the tab closes.')}}</div>
+                <div class="text-caption m-muted">{{t('The desktop and mobile apps can keep your key open for a while, under the device\'s own key store. Take a device off the list and it opens nothing more.')}}</div>
+                <q-list v-if="memories.length" dense separator class="q-mt-sm boss-vault-memories">
+                    <q-item v-for="row in memories" :key="row.deviceMemoryId">
+                        <q-item-section><q-item-label>{{row.deviceName || t('A device')}}</q-item-label>
+                            <q-item-label caption>{{fill(t('Until {time}'), {time: timeText(row.thruStamp)})}}</q-item-label></q-item-section>
+                        <q-item-section side><q-btn flat dense no-caps size="sm" color="negative" :label="t('Take off')" @click="takeOff(row)"></q-btn></q-item-section>
+                    </q-item>
+                </q-list>
+                <div v-else class="text-body2 m-muted q-mt-sm">{{t('No device remembers your key. In the browser it stays open only in this tab, until the vault locks or the tab closes.')}}</div>
+                <div v-if="S.memory.available" class="row items-center q-gutter-sm q-mt-sm">
+                    <q-btn-dropdown v-if="S.unlocked" flat no-caps color="primary" icon="sym_o_devices" :label="t('Remember on this device for…')">
+                        <q-list dense><q-item v-for="choice in memoryChoices" :key="choice.minutes" clickable v-close-popup @click="rememberFor(choice.minutes)">
+                            <q-item-section>{{choice.label}}</q-item-section></q-item></q-list>
+                    </q-btn-dropdown>
+                    <q-btn v-if="!S.unlocked && S.memory.until" flat no-caps color="primary" icon="sym_o_devices" :label="t('Open from this device')" @click="openFromDevice(null)"></q-btn>
+                    <q-btn v-if="S.memory.until" flat no-caps color="negative" :label="t('Forget on this device')" @click="forgetOnDevice"></q-btn>
+                </div>
             </q-card-section></q-card></div>
         </div>
     </template>
@@ -174,6 +196,15 @@ along with this software (see the LICENSE.md file). If not, see
 
         <q-banner v-if="S.idleLocked" dense rounded class="q-mb-sm m-tonal text-grey-9 boss-vault-idle">
             <template v-slot:avatar><q-icon name="sym_o_lock_clock"></q-icon></template>{{fill(t('The vault locked after {minutes} minutes without use.'), {minutes: S.config.idleMinutes})}}</q-banner>
+        <div v-if="S.memory.available && S.personal && S.personal.hasKey" class="row items-center q-gutter-sm q-mb-sm boss-vault-memory">
+            <q-btn-dropdown v-if="S.unlocked" flat dense no-caps color="primary" icon="sym_o_devices" :label="t('Remember on this device for…')">
+                <q-list dense><q-item v-for="choice in memoryChoices" :key="choice.minutes" clickable v-close-popup @click="rememberFor(choice.minutes)">
+                    <q-item-section>{{choice.label}}</q-item-section></q-item></q-list>
+            </q-btn-dropdown>
+            <q-btn v-if="!S.unlocked && S.memory.until" unelevated dense no-caps color="primary" icon="sym_o_devices" :label="t('Open from this device')" @click="openFromDevice(null)"></q-btn>
+            <span v-if="S.memory.until" class="text-caption m-muted">{{fill(t('This device remembers your key until {time}'), {time: timeText(S.memory.until)})}}</span>
+            <q-btn v-if="S.memory.until" flat dense no-caps color="negative" :label="t('Forget on this device')" @click="forgetOnDevice"></q-btn>
+        </div>
         <q-banner v-if="S.deliveries.length" dense rounded class="q-mb-sm m-tonal text-primary">
             <template v-slot:avatar><q-icon name="sym_o_inbox"></q-icon></template>{{fill(t('{count} sent to you, to file into a vault'), {count: S.deliveries.length})}}
             <template v-slot:action><q-btn flat dense no-caps color="primary" :label="t('See them')" @click="openDeliveries"></q-btn></template></q-banner>
@@ -242,6 +273,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <q-btn v-for="userId in unlockForm.check" :key="userId" flat no-caps color="primary" :label="fill(t('Compare {name}\'s key'), {name: nameOf(userId)})" @click="openCheck(userId, openCurrent)"></q-btn>
                         </div>
                         <q-btn v-if="current.lockEnumId === SINGLE || S.personal.hasKey" unelevated no-caps color="primary" class="q-mt-sm" :loading="unlockForm.busy" :label="t('Open')" @click="openCurrent"></q-btn>
+                        <q-btn v-if="current.lockEnumId === SHARED && !S.unlocked && S.memory.available && S.memory.until" flat no-caps color="primary" class="q-mt-sm q-ml-sm"
+                                icon="sym_o_devices" :label="t('Open from this device')" @click="openFromDevice(openCurrent)"></q-btn>
                     </div>
                 </div>
 
@@ -298,6 +331,8 @@ along with this software (see the LICENSE.md file). If not, see
                         </div>
                         <q-btn v-if="current.lockEnumId === SHARED" unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_group" :label="t('Members')" @click="openMembers"></q-btn>
                         <q-btn flat dense round icon="more_horiz" :aria-label="t('More')"><q-menu auto-close><q-list dense style="min-width:220px">
+                            <q-item clickable :disable="!manages(current)" @click="openRename"><q-item-section avatar><q-icon name="sym_o_edit"></q-icon></q-item-section><q-item-section>{{t('Rename')}}</q-item-section></q-item>
+                            <q-separator></q-separator>
                             <q-item clickable :disable="!manages(current)" class="text-negative" @click="confirmDeleteVault"><q-item-section avatar><q-icon name="sym_o_delete" color="negative"></q-icon></q-item-section><q-item-section>{{t('Delete the vault')}}</q-item-section></q-item>
                         </q-list></q-menu></q-btn>
                     </div>
@@ -403,6 +438,17 @@ along with this software (see the LICENSE.md file). If not, see
         </div>
     </m-dialog>
 
+    <m-dialog v-model="rename.open" :title="t('Rename the vault')" width="480">
+        <div class="q-gutter-y-sm">
+            <q-input v-model="rename.name" outlined dense autocomplete="off" :label="t('Name')" @keyup.enter="submitRename"></q-input>
+            <div class="text-caption m-muted">{{t('The name is sealed with the vault\'s key: the server never sees it.')}}</div>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Rename')" :loading="rename.busy" :disable="!String(rename.name || '').trim()" @click="submitRename"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
     <!-- the personal key opened, when an action needs it -->
     <m-dialog v-model="unlockDialog.open" :title="t('Unlock your vault key')" width="480">
         <div class="q-gutter-y-sm">
@@ -410,6 +456,7 @@ along with this software (see the LICENSE.md file). If not, see
             <div v-if="unlockDialog.error" class="text-negative text-body2">{{unlockDialog.error}}</div>
             <div class="row items-center q-gutter-sm">
                 <q-btn flat dense no-caps color="primary" :label="t('Use the recovery code')" @click="unlockDialog.open = false; openRecover()"></q-btn>
+                <q-btn v-if="S.memory.available && S.memory.until" flat dense no-caps color="primary" :label="t('Open from this device')" @click="openFromDevice(unlockDialog.then)"></q-btn>
                 <div class="col"></div>
                 <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
                 <q-btn unelevated no-caps color="primary" :label="t('Unlock')" :loading="unlockDialog.busy" @click="submitUnlock"></q-btn>
@@ -947,7 +994,8 @@ function parseImport(text) {
 // ===== the session: one per page, shared with Commons › Contacts =====
 function makeSession() {
     const S = Vue.reactive({ config: null, base: '', loading: false, failed: '', personal: null, unlocked: false, keyChecks: [], vaults: [],
-        deliveries: [], names: {}, lockCount: 0, idleLocked: false, needsFactor: false, recoveryKeys: [], recoverySessions: [] });
+        deliveries: [], names: {}, lockCount: 0, idleLocked: false, needsFactor: false, recoveryKeys: [], recoverySessions: [],
+        memory: { available: false, kind: null, until: null, open: false, maxMinutes: 0 } });
     let client = null;
     let starting = null;
     let locking = false;
@@ -1071,6 +1119,7 @@ function makeSession() {
         await refreshVaults();
         await refreshRecoveryKeys().catch(() => {});
         if (S.personal.hasKey) await refreshDeliveries().catch(() => {});
+        if (S.personal.hasKey) await refreshMemory().catch(() => {});
     }
     async function refreshVaults() {
         const listed = (await api('GET', '/vaults')).vaultList || [];
@@ -1194,9 +1243,11 @@ function makeSession() {
         for (const entry of entries || []) for (const m of entry.members || []) if (isRecoveryMember(m.user_id)) ids.add(m.user_id.slice(RECOVERY_PREFIX.length));
         return S.recoveryKeys.filter((row) => ids.has(row.recoveryKeyId)).map((row) => ({ record: row.record, maker_public: row.makerPublic }));
     }
-    const openArgs = (vaultId, row) => ({ vault_id: vaultId, item_id: row.vaultItemId, key_version: row.keyVersion, wrapped_item_key: row.wrappedItemKey,
-        sealed_body: row.bodyCipher });
-    const openRow = (vaultId, row) => client.itemOpen(openArgs(vaultId, row)).then((out) => out.body);
+    // an item's current row names its revision, which the apps refuse when it is older than one they saw (rollback memory); an
+    // earlier version from the history does not
+    const openArgs = (vaultId, row, current) => Object.assign({ vault_id: vaultId, item_id: row.vaultItemId, key_version: row.keyVersion,
+        wrapped_item_key: row.wrappedItemKey, sealed_body: row.bodyCipher }, current === false || row.revision == null ? {} : { revision: row.revision });
+    const openRow = (vaultId, row, current) => client.itemOpen(openArgs(vaultId, row, current)).then((out) => out.body);
     function parseBody(text) {
         const body = JSON.parse(text);
         if (!body || typeof body !== 'object') throw new Error(t('Not an item'));
@@ -1290,15 +1341,15 @@ function makeSession() {
                 console.warn('Vault: the header does not open: ' + messageOf(err));
             }
         }
-        // the highest revision this browser saw of each item: an older one coming back is told (§3.12)
-        const seen = local.get(keyOf('revisions', v.vaultId)) || {};
-        let older = false;
+        // the highest revision seen of each item, kept by the client (the apps across runs, a browser for this page only): an older one
+        // coming back is told (§3.12), and the apps refuse to open it
+        const rows = out.itemList || [];
+        const seen = await c.revisionsSeen({ vault_id: v.vaultId, items: rows.map((row) => ({ item_id: row.vaultItemId, revision: row.revision || 0 })) });
+        const older = ((seen && seen.older) || []).length > 0;
         const items = [];
         v.info = null;
-        for (const row of out.itemList || []) {
+        for (const row of rows) {
             const raw = Vue.markRaw(row);
-            if ((seen[row.vaultItemId] || 0) > (row.revision || 0)) older = true;
-            seen[row.vaultItemId] = Math.max(seen[row.vaultItemId] || 0, row.revision || 0);
             try {
                 // the masked names of every type: the summary leaves them out whatever the item's type says it is
                 const masked = ((S.config && S.config.itemTypes) || []).flatMap((type) => type.fields.filter((field) => field.masked).map((field) => field.name));
@@ -1313,10 +1364,9 @@ function makeSession() {
                 items.push({ id: row.vaultItemId, row: raw, type: '', name: t('An item that does not open'), uris: [], tags: [], shown: {}, changed: null, broken: messageOf(err) });
             }
         }
-        local.set(keyOf('revisions', v.vaultId), seen);
         items.sort((a, b) => a.name.localeCompare(b.name));
         v.items = items;
-        v.itemCount = (out.itemList || []).length;
+        v.itemCount = rows.length;
         v.warning = older ? t('The server gave an older copy of an item than this browser saw before. Someone may have put back old data.') : '';
     }
     async function itemBody(vaultId, itemId) {
@@ -1406,6 +1456,19 @@ function makeSession() {
     async function deleteVault(vaultId) {
         await api('DELETE', '/vaults/' + enc(vaultId));
         await refreshVaults();
+    }
+    /** A new name: the header sealed again under the vault's current key version, stored from the revision read just before
+     * (update#VaultHeader), which an item written since moves too. */
+    async function renameVault(vaultId, name) {
+        const v = vault(vaultId);
+        if (!v || !v.open) throw new Error(t('Open the vault first'));
+        const c = await ensureClient();
+        const got = await api('GET', '/vaults/' + enc(vaultId));
+        if (got.vault.keyVersion !== v.keyVersion) throw new Error(t('The vault\'s key changed: open it again'));
+        v.revision = got.vault.revision;
+        const headerCipher = (await c.headerSeal({ vault_id: vaultId, key_version: v.keyVersion, header: JSON.stringify({ v: 1, name }) })).header_cipher;
+        const out = await api('PUT', '/vaults/' + enc(vaultId) + '/header', { expectedRevision: v.revision, headerCipher });
+        Object.assign(v, { revision: out.revision || v.revision, headerCipher, name });
     }
 
     // ----- members (§3.9) and recovery on a vault (§3.10) -----
@@ -1626,16 +1689,8 @@ function makeSession() {
         const sessionId = row.recoverySessionId;
         const open = await api('GET', '/recoveries/' + enc(sessionId));
         const keys = recoveryKeysFor(open.entries);
-        // a holder who is also a member may have that key version open: the module opens it again through the recovery key only
-        // with no copy of it held, so the member's copy is forgotten first, before the combine (any call between the combine and
-        // the rekey drops the combined key); the vault opens again from the member's own wrap
-        const wrapVersion = open.recoveryWrap && open.recoveryWrap.key_version;
-        if (wrapVersion != null && opened.has(slot(open.session.vault_id, wrapVersion))) {
-            await c.vaultKeyForget({ vault_id: open.session.vault_id, key_version: wrapVersion });
-            opened.delete(slot(open.session.vault_id, wrapVersion));
-            const v = vault(open.session.vault_id);
-            if (v) Object.assign(v, blank());
-        }
+        // a holder who is also a member may have that key version open: the module checks the recovery key's wrap opens the same
+        // key and keeps it open after the rekey, so nothing is forgotten first
         await c.recoveryCombine({ session_id: sessionId, record: open.record, maker_public: open.makerPublic, held: open.held, deliveries: open.deliveries,
             key_checks: S.keyChecks });
         await c.recoveryOpenVault({ entries: open.entries, key_checks: S.keyChecks, recovery_keys: keys, session_id: sessionId, wrap: open.recoveryWrap });
@@ -1650,14 +1705,47 @@ function makeSession() {
         await refreshRecoverySessions();
     }
 
-    async function lock() {
+    /** Every key dropped; with {forget: true} (the page's Lock) the app's device memory of the key goes too. */
+    async function lock(options) {
         locking = true;
         try {
-            if (client) await client.lock();
+            if (client) await client.lock(options);
             else forget(false);
         } finally {
             locking = false;
         }
+        if (options && options.forget) await refreshMemory().catch(() => {});
+    }
+
+    // ----- device memory, in the desktop and mobile apps (V5): the app keeps the open key under its device key store's key -----
+    const inApp = () => !!(window.moquiDesktop && window.moquiDesktop.vault && typeof window.moquiDesktop.vault.memory === 'function');
+    async function refreshMemory() {
+        if (!inApp()) return;
+        const c = await ensureClient();
+        S.memory = Object.assign({ available: false, kind: null, until: null, open: false, maxMinutes: 0 }, await c.deviceMemory());
+    }
+    /** From a click, with the key open: the app remembers it for minutes (the server may give less). */
+    async function rememberKey(minutes) {
+        requireUnlocked();
+        const out = await (await ensureClient()).remember(minutes);
+        await refreshMemory();
+        return out;
+    }
+    /** From a click: the key opened from the app's memory, once the server (and on a phone the device's lock) confirms it:
+     * {opened: true} or {opened: false, reason: none, ended, unlock or unconfirmed}. */
+    async function restoreKey() {
+        const out = await (await ensureClient()).restore();
+        if (out && out.opened) {
+            S.unlocked = true;
+            S.idleLocked = false;
+            await refreshChecks();
+        }
+        await refreshMemory().catch(() => {});
+        return out || { opened: false, reason: 'none' };
+    }
+    async function forgetMemory() {
+        await (await ensureClient()).forget();
+        await refreshMemory();
     }
     const touch = () => { if (client && (S.unlocked || opened.size)) client.touch(); };
     const copy = async (text) => (await ensureClient()).copy(text);
@@ -1676,9 +1764,9 @@ function makeSession() {
 
     return { S, api, init, refresh, refreshVaults, refreshDeliveries, refreshChecks, refreshRecoveryKeys, refreshRecoverySessions, names, unlock,
         changePassphrase, unlockWithCode, strongReady, makeKey, saveKey, discardKey, checked, publicKeyOf, fingerprintOf, storeCheck, openVault, loadItems,
-        itemBody, saveItem, deleteItem, prepareGenerated, discardPrepared, makeVault, deleteVault, setMember, recoveryOn, removeMember, replaceRecovery,
+        itemBody, saveItem, deleteItem, prepareGenerated, discardPrepared, makeVault, deleteVault, renameVault, setMember, recoveryOn, removeMember, replaceRecovery,
         fileDelivery, sendItem, exportVault, readExport, importItems, makeRecoveryKey, startRecovery, deliverShare, finishRecovery, cancelRecovery, myHolder,
-        lock, touch, copy, typeOf, vault, anyOpen, lastOpened, openRow, parseBody, INFO_TYPE };
+        lock, touch, copy, typeOf, vault, anyOpen, lastOpened, openRow, parseBody, refreshMemory, rememberKey, restoreKey, forgetMemory, INFO_TYPE };
 }
 const session = window.BossVaultSession || (window.BossVaultSession = makeSession());
 
@@ -1707,6 +1795,8 @@ module.exports = {
             deliveries: { open: false, vaultId: null, busy: '', error: '' },
             send: { open: false, userId: null, key: null, words: '', checked: false, match: false, busy: false, error: '' },
             copyTo: { open: false, vaultId: null, busy: false },
+            rename: { open: false, name: '', busy: false },
+            memories: [],
             history: { open: false, busy: false, rows: [], shown: {} },
             importer: { open: false, vaultId: null, fileName: '', parsed: null, password: '', busy: false, progress: 0, total: 0, result: '', error: '' },
             exporter: { open: false, vaultId: null, password: '', password2: '', busy: false, error: '' },
@@ -1740,6 +1830,12 @@ module.exports = {
         lockOptions() {
             return [{ value: SHARED, label: t('Shared key: opened by your vault key. You can share it, and each member keeps access of their own.') },
                 { value: SINGLE, label: t('Single secret: one password or generated key, yours only. It cannot be shared, and nobody can recover it for you.') }];
+        },
+        // how long the app may remember the key, up to what it allows (the server may give less: vault@device-memory-max-hours)
+        memoryChoices() {
+            const most = Number(this.S.memory.maxMinutes) || 0;
+            return [[15, t('15 minutes')], [60, t('1 hour')], [240, t('4 hours')], [480, t('8 hours')], [1440, t('24 hours')]]
+                .filter(([minutes]) => minutes <= most).map(([minutes, label]) => ({ minutes, label }));
         },
         secretOptions() { return [{ value: 'VsPassword', label: t('A password') }, { value: 'VsGenerated', label: t('A generated key') }]; },
         secretReady() {
@@ -1948,7 +2044,54 @@ module.exports = {
             this.openUnlock(then);
             return false;
         },
-        lockNow() { session.lock().then(() => this.notify(t('Locked'))); },
+        // the page's Lock also ends the app's device memory of the key; the idle lock does not
+        lockNow() { session.lock({ forget: true }).then(() => this.notify(t('Locked'))); },
+        timeText(value) {
+            if (value == null || value === '') return '';
+            const date = new Date(Number(value));
+            return isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+        },
+        // ----- device memory (the desktop and mobile apps): each call from the click, which the app asks for -----
+        async rememberFor(minutes) {
+            try {
+                const out = await session.rememberKey(minutes);
+                this.notify(fill(t('This device remembers your key until {time}'), { time: this.timeText(out && out.until) }));
+                this.loadMemories();
+            } catch (err) { this.fail(err); }
+        },
+        async openFromDevice(then) {
+            try {
+                const out = await session.restoreKey();
+                if (!out.opened) {
+                    const reasons = { none: t('This device does not remember your key'),
+                        ended: t('This device no longer remembers your key: its time ended, or it was taken off the list'),
+                        unlock: t('Unlock this device to open your key from it'),
+                        unconfirmed: t('The server could not confirm this device just now: try again, or use your passphrase') };
+                    this.fail(reasons[out.reason] || reasons.none);
+                    return;
+                }
+                this.unlockDialog.open = false;
+                if (then) then();
+            } catch (err) { this.fail(err); }
+        },
+        async forgetOnDevice() {
+            try {
+                await session.forgetMemory();
+                this.notify(t('This device no longer remembers your key'));
+                this.loadMemories();
+            } catch (err) { this.fail(err); }
+        },
+        async loadMemories() {
+            if (!this.keyView || !this.S.personal || !this.S.personal.hasKey) return;
+            try { this.memories = (await session.api('GET', '/deviceMemories')).deviceMemoryList || []; } catch (err) { this.fail(err); }
+        },
+        async takeOff(row) {
+            try {
+                await session.api('DELETE', '/deviceMemories/' + encodeURIComponent(row.deviceMemoryId));
+                await this.loadMemories();
+                await session.refreshMemory().catch(() => {});
+            } catch (err) { this.fail(err); }
+        },
         // ----- an item -----
         async toggleReveal(field) {
             if (this.revealed[field.name] != null) { delete this.revealed[field.name]; this.revealed = Object.assign({}, this.revealed); return; }
@@ -2027,7 +2170,7 @@ module.exports = {
         async toggleHistory(row) {
             if (this.history.shown[row.revision]) { this.history.shown = Object.assign({}, this.history.shown, { [row.revision]: '' }); return; }
             try {
-                const body = session.parseBody(await session.openRow(this.current.vaultId, row));
+                const body = session.parseBody(await session.openRow(this.current.vaultId, row, false));
                 const type = session.typeOf(body.type);
                 const lines = [String(body.name || '')].concat(Object.entries(body.fields || {}).map(([name, value]) => {
                     const def = type ? type.fields.find((f) => f.name === name) : null;
@@ -2086,6 +2229,19 @@ module.exports = {
             } catch (err) {
                 m.error = /does not open/.test(messageOf(err)) ? t('That passphrase does not open your vault key') : messageOf(err);
             } finally { m.busy = false; }
+        },
+        openRename() { this.rename = { open: true, name: this.current.name || '', busy: false }; },
+        async submitRename() {
+            const r = this.rename;
+            if (r.busy || !String(r.name || '').trim()) return;
+            r.busy = true;
+            try {
+                await session.renameVault(this.current.vaultId, String(r.name).trim());
+                r.open = false;
+            } catch (err) {
+                if (/changed since|revision/i.test(messageOf(err))) await session.refreshVaults().catch(() => {});
+                this.fail(err);
+            } finally { r.busy = false; }
         },
         confirmDeleteVault() {
             const v = this.current;
@@ -2477,6 +2633,7 @@ module.exports = {
         document.addEventListener('pointerdown', this.onActivity, true);
         this.start().then(() => {
             this.loadKeyWords();
+            this.loadMemories();
             this.loadDetail();
             if (this.recoveryView) session.refreshRecoverySessions().catch((err) => { this.recovery.error = messageOf(err); });
         });

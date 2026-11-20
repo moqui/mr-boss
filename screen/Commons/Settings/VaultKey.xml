@@ -22,11 +22,6 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Vault key" default-menu-index="7" render-modes="vue,qvue,tui" server-static="vue,qvue" menu-image="sym_o_key" menu-image-type="icon">
 
-    <always-actions>
-        <!-- a page loaded here: the vault worker's Content-Security-Policy, as Commons › Vault and System › Vaults have -->
-        <script>if (ec.web &amp;&amp; ec.web.response) ec.web.response.setHeader("Content-Security-Policy",
-            "frame-ancestors 'none'; form-action 'self'; worker-src 'self' blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'")</script>
-    </always-actions>
 
     <transition-include name="setup" location="component://mr-boss/screen/Commons/Vault.xml"/>
     <transition-include name="userChoices" location="component://mr-boss/screen/Commons/Vault.xml"/>

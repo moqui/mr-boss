@@ -2,7 +2,7 @@
 // with the real vault module (webroot js/vault: VaultClient.js, its worker and moqui_vault.wasm, each loaded with its integrity
 // hash), over an in-page stand-in for the vault REST services that keeps what a server keeps (test/client/pages/VaultStandIn.js).
 // A private contact shows under Contacts while the vault is open, and no request carries it. An encrypted export opens only as
-// an export. A removal the server refuses leaves no key version behind, so the same removal works next; a manager's changed key
+// an export. A rename seals the new name, and one from a revision the server has moved past is refused. A removal the server refuses leaves no key version behind, so the same removal works next; a manager's changed key
 // is given access with the wraps the server names to remake; the first write after a rotation makes a new item key. A masked
 // value is not on the page until Show asks the worker for it, and the vault locks by itself after the idle time (a short one
 // here, boss/vault@idle-minutes in a deployment), dropping the value and every key.
@@ -95,6 +95,29 @@ feature("an encrypted export opens with its password, and a file naming a vault'
         read == ["Quillon Privatesson"]
         // the export's key is forgotten after each read, so the same file reads again
         again == ["Quillon Privatesson"]
+    }
+})
+
+feature("a rename seals the new name under the vault's key from the revision read; the server keeps only ciphertext", {
+    when() {
+        return page.evaluate(async () => {
+            const s = window.BossVaultSession
+            await s.renameVault(homeId, "Household")
+            const sent = store.sent.filter((line) => line.includes("/header")).join("\n")
+            await s.loadItems(s.vault(homeId))
+            // another change moves the revision between the read and the write: the rename is refused
+            store.fail.headerOnce = true
+            let stale = ""
+            try { await s.renameVault(homeId, "Attic") } catch (err) { stale = err.message }
+            return { name: s.vault(homeId).name, sent, stored: JSON.stringify(store.vaults), stale }
+        })
+    },
+    then({name, sent, stored, stale}) {
+        name == "Household"
+        sent.includes("PUT /rest/s1/vault/vaults/")
+        !sent.includes("Household")
+        !stored.includes("Household")
+        stale.includes("changed since")
     }
 })
 
