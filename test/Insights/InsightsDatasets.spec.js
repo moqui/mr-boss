@@ -330,18 +330,25 @@ feature("the dataset's readiness and index refresh are in Admin's registries, th
     }
 })
 
-// the steward adds a field to a document only Insights groups read (MantleSalesOrderPart, the sales orders dataset's), by its
-// widen grant of those groups (BOSS_INS_DATASET_WIDEN; SEC-TLS-92); the field is taken away again after
-feature("the steward adds a field to the sales orders dataset, whose document only Insights groups read (SEC-TLS-92)", {
+// the steward adds a field to a document only Insights groups read (MantleSalesOrderPart, of a dataset of the steward's
+// own), by its widen grant of those groups (BOSS_INS_DATASET_WIDEN; SEC-TLS-92); the field is taken away again after, and
+// the shared sales orders dataset is left as it was
+feature("the steward adds a field to a dataset over a document only Insights groups read (SEC-TLS-92)", {
     when() {
         const fieldsOf = () => system(() => Array.from(ec.entity.find("moqui.entity.document.DataDocumentField")
             .condition({dataDocumentId: "MantleSalesOrderPart", fieldPath: "orderHeader:externalId"}).useCache(false).list()))
+        // the steward's own dataset over the document, made through Insights' route and deleted after
+        const widen = "insights-ins-ds-widen"
+        transition(users.steward, insightsRoot, "ReportBuilder/Datasets/createDataset", {title: "Spec widen orders",
+            name: "INS DS widen", dataDocumentId: "MantleSalesOrderPart", scopePolicyId: "MantleOrganization", scopeField: "vendorPartyId"})
         const added = asUser(users.steward, () => refusal(R + "store#BusinessDatasetFields",
-            {datasetId: salesId, fields: [{fieldPath: "orderHeader:externalId", fieldNameAlias: "insWidenExternalId"}]}))
+            {datasetId: widen, fields: [{fieldPath: "orderHeader:externalId", fieldNameAlias: "insWidenExternalId"}]}))
         const after = fieldsOf()
         const removed = after.length ? asUser(users.steward, () => refusal(R + "store#BusinessDatasetFields",
-            {datasetId: salesId, fields: [{fieldSeqId: after[0].fieldSeqId, remove: true}]})) : "none added"
-        return {added, after: after.length, removed, left: fieldsOf().length}
+            {datasetId: widen, fields: [{fieldSeqId: after[0].fieldSeqId, remove: true}]})) : "none added"
+        const left = fieldsOf().length
+        asUser(users.steward, () => refusal(R + "delete#Definition", {definitionId: widen}))
+        return {added, after: after.length, removed, left}
     },
     then({added, after, removed, left}) {
         added == ""
