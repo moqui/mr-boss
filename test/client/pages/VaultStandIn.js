@@ -136,8 +136,17 @@
         const vault = await load("/files/component/mr-boss/screen/Commons/Vault.qvue");
         const contacts = await load("/files/component/mr-boss/screen/Commons/Contacts/VaultContacts.qvue");
         window.app = Vue.createApp({
-            data() { return { basePath: "/apps", linkBasePath: "/qapps", currentPathList: ["Commons", "Vault"], currentParameters: {}, contactsQuery: { parameters: {} } }; },
-            methods: { setUrl(url) { const query = url.split("?")[1] || ""; this.currentParameters = Object.fromEntries(new URLSearchParams(query)); } },
+            data() { return { basePath: "/apps", linkBasePath: "/qapps", currentPathList: ["Commons", "Vault"], currentParameters: {}, contactsQuery: { parameters: {} },
+                urlListeners: [] }; },
+            // as the shell's root: the parameters of the URL, and its URL listeners told of each
+            methods: {
+                setUrl(url) {
+                    const query = url.split("?")[1] || "";
+                    this.currentParameters = Object.fromEntries(new URLSearchParams(query));
+                    this.urlListeners.forEach((listener) => listener(url, this));
+                },
+                addUrlListener(listener) { if (this.urlListeners.indexOf(listener) < 0) this.urlListeners.push(listener); }
+            },
             template: '<vault-screen ref="screen"></vault-screen><vault-contacts ref="contacts"></vault-contacts>',
         });
         app.use(Quasar);

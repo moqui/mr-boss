@@ -23,13 +23,15 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="search" noun="VaultPeople" allow-remote="false">
         <description>People the user may reach (search#Users) who have an active vault key, by name or username, as options
             {value (userId), label}; with recoveryHolders, only those who also hold VAULT_RECOVERY through a group, to split a
-            recovery key to (the server refuses any other holder again).</description>
+            recovery key to (the server refuses any other holder again), and only for a caller who holds VAULT_RECOVERY, who
+            alone makes one: anyone else gets none, so who holds it is not told.</description>
         <in-parameters>
             <parameter name="term"/>
             <parameter name="recoveryHolders" type="Boolean" default="false"/>
         </in-parameters>
         <out-parameters><parameter name="optionList" type="List"/></out-parameters>
         <actions><script><![CDATA[
+            if (recoveryHolders && !ec.user.hasPermission('VAULT_RECOVERY')) { optionList = []; return }
             const found = ec.service.sync().name('ironstone.shared.ChatterServices.search#Users').parameters({term: term || '', limit: 50}).call()
             const users = Array.from(found?.userList || []).filter((user) => user.id !== ec.user.userId)
             const ids = users.map((user) => user.id)
@@ -57,9 +59,10 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="VaultUserNames" allow-remote="false">
         <description>The names of the users the caller's own vault records name (userIds, at most 200): the members of the
             vaults they are a member of, the signers of those vaults' member lists, the senders of their deliveries, the users
-            whose keys they checked, and the makers and holders of the recovery keys and the people of the recoveries. Any
-            other id, and a user the apps' chat-target providers refuse to the caller, is answered as itself, as one with no
-            name.</description>
+            whose keys they checked; the makers of the recovery keys not ended, whose keys a manager checks to turn recovery on;
+            their holders only to a caller who holds VAULT_RECOVERY or is a member of a vault whose member list names that
+            recovery key (recovery:id); and to a holder of VAULT_RECOVERY the people of the recoveries. Any other id, and a
+            user the apps' chat-target providers refuse to the caller, is answered as itself, as one with no name.</description>
         <in-parameters><parameter name="userIds"/></in-parameters>
         <out-parameters><parameter name="names" type="Map"/></out-parameters>
         <actions><script><![CDATA[
@@ -71,17 +74,27 @@ along with this software (see the LICENSE.md file). If not, see
             const wasDisabled = ec.artifactExecution.disableAuthz()
             try {
                 const find = (entity) => ec.entity.find('moqui.security.vault.' + entity)
+                const recovery = ec.user.hasPermission('VAULT_RECOVERY')
+                const now = ec.user.nowTimestamp
                 const vaultIds = Array.from(new Set(Array.from(find('VaultMember').condition('userId', me).list()).map((row) => row.vaultId)
                     .concat(Array.from(find('Vault').condition('ownerUserId', me).list()).map((row) => row.vaultId))))
+                // the recovery keys a vault of the caller's lists as its member recovery:<id>
+                const listedKeys = new Set()
                 if (vaultIds.length) {
-                    for (const row of Array.from(find('VaultMember').condition('vaultId', 'in', vaultIds).list())) known.add(row.userId)
+                    for (const row of Array.from(find('VaultMember').condition('vaultId', 'in', vaultIds).list())) {
+                        known.add(row.userId)
+                        if (String(row.userId || '').startsWith('recovery:')) listedKeys.add(String(row.userId).slice('recovery:'.length))
+                    }
                     for (const row of Array.from(find('VaultKeyVersion').condition('vaultId', 'in', vaultIds).list())) known.add(row.signerUserId)
                 }
                 for (const row of Array.from(find('VaultDelivery').condition('recipientUserId', me).list())) known.add(row.senderId)
                 for (const row of Array.from(find('VaultKeyCheck').condition('checkerUserId', me).list())) known.add(row.checkedUserId)
-                for (const row of Array.from(find('VaultRecoveryKey').list())) known.add(row.makerUserId)
-                for (const row of Array.from(find('VaultRecoveryHolder').list())) known.add(row.userId)
-                if (ec.user.hasPermission('VAULT_RECOVERY')) for (const row of Array.from(find('VaultRecoverySession').list())) {
+                const liveKeys = Array.from(find('VaultRecoveryKey').conditionDate('fromDate', 'thruDate', now).list())
+                for (const row of liveKeys) known.add(row.makerUserId)
+                const holderKeys = liveKeys.map((row) => row.recoveryKeyId).filter((id) => recovery || listedKeys.has(id))
+                if (holderKeys.length) for (const row of Array.from(find('VaultRecoveryHolder').condition('recoveryKeyId', 'in', holderKeys)
+                    .conditionDate('fromDate', 'thruDate', now).list())) known.add(row.userId)
+                if (recovery) for (const row of Array.from(find('VaultRecoverySession').list())) {
                     known.add(row.subjectUserId)
                     known.add(row.holderUserId)
                 }
@@ -102,10 +115,12 @@ along with this software (see the LICENSE.md file). If not, see
 
     <service verb="search" noun="RecoveryGroups" allow-remote="false">
         <description>The user groups that hold VAULT_RECOVERY, which a recovery key may be kept for (its userGroupId), by id or
-            description, as options {value, label}.</description>
+            description, as options {value, label}; to a caller who holds VAULT_RECOVERY, who alone makes one, else none.</description>
         <in-parameters><parameter name="term"/></in-parameters>
         <out-parameters><parameter name="optionList" type="List"/></out-parameters>
         <actions><script><![CDATA[
+            optionList = []
+            if (!ec.user.hasPermission('VAULT_RECOVERY')) return
             const text = String(term || '').trim().toLowerCase()
             const wasDisabled = ec.artifactExecution.disableAuthz()
             try {

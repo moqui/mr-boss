@@ -34,7 +34,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     In the desktop and mobile apps VaultClient.js calls the app's native vault, and the app may remember the open key on the
     device (V5): "Remember on this device for…" once the key is open, "Open from this device", "Forget on this device", each
-    from the click the app asks for; the page's Lock forgets it too, the idle lock does not. Settings › Vault key lists the
+    from the click the app asks for; the page's Lock forgets it too, the idle lock does not. Leaving the vault screens for
+    anything but them and Commons › Contacts locks the vault, as the apps do. Settings › Vault key lists the
     devices that remember the key (/rest/s1/vault/deviceMemories) and takes one off. -->
 <template><div class="boss-vault">
     <div v-if="S.failed && !S.config" class="q-pa-lg text-center">
@@ -1038,7 +1039,8 @@ function makeSession() {
                         document.head.appendChild(script);
                     });
                 }
-                const made = new window.MoquiVaultClient({ idleMinutes: c.idleMinutes == null ? 15 : c.idleMinutes, clipboardSeconds: c.clipboardSeconds == null ? 30 : c.clipboardSeconds,
+                // userId: a browser keeps the highest item revisions it saw per user and vault (revisionsSeen)
+                const made = new window.MoquiVaultClient({ userId: (S.personal && S.personal.userId) || '', idleMinutes: c.idleMinutes == null ? 15 : c.idleMinutes, clipboardSeconds: c.clipboardSeconds == null ? 30 : c.clipboardSeconds,
                     wasmIntegrity: integrity.wasm, workerIntegrity: integrity.worker, workerUrl: window.location.origin + fresh('VaultWorker.js', integrity.worker),
                     wasmUrl: window.location.origin + fresh('moqui_vault.wasm', integrity.wasm), onLock: () => forget(!locking) });
                 await made.start();
@@ -1467,7 +1469,8 @@ function makeSession() {
         if (got.vault.keyVersion !== v.keyVersion) throw new Error(t('The vault\'s key changed: open it again'));
         v.revision = got.vault.revision;
         const headerCipher = (await c.headerSeal({ vault_id: vaultId, key_version: v.keyVersion, header: JSON.stringify({ v: 1, name }) })).header_cipher;
-        const out = await api('PUT', '/vaults/' + enc(vaultId) + '/header', { expectedRevision: v.revision, headerCipher });
+        // two renames at once: the last stored wins; one sealed under a key version the vault has left is refused
+        const out = await api('PUT', '/vaults/' + enc(vaultId) + '/header', { expectedRevision: v.revision, keyVersion: v.keyVersion, headerCipher });
         Object.assign(v, { revision: out.revision || v.revision, headerCipher, name });
     }
 
@@ -1748,6 +1751,22 @@ function makeSession() {
         await refreshMemory();
     }
     const touch = () => { if (client && (S.unlocked || opened.size)) client.touch(); };
+    // The page leaving the vault's screens for anything but them and Commons › Contacts (which reads the open vault's private
+    // contacts) locks the vault, as the apps lock when their page leaves the vault screens: no other screen runs beside open keys.
+    const VAULT_SCREENS = ['Vault', 'Vaults', 'VaultKey', 'VaultContacts', 'RecoveryKeys'];
+    function keepsOpen(url) {
+        const names = String(url || '').split(/[?#]/)[0].split('/').filter((name) => name.length > 0).map((name) => {
+            try { return decodeURIComponent(name); } catch (err) { return name; }
+        });
+        const vaults = (window.moqui && moqui.vaultScreens && moqui.vaultScreens.length) ? moqui.vaultScreens : VAULT_SCREENS;
+        return names.some((name) => vaults.includes(name)) || names.some((name, i) => name === 'Contacts' && names[i - 1] === 'Commons');
+    }
+    let leaveWatched = false;
+    function watchLeave(rootVm) {
+        if (leaveWatched || !rootVm || typeof rootVm.addUrlListener !== 'function') return;
+        leaveWatched = true;
+        rootVm.addUrlListener((url) => { if (!keepsOpen(url) && (S.unlocked || opened.size)) lock(); });
+    }
     const copy = async (text) => (await ensureClient()).copy(text);
     const anyOpen = () => opened.size > 0;
     const lastOpened = (vaultId) => local.get(keyOf('opened', vaultId));
@@ -1766,7 +1785,7 @@ function makeSession() {
         changePassphrase, unlockWithCode, strongReady, makeKey, saveKey, discardKey, checked, publicKeyOf, fingerprintOf, storeCheck, openVault, loadItems,
         itemBody, saveItem, deleteItem, prepareGenerated, discardPrepared, makeVault, deleteVault, renameVault, setMember, recoveryOn, removeMember, replaceRecovery,
         fileDelivery, sendItem, exportVault, readExport, importItems, makeRecoveryKey, startRecovery, deliverShare, finishRecovery, cancelRecovery, myHolder,
-        lock, touch, copy, typeOf, vault, anyOpen, lastOpened, openRow, parseBody, refreshMemory, rememberKey, restoreKey, forgetMemory, INFO_TYPE };
+        lock, touch, copy, typeOf, vault, anyOpen, lastOpened, openRow, parseBody, refreshMemory, rememberKey, restoreKey, forgetMemory, watchLeave, keepsOpen, INFO_TYPE };
 }
 const session = window.BossVaultSession || (window.BossVaultSession = makeSession());
 
@@ -2631,6 +2650,7 @@ module.exports = {
     mounted() {
         document.addEventListener('keydown', this.onActivity, true);
         document.addEventListener('pointerdown', this.onActivity, true);
+        session.watchLeave(this.$root);
         this.start().then(() => {
             this.loadKeyWords();
             this.loadMemories();

@@ -2,7 +2,8 @@
 // with the real vault module (webroot js/vault: VaultClient.js, its worker and moqui_vault.wasm, each loaded with its integrity
 // hash), over an in-page stand-in for the vault REST services that keeps what a server keeps (test/client/pages/VaultStandIn.js).
 // A private contact shows under Contacts while the vault is open, and no request carries it. An encrypted export opens only as
-// an export. A rename seals the new name, and one from a revision the server has moved past is refused. A removal the server refuses leaves no key version behind, so the same removal works next; a manager's changed key
+// an export. A rename seals the new name, and one from a revision the server has moved past is refused. Leaving the vault for
+// another screen than the vault's and Contacts locks it, and a browser keeps the highest item revisions it saw per user and vault. A removal the server refuses leaves no key version behind, so the same removal works next; a manager's changed key
 // is given access with the wraps the server names to remake; the first write after a rotation makes a new item key. A masked
 // value is not on the page until Show asks the worker for it, and the vault locks by itself after the idle time (a short one
 // here, boss/vault@idle-minutes in a deployment), dropping the value and every key.
@@ -224,5 +225,36 @@ feature("a masked value shows only when asked for, and the vault locks after the
         after.open == false
         after.items == 0
         after.worker.includes("locked")
+    }
+})
+
+feature("leaving the vault for a screen other than the vault's and Contacts locks it; a browser keeps the item revisions it saw", {
+    when() {
+        open(5)
+        return page.evaluate(async (password) => {
+            const s = window.BossVaultSession
+            const vaultId = await s.makeVault("Home", "VlSingleSecret", "VsPassword", password)
+            const itemId = await s.saveItem(vaultId, null, {v: 1, type: "login", name: "Mail", fields: {username: "ada"}})
+            store.items[itemId].revision = 3
+            await s.loadItems(s.vault(vaultId))
+            // the highest revision seen is in localStorage under the user and vault: a client of a page loaded anew tells an older one
+            const kept = JSON.parse(localStorage.getItem("moquiVault.revisions.U1." + vaultId) || "{}")[itemId]
+            const fresh = new MoquiVaultClient({userId: "U1"})
+            const older = (await fresh.revisionsSeen({vault_id: vaultId, items: [{item_id: itemId, revision: 2}]})).older
+            const openAfter = async (url) => { vm.setUrl(url); await new Promise((resolve) => setTimeout(resolve, 200)); return s.anyOpen() }
+            return {kept, older, itemId,
+                contacts: await openAfter("/qapps/Commons/Contacts?letter=A"),
+                key: await openAfter("/qapps/Commons/Settings/VaultKey"),
+                recovery: await openAfter("/qapps/Admin/Security/RecoveryKeys"),
+                notes: await openAfter("/qapps/Commons/Notes")}
+        }, PASSWORD)
+    },
+    then({kept, older, itemId, contacts, key, recovery, notes}) {
+        kept == 3
+        older == [itemId]
+        contacts == true
+        key == true
+        recovery == true
+        notes == false
     }
 })

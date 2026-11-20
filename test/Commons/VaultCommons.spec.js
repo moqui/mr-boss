@@ -5,7 +5,8 @@
 // collection tag, after the item is stored as before it. The item's body is stored here as the hex of its bytes, so a server that
 // read vault items would find the name; the browser stores it sealed. These are the server's half of the plan's V3 rules (its
 // regression row names them for mr-boss); the client's half, that Contacts merges a private contact with no request carrying it,
-// is test/client/Commons/VaultLock.spec.js.
+// is test/client/Commons/VaultLock.spec.js. Who holds a recovery key is told only to a holder of VAULT_RECOVERY or a member of a
+// vault that lists the key.
 // Run: ./moq test mr-boss --spec VaultCommons
 const RUN = String(Date.now()).slice(-9)
 const USERNAME = "vc.ana." + RUN
@@ -138,5 +139,43 @@ feature("a private contact in the user's vault never reaches their address book 
         !String(after.body).includes("Privatesson")
         !String(home.body).includes("Privatesson")
         !String(home.body).includes("vc-dav-")
+    }
+})
+
+// Who holds a recovery key, and which groups may keep one, are told only to a holder of VAULT_RECOVERY (who alone makes a
+// recovery key) or, for a key's holders, to a member of a vault that lists that key; a recovery key's maker, whose key a
+// manager checks to turn recovery on, is named while the key lasts. Ana holds no VAULT_RECOVERY and is in no such vault.
+feature("a recovery key's holders and the recovery groups are not told to a user without VAULT_RECOVERY", {
+    when() {
+        const PEOPLE = "ironstone.commons.VaultPeopleServices."
+        const ids = sys(() => {
+            const me = ec.user.userId
+            const maker = ec.entity.find("moqui.security.UserAccount").condition("username", "john.doe").one().userId
+            const holder = Array.from(ec.entity.find("moqui.security.UserAccount").condition("userId", "not-in", [me, maker])
+                .orderBy("userId").limit(1).list())[0].userId
+            const now = ec.user.nowTimestamp
+            ec.entity.makeValue("moqui.security.vault.VaultRecoveryKey").setAll({recoveryKeyId: "vc-rk-" + RUN, makerUserId: maker,
+                sharesNeeded: 2, sharesTotal: 3, fromDate: now}).create()
+            ec.entity.makeValue("moqui.security.vault.VaultRecoveryHolder").setAll({recoveryKeyId: "vc-rk-" + RUN, userId: holder,
+                shareIndex: 1, fromDate: now}).create()
+            // an ended key whose maker is the holder: not named for having made it
+            ec.entity.makeValue("moqui.security.vault.VaultRecoveryKey").setAll({recoveryKeyId: "vc-rk-old-" + RUN, makerUserId: holder,
+                sharesNeeded: 2, sharesTotal: 3, fromDate: now, thruDate: new Date(Date.now() - 1000)}).create()
+            return {maker, holder}
+        })
+        const run = (name, parameters) => sys(() => ec.service.sync().name(PEOPLE + name).parameters(parameters).call() || {})
+        return Object.assign({
+            hasRecovery: ec.user.hasPermission("VAULT_RECOVERY"),
+            names: run("get#VaultUserNames", {userIds: [ids.maker, ids.holder].join(",")}).names || {},
+            holders: run("search#VaultPeople", {term: "", recoveryHolders: true}).optionList || [],
+            groups: run("search#RecoveryGroups", {term: ""}).optionList || []
+        }, ids)
+    },
+    then({hasRecovery, names, holders, groups, maker, holder}) {
+        hasRecovery == false
+        names[holder] == null
+        names[maker] != null
+        holders.length == 0
+        groups.length == 0
     }
 })
