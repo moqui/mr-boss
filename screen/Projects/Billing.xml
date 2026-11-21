@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     email's attachment), and the shared order detail (screen/Shared/OrderDetail.xml, impl-projects.md P8b). Managers only (the team is refused it), and in it only those who manage money
     (ironstone.projects.BillingServices.check#Money). A client (impl-projects.md P10b: PROJECT_CLIENT) opens Billing, Invoices, InvoiceDetail and
     InvoicePrint only, read only, for its own sent invoices (BillingServices get#ClientInvoices), and lands on Invoices; Unbilled, Rates
-    and OrderDetail are refused it (BOSS_PROJECTS_INTERNAL in data/BossSetupData.xml), and the team is refused all of Billing
+    and OrderDetail are refused it (BOSS_PROJECTS_INTERNAL in data/BossSetupData02Projects.xml), and the team is refused all of Billing
     (BOSS_PROJECTS_BILLING). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Billing" default-menu-index="8" menu-image="sym_o_receipt_long" menu-image-type="icon">

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- for BOSS_ACCT_ORG, defined with the finance users in 10AccountingUsers.xml -->
+    <moqui.basic.Enumeration enumId="BOSS_ACCOUNTING_SERVICE_ITEM" enumTypeId="ItemType" description="Accounting service item"/>
+    <mantle.ledger.account.GlAccount glAccountId="BOSS_ACCOUNTING_EXPENSE" accountCode="909900001" accountName="Accounting demo purchase expense" glAccountClassEnumId="EXPENSE" glAccountTypeEnumId="GatCogs" glResourceTypeEnumId="GlrtMoney" isDebit="Y" disallowPosting="N"/>
+    <!-- Demo delivery stays on a local sink. A deployment provisions its own server and account sharing. -->
+    <moqui.basic.email.EmailServer emailServerId="BOSS_ACCOUNTING_DEMO" smtpHost="127.0.0.1" smtpPort="9" smtpStartTls="N" smtpSsl="N"/>
+    <moqui.basic.email.EmailAccount emailAccountId="BOSS_ACCOUNTING_MAIL" ownerPartyId="BOSS_ACCT_ORG" accountKindEnumId="EakShared" emailServerId="BOSS_ACCOUNTING_DEMO" emailAddress="accounts@finance.example" accountName="Accounting demo mail" statusId="EasActive" recordFilingEnumId="ErfLinkedOnly"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_ACCOUNTING_MAIL" userId="BOSS_ACCT_AR" fromDate="0" permissionEnumId="EapSend"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_ACCOUNTING_MAIL" userId="BOSS_ACCT_ADMIN" fromDate="0" permissionEnumId="EapSend"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_ACCOUNTING_MAIL" userId="EX_JOHN_DOE" fromDate="0" permissionEnumId="EapSend"/>
+    <moqui.basic.email.EmailAccount emailAccountId="BOSS_PROJECT_BILLING_MAIL" ownerPartyId="ORG_ZIZI_SERVICES" accountKindEnumId="EakShared" emailServerId="BOSS_ACCOUNTING_DEMO" emailAddress="billing@projects.example" accountName="Projects demo billing" statusId="EasActive" recordFilingEnumId="ErfLinkedOnly"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_PROJECT_BILLING_MAIL" userId="EX_JOHN_DOE" fromDate="0" permissionEnumId="EapSend"/>
+    <mantle.account.invoice.SettlementTerm settlementTermId="BOSS_ACCT_NET30" description="Net 30 days" termTypeEnumId="TtFinPaymentDays" termValue="30"/>
+    <!-- the payables demo's own stock item, so its receipt changes no other product's availability -->
+    <mantle.product.Product productId="BOSS_ACCT_SUPPLY" productTypeEnumId="PtAsset" assetTypeEnumId="AstTpInventory"
+            assetClassEnumId="AsClsInventoryFin" productName="Accounting demo office supplies" ownerPartyId="BOSS_ACCT_ORG"/>
+    <!-- its weight, which the landed cost demo spreads freight by -->
+    <mantle.product.ProductUomDimension productUomDimensionId="BOSS_ACCT_SUPPLY_WT" productId="BOSS_ACCT_SUPPLY"
+            uomDimensionTypeId="Weight" value="2" uomId="WT_lb"/>
+    <ironstone.accounting.DemoServices.load-AccountingDemo/>
+</entity-facade-xml>

@@ -1,4 +1,4 @@
-// The Customer Service demo orders for ORG_ZIZI_RETAIL (BossCustomerServiceDemoData.xml; impl-customer-service P1, F34),
+// The Customer Service demo orders for ORG_ZIZI_RETAIL (demo/16CustomerService.xml; impl-customer-service P1, F34),
 // made once by fixed ID through Mantle's order, shipment and payment services, as Accounting's Demo.js: Mantle seeds no
 // sales orders. Joe Q Public's order of the warranted, serialized demo thermostat and two filters, paid by check (held in
 // Undeposited Receipts), shipped, invoiced at ship and delivered (the thermostat's Asset is then the customer's,
@@ -178,7 +178,7 @@ function loadOrder(p) {
     })
 }
 
-// P2: the demo requests of BossCustomerServiceDemoData.xml made cases by the case rule (Mantle's ensure#CaseProfile), each
+// P2: the demo requests of demo/16CustomerService.xml made cases by the case rule (Mantle's ensure#CaseProfile), each
 // on its own; one that fails is named and the others are made. The rule's own run after the data file's commit may have made
 // them already; ensure is idempotent.
 const demoCases = [
@@ -206,7 +206,7 @@ function loadCases() {
 }
 
 // P4: the Retail support team's working hours (Monday to Friday 9:00-17:00 in Chicago) on its schedule calendar, through
-// Mantle's store#WorkingHours, before the demo requests are made cases (BossYCustomerServiceCasesDemoData.xml, whose rule starts
+// Mantle's store#WorkingHours, before the demo requests are made cases (demo/52ServiceCases.xml, whose rule starts
 // their clocks on these hours). Idempotent: a second run changes the series in place.
 function loadHours() {
     return asDemoAdministrator(() => {

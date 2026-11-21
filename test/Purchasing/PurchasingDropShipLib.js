@@ -1,5 +1,5 @@
 // Drop-ship fixtures the Purchasing specs share (impl-purchasing P7): a customer order of Retail's to Joe Q Public whose lines
-// reserve at Ziddleman's drop-ship facility (BOSS_PUR_DROPSHIP, BossPurchasingDemoData.xml) or ZIRET_WH, placed and approved by
+// reserve at Ziddleman's drop-ship facility (BOSS_PUR_DROPSHIP, demo/40Purchasing.xml) or ZIRET_WH, placed and approved by
 // john.doe, whose approval makes the drop-ship purchase order once it commits, on a worker of its own (Retail's approval gate
 // off in the demo: approved and emailed). Each call makes a new order.
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")

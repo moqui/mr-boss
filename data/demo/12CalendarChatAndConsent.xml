@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- M7: john.doe's calendars and their events, dated from the day of the load in his time zone (design-drawers-commons.md
+        §7; service/ironstone/commons/CalendarDemoServices.xml load#CalendarDemo): his own and Family calendars, the shared Team calendar,
+        Joe Developer's calendar shared with him and Bob Developer's free/busy, a subscription whose fetch failed; the weekly Team
+        sync with a moved and a cancelled instance, an all-day closure, a yearly birthday, an invitation to answer, a declined
+        one; the Maple and Board rooms, a projector and a video kit, with bookings, one waiting for approval. -->
+    <ironstone.commons.CalendarDemoServices.load-CalendarDemo/>
+
+    <!-- M10: john.doe's chat rooms with Joe Developer and Bob Developer, dated from the load, so Comms Chat, the tray's Chat
+        tab and Chatter's Discuss show and test with content (service/ironstone/comms/ChatDemoServices.xml load#ChatDemo says what
+        is in it). Only BOSS_DEMO_CHAT_* rooms. -->
+    <ironstone.comms.ChatDemoServices.load-ChatDemo/>
+
+    <!-- M11: Ziziwork Retail's lists (Ziziwork News, Events and workshops, Product updates), their members and the consent behind
+        them (given, withdrawn by the email link and by staff, waiting for an opt-in, an unsubscribe waiting for its
+        confirmation), the October news sent to its members, and unsubscribe links with known demo tokens (BossDemoUnsubNews2026,
+        BossDemoUnsubUpdates2026 with the code BossDemoVerify2026, the ended BossDemoUnsubExpired2026), so Comms Consent, the
+        contact record's Consent tab and the public page /u/<token> show and test with content
+        (service/ironstone/comms/ConsentDemoServices.xml load#ConsentDemo says what is in it). -->
+    <ironstone.comms.ConsentDemoServices.load-ConsentDemo/>
+</entity-facade-xml>

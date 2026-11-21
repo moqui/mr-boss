@@ -1,6 +1,6 @@
 // Commons Files (screen/Commons/Files.xml and Files.qvue, Drives, DriveSettings, service/ironstone/commons/DriveServices.xml,
 // impl-drawers-commons.md M8): the browser's JSON transitions under the Commons app root as john.doe on the files demo
-// (data/BossFilesDemoData.xml): the rail, folders with their versions, tags and favorites; new folders and text files,
+// (data/demo/20FilesKnowledgeAndMail.xml): the rail, folders with their versions, tags and favorites; new folders and text files,
 // rename, move and copy; uploads with the replace, keep both and skip answers; versions, compare and restore; the trash;
 // search, tags, favorites and recent; downloads and zips; the drives screens; the records drive, which shows only the
 // records a user may see; and another user (joe.developer) refused on john.doe's private files. The palette's files and

@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- People's shipped datasets and its registrations in Insights (design-people §1.4 Shipped reports, §12 Reports, CX-OPS-REPORTS;
     impl-people P29, F27, F70; impl-insights §7 "What waits on People"), on Maintenance's pattern (BossMaintenanceReportData.xml and
-    BossSetupMaintenanceData.xml's P17 block), in one file loaded after BossSetupData.xml (it names the Insights groups):
+    BossSetupMaintenanceData.xml's P17 block), in one file loaded after BossSetupData07InsightsAndAdminAccess.xml (it names the Insights groups):
     - three DataDocuments indexed by the BossPeopleReports push feed as their records are written, each carrying its employer
       (organizationPartyId), on which Mantle's organization row filter (the ReportScopePolicy MantleOrganization) scopes the
       datasets, and no pay, private contact, identity number or confidential record: BossPeopleEmployment (an employment's dates,

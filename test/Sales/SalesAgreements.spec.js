@@ -2,7 +2,7 @@
 // agreement keeper (Contoso's active supply terms: the record header with Renew and More, the two negotiated prices, the net 30 term,
 // the signer, the signed copy, no activation needs) and Agreements' one html render as the rep (the active agreement listed, the
 // template not, no New agreement). The rules are Mantle's SalesAgreements and ProductAgreementPrices. Demo data:
-// data/BossZSalesDemoData.xml (P15 block).
+// data/demo/70Sales.xml (P15 block).
 // Run: ./moq test mr-boss --spec SalesAgreements
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, page} = lib

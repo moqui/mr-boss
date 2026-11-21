@@ -1,7 +1,7 @@
 // The Accounting access walk (design-accounting §16.3 Access, impl-accounting P21): an Accounting user of one group, with no
 // other launcher, is refused the other groups' sections and actions and other organizations' records, through URLs, the
 // shared mounts (Records, Chatter, RecordFiles, also under Commons), imports, exports, search, choices and REST. Each group's
-// demo user (finance.ar ... finance.admin, BossAccountingUsersDemoData.xml) works in BOSS_ACCT_ORG only. A second internal
+// demo user (finance.ar ... finance.admin, demo/10AccountingUsers.xml) works in BOSS_ACCT_ORG only. A second internal
 // organization, BOSS_P21_OTHER, holds one record of each kind, each with "P21 secret" in a text the screens show; no render,
 // export, search or choice of any of these users may show it.
 // Run: ./moq test mr-boss --spec AccountingAccessWalk

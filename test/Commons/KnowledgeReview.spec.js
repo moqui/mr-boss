@@ -2,7 +2,7 @@
 // org.moqui.resource.WikiServices request, decide, cancel and find#WikiPageReviews; impl-drawers-commons.md M9, R23; design §10
 // Review): a version asked for review from the page, decided from the tray's Notifications tab (approve publishes it, refuse
 // asks for changes with the reason) or from the page and the Review list, cancelled by the one who asked; the requester told
-// on WikiPageReviewDecision with a link that opens the page on its review. On the knowledge demo (data/BossKnowledgeDemoData.xml):
+// on WikiPageReviewDecision with a link that opens the page on its review. On the knowledge demo (data/demo/20FilesKnowledgeAndMail.xml):
 // joe.developer edits the Team handbook, bob.developer reads it, john.doe administers it. Every review this spec asks of
 // john.doe is decided here, so his tray keeps the M2 demo's one approval for the specs after this one.
 // Run: ./moq test mr-boss --spec KnowledgeReview

@@ -60,7 +60,7 @@ const capabilityPermissions = {
     constitutionGlobal: "ADMIN_CONSTITUTION_GLOBAL",
     agentAdmin: "AgentAdmin"
 }
-// The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_ADM_<Area>): Operations for the reader,
+// The menu areas whose authorization is a capability (data/BossSetupData06CommerceAndAdmin.xml BOSS_ADM_<Area>): Operations for the reader,
 // the operations operator and the administrator; Agents for the administrator. Home is every Admin user's;
 // System (the Tools System screens) is ADMIN's alone, by Tools' own grant (impl-admin F2), so it is the system capability
 // below, not an area. Later phases add their areas: P3 Access (Groups and GroupDetail) for the access administrator and the

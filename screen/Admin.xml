@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- IronStone Admin (design-admin §1): the root of the app for system administrators and people delegated an administrative
-    responsibility. The root user group BOSS_ADMIN and the administrator group BOSS_ADMIN_ADMIN open it (data/BossSetupData.xml),
+    responsibility. The root user group BOSS_ADMIN and the administrator group BOSS_ADMIN_ADMIN open it (data/BossSetupData06CommerceAndAdmin.xml),
     as ADMIN does; the root grant opens navigation only, and each screen and service checks its own permission
     (ironstone.admin.ContextServices.get#SharedContext resolves the organizations the user administers, the capabilities and the
     links for every subscreen). Its areas, in the menu order of design §1.2 by their menu-index: 1 Home; 2 Users (Users,

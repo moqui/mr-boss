@@ -51,7 +51,7 @@ along with this software (see the LICENSE.md file). If not, see
         </out-parameters>
         <actions>
             <script><![CDATA[
-            // Every capability comes from the Moqui permissions Mantle checks (granted to the BOSS groups in BossSetupData),
+            // Every capability comes from the Moqui permissions Mantle checks (granted to the BOSS groups in BossSetupData03CommonsAndPermissions.xml),
             // so a screen offers exactly what the Mantle services will allow.
             const domain = ec.resource.script('component://mr-mantle/service/mantle/product/ProductAccess.js')
             const cost = ec.resource.script('component://mr-mantle/service/mantle/product/CostPolicy.js').capabilities()

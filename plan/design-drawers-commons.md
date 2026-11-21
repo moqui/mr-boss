@@ -124,7 +124,7 @@ list of root element ids the framework exposes as `assistReach`, not a layout ch
 | Assist | Toggles the Assist drawer; Mod+J; shown when an agent answers the user (§1.3) | Framework |
 
 The theme values that name the BOSS screens for the framework frames are seeded by BOSS in
-`data/BossSetupData.xml`: `STRT_TRAY_TODAY`, `STRT_TRAY_CHAT`, `STRT_TRAY_NOTIFICATIONS`, `STRT_TRAY_DIALER`
+`data/BossSetupData03CommonsAndPermissions.xml`: `STRT_TRAY_TODAY`, `STRT_TRAY_CHAT`, `STRT_TRAY_NOTIFICATIONS`, `STRT_TRAY_DIALER`
 (`Comms/Panel/Dialer`), `STRT_QUICK_CREATE`, `STRT_MAIL_SCREEN` and `STRT_MESSAGES_SCREEN` (the Mail and Messages counts'
 links, `Comms/Inbox` and `Comms/Inbox?view=internal`), `STRT_CALLS_SCREEN` (the missed calls link,
 `Comms/Calls/History?outcome=missed`), `STRT_CHATTER_SCREEN`,

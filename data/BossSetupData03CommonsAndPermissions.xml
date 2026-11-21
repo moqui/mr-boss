@@ -1,0 +1,530 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="seed-initial">
+    <!-- The suite shell's IronStone screens (design-drawers-commons.md §1.2, impl R14), on the Quasar theme BOSS ships with:
+        the tray panel's three tabs, the quick-create screen of the + menu kinds that name no screen, and the screen the
+        header's Inbox count links to, each a path under the apps root; the Chatter and record-files elements' subscreen
+        names, which every BOSS app root mounts from screen/Shared (R5). The webroot shellData transition sends them to
+        the shell (docs/ui/Qvt-Client.md, "Shell data and providers"). STRT_SHELL_COUNTS_SERVICE comes with
+        mantle.party.PartyServices.get#ShellCounts (M2). -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="300" resourceTypeEnumId="STRT_TRAY_TODAY"
+            resourceValue="Commons/Panel/Today"/>
+    <!-- the Chat tab is a .qvue screen (Panel/ChatPanel.qvue), which the tray loads in its best client mode -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="301" resourceTypeEnumId="STRT_TRAY_CHAT"
+            resourceValue="Comms/Panel/Chat"/>
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="302" resourceTypeEnumId="STRT_TRAY_NOTIFICATIONS"
+            resourceValue="Commons/Panel/Notifications"/>
+    <!-- the Dialer tab (Comms V3): BasicComms' Panel/Dialer under the Comms mount, a .qvue screen as the Chat tab is -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="320" resourceTypeEnumId="STRT_TRAY_DIALER"
+            resourceValue="Comms/Panel/Dialer"/>
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="303" resourceTypeEnumId="STRT_QUICK_CREATE"
+            resourceValue="Commons/QuickCreate"/>
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="304" resourceTypeEnumId="STRT_MAIL_SCREEN"
+            resourceValue="Comms/Inbox"/>
+    <!-- the Messages count opens the Inbox on the Internal account (design-drawers-commons.md §1.2, §12) -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="308" resourceTypeEnumId="STRT_MESSAGES_SCREEN"
+            resourceValue="Comms/Inbox?view=internal"/>
+    <!-- the missed calls count (Mantle's calls) opens Calls on its Missed tab -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="321" resourceTypeEnumId="STRT_CALLS_SCREEN"
+            resourceValue="Comms/Calls/History?outcome=missed"/>
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="305" resourceTypeEnumId="STRT_CHATTER_SCREEN"
+            resourceValue="Chatter"/>
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="306" resourceTypeEnumId="STRT_RECORD_FILES_SCREEN"
+            resourceValue="RecordFiles"/>
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="307" resourceTypeEnumId="STRT_SHELL_COUNTS_SERVICE"
+            resourceValue="mantle.party.PartyServices.get#ShellCounts"/>
+    <!-- Chat (design-drawers-commons.md §13, impl M10): a room bound to a record is read and joined by the users who may see the
+        record (org.moqui.chat.ChatServices.check#RecordVisible calls this service with checkOnly, under the user's filters) -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="309" resourceTypeEnumId="STRT_RECORD_VISIBLE_SERVICE"
+            resourceValue="mantle.party.CommunicationServices.get#RecordLinkInfo"/>
+    <!-- Out of office (design-drawers-commons.md §17, impl M5): an automatic reply to "my contacts and people inside" asks which
+        senders are the account owner's contacts (org.moqui.mail.EmailClientServices.filter#ContactAddresses calls this service:
+        the owner's personal contacts, own and shared contact books, and the directory of the owner's organizations) -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="310" resourceTypeEnumId="STRT_EMAIL_CONTACT_SERVICE"
+            resourceValue="mantle.party.ContactBookServices.filter#ContactAddresses"/>
+    <!-- Chat's people across networks (MR Moqui plans/Comms-Messaging.md §11.1): which of the user's rooms are one contact
+        (org.moqui.chat.ChatPeopleServices.find#ContactPeople calls this service: the contacts the user can see, by number, mail
+        address or user account, with their own addresses) -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="312" resourceTypeEnumId="STRT_CHAT_CONTACT_SERVICE"
+            resourceValue="mantle.party.ContactBookServices.find#ContactPeople"/>
+    <!-- m-avatar given only a user id (the header). ${userId} is replaced in the browser. 404 leaves the initials. Under
+        /apps, where a transition answers an image request: under /qapps the request gets the page shell, so no image loads.
+        An existing database needs this row loaded (the STRT_AVATAR_URL enumeration comes with the framework seed). -->
+    <moqui.screen.ScreenThemeResource screenThemeId="DEFAULT_QUASAR" sequenceNum="311" resourceTypeEnumId="STRT_AVATAR_URL"
+            resourceValue="/apps/Commons/Settings/Account/userPhoto?userId=${userId}"/>
+    <!-- Contacts (design-drawers-commons.md §6, impl M4): contact admins change and delete directory contacts and review the
+        duplicates (Commons/Contacts/Duplicates), with Mantle's CONTACT_ADMIN permission (which the ADMIN group has too). A pair
+        a contact admin marks "not a duplicate" is Mantle's PartyNotDuplicate; the PartySetting BossNotDuplicates that held such
+        pairs before is moved to it on a load (ironstone.commons.ContactServices.migrate#NotDuplicateSettings, nothing to do once done). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CONTACT_ADMIN" userPermissionId="CONTACT_ADMIN" fromDate="0"/>
+    <ironstone.commons.ContactServices.migrate-NotDuplicateSettings/>
+
+    <!-- Files (design-drawers-commons.md §9 Records, impl-drawers-commons.md M8, R25): the Records drive, a view over the record
+        attachment folders Mantle's save#*ContentFile services write under the mantle@content-root setting (the default
+        dbresource://mantle/content; a deployment that moves the root changes rootLocation too). Every internal user may view it (the
+        BOSS_USERS member row), and FileServices (get#DriveAccess, through the STRT_RECORD_VISIBLE_SERVICE hook above) lets a user
+        into a record's folder only when the record is one the user may see (R5, R28), so the drive shows each user only their
+        records; it is read only (files are added from a record's Files panel). The folders are mapped explicitly, since they
+        follow no naming rule: CommunicationEvent is capitalised, a work effort of any type (task, project, event) is under work,
+        an asset maintenance record's files are
+        under asset/<assetId>/maintenance/<id>, a facility's are written by BOSS's RecordFiles (no Mantle pair) and its
+        certifications by Mantle. Payment methods and employments are left out on purpose; wiki page attachments are under
+        each space's own root, not here. -->
+    <moqui.resource.ResourceDrive driveId="BOSS_RECORDS" driveName="Records" driveKindEnumId="RdkRecords" rootLocation="dbresource://mantle/content"
+            description="The files of records: parties, orders, requests, tasks and events, messages and more"/>
+    <moqui.resource.ResourceDriveMember driveMemberId="BOSS_RECORDS_USERS" driveId="BOSS_RECORDS" userGroupId="BOSS_USERS"
+            permissionEnumId="RdpView" fromDate="1767225600000"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="party" recordEntityName="mantle.party.Party" idField="partyId"
+            label="People and organizations" sequenceNum="10"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="order" recordEntityName="mantle.order.OrderHeader" idField="orderId"
+            label="Orders" sequenceNum="20"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="request" recordEntityName="mantle.request.Request" idField="requestId"
+            label="Requests" sequenceNum="30"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="work" recordEntityName="mantle.work.effort.WorkEffort"
+            idField="workEffortId" label="Tasks, projects and events" sequenceNum="40"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="CommunicationEvent"
+            recordEntityName="mantle.party.communication.CommunicationEvent" idField="communicationEventId" label="Messages" sequenceNum="50"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="facility" recordEntityName="mantle.facility.Facility"
+            idField="facilityId" label="Facilities" sequenceNum="60"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="asset" recordEntityName="mantle.product.asset.Asset"
+            idField="assetId" label="Assets" sequenceNum="70"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="asset/*/maintenance"
+            recordEntityName="mantle.product.maintenance.AssetMaintenance" idField="assetMaintenanceId" label="Asset maintenance" sequenceNum="75"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="invoice" recordEntityName="mantle.account.invoice.Invoice"
+            idField="invoiceId" label="Invoices" sequenceNum="80"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="payment" recordEntityName="mantle.account.payment.Payment"
+            idField="paymentId" label="Payments" sequenceNum="85"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="shipment" recordEntityName="mantle.shipment.Shipment"
+            idField="shipmentId" label="Shipments" sequenceNum="90"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="agreement" recordEntityName="mantle.party.agreement.Agreement"
+            idField="agreementId" label="Agreements" sequenceNum="95"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="product" recordEntityName="mantle.product.Product"
+            idField="productId" label="Products" sequenceNum="100"/>
+    <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="productCategory"
+            recordEntityName="mantle.product.category.ProductCategory" idField="productCategoryId" label="Product categories" sequenceNum="105"/>
+    <moqui.screen.form.FormListFind formListFindId="BOSS_PRD_VIRTUAL" description="Virtual" formLocation="component://mr-boss/screen/Products/Products/List.xml.form_list$ProductList">
+        <moqui.screen.form.FormListFindField fieldName="list" fieldValue="virtual"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="BOSS_PRODUCTS"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="ADMIN"/>
+    </moqui.screen.form.FormListFind>
+    <moqui.screen.form.FormListFind formListFindId="BOSS_PRD_VARIANTS" description="Variants" formLocation="component://mr-boss/screen/Products/Products/List.xml.form_list$ProductList">
+        <moqui.screen.form.FormListFindField fieldName="list" fieldValue="variants"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="BOSS_PRODUCTS"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="ADMIN"/>
+    </moqui.screen.form.FormListFind>
+    <moqui.screen.form.FormListFind formListFindId="BOSS_PRD_SERVICES" description="Services" formLocation="component://mr-boss/screen/Products/Products/List.xml.form_list$ProductList">
+        <moqui.screen.form.FormListFindField fieldName="list" fieldValue="services"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="BOSS_PRODUCTS"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="ADMIN"/>
+    </moqui.screen.form.FormListFind>
+    <moqui.screen.form.FormListFind formListFindId="BOSS_PRD_STOCKED" description="Stocked" formLocation="component://mr-boss/screen/Products/Products/List.xml.form_list$ProductList">
+        <moqui.screen.form.FormListFindField fieldName="list" fieldValue="stocked"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="BOSS_PRODUCTS"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="ADMIN"/>
+    </moqui.screen.form.FormListFind>
+    <moqui.screen.form.FormListFind formListFindId="BOSS_PRD_DISCONTINUED" description="Discontinued" formLocation="component://mr-boss/screen/Products/Products/List.xml.form_list$ProductList">
+        <moqui.screen.form.FormListFindField fieldName="list" fieldValue="discontinued"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="BOSS_PRODUCTS"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="ADMIN"/>
+    </moqui.screen.form.FormListFind>
+    <moqui.screen.form.FormListFind formListFindId="BOSS_PRD_MISSINGPRICE" description="Missing price" formLocation="component://mr-boss/screen/Products/Products/List.xml.form_list$ProductList">
+        <moqui.screen.form.FormListFindField fieldName="list" fieldValue="missingPrice"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="BOSS_PRODUCTS"/>
+        <moqui.screen.form.FormListFindUserGroup userGroupId="ADMIN"/>
+    </moqui.screen.form.FormListFind>
+    <artifactGroups artifactGroupId="BOSS_PRODUCTS_NEW">
+        <artifacts artifactName="component://mr-boss/screen/Products/Products/NewProduct.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_EDIT" userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_SYS" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PRODUCTS_NEW_CATEGORY">
+        <artifacts artifactName="component://mr-boss/screen/Products/Categories/NewCategory.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_CATEGORY_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_CATEGORY_EDIT" userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_CATEGORY_SYS" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PRODUCTS_NEW_FEATURE">
+        <artifacts artifactName="component://mr-boss/screen/Products/Features/NewFeature.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_FEATURE_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_FEATURE_EDIT" userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_FEATURE_SYS" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PRODUCTS_NEW_FEATURE_GROUP">
+        <artifacts artifactName="component://mr-boss/screen/Products/Features/FeatureGroups/NewGroup.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_FEATURE_GROUP_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_FEATURE_GROUP_EDIT" userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_NEW_FEATURE_GROUP_SYS" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PRODUCTS_VARIANTS">
+        <artifacts artifactName="component://mr-boss/screen/Products/Products/VariantBuilder.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_VARIANTS_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_VARIANTS_EDIT" userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_VARIANTS_SYS" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PRODUCTS_VARIANTS_TUI">
+        <artifacts artifactName="component://mr-boss/screen/Products/Products/VariantBuilderTui.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_VARIANTS_TUI_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_VARIANTS_TUI_EDIT" userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_VARIANTS_TUI_SYS" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PRODUCTS_BULK_PRICE">
+        <artifacts artifactName="component://mr-boss/screen/Products/Products/BulkPrice.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_BULK_PRICE_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_BULK_PRICE_EDIT" userGroupId="BOSS_PRODUCTS_PRICE_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_BULK_PRICE_SUP" userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_BULK_PRICE_SYS" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_BULK_PRICE_APPADMIN" userGroupId="BOSS_PRODUCTS_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="ProductPriceChanged" inboxEnumId="NinUpdates" description="Catalog price changes" titleTemplate="Price changed for ${productName}" showAlert="N" persistOnSend="Y" receiveNotifications="Y" emailNotifications="N" isPrivate="Y" typeString="info"/>
+    <moqui.security.user.NotificationTopic topic="ProductPriceExpiring" inboxEnumId="NinNotifications" description="Expiring catalog prices" titleTemplate="Price for ${productName} expires ${thruDate}" showAlert="N" persistOnSend="Y" receiveNotifications="Y" emailNotifications="N" isPrivate="Y" typeString="warning"/>
+    <moqui.service.job.ServiceJob jobName="send_ExpiringProductPrices" serviceName="ironstone.products.PriceNoticeServices.send#ExpiringPriceNotices" description="Notify authorized pricing staff about prices ending in 30 days" cronExpression="0 0 6 * * ?" paused="N"/>
+    <artifactGroups artifactGroupId="BOSS_PRODUCTS_LISTS" description="Shared price-list and explanation capabilities">
+        <artifacts artifactName="component://mr-boss/screen/Shared/PriceLists.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PriceListDetail.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PriceExplain.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Products/Prices/PriceLists.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Products/Prices/PriceExplain.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_LISTS_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_LISTS_0" userGroupId="BOSS_PRODUCTS_PRICE_READ" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_LISTS_1" userGroupId="BOSS_PRODUCTS_PRICE_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_LISTS_2" userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_READ" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_LISTS_3" userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_LISTS_4" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_LISTS_APPADMIN" userGroupId="BOSS_PRODUCTS_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PRODUCTS_SUPPLIERS" description="Guarded shared supplier offers and supplier records">
+        <artifacts artifactName="component://mr-boss/screen/Products/SupplierPrices.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/SupplierPrices.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/Supplier360.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_SUPPLIERS_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_SUPPLIERS_0" userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_READ" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_SUPPLIERS_1" userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_EDIT" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_SUPPLIERS_2" userGroupId="BOSS_PRODUCTS_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_SUPPLIERS_3" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+
+    <artifactGroups artifactGroupId="BOSS_PRODUCTS_COSTS" description="Shared standard estimates">
+        <artifacts artifactName="component://mr-boss/screen/Shared/StandardCosts.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Products/Prices/StandardCosts.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/CostRollup.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Products/Prices/CostRollup.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/CostHistory.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Products/Prices/CostHistory.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_COSTS_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PRODUCTS_COSTS_0" userGroupId="BOSS_PRODUCTS_COST_READ" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_COSTS_1" userGroupId="BOSS_PRODUCTS_COST_ESTIMATE" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_COSTS_2" userGroupId="BOSS_PRODUCTS_COST_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_COSTS_3" userGroupId="BOSS_PRODUCTS_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_COSTS_4" userGroupId="BOSS_ACCOUNTING_READ" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_COSTS_5" userGroupId="BOSS_ACCOUNTING_GL" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PRODUCTS_COSTS_6" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_SHARED_REVALUATION" description="Accounting inventory revaluation">
+        <artifacts artifactName="component://mr-boss/screen/Shared/InventoryValuation.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_SHARED_REVALUATION_DENY" userGroupId="BOSS_PRODUCTS" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_SHARED_REVALUATION_0" userGroupId="BOSS_ACCOUNTING_GL" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_SHARED_REVALUATION_1" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+    </artifactGroups>
+
+    <!-- Shared Mantle permissions; launcher and organization scope remain separate. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_COST_ESTIMATE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_COST_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRICE_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="SUPPLIER_PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="SUPPLIER_PRICE_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_CATALOG_ADMIN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_COST_READ" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_COST_ESTIMATE" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_COST_ESTIMATE" userPermissionId="PRODUCT_COST_ESTIMATE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_COST_APPROVE" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_COST_APPROVE" userPermissionId="PRODUCT_COST_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_PRICE_READ" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_PRICE_EDIT" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_PRICE_EDIT" userPermissionId="PRICE_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_READ" userPermissionId="SUPPLIER_PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_EDIT" userPermissionId="SUPPLIER_PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_EDIT" userPermissionId="SUPPLIER_PRICE_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_READ" userPermissionId="ACCOUNTING_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_READ" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_GL" userPermissionId="ACCOUNTING_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_GL" userPermissionId="ACCOUNTING_GL_POST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_GL" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_READ" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_METHOD" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_METHOD" userPermissionId="METHOD_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userPermissionId="METHOD_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userPermissionId="METHOD_RESOURCES" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="METHOD_COST_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_RESOURCES" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_COST_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_COST_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_STOCK_PLANNER" userPermissionId="STOCK_POLICY_PLAN"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_MANAGER" userPermissionId="STOCK_POLICY_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_MANAGER" userPermissionId="STOCK_POLICY_MANAGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="STOCK_POLICY_PLAN"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="STOCK_POLICY_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_POLICY_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_POLICY_MANAGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_PLANNER" userPermissionId="STOCK_POLICY_PLAN" fromDate="0"/>
+    <!-- Warehouse users read their organization's catalog: product names on stock, and scans through
+        resolve#ScannedProduct (impl-warehouse F56); the Products app stays closed to them -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE" userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <!-- Warehouse P1: the Mantle permissions the warehouse services check, each to its capability group and all to the
+        administrator. STOCK_POLICY_PLAN and STOCK_POLICY_MANAGE are above; financial read is Accounting's ACCOUNTING_VIEW. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_RECEIVE" userPermissionId="STOCK_RECEIVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ISSUE" userPermissionId="STOCK_ISSUE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_MOVE" userPermissionId="STOCK_MOVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADJUST" userPermissionId="STOCK_ADJUST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_COUNT" userPermissionId="STOCK_COUNT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_PICK" userPermissionId="SHIPMENT_PICK" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_PACK" userPermissionId="SHIPMENT_PACK" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_SHIP" userPermissionId="SHIPMENT_SHIP" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_INSPECT" userPermissionId="QUALITY_INSPECT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_COUNT_REVIEWER" userPermissionId="STOCK_COUNT_REVIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_PICK_SUPERVISOR" userPermissionId="SHIPMENT_LOAD_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="FACILITY_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="QUALITY_VERIFY"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="QUALITY_DISPOSE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="QUALITY_TEMPLATE_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="LOT_EXPIRY_EXTEND"
+            fromDate="0"/>
+    <!-- Warehouse P13: the shipping manager ships; carrier methods and gateway bindings (Carriers), shared by every
+        organization, are the Warehouse administrator's (P13 review B7) -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_SHIPPING_MANAGER" userPermissionId="SHIPMENT_SHIP"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPPING_CARRIER_EDIT"
+            fromDate="0"/>
+    <!-- the administrator works in its own organizations' facilities; every organization's is ADMIN's alone
+        (FACILITY_ALL_ORGANIZATIONS, 15-seed-initial/Access.xml; the owner's call of Nov 19, 2026, SEC-BAP-86) -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_RECEIVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_ISSUE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_MOVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_ADJUST" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_COUNT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_COUNT_REVIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="LOT_EXPIRY_EXTEND" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_PICK" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_LOAD_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_PACK" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_SHIP" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="FACILITY_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_INSPECT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_VERIFY" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_DISPOSE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT" fromDate="0"/>
+    <!-- Manufacturing P1 (impl-manufacturing §2): the Mantle permissions the production, planning and quality services check,
+        each to its capability group and all to the administrator. PRODUCTION_VIEW is every Manufacturing group's but the plant
+        display's, and METHOD_VIEW the new groups' (Products P9 granted it to the method groups and _COST, with the method and
+        cost permissions, F22). STOCK_ISSUE stays Warehouse's grant and ACCOUNTING_VIEW Accounting's. Later phases append
+        their grants below. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_READ" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_METHOD" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userPermissionId="PRODUCTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" userPermissionId="METHOD_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="METHOD_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="METHOD_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="PRODUCTION_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="SUPPLY_PLAN_RUN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="PRODUCTION_SCHEDULE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="PRODUCTION_OPERATE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="PRODUCTION_SUPERVISE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="PRODUCTION_COST_REVIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userPermissionId="PRODUCTION_POLICY_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" userPermissionId="QUALITY_INSPECT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="QUALITY_VERIFY"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="QUALITY_DISPOSE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT"
+            fromDate="0"/>
+    <!-- the administrator: every production and quality permission, and every organization's plants (impl-manufacturing §4),
+        in Mantle's guards too, as BOSS_WAREHOUSE_ADMIN -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_PLAN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_SCHEDULE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_OPERATE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_SUPERVISE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_COST_REVIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_POLICY_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="SUPPLY_PLAN_RUN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_INSPECT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_VERIFY" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_DISPOSE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT"
+            fromDate="0"/>
+    <!-- the administrator works in its own organizations' plants; every organization's is ADMIN's alone (FACILITY_ALL_ORGANIZATIONS;
+        the owner's call of Nov 19, 2026, SEC-BAP-86) -->
+</entity-facade-xml>

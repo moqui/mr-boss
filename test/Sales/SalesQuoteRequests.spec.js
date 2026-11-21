@@ -6,7 +6,7 @@
 // product, Conversation and Files), its record link under Sales, and its "not available" for another organization's rep and in
 // Commons' requests for its own rep; RFQs' one html render (the rep's requests
 // with the mailed one in East's queue, the saved lists, New request). The rules are Mantle's SalesQuoteRequests; the demo requests are
-// data/BossZSalesDemoData.xml's P8 block.
+// data/demo/70Sales.xml's P8 block.
 // Run: ./moq test mr-boss --spec SalesQuoteRequests
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, system, page} = lib

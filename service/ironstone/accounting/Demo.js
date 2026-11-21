@@ -1,4 +1,4 @@
-// The Accounting demo records for BOSS_ACCT_ORG (BossZAccountingDemoData.xml), made once by fixed ID: a draft invoice,
+// The Accounting demo records for BOSS_ACCT_ORG (demo/56Accounting.xml), made once by fixed ID: a draft invoice,
 // bill and payment, a draft and a posted journal entry, the payables demo (a supplier on terms, a bill awaiting approval,
 // a bill on hold, an approved purchase order), the matching demo (a match policy and two bills against a received order),
 // a sale with a return waiting for settlement, the organization's adoption of the posting guard, dimensions, forward
@@ -8,8 +8,8 @@
 // commitment). It is
 // not a Ziziwork organization, so the adoption does not reach Mantle's demo
 // flows, which post for ORG_ZIZI_RETAIL (rolled up to ORG_ZIZI_CORP) directly. The Billing and Supplier apps' demo is for
-// ORG_ZIZI_RETAIL (portal(), BossZPortalDemoData.xml), and the accounting setup demo is for BOSS_ACCT_NEWCO (setupDemo(),
-// BossZSetupDemoData.xml).
+// ORG_ZIZI_RETAIL (portal(), demo/64AccountingPortal.xml), and the accounting setup demo is for BOSS_ACCT_NEWCO (setupDemo(),
+// demo/71AccountingSetup.xml).
 const policy = ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
 const organizationPartyId = "BOSS_ACCT_ORG"
 
@@ -1622,7 +1622,7 @@ function budgets(currency) {
 // The PASS Billing and Supplier apps for ORG_ZIZI_RETAIL (impl-accounting P18): a published site with their mounts on
 // portal.zizi.localhost, the organization's hosted test gateway for invoice payment, an invoice to JoeDist and a purchase
 // order from ZiddlemanInc with their link tokens (PORTAL_TOKENS, documented in AccountingImplementation.md; this runs
-// only from the demo data, BossZPortalDemoData.xml), and a contact of each, invited through invite#Contact and redeemed,
+// only from the demo data, demo/64AccountingPortal.xml), and a contact of each, invited through invite#Contact and redeemed,
 // as PASS public accounts (demo password moqui).
 const PORTAL_TOKENS = {
     invoice: "ZiziPortalDemoInvoicePayLink000000000000000001",

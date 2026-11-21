@@ -1,5 +1,5 @@
 // The Comms Inbox (screen/Comms/Inbox/Mail.xml and Mail.qvue, service/ironstone/comms/InboxServices.xml, impl-drawers-commons.md M5b):
-// the JSON transitions the client calls under the Comms app root, as john.doe, on the mail demo (data/BossMailDemoData.xml,
+// the JSON transitions the client calls under the Comms app root, as john.doe, on the mail demo (data/demo/20FilesKnowledgeAndMail.xml,
 // MailDemoServices.load#MailDemo, loaded again here so this spec sees it as loaded whatever ran before). The rail data; each
 // view over both stores (Unified, flagged, snoozed, scheduled, drafts, sent, archive, spam, outbox, the Internal account,
 // comments, a folder, a label, a mailbox); the search line with its operators over both stores; the thread of the reading

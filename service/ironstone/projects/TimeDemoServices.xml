@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The time demo of IronStone Projects (impl-projects.md P6a): data/BossProjectsDemoDataTime.xml calls load#TimeDemo after the
+<!-- The time demo of IronStone Projects (impl-projects.md P6a): data/demo/33ProjectTime.xml calls load#TimeDemo after the
     support desk project SUPP. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
@@ -48,7 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
             const account = (userId) => ec.entity.find('moqui.security.UserAccount').condition('userId', userId).disableAuthz().one()
             if (!account(ids.john) || !account(ids.joe) || !account(ids.bob)) { ec.logger.warn('The time demo needs john.doe, joe.developer and bob.developer; nothing loaded'); return }
             if (!ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'SUPP-1').disableAuthz().one()) {
-                ec.logger.warn('The time demo needs the project SUPP (BossProjectsDemoDataTime.xml); nothing loaded'); return }
+                ec.logger.warn('The time demo needs the project SUPP (demo/33ProjectTime.xml); nothing loaded'); return }
             const nowMs = Date.now()
             const addDays = (text, days) => { const d = new Date(text + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().substring(0, 10) }
             // as a demo user at a moment (never later than now)

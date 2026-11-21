@@ -1,0 +1,434 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="seed-initial">
+    <!-- impl-people P11 (design-people §7 LeavePolicies, LeavePolicyDetail, LeaveAllocations and LeaveBalances, §1.2, §1.4): HR's
+        leave editors (policies, a policy's detail and allocations) under Time & leave rather than Settings, as Holidays (the user's
+        call of Nov 11 put HR's own editors out of Settings): denied to the root user group, opened to the HR officers (ALWAYS) and to
+        the People administrator and ADMIN through their ALWAYS on the root. Leave balances are HR's and the managers' (an HR
+        reader's employers' employees, a manager's live reports, balances alone), denied to the root user group and to self-service.
+        Mantle's LeaveServices check PEOPLE_HR_VIEW, PEOPLE_HR_EDIT, PEOPLE_TEAM_VIEW and PEOPLE_SELF_SERVICE and the employer or line
+        again. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE" description="People leave policies and allocations">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/(LeavePolicies|LeavePolicyDetail|LeaveAllocations)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <!-- a self-service employee is not in the root user group; denied here too, so a grant of the Time area to them (their own
+            time and leave) never opens HR's editors -->
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_DENY_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE_BALANCES" description="People leave balances">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/LeaveBalances.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <!-- P11's review: the Time area is a self-service employee's by its inheritable ALLOW (BOSS_PPL_TIME, P10), so Leave
+            balances is denied to them here too; their own balances are SelfService's (get#MyBalances) -->
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_BALANCES_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- P11: an employee's own leave balances, on SelfService under either root (its own screen grant, BOSS_PPL_SELF, is
+        non-inheritable, so the service it calls needs its own) and as the Assistant's tool: get#MyBalances, which takes no party and
+        answers the caller's own employments alone (PEOPLE_SELF_SERVICE) -->
+    <artifactGroups artifactGroupId="BOSS_PPL_LEAVE_SELF" description="People own leave balances">
+        <artifacts artifactName="mantle.humanres.LeaveServices.get#MyBalances" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <!-- P12: SelfService's My leave requests card (find#Requests answers a self-service employee their own alone) -->
+        <artifacts artifactName="mantle.humanres.LeaveServices.find#Requests" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_LEAVE_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- P11 (design-people §1.4 Assist: a self-scope read no screen of the Assistant's covers; exposeMcp N, as no HR service is
+        offered to MCP): the user's own leave balances. The tool is get#MyBalances, the self-scope form of get#Balances, since a tool's
+        parameters are the model's to fill and get#Balances answers an HR officer's or a manager's question about other people. -->
+    <moqui.agent.AgentToolExposure toolName="people_my_leave_balances" serviceName="mantle.humanres.LeaveServices.get#MyBalances"
+            title="My leave balances"
+            description="get#MyBalances: the signed-in user's own leave balances (never anyone else's), for each of their employments and leave types: the policy, what was granted, accrued, taken, expired and adjusted, the balance, what is pending and what is available, in days or hours; narrow by leaveTypeEnumId or give asOfDate for a past or future date. No leave reason is returned."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <!-- impl-people P12 (design-people §7 LeaveRequests and LeaveRequestDetail, §13 TeamCalendar, §15): Leave requests, a request's
+        detail and the team calendar are under Time & leave, so they open by its grants as they stand (every People user through the
+        root; a self-service employee by BOSS_PPL_TIME's inheritable ALLOW), with no group of their own: what each user reads, asks,
+        decides and sees on the calendar is Mantle's LeaveServices' check (the person, their manager, an approver of the step waiting,
+        HR of the employer). Leave to approve (Mantle's PeopleLeaveApproval topic) and the person's decision notice
+        (PeopleLeaveDecision) open the request, decided there, from People's Approvals or from the notification tray. -->
+    <moqui.security.user.NotificationTopic topic="PeopleLeaveApproval"
+            linkTemplate="/qapps/People/Time/LeaveRequestDetail?leaveRequestId=${leaveRequestId}"/>
+    <moqui.security.user.NotificationTopic topic="PeopleLeaveDecision"
+            linkTemplate="/qapps/People/Time/LeaveRequestDetail?leaveRequestId=${leaveRequestId}"/>
+    <!-- impl-people P13 (design-people §6 Attendance and TimeImport, §3 SelfService's Clock, §1.4 Quick create): Attendance and the
+        Clock in screen are under Time & leave, so they open by its grants as they stand (every People user through the root; a
+        self-service employee by BOSS_PPL_TIME's inheritable ALLOW), with no group of their own: what each user reads, corrects,
+        decides and clocks is Mantle's AttendanceServices' check (the person, their manager, an approver of the step waiting, HR of
+        the employer). Time import is HR's own (BOSS_PPL_TIME_IMPORT): denied to the root user group and to self-service, opened to the
+        HR officers (ALWAYS) and to the People administrator and ADMIN through their ALWAYS on the root; Mantle checks PEOPLE_IMPORT,
+        PEOPLE_HR_VIEW, PEOPLE_HR_EDIT and the employer again. An attendance correction to approve (Mantle's PeopleAttendanceApproval
+        topic) opens the day on Attendance, decided there, from People's Approvals or from the notification tray. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_TIME_IMPORT" description="People time and attendance import">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/TimeImport.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_IMPORT_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_TIME_IMPORT_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_TIME_IMPORT_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- P13: an employee's own clock on SelfService under either root (its own screen grant, BOSS_PPL_SELF, is non-inheritable, so its
+        clock transition and the services it calls need their own): get#MyClock and record#Punch take no party and answer the caller's
+        own employments alone (PEOPLE_SELF_SERVICE). P30 review (the user's call of Nov 12, 2026; F28's pattern): the worker's own
+        clocking badge PIN, set and changed on SelfService (setMyPin; get#MyKioskBadges and set#MyKioskPin take no party and admit the
+        caller's own badge alone) -->
+    <artifactGroups artifactGroupId="BOSS_PPL_CLOCK_SELF" description="People own clock">
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/clock" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleSelfService.xml/setMyPin" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.AttendanceServices\.(get#MyClock|record#Punch|get#MyKioskBadges|set#MyKioskPin)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_CLOCK_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleAttendanceApproval"
+            linkTemplate="/qapps/People/Time/Attendance?attendanceDayId=${attendanceDayId}"/>
+    <!-- impl-people P14 (design-people §6 ShiftRoster, §3 SelfService, §13 TeamCalendar): the Shift roster is HR's and the managers'
+        (BOSS_PPL_SCHEDULES above: its screens are in that group's pattern), denied to the root user group and to self-service; what
+        each rosters is Mantle's ScheduleServices' check (a manager their live reports at the line's employers, an HR editor the
+        employer's employees). A worker's published shifts are on the team calendar (the time area's grant opens it and its
+        transitions to every People user and a self-service employee) and on SelfService, whose own grant is non-inheritable, so its
+        call of get#MyShifts (no party: the caller's own alone) needs its own row here. The worker's notice (Mantle's
+        PeopleShiftChange) opens the team calendar on the first day it names. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_SHIFTS_SELF" description="People own shifts">
+        <artifacts artifactName="mantle.humanres.ScheduleServices.get#MyShifts" artifactTypeEnumId="AT_SERVICE" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_SHIFTS_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleShiftChange" linkTemplate="/qapps/People/Time/TeamCalendar?date=${firstDay}"/>
+    <!-- impl-people P15 (design-people §9 ExpenseClaims, ExpenseClaimDetail and EmployeeAdvances, §13 InvoiceDetail, §1.4 Quick
+        create; design-accounting §5 ExpensePosting): Expenses (People/Expenses: Expense claims, a claim's detail and print, Advances)
+        is every People user's through the root, and a self-service employee's without the launcher by this inheritable ALLOW on the
+        area (as the time area's, BOSS_PPL_TIME), to claim their own expenses and ask their own advances; what each user reads,
+        changes and decides is Mantle's ExpenseServices' check (the claimant, their manager, an approver of the step waiting, a holder
+        of PEOPLE_EXPENSE_MANAGE at the employer), so the grant opens nothing else of People. Payroll's InvoiceDetail (an expense
+        claim's invoice for a reader of the claim who opens Payroll) is under Payroll's grant as it stands (BOSS_PPL_PAYROLL). An expense claim to approve (Mantle's
+        PeopleExpenseApproval topic) opens the claim, an advance to approve (PeopleAdvanceApproval) the advances to decide; each is
+        decided there, from People's Approvals or from the notification tray. Accounting's Expense posting lists a claim once its
+        business approval is done, and an approved advance as a bill to approve, which a payment run pays; it applies advances under
+        its own grants (PAYMENT_EDIT, which Mantle checks). -->
+    <artifactGroups artifactGroupId="BOSS_PPL_EXPENSES" description="People expense claims and advances, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Expenses.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_EXPENSES_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- PEOPLE_EXPENSE_MANAGE (the user's call, impl-people §4, Nov 12, 2026): every expense claim and advance of the user's
+        employers, and acting for an employee (a claim made, changed, submitted or cancelled, an advance asked for them), to HR and to
+        Accounting's payables group (BOSS_ACCOUNTING_AP, which holds Expense posting), each in its capability bundle -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_EXPENSE_MANAGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="PEOPLE_EXPENSE_MANAGE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_HR" userPermissionId="PEOPLE_EXPENSE_MANAGE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="PEOPLE_EXPENSE_MANAGE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.user.NotificationTopic topic="PeopleExpenseApproval"
+            linkTemplate="/qapps/People/Expenses/ExpenseClaimDetail?invoiceId=${invoiceId}"/>
+    <moqui.security.user.NotificationTopic topic="PeopleAdvanceApproval"
+            linkTemplate="/qapps/People/Expenses/EmployeeAdvances?show=decide"/>
+    <!-- impl-people P18 (design-people §10 SkillsMatrix and Qualifications, §1.2; PE-14): Skills & training (People/Development) is every
+        People user's through the root, and a self-service employee without the launcher opens it by this inheritable ALLOW on the area
+        (as Time & leave, BOSS_PPL_TIME), for their own qualifications: Mantle's DevelopmentServices answer them their own alone
+        (BOSS_PPL_DEVELOPMENT). The skills matrix and its terminal twin are development's, HR's and the managers' (the readers
+        get#SkillsMatrix answers): denied to the root user group and to self-service, opened to BOSS_PEOPLE_DEVELOP, BOSS_PEOPLE_HR and
+        BOSS_PEOPLE_MANAGER (ALWAYS, as the working schedules) and to the People administrator and ADMIN through the root's ALWAYS
+        (BOSS_PPL_SKILLS). A qualification's files are on its own content host (PartyQualification, the person's and HR's), whose panel
+        is People's RecordFiles; the person's expiry notice (Mantle's QualificationExpiring) opens their qualifications. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_DEVELOPMENT" description="People skills and training, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Development.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_DEVELOPMENT_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_SKILLS" description="People skills matrix">
+        <artifacts artifactName="component://mr-boss/screen/People/Development/SkillsMatrix(Tui)?\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_HR" userGroupId="BOSS_PEOPLE_HR" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_SKILLS_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- P18: the record files panel for a self-service employee without the launcher, so they attach a certificate to their own
+        qualification under People (People/RecordFiles; the People root's check serves People's hosts alone, and get#RecordLinkInfo
+        shows a qualification's files to the person and HR only). The panel's location is the one Commons mounts, which every BOSS
+        user opens there already: what it shows is decided per record, so the grant reaches no record Commons' panel does not. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_FILES_SELF" description="People record files for self-service employees">
+        <artifacts artifactName="component://mr-boss/screen/Shared/RecordFiles.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_FILES_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="QualificationExpiring"
+            linkTemplate="/qapps/People/Development/Qualifications?show=mine&amp;partyQualificationId=${partyQualificationId}"/>
+    <!-- impl-people P17 (design-people §5 OfferDetail, §15 the letters): an offer of employment to approve (Mantle's PeopleOfferApproval
+        topic) opens OfferDetail, which the Staffing area opens to every People user (Mantle's RecruitingServices check who reads an
+        offer: its recruiters, HR and payroll readers of the employer, and the approver of the step waiting). An employment change's
+        lifecycle letter print (Employees/EmploymentLetter) is HR's, with the hire and change wizards (BOSS_PPL_EMPLOYMENT); Mantle's
+        PeopleServices check PEOPLE_HR_VIEW and the employer again. -->
+    <moqui.security.user.NotificationTopic topic="PeopleOfferApproval"
+            linkTemplate="/qapps/People/Staffing/OfferDetail?employmentOfferId=${employmentOfferId}"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_PPL_EMPLOYMENT"
+            artifactName="component://mr-boss/screen/People/Employees/EmploymentLetter.xml" artifactTypeEnumId="AT_XML_SCREEN"
+            inheritAuthz="Y"/>
+    <!-- impl-people P19 (design-people §10 Training and TrainingDetail): Training, a session's detail and a completed place's
+        certificate are under Skills & training (People/Development), so they open as the area does: every People user through the
+        root, a self-service employee by BOSS_PPL_DEVELOPMENT (the sessions of their employers, their own places, results and
+        certificates, and the sessions they train); what each reads and does is Mantle's DevelopmentServices' check. A place to
+        approve (Mantle's PeopleTrainingApproval topic) opens the session, where it is decided, as from People's Approvals or the
+        notification tray. -->
+    <moqui.security.user.NotificationTopic topic="PeopleTrainingApproval"
+            linkTemplate="/qapps/People/Development/TrainingDetail?personTrainingId=${personTrainingId}"/>
+    <!-- impl-people P19 review: the person's decision notice (Mantle's PeopleTrainingDecision) opens their place on the session.
+        Assessment forms (People/Development/AssessmentForms, the survey builder with People's Development mount) are the learning
+        administrator's: opened to BOSS_PEOPLE_DEVELOP (ALWAYS, as the skills matrix), denied to the root user group and to
+        self-service, the People administrator and ADMIN through the root's ALWAYS; Mantle's FormDefinitionServices check the
+        training assessment purpose's edit permission (PEOPLE_DEVELOP_EDIT or PEOPLE_CONFIGURE) and the employer again. -->
+    <moqui.security.user.NotificationTopic topic="PeopleTrainingDecision"
+            linkTemplate="/qapps/People/Development/TrainingDetail?personTrainingId=${personTrainingId}"/>
+    <artifactGroups artifactGroupId="BOSS_PPL_ASSESSMENT_FORMS" description="People training assessment forms">
+        <artifacts artifactName="component://mr-boss/screen/People/Development/AssessmentForms.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_ASSESSMENT_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- impl-people P21 (design-people §4 Grievances, §13 RequestDetail): Grievances (People/Employees/Grievances) is every People user's
+        through the root, and a self-service employee's without the launcher by this inheritable ALLOW (as their Time & leave), to raise
+        a concern and follow their own cases; a case's RequestDetail (People/Employees/RequestDetail, the shared request detail's
+        People branch) and its Chatter panel are theirs by the same group, as their record files are (BOSS_PPL_FILES_SELF): both
+        locations are those Commons mounts, which every BOSS user opens there already, and what they show is decided per record
+        (Mantle's get#PeopleCase and get#RecordLinkInfo admit a case's people alone), so the grant reaches no record Commons' does not.
+        A case handler holds PEOPLE_CASE_HANDLE (BOSS_PEOPLE_CASE) and reads only the cases they are assigned. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_CASES_SELF" description="People grievances for self-service employees">
+        <artifacts artifactName="component://mr-boss/screen/People/Employees/Grievances.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/RequestDetail.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/Chatter.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_CASES_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleCaseUpdate" linkTemplate="/qapps/People/Employees/RequestDetail?requestId=${requestId}"/>
+    <!-- impl-people P20 (design-people §11, §1.2): Reviews & goals (People/Performance: Reviews, Goals, a review's detail and its
+        release print) is every People user's through the root, and a self-service employee's without the launcher by this inheritable
+        ALLOW on the area (as Skills & training, BOSS_PPL_DEVELOPMENT), for their own reviews and goals and the feedback asked of them:
+        Mantle's ReviewServices answer each user what they may read. Review cycles and Review forms (the survey builder with People's
+        Performance mount) are the review administrator's: opened to BOSS_PEOPLE_DEVELOP (ALWAYS), denied to the root user group and
+        to self-service, the People administrator and ADMIN through the root's ALWAYS (BOSS_PPL_REVIEW_ADMIN). A review's files are on
+        its own content host (PerformanceReview: the reviewer's, development's and, once released, the person's), whose panel is
+        People's RecordFiles; a self-service employee reaches it by BOSS_PPL_FILES_SELF. A review's finalizing to approve (Mantle's
+        PeopleReviewStep) and a review step given or a review released (PeopleReviewUpdate) open the review. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_PERFORMANCE" description="People reviews and goals, for self-service employees too">
+        <artifacts artifactName="component://mr-boss/screen/People/Performance.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_PERFORMANCE_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PPL_REVIEW_ADMIN" description="People review cycles and review forms">
+        <artifacts artifactName="component://mr-boss/screen/People/Performance/Review(Cycles|Forms)\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_REVIEW_ADMIN_DEVELOP" userGroupId="BOSS_PEOPLE_DEVELOP" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_REVIEW_ADMIN_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_REVIEW_ADMIN_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeopleReviewStep"
+            linkTemplate="/qapps/People/Performance/ReviewDetail?performanceReviewId=${performanceReviewId}"/>
+    <moqui.security.user.NotificationTopic topic="PeopleReviewUpdate"
+            linkTemplate="/qapps/People/Performance/ReviewDetail?performanceReviewId=${performanceReviewId}"/>
+    <!-- impl-people P22 review (the user's calls of Nov 12, 2026): publishing a pay component or a pay structure to approve (Mantle's
+        PeoplePayrollConfigApproval) opens it under Payroll, where its approver (a payroll approver who did not draft it) decides;
+        the Payroll area is the payroll groups', the approver's included -->
+    <moqui.security.user.NotificationTopic topic="PeoplePayrollConfigApproval"
+            linkTemplate="/qapps/People/Payroll/${payrollStructureId ? 'PayStructureDetail?payrollStructureId=' + payrollStructureId : 'PayComponentDetail?payrollComponentId=' + payrollComponentId}"/>
+    <!-- impl-people P24 (design-people §6 HoursForPay, §8 PayAdjustments, §12 ApprovalPolicies): Hours for pay under Time & leave,
+        payroll's (the payroll operator and approver) and the managers' (their reports' hours, read only; Mantle's
+        PayrollInputServices get#Reconciliation answers a manager their reports alone and never an amount), denied to the root user
+        group and to self-service as the working schedules are; Pay adjustments is under Payroll's grant (BOSS_PPL_PAYROLL). A pay
+        adjustment to approve (Mantle's PeoplePayAdjustmentApproval) opens Pay adjustments' To decide, where its approver (a payroll
+        approver who neither made nor changed it) decides. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_HOURS_FOR_PAY" description="People hours for pay">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/HoursForPay.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PPL_HOURS_PAYROLL" userGroupId="BOSS_PEOPLE_PAYROLL" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_HOURS_APPROVER" userGroupId="BOSS_PEOPLE_PAYROLL_APPROVE" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_HOURS_MANAGER" userGroupId="BOSS_PEOPLE_MANAGER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+        </authz>
+        <authz artifactAuthzId="BOSS_PPL_HOURS_DENY" userGroupId="BOSS_PEOPLE" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PPL_HOURS_SELF" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PeoplePayAdjustmentApproval" linkTemplate="/qapps/People/Payroll/PayAdjustments?show=decide"/>
+    <!-- impl-people P30 (design-people §6 ClockingKiosk, §1.4 Devices, §15 the badge; impl-people F55; owner contract with Admin,
+        impl-admin P18): the clocking kiosk on Admin's shared devices. The route group PEOPLE_CLOCKING (owner People, no fixed
+        parameter, homePath the kiosk's page, a week's idle timeout, a year's lifetime) names BOSS_DEV_PPL_CLOCKING, the device's
+        allow-list, which grants nothing: ClockingKiosk's render, its punch transition and the scanResolve transition its scan-input
+        asks, each by name and not inheritable, as BOSS_DEV_INS_WALL names WallDisplay's. The /qapps shell, People's other screens and
+        the directory are not members (impl-admin F285): the page needs none of them. The idle timeout stays a week: the page reloads
+        itself every half hour when idle, so a kiosk switched on stays seen and one switched off or replaced ends. -->
+    <moqui.security.ArtifactGroup artifactGroupId="BOSS_DEV_PPL_CLOCKING" description="Shared device route group: People clocking kiosk"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_PPL_CLOCKING" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_PPL_CLOCKING" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml/punch"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_PPL_CLOCKING" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml/scanResolve"/>
+    <moqui.security.DeviceRouteGroup routeGroupId="PEOPLE_CLOCKING" description="People clocking kiosk" ownerName="People"
+            artifactGroupId="BOSS_DEV_PPL_CLOCKING" homePath="/apps/People/Time/ClockingKiosk" defaultIdleMinutes="10080"
+            defaultLifetimeDays="365" sequenceNum="20"/>
+    <!-- P30: what a clocking kiosk's display account holds (impl-people F55; Insights' BOSS_INSIGHTS_DISPLAY is the pattern). The People
+        root is the launcher group's (BOSS_PEOPLE), which opens every People screen and the directory, so a display account is not in
+        it: it holds this bundle alone, which opens the kiosk's page, its two transitions and the two services they call, by name
+        and not inheritable, with the organization filters, and nothing else of People even if a route group were wider (the root
+        calls no get#SharedContext for a device's request, screen/People.xml), and PEOPLE_KIOSK_PUNCH, which Mantle's
+        record#KioskPunch asks beside the device's own request. It reaches no directory, payslip or search. A registered bundle with
+        no delegable permission: its permission is no sealed one, so ADMIN_ACCESS_MANAGE alone assigns it (Admin's delegation rule,
+        Access.js delegable and proposalBundles), and the identity operator proposes it when making the display account
+        (create#DisplayAccount's grant proposal). Meant for display accounts: a person given it opens the page, whose punches
+        Mantle refuses outside a registered device. -->
+    <moqui.security.UserGroup userGroupId="BOSS_PEOPLE_KIOSK" description="People clocking kiosk (display accounts)"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PEOPLE_KIOSK" userPermissionId="PEOPLE_KIOSK_PUNCH" fromDate="0"/>
+    <artifactGroups artifactGroupId="BOSS_PPL_KIOSK" description="People: the clocking kiosk's page alone">
+        <artifacts artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml/punch" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/People/Time/ClockingKiosk.xml/scanResolve" artifactTypeEnumId="AT_XML_SCREEN_TRANS"
+                inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.AttendanceServices\.(record#KioskPunch|resolve#KioskBadge)" artifactTypeEnumId="AT_SERVICE"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_KIOSK_DISPLAY" userGroupId="BOSS_PEOPLE_KIOSK" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PEOPLE_KIOSK" appName="People" description="People clocking kiosk: records the punches of workers by badge and PIN on a shared device (display accounts only)" scopeDependency="organization; each worker by badge and PIN" sequenceNum="1210"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PEOPLE_KIOSK" userPermissionId="PEOPLE_KIOSK_PUNCH" capabilityKindEnumId="CpkEdit"/>
+    <!-- P30: a badge's print (Employees/BadgePrint) is HR's, with the hire and change wizards (BOSS_PPL_EMPLOYMENT), as the letters'
+        print is; Mantle's print#KioskBadge checks PEOPLE_HR_EDIT, the employer and the issuer again -->
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_PPL_EMPLOYMENT"
+            artifactName="component://mr-boss/screen/People/Employees/BadgePrint.xml" artifactTypeEnumId="AT_XML_SCREEN"
+            inheritAuthz="Y"/>
+    <!-- People follow-up 4 (the user's call of Nov 12, 2026): the worker's notice that their clocking badge is stopped opens their
+        SelfService under Commons (every self-service employee's mount), where My clocking badge shows it stopped until HR resets
+        its PIN. Only the link is set here; the topic is Mantle's. -->
+    <moqui.security.user.NotificationTopic topic="PeopleMyKioskBadgeDisabled" linkTemplate="/qapps/Commons/People/SelfService"/>
+    <!-- impl-people P25 (design-people §8 PayRuns, PayRunDetail, §8.2): pay runs under Payroll's grant (BOSS_PPL_PAYROLL: the payroll
+        operator prepares, the payroll approver reads and decides). A pay run to approve (Mantle's PayrollRunApproval) opens its
+        PayRunDetail at the Approval step, where its approver (a payroll approver who neither selected nor calculated it) decides. -->
+    <moqui.security.user.NotificationTopic topic="PayrollRunApproval"
+            linkTemplate="/qapps/People/Payroll/PayRunDetail?payrollRunId=${payrollRunId}"/>
+    <!-- impl-people P26 (design-people §8 Payslips, PayslipDetail, §3 SelfService, §1.4 Assist, §15; F28's pattern): Payslips and
+        PayslipDetail are under Payroll's grant (BOSS_PPL_PAYROLL: the payroll operator issues and corrects, the payroll approver reads).
+        An employee's own issued payslips: a non-inheritable ALLOW on the shared MyPayslip screen (one location for both mounts,
+        People/MyPayslip and Commons/People/MyPayslip), its statement's download, and the Mantle services it and SelfService's My
+        payslips call, each of which admits the caller's own issued slips alone (find#Payslips with mine, get#MyPayslip, which takes no
+        party). Nothing of payroll opens to them. The PayslipIssued notice (Mantle's topic, direct only, no amount) opens the slip under
+        Commons, every self-service employee's mount. -->
+    <artifactGroups artifactGroupId="BOSS_PPL_PAYSLIP_SELF" description="People own payslips for employees">
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyPayslip.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Shared/PeopleMyPayslip.xml/myStatement"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <artifacts artifactName="mantle\.humanres\.PayrollResultServices\.(find#Payslips|get#MyPayslip|get#MyPayslipStatement)" artifactTypeEnumId="AT_SERVICE"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_PPL_PAYSLIP_SELF_EMPLOYEE" userGroupId="BOSS_PEOPLE_SELF" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.user.NotificationTopic topic="PayslipIssued"
+            linkTemplate="/qapps/Commons/People/MyPayslip?payslipId=${payslipId}"/>
+    <!-- P26 (design-people §1.4 Assist: a self-scope read; exposeMcp N, as no HR or payroll service is offered to MCP): the user's own
+        issued payslip for "Explain this payslip". The tool is get#MyPayslip, the self-scope form of get#Payslip, since a tool's
+        parameters are the model's to fill and get#Payslip answers payroll about other people. It returns the person's own amounts to
+        their own session: pay's AI opt-out (the user's call of Nov 12, 2026) keeps amounts out of screens' agent renders and the
+        generic data tool, and this explicit self-only read is the design's own (the user's call of Nov 12, 2026, as built). Its only
+        arguments are a payslipId or legacyKey, each checked as the caller's own (issued, never a preview); it never names where a
+        statement is stored (get#MyPayslipStatement, the screen's download, is no tool: P26 review). -->
+    <moqui.agent.AgentToolExposure toolName="people_my_payslip" serviceName="mantle.humanres.PayrollResultServices.get#MyPayslip"
+            title="My payslip"
+            description="get#MyPayslip: the signed-in user's own issued payslip (never anyone else's, never a preview or one not issued): payslipId's, else the latest. Its employer, period and pay date, each line the payslip shows with its amount, group and how it was worked out (the formula and values, proration, adjustments, rounding), the totals (gross, deductions, the localization's items, net, employer cost), the year to date, the corrections of it that are issued with the net effect, and the inputs it paid (hours, leave, pieces, claims). With a legacyKey from My payslips, the user's own historical pay record as it was recorded."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+</entity-facade-xml>

@@ -14,7 +14,7 @@ const lib = ec.resource.script("component://mr-boss/test/Maintenance/Maintenance
 const {ids, users, asUser, invoke, page} = lib
 const S = "ironstone.maintenance.StackServices."
 const WORK = "mantle.work.effort.WorkEffort"
-// Kenji Arakawa's work phone (BossPeopleDemoData.xml), an employee of Services
+// Kenji Arakawa's work phone (demo/26People.xml), an employee of Services
 const servicesCaller = "+18015550152"
 
 spec({

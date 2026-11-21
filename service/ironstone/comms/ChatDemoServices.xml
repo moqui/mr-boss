@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The chat demo (impl-drawers-commons.md M10): john.doe's rooms, so Comms Chat, the tray's Chat tab and Chatter's Discuss
-    show and test with content. data/BossChatDemoData.xml calls load#ChatDemo. -->
+    show and test with content. data/demo/12CalendarChatAndConsent.xml calls load#ChatDemo. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
     <service verb="load" noun="ChatDemo" authenticate="anonymous-all" allow-remote="false">

@@ -33,7 +33,7 @@ into `warehouse` (capabilities, the selected facility, `sharedLinks`) and sets `
 parts are in `template/WarehouseParts.xml`: the `choices` and `selectFacility` transitions and the `FacilityPicker`
 section.
 
-Groups (data/BossSetupData.xml). `BOSS_WAREHOUSE` is the root user group: its authorization on the root has
+Groups (data/BossSetupData01GroupsAndLaunchers.xml). `BOSS_WAREHOUSE` is the root user group: its authorization on the root has
 `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`, and it covers `ironstone\.warehouse\..*`. `BOSS_WAREHOUSE_ADMIN` has
 every authorization with `MANTLE_ACTIVE_ORG`. Every grant on an area carries the root's filter sets too, since entity filters come from the
 record that authorizes the screen (F59). The capability groups of design-warehouse §1 hold no root authorization of
@@ -58,12 +58,12 @@ authorization for the raw Mantle stock services or the `/mantle` REST paths (F3,
 Picking (with the move group) areas deny `BOSS_WAREHOUSE` and allow their groups (`BOSS_WH_<Area>` artifact groups); a new restricted area
 follows that pattern.
 
-Demo users (BossUsersDemoData.xml, password `moqui`), agents of Ziziwork Retail: `warehouse.receive`, `.inspect`,
+Demo users (demo/42Users.xml, password `moqui`), agents of Ziziwork Retail: `warehouse.receive`, `.inspect`,
 `.issue`, `.move`, `.count`, `.countreview`, `.adjust`, `.pick`, `.picksupervisor`, `.pack`, `.ship`, `.dispatch`,
 `.shippingmanager`, `.planner`, `.manager`, `.quality`, `.facility`, `.integration`, the reader `warehouse.read` (no other
 business launcher) and `warehouse.admin`.
 
-Demo records (BossWarehouseDemoData.xml), over Mantle's ZIRET_WH (ORG_ZIZI_RETAIL):
+Demo records (demo/44Warehouse.xml), over Mantle's ZIRET_WH (ORG_ZIZI_RETAIL):
 
 | Record | Ids |
 | --- | --- |
@@ -82,7 +82,7 @@ Demo records (BossWarehouseDemoData.xml), over Mantle's ZIRET_WH (ORG_ZIZI_RETAI
 | P15 | the transfer demo filter `BOSS_WH_TRF` (30 at ZIRET_WH `01020401`, `BOSS_WH_TRF_STOCK`), 6 of it on `BOSS_WH_SHIP_TRANSFER`; the vendor-custody facility `BOSS_WH_VENDOR` (Retail's, custodian Ziddleman; `V0101`, 3 filters `BOSS_WH_VENDOR_STOCK`); the run `BOSS_WH_RUN` with its coating operation `BOSS_WH_RUN_OP`, the service order `BOSS_WH_SUB_PO` (OrderItemWorkEffort) and the subcontract dispatch `BOSS_WH_SHIP_SUB` (2 filters); the submitted stock request `BOSS_WH_REQ` (4 filters at BOSS_WH_EAST) |
 
 Another organization's records, which Retail's warehouse users never reach: `BOSS_PRD_WH` and its stock
-(BossProductsDemoData.xml), including `BOSS_PRD_FOREIGN_STOCK`, Retail-owned stock in that facility (third-party
+(demo/28Products.xml), including `BOSS_PRD_FOREIGN_STOCK`, Retail-owned stock in that facility (third-party
 facilities are later, impl-warehouse §4).
 
 ## Access contract

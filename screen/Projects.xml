@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- IronStone Projects: root of the app for project managers, software teams, consultants and their clients
-    (design-projects.md §1). Authorized by BOSS_PROJECTS in data/BossSetupData.xml for ADMIN, BOSS_PROJECT_MANAGER and
+    (design-projects.md §1). Authorized by BOSS_PROJECTS in data/BossSetupData02Projects.xml for ADMIN, BOSS_PROJECT_MANAGER and
     BOSS_PROJECT_TEAM, with the managers' screens (WorkItems/Import, Billing, Settings) denied to the team, so their menu
     entries are absent for it (§1.2); and for BOSS_PROJECT_CLIENT, the client contacts (impl-projects.md P10), under the
     BOSS_PROJECT_CLIENT filter set with the internal screens and every write denied (BOSS_PROJECTS_INTERNAL). -->

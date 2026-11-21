@@ -3,7 +3,7 @@
 // operations history with totals by unit, never across units; InventoryValuation's values refused to a Warehouse user
 // without financial read while the quantity reports stay complete, and shown with it; the report index, the exports and
 // the drop-downs; Home's cards, Your work from the Today source and the quantity indicators. The Mantle rules are mr-mantle's
-// WarehouseReports spec. Demo records (BossWarehouseDemoData.xml P17); the financial reader is warehouse.manager made an
+// WarehouseReports spec. Demo records (demo/44Warehouse.xml P17); the financial reader is warehouse.manager made an
 // Accounting reader for one feature.
 const lib = ec.resource.script("component://mr-boss/test/Warehouse/WarehouseSpecLib.js")
 const {ids, asUser, refusal, invoke, page} = lib

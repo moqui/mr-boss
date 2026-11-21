@@ -3,7 +3,7 @@
 // it, each loading it in its best client mode, qvue, its only one; it answers its component, which refreshes in place when the
 // tray asks (shellRefresh) and loads the room view from Comms/Chat (chat-room); the light room list it asks
 // for (chatData with a limit) has john.doe's rooms with their counts; New message finds the direct room there is or makes
-// one; Mark all read clears every count. On the chat demo (data/BossChatDemoData.xml), loaded again here.
+// one; Mark all read clears every count. On the chat demo (data/demo/12CalendarChatAndConsent.xml), loaded again here.
 // Run: ./moq test mr-boss --spec ChatPanel
 const webroot = "component://webroot/screen/webroot.xml"
 const comms = "component://mr-boss/screen/Comms.xml"

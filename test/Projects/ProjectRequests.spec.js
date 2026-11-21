@@ -1,6 +1,6 @@
 // IronStone Projects' requests (impl-projects.md P5; design-projects.md §6 Requests, RequestDetail, RequestIntake, §4
 // ProjectRequests, §12 IntakeSettings) through the screens, with authorization on, on the demo of
-// data/BossProjectsDemoDataRequests.xml: the triage list (its lists and counts, the find, the board), the project's Requests tab
+// data/demo/32ProjectRequests.xml: the triage list (its lists and counts, the find, the board), the project's Requests tab
 // (ProjectDetail tab 6, mounted from Requests/List, so AppStructure does not walk it, impl-projects.md F52) with its Intake box
 // for the managers, the shared RequestDetail in the Projects context (triage moves, edit, assign, set project, make and link a
 // work item, the Work tab), the bulk changes, who sees a project's request (its members; one not on a members-only project

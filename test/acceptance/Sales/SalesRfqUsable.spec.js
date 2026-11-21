@@ -3,7 +3,7 @@
 // of them and a second quote later from the third, through QuoteRequestDetail's transitions; a declined request tells the requester
 // at the address the preview showed; a warranty claim whose decision is a chargeable repair becomes a quote, carrying none of the
 // claim's fault, which Customer Service reads back on the claim. The rules are Mantle's SalesQuoteRequests and the BOSS
-// SalesQuoteRequests; the demo rule and mailbox are data/BossZSalesDemoData.xml's P5 and P8 blocks.
+// SalesQuoteRequests; the demo rule and mailbox are data/demo/70Sales.xml's P5 and P8 blocks.
 // Run: ./moq accept mr-boss --spec SalesRfqUsable
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const cs = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")

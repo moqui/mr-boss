@@ -1,5 +1,5 @@
 // Purchasing's Supplier app demo (impl-purchasing P16): on Accounting's PASS site for ORG_ZIZI_RETAIL (portal.zizi.localhost,
-// BossZPortalDemoData.xml, whose invited ZiddlemanInc contact ziddleman.billing signs in to SupplierHome), an RFQ of Retail's
+// demo/64AccountingPortal.xml, whose invited ZiddlemanInc contact ziddleman.billing signs in to SupplierHome), an RFQ of Retail's
 // with a quote requested of ZiddlemanInc and its QuoteResponse link, and the portal demo's purchase order from ZiddlemanInc
 // with its OrderAcknowledgement link of the order's revision (BillUpload beside it): fixed tokens (SUPPLIER_PORTAL_TOKENS,
 // listed in impl-purchasing P16), as Accounting's PORTAL_TOKENS. Only data loading or a system administrator runs it.

@@ -1,5 +1,5 @@
 // Commons Contacts' Duplicates and Compare (screen/Commons/Contacts/Duplicates.xml, Compare.xml; impl-drawers-commons.md M4;
-// design-drawers-commons.md §6): the demo's duplicate pairs (data/BossDemoData.xml: Pat and Patricia Quinn with the same email and
+// design-drawers-commons.md §6): the demo's duplicate pairs (data/demo/18Commons.xml: Pat and Patricia Quinn with the same email and
 // phone, Quinn Consulting and Quinn Consulting LLC) grouped by reason, each reason's limit, a reason narrowing the list, and Joe
 // Developer's personal contact Sam Secret (with the same email and phone) never in it nor in Compare; Duplicates is for contact
 // admins; Compare and Merge; Not a duplicate (Mantle's PartyNotDuplicate) and Run the scan; an old BOSS not-a-duplicate setting

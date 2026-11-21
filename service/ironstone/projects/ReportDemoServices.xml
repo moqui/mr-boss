@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The reports demo of IronStone Projects (impl-projects.md P9): data/BossProjectsDemoDataTimeReports.xml calls load#ReportDemo after the
+<!-- The reports demo of IronStone Projects (impl-projects.md P9): data/demo/35ProjectReportsAndResources.xml calls load#ReportDemo after the
     billing demo's rates. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
@@ -36,7 +36,7 @@ along with this software (see the LICENSE.md file). If not, see
             const account = (userId) => ec.entity.find('moqui.security.UserAccount').condition('userId', userId).disableAuthz().one()
             if (!account(ids.joe) || !account(ids.bob)) { ec.logger.warn('The report demo needs joe.developer and bob.developer; nothing loaded'); return }
             if (!ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'ACME-1').disableAuthz().one()) {
-                ec.logger.warn('The report demo needs the project ACME (BossProjectsDemoData.xml); nothing loaded'); return }
+                ec.logger.warn('The report demo needs the project ACME (demo/30Projects.xml); nothing loaded'); return }
             if (ec.entity.find('mantle.work.time.TimeEntry').condition('workEffortId', 'ACME-1').disableAuthz().count() > 0) { ec.logger.info('The report demo is already loaded'); return }
             const nowMs = Date.now()
             const addDays = (text, days) => { const d = new Date(text + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().substring(0, 10) }

@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- IronStone Customer Service (design-customer-service §1): the root of the app for service agents, service managers, the
     order desk, return authorizers, knowledge authors and the service administrator. The root user group
-    BOSS_CUSTOMER_SERVICE and the administrator group BOSS_CUSTOMER_SERVICE_ADMIN open it (data/BossSetupData.xml); its areas
+    BOSS_CUSTOMER_SERVICE and the administrator group BOSS_CUSTOMER_SERVICE_ADMIN open it (data/BossSetupData01GroupsAndLaunchers.xml); its areas
     are the files of screen/CustomerService/, in the menu order of design §1 by their default-menu-index:
     1 Home; 2 Cases; 3 Customers; 4 Orders; 5 Returns; 6 Approvals; 7 Availability; 8 Knowledge; 9 Reports; 10 Settings.
     Cases, Orders, Returns and Availability become menu groups holding their lists as their phases build them (P2, P3, P9);
@@ -53,7 +53,7 @@ along with this software (see the LICENSE.md file). If not, see
                 service="ironstone.customerservice.AccessServices.search#Records" sequence="49"/>
         <!-- P2: cases in the palette (search#Records above), a new case for the groups that enter cases (NewCase checks
             caseEdit), the user's own due and overdue cases in Today (in place of Commons' request rows for a case, F9), and
-            the case topics Mantle sends (BossSetupData.xml sets their links to CaseDetail) -->
+            the case topics Mantle sends (BossSetupData05PurchasingAndCustomerService.xml sets their links to CaseDetail) -->
         <quick-create kind="customerServiceCase" label="Case" screen="CustomerService/Cases/NewCase" icon="sym_o_support_agent"
                 sequence="74"/>
         <today-source service="ironstone.customerservice.CaseServices.get#TodayItems" label="Cases"/>
@@ -67,7 +67,7 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P6: the caller's open cases in Comms' ring bar and call (Comms' own provider answers the contacts) -->
         <call-context name="boss.cases" service="ironstone.customerservice.ChannelServices.get#CallContext"/>
         <!-- P9: RMAs in the palette (search#Records), quick create's Request return for the Returns area's groups (NewReturn
-            checks the entry permission), and the return topics Mantle sends (BossSetupData.xml links them to ReturnDetail) -->
+            checks the entry permission), and the return topics Mantle sends (BossSetupData05PurchasingAndCustomerService.xml links them to ReturnDetail) -->
         <quick-create kind="customerServiceReturn" label="Return" screen="CustomerService/Returns/NewReturn"
                 icon="sym_o_assignment_return" sequence="75"/>
         <notification-topic topic="ReturnExceptionApproval"/>

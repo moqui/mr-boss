@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The resources demo of IronStone Projects (impl-projects.md P7): data/BossProjectsDemoDataTimeResources.xml calls load#ResourceDemo
+<!-- The resources demo of IronStone Projects (impl-projects.md P7): data/demo/35ProjectReportsAndResources.xml calls load#ResourceDemo
     after the support desk project SUPP and Ana Designer. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 

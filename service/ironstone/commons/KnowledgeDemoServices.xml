@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The knowledge and notes demo of IronStone Commons M9 (data/BossKnowledgeDemoData.xml calls load#KnowledgeDemo as the
+<!-- The knowledge and notes demo of IronStone Commons M9 (data/demo/20FilesKnowledgeAndMail.xml calls load#KnowledgeDemo as the
     element ironstone.commons.KnowledgeDemoServices.load-KnowledgeDemo): spaces with page trees, links, history and a review, and
     john.doe's notes, written through the wiki services as the demo users so the versions, their notes and authors are real,
     dated over the weeks before the load. -->

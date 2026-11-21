@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     with preview#Hire and keeps the draft in a draft record (Mantle's EmploymentDraft, the HR user's own: store#EmploymentDraft;
     style-guide §3.10, the user's call), so Back loses nothing and a hire left unfinished is resumed when the wizard is opened again
     (or discarded); the draft carries the hire's operation key, so a Hire sent twice answers the first, and is discarded when the
-    hire is made. HR's (BOSS_PPL_EMPLOYMENT, data/BossSetupData.xml): the quick create "Hire employee" and
+    hire is made. HR's (BOSS_PPL_EMPLOYMENT, data/BossSetupData14PeopleAccess.xml): the quick create "Hire employee" and
     the directory's Hire employee open it; Mantle checks PEOPLE_HR_VIEW and PEOPLE_HR_EDIT and the employer again. The account
     request and the onboarding checklist join ConfirmHire with P7. P17: a hire from an accepted offer (OfferDetail's Hire, or
     Identity's accepted offers) starts its draft from the offer and consumes it once. -->

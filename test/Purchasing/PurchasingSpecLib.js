@@ -1,4 +1,4 @@
-// Helpers the Purchasing specs share: the demo ids (data/BossPurchasingDemoData.xml, BossUsersDemoData.xml), the demo users
+// Helpers the Purchasing specs share: the demo ids (data/demo/40Purchasing.xml, demo/42Users.xml), the demo users
 // by group, a block run as a user with artifact authorization on or off, a call's refusal message, a Purchasing page render
 // and the route fixtures the acceptance AppStructure renders. Later phases add their ids, users and routes here.
 const ids = {
@@ -16,10 +16,10 @@ const ids = {
     otherOrganizationId: "ORG_ZIZI_SERVICES",
     // P14a: Retail's warehouse, the facility Replenishment plans
     facilityId: "ZIRET_WH",
-    // P2: Retail's supplier awaiting approval and its blocked one (BossPurchasingDemoData.xml's buying profiles)
+    // P2: Retail's supplier awaiting approval and its blocked one (demo/40Purchasing.xml's buying profiles)
     pendingSupplierId: "BOSS_PUR_SUP_PENDING",
     blockedSupplierId: "BOSS_PUR_SUP_BLOCKED",
-    // P4: Retail's approval policy steps (BossPurchasingDemoData.xml): up to $5,000 one step, from $5,000 two
+    // P4: Retail's approval policy steps (demo/40Purchasing.xml): up to $5,000 one step, from $5,000 two
     approvalPolicyIds: ["BOSS_PUR_APR_SMALL", "BOSS_PUR_APR_LARGE_1", "BOSS_PUR_APR_LARGE_2"],
     // P5: Retail's approved order from Ziddleman, late, with its expected receipt (nothing received)
     receiptOrderId: "BOSS_PUR_PO_RCV",

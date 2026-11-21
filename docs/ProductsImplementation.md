@@ -2,7 +2,7 @@
 
 The Products build covers catalog masters and Product360, taxonomy and features, selected variants, dated sales and supplier prices, stock policy, manufacturing methods, standard estimates, documents and translations, units, packaging, identifiers and labels, durable imports, catalog checks, and authorized outputs.
 
-Business rules and record guards are native Mantle services, including the organization catalog and variant settings, reviewed bulk price changes and stock totals. BOSS owns app capabilities (derived from the Moqui permissions Mantle checks), screen context and forms; its service scripts share `service/ironstone/products/ProductsLib.js`. Mantle boots and tests without BOSS, checks shared Moqui permissions, and has no BOSS group or `ironstone.*` references. BOSS group permission assignments are in `data/BossSetupData.xml`.
+Business rules and record guards are native Mantle services, including the organization catalog and variant settings, reviewed bulk price changes and stock totals. BOSS owns app capabilities (derived from the Moqui permissions Mantle checks), screen context and forms; its service scripts share `service/ironstone/products/ProductsLib.js`. Mantle boots and tests without BOSS, checks shared Moqui permissions, and has no BOSS group or `ironstone.*` references. BOSS group permission assignments are in `data/BossSetupData03CommonsAndPermissions.xml`.
 
 The P8/P9 review decisions are implemented:
 

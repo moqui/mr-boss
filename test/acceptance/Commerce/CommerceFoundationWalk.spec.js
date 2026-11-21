@@ -167,7 +167,7 @@ feature("the demo: POPC_DEFAULT completed, the digital store, and two disabled s
         shop.state == "disabled"
         // Commerce P5 added ZIZI_SHOP's theme preview host
         shop.hosts == ["preview.shop.zizi.localhost", "shop.zizi.localhost"]
-        // Marketing's demo (data/BossZZMarketingDemoData.xml) gives ZIZI_SHOP Retail's Marketing mount
+        // Marketing's demo (data/demo/80Marketing.xml) gives ZIZI_SHOP Retail's Marketing mount
         shop.mounts == ["account:", "billing:ORG_ZIZI_RETAIL", "marketing:ORG_ZIZI_RETAIL", "shop:POPC_DEFAULT", "support:ORG_ZIZI_RETAIL"]
         digitalSite.state == "disabled"
         digitalSite.hosts == ["digital.zizi.localhost"]

@@ -4,7 +4,7 @@
 // entered forecast to its own; a manager's new target for sales.rep2 measured on placed orders is set through Targets; and Target
 // attainment compares the won-deal targets with the won amount alone, never adding order or invoice amounts, while the order target
 // counts placed orders. Every write through the screens' transitions; the rules are Mantle's SalesForecasts. Demo data:
-// data/BossZSalesDemoData.xml (P4 and P18 blocks).
+// data/demo/70Sales.xml (P4 and P18 blocks).
 // Run: ./moq accept mr-boss --spec SalesForecastScenarios
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, system, invoke} = lib

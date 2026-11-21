@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="seed-initial">
+    <!-- Insights P3 (impl-insights P3, §4, F4, F5, F9, F10, F30; design-insights §5): dataset admission. Every business dataset
+        (signal business) is read only once admitted (the framework's moqui.report.BusinessDataset; crates/moqui-report/src/business.rs),
+        except by its steward, who holds the dataset's update artifact; admission needs the document in a registered DataFeed, its
+        index built and Mantle's organization row filter (the ReportScopePolicy MantleOrganization) bound, so each viewer reads
+        their own organizations' rows in rows, suggestions, value counts, aggregates and exports alike. The grants below give the
+        Insights groups each business dataset's own artifact (view; the steward update, its index#BusinessDataset guard) and its
+        documents' DataDocumentUserGroup rows; the owners' report groups are granted below (BOSS_COM_DATASETS, BOSS_CS_DATASETS and
+        their documents' rows). Datasets a steward creates are named insights-*: the
+        pattern grants the dataset a steward names, never a source under it (an alias of a log index, or of a business document without
+        its signal, needs the source's own artifact of its saver and reader: the engine's alias.rs, impl-admin F277). The
+        Insights administrator reads no dataset (its business data stays a separate grant). Never grant an Insights group
+        org.moqui.report.dataset.* or a DataDocument-by-id or index: dataset: the engine opens those over a business dataset's
+        document only to a holder of their update artifact (impl-insights F53, review R1), which would read them unfiltered. -->
+    <artifactGroups artifactGroupId="BOSS_INS_DATASETS" description="Insights: the business datasets">
+        <artifacts artifactName="org.moqui.report.dataset.mantle-sales-orders" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.mantle-sales-items" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.mantle-inventory" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-commerce-checkouts" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-commerce-payment-attempts" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-commerce-feed-builds" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-service-clocks" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-service-breaches" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org\.moqui\.report\.dataset\.insights-.*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y"/>
+        <authz artifactAuthzId="BOSS_INS_DATASETS_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_DATASETS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_DATASETS_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_DATASETS_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_DATASETS_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderPart" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderPart" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderPart" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderPart" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderPart" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderItem" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderItem" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderItem" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderItem" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderItem" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleInventoryAsset" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleInventoryAsset" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleInventoryAsset" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleInventoryAsset" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleInventoryAsset" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreCheckout" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreCheckout" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreCheckout" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreCheckout" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreCheckout" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStorePaymentAttempt" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStorePaymentAttempt" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStorePaymentAttempt" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStorePaymentAttempt" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStorePaymentAttempt" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreFeedBuild" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreFeedBuild" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreFeedBuild" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreFeedBuild" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreFeedBuild" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossServiceClock" userGroupId="BOSS_INSIGHTS_READ"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossServiceClock" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossServiceClock" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossServiceClock" userGroupId="BOSS_INSIGHTS_FLOW"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossServiceClock" userGroupId="BOSS_INSIGHTS_DATA"/>
+    <!-- The owners' report groups (owner contracts: design-commerce §1.4, design-customer-service §7): Commerce's store managers and
+        administrators read its three store datasets, Customer Service's managers and administrators its clocks and breaches, each
+        their own organizations' rows. -->
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreCheckout" userGroupId="BOSS_COMMERCE_MANAGER"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreCheckout" userGroupId="BOSS_COMMERCE_ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStorePaymentAttempt" userGroupId="BOSS_COMMERCE_MANAGER"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStorePaymentAttempt" userGroupId="BOSS_COMMERCE_ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreFeedBuild" userGroupId="BOSS_COMMERCE_MANAGER"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreFeedBuild" userGroupId="BOSS_COMMERCE_ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossServiceClock" userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossServiceClock" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"/>
+    <artifactGroups artifactGroupId="BOSS_COM_DATASETS" description="Commerce: the store operations datasets">
+        <artifacts artifactName="org.moqui.report.dataset.boss-commerce-checkouts" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-commerce-payment-attempts" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-commerce-feed-builds" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_COM_DATASETS_MANAGER" userGroupId="BOSS_COMMERCE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_COM_DATASETS_ADMIN" userGroupId="BOSS_COMMERCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_CS_DATASETS" description="Customer Service: the service clock datasets">
+        <artifacts artifactName="org.moqui.report.dataset.boss-service-clocks" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.dataset.boss-service-breaches" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_CS_DATASETS_MANAGER" userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_CS_DATASETS_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+    </artifactGroups>
+    <!-- Admission by setup of BOSS's own datasets (F10): their owners bound the organization filter, their feeds index as records
+        are written, and the engine's checks still report each one's state live (find#BusinessDatasets). Mantle's sales datasets and
+        the inventory dataset wait for the steward's Admit (the "usable when" of impl-insights P3). -->
+    <moqui.report.BusinessDataset datasetId="boss-commerce-checkouts" admittedDate="2026-11-07 00:00:00" versionNumber="1"/>
+    <moqui.report.BusinessDataset datasetId="boss-commerce-payment-attempts" admittedDate="2026-11-07 00:00:00" versionNumber="1"/>
+    <moqui.report.BusinessDataset datasetId="boss-commerce-feed-builds" admittedDate="2026-11-07 00:00:00" versionNumber="1"/>
+    <moqui.report.BusinessDataset datasetId="boss-service-clocks" admittedDate="2026-11-07 00:00:00" versionNumber="1"/>
+    <moqui.report.BusinessDataset datasetId="boss-service-breaches" admittedDate="2026-11-07 00:00:00" versionNumber="1"/>
+    <!-- The dataset operations: every Insights reader of datasets lists them (find#BusinessDatasets), the steward manages them;
+        ALWAYS so they pass BOSS_INS_REPORT_ENGINE's deny, and each also checks the dataset's own artifact in the engine. -->
+    <artifactGroups artifactGroupId="BOSS_INS_DATASET_READ" description="Insights: listing business datasets">
+        <artifacts artifactName="org.moqui.report.ReportServices.find#BusinessDatasets" artifactTypeEnumId="AT_SERVICE"/>
+        <!-- what the framework's dataset screens read beside it, shown under Insights' mount (mr-moqui
+            plans/archive/Admin-Screens-Down.md, Track I): one dataset the viewer reads or stewards, its document's fields and
+            conditions for its steward only, and what a dataset form offers, the sources for one who may create only -->
+        <artifacts artifactName="org.moqui.report.ReportServices.get#BusinessDataset" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.get#BusinessDatasetOptions" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_READ_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_READ_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_INS_DATASET_STEWARD" description="Insights: stewarding business datasets">
+        <artifacts artifactName="org.moqui.report.ReportServices.validate#BusinessDataset" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.create#BusinessDataset" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.store#BusinessDataset" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.index#BusinessDataset" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.store#BusinessDatasetFields" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.store#BusinessDatasetConditions" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_STEWARD_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- The report builder's dataset screens (design §5, §1.1): Datasets and DatasetView the author's and the steward's,
+        DatasetDetail and DatasetFields the steward's; each denies the root user group and the administrator and gives its groups a
+        non-inheritable ALWAYS on the screen and its transitions by name (as BOSS_INS_AUTHORING), so a transition not named is
+        refused and each service under them is checked by its own grant. -->
+    <artifactGroups artifactGroupId="BOSS_INS_DATASET_SCREENS" description="Insights: the dataset list and view">
+        <artifacts artifactName="component://mr-boss/screen/Insights/ReportBuilder/(Datasets|DatasetView)\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Insights/ReportBuilder/(Datasets\.xml/createDataset|DatasetView\.xml/exportDocuments)"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_SCREENS_ROOTDENY" userGroupId="BOSS_INSIGHTS"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_SCREENS_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_SCREENS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_INS_DATASET_SCREENS_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_INS_DATASET_STEWARDSHIP" description="Insights: the dataset steward's screens">
+        <artifacts artifactName="component://mr-boss/screen/Insights/ReportBuilder/(DatasetDetail|DatasetFields)\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Insights/ReportBuilder/(DatasetDetail\.xml/(storeDataset|admitDataset|retireDataset|rebuildIndex)|DatasetFields\.xml/(storeFields|storeConditions))"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" nameIsPattern="Y" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_STEWARDSHIP_ROOTDENY" userGroupId="BOSS_INSIGHTS"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_STEWARDSHIP_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_STEWARDSHIP_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Readiness (design §5, §11; impl-admin F50, F53): each business dataset's freshness provider (its last index build, the
+        lag since and the admission state) and its index refresh in Admin's registries. The provider answers only a dataset the viewer
+        may read or steward (an instance check: the dataset's row filter scopes its rows, the index is one for every organization);
+        the refresh runs index#BusinessDataset as the viewer, guarded by the dataset's own update artifact. The registries'
+        services are the framework's (org.moqui.admin.ReadinessServices, any signed-in user's, their grant not inheritable):
+        the provider and the refresh are Insights' own services, which an Insights user calls by the root group's grant. -->
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.mantle-sales-orders" version="1" ownerApp="Insights"
+            title="Sales orders index" description="The sales orders dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="mantle-sales-orders" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.mantle-sales-items" version="1" ownerApp="Insights"
+            title="Sales items index" description="The sales items dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="mantle-sales-items" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.mantle-inventory" version="1" ownerApp="Insights"
+            title="Inventory index" description="The inventory dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="mantle-inventory" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-commerce-checkouts" version="1" ownerApp="Insights"
+            title="Store checkouts index" description="The store checkouts dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-commerce-checkouts" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-commerce-payment-attempts" version="1"
+            ownerApp="Insights" title="Store payment attempts index"
+            description="The store payment attempts dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-commerce-payment-attempts" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-commerce-feed-builds" version="1" ownerApp="Insights"
+            title="Store feed builds index" description="The store feed builds dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-commerce-feed-builds" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-service-clocks" version="1" ownerApp="Insights"
+            title="Service clocks index" description="The service clocks dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-service-clocks" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.ReadinessProvider providerKey="insights.dataset.boss-service-breaches" version="1" ownerApp="Insights"
+            title="Service level breaches index"
+            description="The service level breaches dataset's admission and its index's last build"
+            healthGroupEnumId="AdmHgObservability" scopeEnumId="AdmScInstance"
+            serviceName="ironstone.insights.DatasetServices.check#DatasetReadiness" requiredPermission="INSIGHTS_VIEW"
+            fixRoute="insightsDataset" fixId="boss-service-breaches" expectedFrequencyMinutes="1440" sequenceNum="70"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.mantle-sales-orders.index" version="1" ownerApp="Insights"
+            title="Rebuild the sales orders index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="mantle-sales-orders" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.mantle-sales-orders"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.mantle-sales-items.index" version="1" ownerApp="Insights"
+            title="Rebuild the sales items index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="mantle-sales-items" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.mantle-sales-items"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.mantle-inventory.index" version="1" ownerApp="Insights"
+            title="Rebuild the inventory index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="mantle-inventory" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.mantle-inventory"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-commerce-checkouts.index" version="1" ownerApp="Insights"
+            title="Rebuild the store checkouts index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-commerce-checkouts" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-commerce-checkouts"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-commerce-payment-attempts.index" version="1"
+            ownerApp="Insights" title="Rebuild the store payment attempts index"
+            serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex" sourceKindEnumId="AdmRsIndex"
+            sourceName="boss-commerce-payment-attempts" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-commerce-payment-attempts"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-commerce-feed-builds.index" version="1" ownerApp="Insights"
+            title="Rebuild the store feed builds index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-commerce-feed-builds" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-commerce-feed-builds"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-service-clocks.index" version="1" ownerApp="Insights"
+            title="Rebuild the service clocks index" serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex"
+            sourceKindEnumId="AdmRsIndex" sourceName="boss-service-clocks" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-service-clocks"/>
+    <moqui.server.RefreshOperation refreshKey="insights.dataset.boss-service-breaches.index" version="1" ownerApp="Insights"
+            title="Rebuild the service level breaches index"
+            serviceName="ironstone.insights.DatasetServices.refresh#DatasetIndex" sourceKindEnumId="AdmRsIndex"
+            sourceName="boss-service-breaches" requiredPermission="INSIGHTS_DATASET_EDIT"
+            providerKey="insights.dataset.boss-service-breaches"/>
+</entity-facade-xml>

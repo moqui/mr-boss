@@ -1,5 +1,5 @@
 // Commons Requests and RequestDetail (screen/Commons/Requests/List.xml and RequestDetail.xml, service/ironstone/commons/RequestServices.xml;
-// impl-drawers-commons.md M6, design-drawers-commons.md §8): john.doe's lists on the demo (data/BossDemoData.xml,
+// impl-drawers-commons.md M6, design-drawers-commons.md §8): john.doe's lists on the demo (data/demo/18Commons.xml,
 // DemoServices.load#TasksDemo): All open, Raised by me, Assigned to me, Watching and Closed, the find, New request (submitted
 // or a draft); RequestDetail with its stage chips and the requester's actions: submit a draft, cancel one's own, edit a
 // draft, comment (add#RequestComment, shown in Chatter's timeline as a note), reassign when one is the assignee, add a task.

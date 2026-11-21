@@ -1,6 +1,6 @@
 // Warehouse P4, Inventory and traceability (impl-warehouse P4, design-warehouse §6): the asset list and its groups, an
 // asset's detail, ledger and audit with its metadata edit, lots, containers, movements, Traceability, and Products'
-// Product360 and InventoryAvailability with the Warehouse context; on the demo of data/BossWarehouseDemoData.xml, with
+// Product360 and InventoryAvailability with the Warehouse context; on the demo of data/demo/44Warehouse.xml, with
 // artifact authorization enabled. Cost reaches only a Warehouse user with financial read (a spec-local group holding
 // ACCOUNTING_VIEW).
 const lib = ec.resource.script("component://mr-boss/test/Warehouse/WarehouseSpecLib.js")

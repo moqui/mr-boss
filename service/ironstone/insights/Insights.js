@@ -2,7 +2,7 @@
 // results they may see, their capabilities from the INSIGHTS_* permissions, safe defaults and the canonical links. The INSIGHTS_*
 // permissions are BOSS's and decide what Insights' own screens and services offer; the framework's report engine checks its own
 // artifacts (the ReportServices operations, each dataset's org.moqui.report.dataset.<id>, dataset saves, DataDocumentUserGroup),
-// which data/BossSetupData.xml grants by capability (impl-insights §4, F2, F4). Nothing here grants a source: a supplied
+// which data/BossSetupData07InsightsAndAdminAccess.xml grants by capability (impl-insights §4, F2, F4). Nothing here grants a source: a supplied
 // organization is checked against the user's own, and a capability opens an affordance, never data.
 //
 // Opening Insights needs the root grant of one of the user's groups (BOSS_INSIGHTS, the root user group, or BOSS_INSIGHTS_ADMIN),
@@ -21,7 +21,7 @@ const areaLocation = area => "component://mr-boss/screen/Insights/" + area + ".x
 const defaultRange = {from: "now-30d", thru: "now"}
 
 // ===== capabilities =====
-// Each capability from its permission (design §1.1's table; data/BossSetupData.xml seeds them, each granted to ADMIN).
+// Each capability from its permission (design §1.1's table; data/BossSetupData07InsightsAndAdminAccess.xml seeds them, each granted to ADMIN).
 const capabilityPermissions = {
     view: "INSIGHTS_VIEW",
     author: "INSIGHTS_AUTHOR",
@@ -33,7 +33,7 @@ const capabilityPermissions = {
     settingsView: "INSIGHTS_SETTINGS_VIEW",
     settingsEdit: "INSIGHTS_SETTINGS_EDIT"
 }
-// The menu areas whose authorization is a capability (data/BossSetupData.xml): P3's dataset screens, Datasets and DatasetView
+// The menu areas whose authorization is a capability (data/BossSetupData09DatasetAccess.xml): P3's dataset screens, Datasets and DatasetView
 // the author's and steward's (BOSS_INS_DATASET_SCREENS), DatasetDetail and DatasetFields the steward's
 // (BOSS_INS_DATASET_STEWARDSHIP). The copied screens of impl-insights F20 are all replaced (P2 Dashboards, P3 the report
 // builder, P4 Reports, P7 ScheduledReports, every Insights user's), so no legacy area is left.
@@ -144,7 +144,7 @@ function organizationIds(userScope) {
 }
 
 // ===== organization analytics defaults (P10; design §11 Settings, impl-insights §4) =====
-// The organization's analytics defaults are registered PartySetting types mr-boss seeds (data/BossSetupData.xml), each for the
+// The organization's analytics defaults are registered PartySetting types mr-boss seeds (data/BossSetupData13SettingsAndOperations.xml), each for the
 // OrgInternal role, so Admin's OrganizationDefaults lists them too: the default dashboard, flow map and digest, the display
 // time zone and week start of Insights' own queries, the freshness policy of DataReadiness and the group recipient cap.
 // ContextServices.store#Settings writes them (Settings.js); the readers are here, for every module that applies one. A value
@@ -303,7 +303,7 @@ function reportLinks(capabilities) {
 //   author: the framework's share transitions refuse anyone else, a steward and a distributor too, who hold the save);
 // - range: the default reporting range (get#Context's defaults);
 // - datasetIdPrefix: what a dataset created in Insights is named with; written here only: the steward group's grant is on
-//   org.moqui.report.dataset.insights-* (BossSetupData), and the engine creates a dataset only under an id its creator's
+//   org.moqui.report.dataset.insights-* (BossSetupData09DatasetAccess.xml), and the engine creates a dataset only under an id its creator's
 //   own grant names;
 // - datasetScopeLabel and datasetScopeHelp: the words of the dataset forms' scope field under Insights, the field that
 //   carries a row's organization (the rowFilterParameters entry it is sent in is the scope policy's own, which Mantle's
@@ -316,7 +316,7 @@ function reportLinks(capabilities) {
 //   transitions write into every rule in place of contact points;
 // - shareGroups: the wall displays, offered beside the sharer's own groups. Being here gives no right: the engine's save
 //   accepts the group only from a sharer whose own grant holds its share artifact
-//   (org.moqui.report.share.BOSS_INSIGHTS_DISPLAY: the author's, BossSetupData BOSS_INS_SHARE_DISPLAY);
+//   (org.moqui.report.share.BOSS_INSIGHTS_DISPLAY: the author's, BossSetupData07InsightsAndAdminAccess.xml BOSS_INS_SHARE_DISPLAY);
 // - calendar: the display zone and week start (its enumCode, the engine's week offset) of the organization in scope, nothing
 //   where it set none; Insights' own Analysis (Analysis.js) reads it from this context through the framework's
 //   ReportAnalysis.js calendarParameters, as the framework's Analysis reads it under a mount.

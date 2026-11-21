@@ -84,6 +84,16 @@ The demo data is a company, Ziziwork Industries, with its customers, suppliers, 
 projects. There is also a demo user for each role, such as `sales.rep`, `finance.ar` and `maint.tech`, with the same
 password, to see an app as that role does.
 
+## Data files
+
+The [data directory](data/) holds required permissions and record-link types (`seed`) and customizable
+app settings, grants and report definitions (`seed-initial`). The numbered `BossSetupData` files load in order,
+starting with user groups and launcher grants. Maintenance report definitions have their own file for upgrades.
+
+The [demo directory](data/demo/) holds numbered fixtures and their image assets. Root XML loads first, then
+demo XML in filename order. Each file commits separately, so project billing can read the time entries and
+the commerce forum can read its site. Use `./moq load seed seed-initial install` for setup without demo data.
+
 ## How it fits
 
 - **[mr-mantle](https://github.com/moqui/mr-mantle)** is the data model and the service library underneath, and the

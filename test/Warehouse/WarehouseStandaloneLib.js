@@ -13,7 +13,7 @@ const ORG = "BOSS_P18_ORG",
     CUSTOMER = "BOSS_P18_CUSTOMER",
     PRODUCT = "BOSS_P18_GASKET"
 const SECRET = /P18 secret/
-// Retail's demo records (data/BossWarehouseDemoData.xml) by the names its screens show; box types are shared by every
+// Retail's demo records (data/demo/44Warehouse.xml) by the names its screens show; box types are shared by every
 // organization (impl-warehouse §5), and a supplier is a party that organizations share, so Supplier360 of Retail's
 // supplier may name it but none of Retail's records
 const RETAIL = /Ziziwork Retail|Ziddleman|SEAL-2026|Lot-tracked sealant|demo bracket|demo hinge|East tote/

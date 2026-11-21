@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- IronStone Warehouse (design-warehouse §1): the root of the app for receiving, inspection, inventory, counts,
     transfers, picking, shipping, returns, locations, handheld work, reports and settings. The root user group BOSS_WAREHOUSE
-    and the administrator group BOSS_WAREHOUSE_ADMIN open it (data/BossSetupData.xml); the Inspection, Counts and Picking
+    and the administrator group BOSS_WAREHOUSE_ADMIN open it (data/BossSetupData01GroupsAndLaunchers.xml); the Inspection, Counts and Picking
     areas are for their capability groups. ironstone.warehouse.AccessServices.get#SharedContext checks the user and
     resolves their facilities, the selected facility and capabilities for every subscreen; each service checks again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"

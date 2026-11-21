@@ -1,4 +1,4 @@
-// Helpers the People specs share: the demo ids (data/BossPeopleDemoData.xml, data/BossUsersDemoData.xml), the demo users by
+// Helpers the People specs share: the demo ids (data/demo/26People.xml, data/demo/42Users.xml), the demo users by
 // group, a block run as a user with artifact authorization on, a call's refusal message, a People page render and the shell's menu
 // and providers. Later phases add their ids and users here. P31 adds the acceptance sweeps' and review walks' helpers at the end (the
 // mounts, their tabs and records, a kiosk tablet), which no regression spec calls.

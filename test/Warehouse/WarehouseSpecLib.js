@@ -65,7 +65,7 @@ function page(path, parameters = {}, mode = "qvt") {
 }
 
 // The route fixtures of every Warehouse screen (P18), for AppStructure, TuiRender and ServerStatic: by path under the
-// Warehouse root, the demo record's parameters (data/BossWarehouseDemoData.xml) and a text the screen shows in every data
+// Warehouse root, the demo record's parameters (data/demo/44Warehouse.xml) and a text the screen shows in every data
 // state (tuiText where the terminal twin shows another: a scan field's title, not its placeholder); and the shared screens and Handheld mounts under the root that
 // the screen file walk does not find, as [path, screen location].
 function routeFixtures() {
@@ -74,7 +74,7 @@ function routeFixtures() {
     const routes = {
         // Warehouse P1: Home's queues (counted by later phases) and the lookup of a demo unit by its serial number
         "Home": {parameters: {scanText: "SCN-1001"}, text: "Serialized scanner"},
-        // Warehouse P4: the Inventory area on its demo stock (data/BossWarehouseDemoData.xml), and Products' shared mounts in the
+        // Warehouse P4: the Inventory area on its demo stock (data/demo/44Warehouse.xml), and Products' shared mounts in the
         // Warehouse context (pushed in setupSpec); a tab renders its parent's level here, WarehouseInventory checks the tabs' rows
         // a list's demo row is found by a filter (not by its text, which the filter field would echo), as the suite's other
         // specs add rows that page it off the first page
@@ -109,7 +109,7 @@ function routeFixtures() {
         "Transfers": {text: "Move stock"},
         "Transfers/Move": {parameters: {facilityId: "ZIRET_WH", locationSeqId: "0901", assetId: "BOSS_WH_LOT_QUARANTINE"},
             text: "Quarantined stock moves only"},
-        // Warehouse P15: Transfers and the demo transfer, subcontract dispatch and stock request (data/BossWarehouseDemoData.xml);
+        // Warehouse P15: Transfers and the demo transfer, subcontract dispatch and stock request (data/demo/44Warehouse.xml);
         // the shared shipment and request mounts are pushed in setupSpec
         "Transfers/Transfers": {text: "BOSS_WH_SHIP_TRANSFER"},
         "Transfers/TransferShipmentDetail": {parameters: {shipmentId: "BOSS_WH_SHIP_TRANSFER"}, text: "Transfer demo filter"},
@@ -119,7 +119,7 @@ function routeFixtures() {
         "Transfers/StockRequests": {text: "Filters for the east line"},
         "Transfers/RequestDetail": {parameters: {requestId: "BOSS_WH_REQ"}, text: "Items and progress"},
         "Transfers/NewStockRequest": {text: "Ask for stock"},
-        // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases (data/BossWarehouseDemoData.xml)
+        // Warehouse P6: Adjustments with a demo asset fixed, and Repack of the demo cases (data/demo/44Warehouse.xml)
         "Inventory/Adjustments": {parameters: {assetId: "BOSS_WH_LOT_AVAIL"}, text: "Adjust this asset"},
         "Transfers/Repack": {parameters: {assetId: "BOSS_WH_CASES"}, text: "Unpack into"},
         "Handheld": {text: "Scan anything"},

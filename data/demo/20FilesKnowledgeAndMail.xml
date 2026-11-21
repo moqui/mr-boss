@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- M8: john.doe's files, a shared team drive, a version-controlled drive, shares and links (some with known demo tokens),
+        the trash and versions of the demo request's files, dated before the load, so Commons Files, Drives, Shares, the public
+        page /s/<token>, Home's recent files, the records drive and Compose's Attach from Files show and test with content
+        (service/ironstone/commons/FilesDemoServices.xml load#FilesDemo says what is in it). Only BOSS_DEMO_* drives, shares and links,
+        and the users' own drives. -->
+    <ironstone.commons.FilesDemoServices.load-FilesDemo/>
+
+    <!-- M9: knowledge and notes (design-drawers-commons.md §10; service/ironstone/commons/KnowledgeDemoServices.xml load#KnowledgeDemo),
+        written through the wiki services as john.doe, joe.developer and bob.developer, dated over the weeks before the load:
+        the Team handbook space (a page tree with links between its pages, a restricted page, history with notes, a review
+        waiting on john.doe, a comment and a file), the members-only Leadership space, the Engineering notes space in a git
+        repository, and john.doe's notes (pinned and tagged) with one of joe.developer's. -->
+    <ironstone.commons.KnowledgeDemoServices.load-KnowledgeDemo/>
+
+    <!-- M5: john.doe's demo mail, internal messages and mailboxes, dated from the load, so the Comms Inbox, Compose and
+        MessageDetail show and test with no mail server (service/ironstone/comms/MailDemoServices.xml load#MailDemo says what is in
+        it). Only BOSS_DEMO_MAIL_* and BOSS_DEMO_MBX_* records. -->
+    <ironstone.comms.MailDemoServices.load-MailDemo/>
+    <!-- the Comms mail settings: a shared account whose sign-in failed, rules, an automatic reply and text blocks
+        (load#MailSettingsDemo) -->
+    <ironstone.comms.MailDemoServices.load-MailSettingsDemo/>
+</entity-facade-xml>

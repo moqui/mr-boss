@@ -3,7 +3,7 @@
 // Comms' create-from provider, makes a lead of sales.rep's with the message as its source (filed on it) and answers the same lead
 // again; another app's user is refused, and is not offered Log call on opportunity, which a rep's voicemail and call offer; Create lead on a chat message (Chat's createFrom, kind lead) does the same; the record-lookup and contact-card providers answer the lead to its rep; LeadSources' one
 // qvt render shows the UTM map and the teams' intake addresses. The rules are Mantle's SalesLeadIntake; the demo inquiry is
-// data/BossZSalesDemoData.xml's P5 block.
+// data/demo/70Sales.xml's P5 block.
 // Run: ./moq test mr-boss --spec SalesIntake
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, system, page} = lib

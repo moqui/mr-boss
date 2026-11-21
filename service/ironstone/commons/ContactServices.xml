@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
     of their own). Another user's personal contact is "not found", never "not allowed", so its existence does not show.
 
     Who may change a contact: the owner of a personal contact; for a directory party a contact admin (the CONTACT_ADMIN
-    permission, which BossSetupData gives the BOSS_CONTACT_ADMIN group and Mantle the ADMIN group). A contact is deleted by
+    permission, which BossSetupData03CommonsAndPermissions.xml gives the BOSS_CONTACT_ADMIN group and Mantle the ADMIN group). A contact is deleted by
     mantle.party.ContactBookServices.delete#Contacts: removed when nothing refers to it, else disabled and taken out of its
     books; a directory party with a user account or an internal organization role is not deleted. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
@@ -1355,7 +1355,7 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
     <service verb="migrate" noun="NotDuplicateSettings" authenticate="anonymous-all" allow-remote="false">
-        <description>Once, on a data load (data/BossSetupData.xml): the "not a duplicate" decisions BOSS kept in a PartySetting of
+        <description>Once, on a data load (data/BossSetupData03CommonsAndPermissions.xml): the "not a duplicate" decisions BOSS kept in a PartySetting of
             each party (BossNotDuplicates, a comma list of the other party ids) become Mantle's PartyNotDuplicate rows (one per
             pair, the lower id first), and the settings and their type go. A pair whose party is gone is dropped; a party whose
             setting fails is logged and the rest go on, its setting kept for the next load.</description>

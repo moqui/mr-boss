@@ -1,4 +1,4 @@
-// Helpers the Marketing specs share: the demo ids (data/BossZZMarketingDemoData.xml and the other apps' demo organizations), the
+// Helpers the Marketing specs share: the demo ids (data/demo/80Marketing.xml and the other apps' demo organizations), the
 // demo users by group, a block run as a user with artifact authorization on, a call's refusal message, a Marketing page render and
 // the shell's menu and providers. Later phases add their ids and users here.
 const ids = {
@@ -67,7 +67,7 @@ const ids = {
     // P12: and the surveys (g v); P14 the content (g o); P16 the events (g e, every Marketing reader's); P21 the calendar (g k, every
     // Marketing reader's)
     authorKeys: ["g m", "g c", "g t", "g n", "g a", "g v", "g o", "g e", "g k"],
-    // P2's demo campaigns (data/BossZZMarketingDemoData.xml): Retail's running one (approved at revision 1, with a planned child),
+    // P2's demo campaigns (data/demo/80Marketing.xml): Retail's running one (approved at revision 1, with a planned child),
     // Retail's planned one, and Services' own
     runningCampaignId: "BOSS_MKT_CMP_SPRING",
     plannedCampaignId: "BOSS_MKT_CMP_HOLIDAY",

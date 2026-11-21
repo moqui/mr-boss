@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- IronStone People (design-people §1): the root of the app for HR officers, managers, recruiters, payroll and development
     staff, case handlers and the People administrator. The root user group BOSS_PEOPLE and the administrator group
-    BOSS_PEOPLE_ADMIN open it (data/BossSetupData.xml), as ADMIN does; BOSS_PEOPLE_SELF has no root grant (an employee's
+    BOSS_PEOPLE_ADMIN open it (data/BossSetupData14PeopleAccess.xml), as ADMIN does; BOSS_PEOPLE_SELF has no root grant (an employee's
     self-service is Commons', impl-people P8). The root grant opens navigation only: ironstone.people.ContextServices
     .get#SharedContext checks the user and resolves their capabilities, employers, units, own employments and links for every
     subscreen, and each Mantle service (mantle.humanres.PeopleServices) checks the scope again. The menu of design §1.2 grows by

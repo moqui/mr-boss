@@ -1,6 +1,6 @@
 // Comms Consent (screen/Comms/Consent/List.xml and Contact.xml, template/ConsentRecord.xml, service/ironstone/comms/ConsentServices.xml;
 // design-drawers-commons.md §16 Consent; impl-drawers-commons.md M11) and the Consent tab of the contact record
-// (template/ContactRecord.xml, §6 ContactDetail), on the consent demo (data/BossConsentDemoData.xml): the registry with its
+// (template/ContactRecord.xml, §6 ContactDetail), on the consent demo (data/demo/12CalendarChatAndConsent.xml): the registry with its
 // rows, chips and filters, the export of every match and of one contact's history for a data request, recording a consent with
 // evidence (allowSolicitation following it), withdrawing it, unsubscribing and subscribing a contact with the note of the
 // request, the bulk unsubscribe; for anyone but a contact admin (Joe Developer) the screens say so and the transitions and

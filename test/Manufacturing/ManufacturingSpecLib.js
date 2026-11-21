@@ -1,4 +1,4 @@
-// Helpers the Manufacturing specs share: the demo ids (data/BossManufacturingDemoData.xml, BossUsersDemoData.xml), the demo
+// Helpers the Manufacturing specs share: the demo ids (data/demo/24Manufacturing.xml, demo/42Users.xml), the demo
 // users by capability, a block run as a user with artifact authorization on or off, a call's refusal message, a Manufacturing
 // page render and the route fixtures AppStructure and TuiRender render. Later phases add their ids, users and routes here.
 const ids = {
@@ -7,13 +7,13 @@ const ids = {
     lineId: "BOSS_MFG_LINE_A",
     lineBId: "BOSS_MFG_LINE_B",
     runId: "BOSS_MFG_RUN_A",
-    // the Warehouse demo's released run and its operation (BossWarehouseDemoData.xml)
+    // the Warehouse demo's released run and its operation (demo/44Warehouse.xml)
     releasedRunId: "BOSS_WH_RUN",
     operationId: "BOSS_WH_RUN_OP",
     equipmentId: "EQUIP_AB4_1",
-    // P11: line A's demo changeover (BossManufacturingDemoData.xml)
+    // P11: line A's demo changeover (demo/24Manufacturing.xml)
     downtimeId: "BOSS_MFG_DT_1",
-    // P3: line A's calendar, capacities, alternate and machine rate (BossManufacturingDemoData.xml)
+    // P3: line A's calendar, capacities, alternate and machine rate (demo/24Manufacturing.xml)
     lineCalendarId: "BOSS_MFG_CAL_LINE_A",
     lineRateId: "BOSS_MFG_LINE_A_MACHINE",
     // the other organization's (ORG_ZIZI_SERVICES) plant, line and run

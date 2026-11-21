@@ -1,6 +1,6 @@
 // The public unsubscribe page of a list email (screen/Unsubscribe.xml and Unsubscribe.qvue at /u/<token>, the token-route "u" of
 // MoquiConf.xml; design-drawers-commons.md §16 Unsubscribe; impl-drawers-commons.md R16, M11), as a visitor who is not signed in,
-// on the demo links (data/BossConsentDemoData.xml): the route's token check (mantle.party.ConsentServices.check#UnsubscribeToken),
+// on the demo links (data/demo/12CalendarChatAndConsent.xml): the route's token check (mantle.party.ConsentServices.check#UnsubscribeToken),
 // the page's state with the token the route gives (the organization, the list, the masked address and the lists, nothing of the
 // party beyond that; an unknown or ended token reads nothing), unsubscribing from this list with a reason and from all marketing
 // email, the lists one by one, Resubscribe, the RFC 8058 one-click POST to the page's own URL /u/<token> (the route's

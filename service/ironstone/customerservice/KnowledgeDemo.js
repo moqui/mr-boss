@@ -1,5 +1,5 @@
 // Customer Service's demo knowledge (impl-customer-service P12, F34; DemoServices.load#KnowledgeDemo, run from
-// BossZCustomerServiceDemoData.xml after the cases): ORG_ZIZI_RETAIL's service articles through the wiki's own services, in
+// demo/60ServiceOrdersAndKnowledge.xml after the cases): ORG_ZIZI_RETAIL's service articles through the wiki's own services, in
 // ZZW_RETAIL, the retail space the POPC store publishes (html pages under help/: the thermostat reading wrong and the
 // replacement filters, published; a battery article left a draft; the thermostat article in Spanish under help/es/), and in
 // a new internal space ZZW_SVC (md: the thermostat calibration offset, published, for agents only; and drafts/, where

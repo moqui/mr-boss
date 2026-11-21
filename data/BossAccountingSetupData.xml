@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <entity-facade-xml type="seed-initial">
-    <!-- also in BossSetupData, with the same descriptions: this file loads first, and its grants need the groups -->
+    <!-- also in BossSetupData01GroupsAndLaunchers.xml, with the same descriptions: this file loads first, and its grants need the groups -->
     <moqui.security.UserGroup userGroupId="BOSS_PROJECT_MANAGER" description="Project managers (IronStone Projects): project, delivery and resource managers, and who bills the work"/>
     <moqui.security.UserGroup userGroupId="BOSS_ACCOUNTING_ADMIN" description="Accounting administrator"/>
     <moqui.security.UserGroup userGroupId="BOSS_ACCOUNTING_GL" description="General ledger posting"/>

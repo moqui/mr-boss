@@ -1,4 +1,4 @@
-// Helpers the Maintenance specs share: the demo ids (data/BossMaintenanceDemoData.xml, data/BossUsersDemoData.xml and the other
+// Helpers the Maintenance specs share: the demo ids (data/demo/22MaintenanceAssets.xml, data/demo/42Users.xml and the other
 // apps' demo facilities and equipment), the demo users by group, a block run as a user with artifact authorization on, a call's
 // refusal message, a Maintenance page render and the shell's menu and providers. Later phases add their ids and users here.
 const ids = {
@@ -10,7 +10,7 @@ const ids = {
     otherFacilityId: "BOSS_WH_EAST",
     otherAssetId: "BOSS_WH_FORKLIFT",
     // P2: Services' campus, building, floors and rooms, the compressor (of the AC-200 model, held by Kenji) with its motor, the
-    // van, the multimeter and the air handler (BossMaintenanceDemoData.xml, BossZMaintenanceDemoData.xml)
+    // van, the multimeter and the air handler (demo/22MaintenanceAssets.xml, demo/62MaintenanceWork.xml)
     siteId: "BOSS_MNT_SITE",
     buildingId: "BOSS_MNT_BLDG",
     floorId: "BOSS_MNT_FLOOR1",
@@ -23,7 +23,7 @@ const ids = {
     airHandlerId: "BOSS_MNT_AIR_HANDLER",
     modelId: "BOSS_MNT_COMP_MODEL",
     custodianId: "BOSS_PPL_KENJI",
-    // P3: the team and work orders (BossZMaintenanceDemoData.xml): the air handler's leak in progress, maint.tech's; the compressor's
+    // P3: the team and work orders (demo/62MaintenanceWork.xml): the air handler's leak in progress, maint.tech's; the compressor's
     // oil service approved for next week, maint.tech2's; the van's service waiting for a supervisor; Room 201's bracket (facility
     // work, unassigned); the overdue multimeter check, maint.tech's; the motor's adopted request on hold
     teamId: "BOSS_MNT_TEAM",
@@ -35,7 +35,7 @@ const ids = {
     heldOrderId: "BOSS_MNT_WO_MOTOR",
     techPartyId: "BOSS_MNT_TECH",
     tech2PartyId: "BOSS_MNT_TECH2",
-    // P4: maint.requester's reports (BossZMaintenanceDemoData.xml): the air handler's water triaged into its work order (maint.reader's
+    // P4: maint.requester's reports (demo/62MaintenanceWork.xml): the air handler's water triaged into its work order (maint.reader's
     // report of the same fault linked to it too) and the compressor's oil leak not yet triaged
     triagedRequestId: "BOSS_MNT_REQ_AHU",
     otherReportId: "BOSS_MNT_REQ_AHU2",
@@ -52,7 +52,7 @@ const ids = {
     blackoutId: "BOSS_MNT_BLK_ROOM101",
     // P16: the technician's shift handover waiting for maint.booking's approval of Room 101
     requestedEventId: "BOSS_MNT_EV_HANDOVER",
-    // P6: the procedures (BossZMaintenanceDemoData.xml): the AC-200 compressor service (approved, for the AC-200 model, a group of two
+    // P6: the procedures (demo/62MaintenanceWork.xml): the AC-200 compressor service (approved, for the AC-200 model, a group of two
     // steps, a dependency and a pressure reading), the room inspection (approved, for rooms), the van's pre-trip check (a draft) and
     // the old compressor checklist (retired)
     compressorProcedureId: "BOSS_MNT_PROC_COMP",
@@ -64,29 +64,29 @@ const ids = {
     retiredProcedureId: "BOSS_MNT_PROC_OLD",
     // P7: the air handler's follow-up task (a Commons task, maint.tech's, linked to its work order)
     followUpTaskId: "BOSS_MNT_TASK_AHU_GASKET",
-    // P9: the parts (BossZMaintenanceDemoData.xml): the air handler's coil gasket in Services' stock warehouse (two issued to its
+    // P9: the parts (demo/62MaintenanceWork.xml): the air handler's coil gasket in Services' stock warehouse (two issued to its
     // leak, one returned), the issuance, and Retail's stock in the same warehouse
     gasketId: "BOSS_MNT_PART_GASKET",
     gasketStockId: "BOSS_MNT_STOCK_GASKET",
     gasketIssuanceId: "BOSS_MNT_ISS_AHU",
     otherOwnerStockId: "BOSS_PRD_FOREIGN_STOCK",
-    // P13: the preventive plans (BossZMaintenanceDemoData.xml), drafts: Room 201's monthly inspection, the compressor's 250-hour oil
+    // P13: the preventive plans (demo/62MaintenanceWork.xml), drafts: Room 201's monthly inspection, the compressor's 250-hour oil
     // service over the AC-200 model's 500-hour default (next threshold 1450 hours), and its contactor check by a start counter last
     // read in August (stale)
     roomPlanId: "BOSS_MNT_PLAN_ROOM201",
     compressorPlanId: "BOSS_MNT_PLAN_COMP",
     stalePlanId: "BOSS_MNT_PLAN_STARTS",
-    // P8: Services' compressor team of employed technicians (BossZMaintenanceDemoData.xml): Kenji its lead (qualified), Sofia (her
+    // P8: Services' compressor team of employed technicians (demo/62MaintenanceWork.xml): Kenji its lead (qualified), Sofia (her
     // electrical safety certificate expired) and Owen (on leave the week of the compressor's oil service)
     fieldTeamId: "BOSS_MNT_TEAM_FIELD",
     qualifiedTechId: "BOSS_PPL_KENJI",
     expiredTechId: "BOSS_PPL_SOFIA",
     awayTechId: "BOSS_PPL_OWEN",
     // P14: the air handler's monthly filter change, active, its August done on time, September late, October skipped and November's
-    // due now (BossZMaintenanceDemoData.xml)
+    // due now (demo/62MaintenanceWork.xml)
     filterPlanId: "BOSS_MNT_PLAN_FILTER",
     // P10: the held motor's rewind, a purchase request of Services sourced to Delta Motor Rewinds' purchase order, its service line
-    // the work's (BossZMaintenanceDemoData.xml)
+    // the work's (demo/62MaintenanceWork.xml)
     rewindRequestId: "BOSS_MNT_PREQ_MOTOR",
     rewindOrderId: "BOSS_MNT_PO_REWIND",
     // P11: Services' costing rate of its service technicians (48 USD an hour), maint.tech's approved timesheet of the belt's week

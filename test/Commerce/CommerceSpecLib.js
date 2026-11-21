@@ -1,5 +1,5 @@
-// Helpers the Commerce specs share: the demo ids (data/BossCommerceDemoData.xml, BossZCommerceDemoData.xml,
-// BossUsersDemoData.xml), the demo users by group, a block run as a user with artifact authorization on or off, a call's
+// Helpers the Commerce specs share: the demo ids (data/demo/14CommerceStores.xml, demo/58CommerceSites.xml,
+// demo/42Users.xml), the demo users by group, a block run as a user with artifact authorization on or off, a call's
 // refusal message, a Commerce page render and the shell's menu and providers. Later phases add their ids and users here.
 const ids = {
     // Ziziwork Retail's demo store and Ziziwork Services' digital store

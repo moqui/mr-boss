@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- IronStone Sales (design-sales §1): the root of the app for representatives, managers, approvers, commercial-change operators,
     agreement keepers, readers and administrators. The root user group BOSS_SALES and the administrator group BOSS_SALES_ADMIN open
-    it (data/BossSetupSalesData.xml, data/BossSetupData.xml), as ADMIN does (impl-sales F1: the grant was live for ADMIN and
+    it (data/BossSetupSalesData.xml, data/BossSetupData01GroupsAndLaunchers.xml), as ADMIN does (impl-sales F1: the grant was live for ADMIN and
     BOSS_SALES_ADMIN before P1, whatever this comment said). The root grant opens navigation only:
     ironstone.sales.ContextServices.get#SharedContext checks the user and resolves their capabilities, organizations and links for
     every subscreen, and each Mantle sales service checks the permissions and the organization again (mantle/sales/SalesAccess.js).

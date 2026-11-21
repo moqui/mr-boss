@@ -5,7 +5,7 @@
 // (follow-up 9: Sends is not the events manager's area, design §1.2), in the calendar and Home's Upcoming; a phone given an app password
 // lists the "Campaign calendar" collection over CalDAV with the same items, and its write is refused; the palette finds the campaign by
 // name and no send. The demo's own records
-// (data/BossZZMarketingDemoData.xml), dated from the load (follow-up 6: the campaign 14 days before the load day to 77 after, the send
+// (data/demo/80Marketing.xml), dated from the load (follow-up 6: the campaign 14 days before the load day to 77 after, the send
 // 16 days after; follow-up 3: the webinar ten weeks or more after), so the days are read from the calendar itself and the projected
 // collection (30 days back, 180 ahead) holds them on any day; the rules are mr-mantle's MarketingCalendar and mr-boss's MarketingShell.
 // The webinar is moved back at the end.

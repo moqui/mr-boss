@@ -1,9 +1,9 @@
 // The Comms mail settings besides the accounts (screen/Comms/Settings: Index, Identities, Rules with Rules.qvue, OutOfOffice,
 // TextBlocks; the Mail box of Commons Preferences; service/ironstone/comms/MailSettingsServices.xml; design-drawers-commons.md §17, §11
-// MailDefaults): on the demo of data/BossMailDemoData.xml (load#MailSettingsDemo: the shared Support account whose sign-in failed,
+// MailDefaults): on the demo of data/demo/20FilesKnowledgeAndMail.xml (load#MailSettingsDemo: the shared Support account whose sign-in failed,
 // john.doe's rules, automatic reply and text blocks) and on an account of this spec's own (127.0.0.1 port 1, nothing listens) with
 // an imported message, so the rules run on mail no other spec reads; its automatic reply to contacts goes (MailCapture) to
-// john.doe's personal contact and not to a stranger, by the contact hook BossSetupData sets (Mantle's filter#ContactAddresses);
+// john.doe's personal contact and not to a stranger, by the contact hook BossSetupData03CommonsAndPermissions.xml sets (Mantle's filter#ContactAddresses);
 // the more domains of people inside are kept with the reply.
 // Each signature, reply and text block is cleaned as safe HTML.
 // joe.developer may not change john.doe's identities, rules, automatic reply or text blocks; he sees the shared text block and,
@@ -289,7 +289,7 @@ feature("out of office: the demo's reply shows off; turned on for three days it 
         const ownReply = one("moqui.basic.email.EmailOutOfOffice", { emailAccountId: ownId })
         for (const id of [DEMO, SUPPORT, ownId]) settings("OutOfOffice/turnOff", { emailAccountId: id })
         const afterOff = rows("moqui.basic.email.EmailOutOfOffice", {}).filter((row) => [DEMO, SUPPORT, ownId].includes(row.emailAccountId) && row.enabled == "Y")
-        // who gets it: people inside only; contacts are the hook's (BossSetupData's STRT_EMAIL_CONTACT_SERVICE), so no note says otherwise
+        // who gets it: people inside only; contacts are the hook's (BossSetupData03CommonsAndPermissions.xml's STRT_EMAIL_CONTACT_SERVICE), so no note says otherwise
         const inside = settings("OutOfOffice/storeReply", { emailAccountId: DEMO, enabled: "Y", fromDate: fmt(now - 3600000), thruDate: fmt(now + 3 * 86400000),
             subject: "Away", bodyHtml: "<p>Away until Thursday.</p>", replyOncePerDays: "2", replyAudienceEnumId: "EraInternal",
             internalDomains: "Partner.example.org, @ally.example.com" })

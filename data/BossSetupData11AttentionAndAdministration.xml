@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="seed-initial">
+    <!-- Insights P5 (impl-insights P5, §4; design-insights §3 Home): the attention providers, each built app's Home counts whose
+        count is the query of the worklist it opens (impl-insights F29; owner contracts, each in its owner's design), and Monitor's
+        Business operations dashboard (F19). get#Attention calls each as the viewer and shows it only when its route opens to them;
+        a registration grants nothing. Customer Service's queue cards, Commerce's To fulfill and Unpaid, Purchasing's Approvals
+        waiting and Projects' Unbilled do not match a worklist's query and wait for their owners (F29). -->
+    <!-- Commerce (owner contract, design-commerce §3, impl-commerce §7): Home's store work counts, one call for all stores the
+        user works in (mantle.order.StoreOperationsServices.get#StoreWorkSummary); integration errors are Channel health's -->
+    <ironstone.insights.AttentionProvider providerKey="Commerce.ToApprove" version="1" ownerApp="Commerce" title="To approve"
+            description="Placed store orders waiting for approval."
+            countService="mantle.order.StoreOperationsServices.get#StoreWorkSummary"
+            countField="counts.toApprove"
+            routePath="Commerce/Orders/Orders" routeParameters="statusId=OrderPlaced"
+            organizationScope="The stores you work in" sequenceNum="10"/>
+    <ironstone.insights.AttentionProvider providerKey="Commerce.PaymentHolds" version="1" ownerApp="Commerce" title="Payment holds"
+            description="Store orders held for payment."
+            countService="mantle.order.StoreOperationsServices.get#StoreWorkSummary"
+            countField="counts.paymentHolds"
+            routePath="Commerce/Orders/Orders" routeParameters="attention=paymentHold"
+            organizationScope="The stores you work in" sequenceNum="20"/>
+    <ironstone.insights.AttentionProvider providerKey="Commerce.PlacementsWaiting" version="1" ownerApp="Commerce" title="Placements waiting"
+            description="Checkouts whose order placement has not finished."
+            countService="mantle.order.StoreOperationsServices.get#StoreWorkSummary"
+            countField="counts.stuckPlacements"
+            routePath="Commerce/Orders/Orders" routeParameters="attention=stuck"
+            organizationScope="The stores you work in" sequenceNum="30"/>
+    <ironstone.insights.AttentionProvider providerKey="Commerce.OpenCarts" version="1" ownerApp="Commerce" title="Open carts"
+            description="Carts customers have not checked out."
+            countService="mantle.order.StoreOperationsServices.get#StoreWorkSummary"
+            countField="counts.openCarts"
+            routePath="Commerce/Orders/Carts"
+            organizationScope="The stores you work in" sequenceNum="40"/>
+    <ironstone.insights.AttentionProvider providerKey="Commerce.IntegrationErrors" version="1" ownerApp="Commerce" title="Integration errors"
+            description="Channel messages in error and failing feeds over the last 30 days."
+            countService="mantle.product.StoreChannelServices.get#ChannelHealth"
+            countField="totals.attention"
+            routePath="Commerce/Reports/ChannelHealth"
+            organizationScope="The stores you work in" requiredPermission="COMMERCE_CHANNEL_OPERATE" sequenceNum="50"/>
+    <!-- Accounting (owner contract, design-accounting §13): the journal entries list's and the bills list's own finds, and the cost
+        close queue, each for the organization in Insights' scope -->
+    <ironstone.insights.AttentionProvider providerKey="Accounting.DraftEntries" version="1" ownerApp="Accounting" title="Draft entries"
+            description="Journal entries not yet posted."
+            countService="mantle.ledger.AccountingServices.find#Records" countParameters='{"kind":"journals","isPosted":"N","pageSize":1}'
+            countField="recordCount"
+            routePath="Accounting/GeneralLedger/JournalEntries" routeParameters="isPosted=N" organizationParameter="organizationPartyId"
+            organizationScope="Your active organization" sequenceNum="110"/>
+    <ironstone.insights.AttentionProvider providerKey="Accounting.PostedEntries" version="1" ownerApp="Accounting" title="Posted entries"
+            description="Journal entries posted to the ledger."
+            countService="mantle.ledger.AccountingServices.find#Records" countParameters='{"kind":"journals","isPosted":"Y","pageSize":1}'
+            countField="recordCount"
+            routePath="Accounting/GeneralLedger/JournalEntries" routeParameters="isPosted=Y" organizationParameter="organizationPartyId"
+            organizationScope="Your active organization" sequenceNum="120"/>
+    <ironstone.insights.AttentionProvider providerKey="Accounting.BillsAwaitingApproval" version="1" ownerApp="Accounting" title="Bills awaiting approval"
+            description="Supplier bills received and waiting for approval."
+            countService="mantle.account.InvoiceServices.find#Payables" countParameters='{"queue":"review","pageSize":1}'
+            countField="recordsCount"
+            routePath="Accounting/Payables/Bills" routeParameters="queue=review" organizationParameter="organizationPartyId"
+            organizationScope="Your active organization" requiredPermission="INVOICE_APPROVE" sequenceNum="130"/>
+    <ironstone.insights.AttentionProvider providerKey="Accounting.BillsOnHold" version="1" ownerApp="Accounting" title="Bills on hold"
+            description="Supplier bills with an open hold."
+            countService="mantle.account.InvoiceServices.find#Payables" countParameters='{"queue":"held","pageSize":1}'
+            countField="recordsCount"
+            routePath="Accounting/Payables/Bills" routeParameters="queue=held" organizationParameter="organizationPartyId"
+            organizationScope="Your active organization" sequenceNum="140"/>
+    <ironstone.insights.AttentionProvider providerKey="Accounting.CostClose" version="1" ownerApp="Accounting" title="Production runs awaiting cost close"
+            description="Production runs waiting for their cost close, and closed runs with later cost events."
+            countService="ironstone.accounting.ProductionCostServices.find#CostCloseQueue"
+            countField="queueCount"
+            routePath="Accounting/Inventory/ProductionCostClose" organizationParameter="organizationPartyId"
+            organizationScope="Your active organization" sequenceNum="150"/>
+    <!-- Products (owner contract, design-products §1.3): the catalog summary Products Home counts, each the list it opens -->
+    <ironstone.insights.AttentionProvider providerKey="Products.ActiveSkus" version="1" ownerApp="Products" title="Active SKUs"
+            description="Products that are sold and not ended."
+            countService="ironstone.products.CatalogServices.get#CatalogSummary" countParameters='{"appRoot":"Products"}'
+            countField="summary.active"
+            routePath="Products/Products" routeParameters="list=activeSkus"
+            organizationScope="Your active organization's catalog and the shared one" sequenceNum="210"/>
+    <ironstone.insights.AttentionProvider providerKey="Products.Variants" version="1" ownerApp="Products" title="Variants"
+            description="Variant products of a virtual product."
+            countService="ironstone.products.CatalogServices.get#CatalogSummary" countParameters='{"appRoot":"Products"}'
+            countField="summary.variants"
+            routePath="Products/Products" routeParameters="list=variants"
+            organizationScope="Your active organization's catalog and the shared one" sequenceNum="220"/>
+    <ironstone.insights.AttentionProvider providerKey="Products.EndingSoon" version="1" ownerApp="Products" title="Ending in 30 days"
+            description="Products whose sales end within 30 days."
+            countService="ironstone.products.CatalogServices.get#CatalogSummary" countParameters='{"appRoot":"Products"}'
+            countField="summary.discontinuingSoon"
+            routePath="Products/Products" routeParameters="list=discontinuingSoon"
+            organizationScope="Your active organization's catalog and the shared one" sequenceNum="230"/>
+    <!-- Purchasing (owner contract, design-purchasing §11): the buyer's Home counters, one call, each the view it opens; Approvals
+        waiting counts unread notifications, not the Approvals list, so it is not registered (impl-insights F29) -->
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.DraftOrders" version="1" ownerApp="Purchasing" title="Draft orders"
+            description="Purchase orders not yet submitted for approval."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.draftCount"
+            routePath="Purchasing/Orders/PurchaseOrders" routeParameters="view=draft"
+            organizationScope="The organizations you buy for" sequenceNum="310"/>
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.ApprovedNotSent" version="1" ownerApp="Purchasing" title="Approved, not sent"
+            description="Approved purchase orders not yet sent to the supplier."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.unsentCount"
+            routePath="Purchasing/Orders/PurchaseOrders" routeParameters="view=unsent"
+            organizationScope="The organizations you buy for" sequenceNum="320"/>
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.Unacknowledged" version="1" ownerApp="Purchasing" title="Unacknowledged orders"
+            description="Sent purchase orders the supplier has not acknowledged."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.unacknowledgedCount"
+            routePath="Purchasing/Orders/Acknowledgements" routeParameters="view=unacknowledged"
+            organizationScope="The organizations you buy for" sequenceNum="330"/>
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.LateReceipts" version="1" ownerApp="Purchasing" title="Late receipts"
+            description="Purchase order lines past their expected receipt."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.lateCount"
+            routePath="Purchasing/Receiving/Receipts" routeParameters="view=late"
+            organizationScope="The organizations you buy for" sequenceNum="340"/>
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.HeldBills" version="1" ownerApp="Purchasing" title="Held bills"
+            description="Supplier bills held by a match exception."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.heldCount"
+            routePath="Purchasing/Bills/MatchExceptions" routeParameters="view=held"
+            organizationScope="The organizations you buy for" sequenceNum="350"/>
+    <ironstone.insights.AttentionProvider providerKey="Purchasing.QuotesExpiring" version="1" ownerApp="Purchasing" title="Quotes expiring"
+            description="Supplier quotes about to expire."
+            countService="ironstone.purchasing.BuyerServices.get#Home" countParameters='{"appRoot":"Purchasing"}'
+            countField="counters.quoteExpiringCount"
+            routePath="Purchasing/Sourcing/Quotes" routeParameters="view=expiring"
+            organizationScope="The organizations you buy for" sequenceNum="360"/>
+    <!-- Manufacturing (owner contract, design-manufacturing §9): the work order counts of the selected plant -->
+    <ironstone.insights.AttentionProvider providerKey="Manufacturing.OpenOrders" version="1" ownerApp="Manufacturing" title="Open work orders"
+            description="Work orders not yet complete."
+            countService="ironstone.manufacturing.HomeServices.get#Home" countParameters='{"appRoot":"Manufacturing"}'
+            countField="summary.openCount"
+            routePath="Manufacturing/WorkOrders/Find" routeParameters="facilityId={plantId}"
+            organizationScope="Your selected plant, else every plant of yours" sequenceNum="410"/>
+    <ironstone.insights.AttentionProvider providerKey="Manufacturing.InProgress" version="1" ownerApp="Manufacturing" title="Work orders in progress"
+            description="Work orders started on the floor."
+            countService="ironstone.manufacturing.HomeServices.get#Home" countParameters='{"appRoot":"Manufacturing"}'
+            countField="summary.inProgressCount"
+            routePath="Manufacturing/WorkOrders/Find" routeParameters="statusId=WeInProgress&amp;facilityId={plantId}"
+            organizationScope="Your selected plant, else every plant of yours" sequenceNum="420"/>
+    <ironstone.insights.AttentionProvider providerKey="Manufacturing.Late" version="1" ownerApp="Manufacturing" title="Late work orders"
+            description="Work orders past their estimated completion."
+            countService="ironstone.manufacturing.HomeServices.get#Home" countParameters='{"appRoot":"Manufacturing"}'
+            countField="summary.lateCount"
+            routePath="Manufacturing/WorkOrders/Find" routeParameters="late=Y&amp;facilityId={plantId}"
+            organizationScope="Your selected plant, else every plant of yours" sequenceNum="430"/>
+    <!-- Projects (owner contract, design-projects §11): the counts of Projects Home that are counts (Unbilled is an amount); each
+        is null for a user it is not for, and then left out -->
+    <ironstone.insights.AttentionProvider providerKey="Projects.ReviewsWaiting" version="1" ownerApp="Projects" title="Reviews waiting"
+            description="Merge requests waiting for your review."
+            countService="ironstone.projects.ProjectServices.get#ProjectsHome"
+            countField="home.counts.reviewsWaiting"
+            routePath="Projects/Code/MergeRequests" routeParameters="list=waiting"
+            organizationScope="The projects you see" sequenceNum="510"/>
+    <ironstone.insights.AttentionProvider providerKey="Projects.ApproveTime" version="1" ownerApp="Projects" title="Time to approve"
+            description="Submitted timesheets you approve."
+            countService="ironstone.projects.ProjectServices.get#ProjectsHome"
+            countField="home.counts.timesheetsToApprove"
+            routePath="Projects/Time/Timesheets" routeParameters="list=toApprove"
+            organizationScope="The projects you see" sequenceNum="520"/>
+    <ironstone.insights.AttentionProvider providerKey="Projects.AllocationRequests" version="1" ownerApp="Projects" title="Allocation requests"
+            description="Requested allocations of the projects you see."
+            countService="ironstone.projects.ProjectServices.get#ProjectsHome"
+            countField="home.counts.allocationRequests"
+            routePath="Projects/Resources/Allocations" routeParameters="list=requested"
+            organizationScope="The projects you see" sequenceNum="530"/>
+    <!-- Warehouse (owner contract, design-warehouse §14): the receiving queue of the selected facility, overdue its late receipts -->
+    <ironstone.insights.AttentionProvider providerKey="Warehouse.Receiving" version="1" ownerApp="Warehouse" title="Receiving"
+            description="Purchase receipts waiting at the dock, late ones counted apart."
+            countService="ironstone.warehouse.HomeServices.get#Home" countParameters='{"appRoot":"Warehouse"}'
+            countField="queueRows[operation=receiving].waitingCount+queueRows[operation=receiving].lateCount" overdueField="queueRows[operation=receiving].lateCount"
+            routePath="Warehouse/Receiving/Receipts" routeParameters="facilityId={facilityId}"
+            organizationScope="Your selected facility" sequenceNum="610"/>
+    <!-- Monitor's Business operations dashboard (impl-insights F19): operation runs rolled back or set to retry over the last day,
+        by the dashboard's own query, opening Monitor's Operations under Monitor's own grants -->
+    <ironstone.insights.AttentionProvider providerKey="Monitor.OperationFailures" version="1" ownerApp="Monitor" title="Operations rolled back"
+            description="Business operation runs rolled back or set to retry in the last day."
+            countService="ironstone.insights.RegistryServices.get#OperationFailures"
+            countField="count"
+            routePath="system/Monitor/Operations"
+            organizationScope="Every organization" sequenceNum="910"/>
+    <!-- Admin P6 (impl-admin P6; design-admin §4.1 Offboarding, §14 Lifecycle participant): the lifecycle participants, each the owner's
+        own registration (owner contracts, F31): Commons' shared drives, calendars and contact books, Comms' shared mail accounts and
+        Projects' assignments, each through its owner's services (the owned-resource contract of org.moqui.admin.IdentityServices);
+        Insights registers its schedules in Insights P7. A registration names services and grants nothing: the owners check their
+        own permission (granted below to the identity operator and the administrator, who offboard) and the new owner. -->
+    <ironstone.admin.LifecycleParticipant participantKey="commons.drives" version="1" ownerApp="Commons" title="Shared drives"
+            description="The shared drives the user owns; personal drives stay with their user." resourceKind="drive"
+            lookupService="org.moqui.resource.FileServices.find#OwnedDrives" transferService="org.moqui.resource.FileServices.transfer#DriveOwner"
+            resourceParameter="driveId" requiredPermission="DRIVE_OWNER_CHANGE" sequenceNum="10"/>
+    <ironstone.admin.LifecycleParticipant participantKey="commons.calendars" version="1" ownerApp="Commons" title="Shared calendars"
+            description="The shared and resource calendars the user owns, and an organization's calendars the user alone manages; personal calendars stay with their user."
+            resourceKind="calendar" lookupService="mantle.work.CalendarServices.find#OwnedCalendars"
+            transferService="mantle.work.CalendarServices.transfer#CalendarOwner" resourceParameter="calendarId"
+            requiredPermission="CALENDAR_OWNER_CHANGE" sequenceNum="20"/>
+    <ironstone.admin.LifecycleParticipant participantKey="commons.contactBooks" version="1" ownerApp="Commons" title="Shared contact books"
+            description="The shared contact books the user alone manages; personal books and personal contacts stay with their user."
+            resourceKind="contactBook" lookupService="mantle.party.ContactBookServices.find#OwnedContactBooks"
+            transferService="mantle.party.ContactBookServices.transfer#ContactBookOwner" resourceParameter="contactBookId"
+            requiredPermission="CONTACT_BOOK_OWNER_CHANGE" sequenceNum="30"/>
+    <ironstone.admin.LifecycleParticipant participantKey="comms.mailAccounts" version="1" ownerApp="Comms" title="Shared mail accounts"
+            description="The shared mail accounts the user owns; personal accounts stay with their user." resourceKind="mailAccount"
+            lookupService="org.moqui.mail.EmailClientServices.find#OwnedEmailAccounts"
+            transferService="org.moqui.mail.EmailClientServices.transfer#EmailAccountOwner" resourceParameter="emailAccountId"
+            requiredPermission="EMAIL_ACCOUNT_OWNER_CHANGE" sequenceNum="40"/>
+    <ironstone.admin.LifecycleParticipant participantKey="projects.assignments" version="1" ownerApp="Projects" title="Open assignments"
+            description="The open tasks, work items and requests assigned to the user, reassigned through Projects' and Commons' own services."
+            resourceKind="assignment" lookupService="ironstone.admin.LifecycleServices.find#Assignments"
+            transferService="ironstone.admin.LifecycleServices.transfer#Assignments" resourceParameter="assignmentKind"
+            requiredPermission="ADMIN_IDENTITY_VIEW" sequenceNum="50"/>
+    <!-- the owner changes the participants' services check for another user's resources -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="DRIVE_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="EMAIL_ACCOUNT_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="CALENDAR_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="CONTACT_BOOK_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="DRIVE_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="EMAIL_ACCOUNT_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="CALENDAR_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="CONTACT_BOOK_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="DRIVE_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="EMAIL_ACCOUNT_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="CALENDAR_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="CONTACT_BOOK_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="DRIVE_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="EMAIL_ACCOUNT_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="CALENDAR_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="CONTACT_BOOK_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <!-- the client deny pattern (BOSS_PROJECTS_INTERNAL, impl-admin F14): P6's new write verb, transfer
+        (ironstone.admin.LifecycleServices transfer#OwnedResource, transfer#Assignments) -->
+    <artifactGroups artifactGroupId="BOSS_PROJECTS_INTERNAL">
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|people|maintenance|sales|marketing|shared)(\.[A-Za-z]+)+\.(pause|reconcile|retry|transfer)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+    </artifactGroups>
+
+    <!-- Admin P7 (impl-admin P7; design-admin §7 Organizations, OrganizationDetail and Constitution, §1.1): the Settings screens
+        Organizations, OrganizationDetail and Constitution for the configuration administrator (the organizations it belongs to and
+        their child organizations, MANTLE_USER_ORG) and the administrator (every organization with none active, MANTLE_ACTIVE_ORG),
+        denying the root user group as the other areas do; Mantle's IdentityServices check ADMIN_SETTINGS_VIEW and _MANAGE and the
+        organization scope, and its ConstitutionServices ORG_CONSTITUTION_EDIT in the organization, whatever opens the screens.
+        Members read their organization's Constitution in the Assist drawer's Rules pane, not here (impl-admin F46). -->
+    <artifactGroups artifactGroupId="BOSS_ADM_ORGANIZATIONS" description="Admin organizations and the Constitution">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/Organizations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/OrganizationDetail.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/Constitution.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_ORGANIZATIONS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_ORGANIZATIONS_CONFIGURE" userGroupId="BOSS_ADMIN_CONFIGURE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_ORGANIZATIONS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Organization Constitution edits are the configuration administrator's (design §1.1), with Mantle's ORG_CONSTITUTION_EDIT in
+        the organizations it works in; the instance's document stays the sealed ADMIN_CONSTITUTION_GLOBAL's (ADMIN) -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ORG_CONSTITUTION_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ORG_CONSTITUTION_EDIT" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ORG_CONSTITUTION_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ORG_CONSTITUTION_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <!-- Admin's own settings index entries (impl-admin P2's "For the lead"): organizations and the Constitution, each shown to a user
+        Admin › Settings opens them to -->
+    <moqui.server.SettingsEntry settingsKey="admin.organizations" version="1" ownerApp="Admin" title="Organizations"
+            description="Internal organizations: profile, contacts, members, defaults and setup links"
+            settingsGroupEnumId="AdmSgCompany" scopeEnumId="AdmScOrganization" destinationRoute="adminOrganizations"
+            screenLocation="component://mr-boss/screen/Admin/Settings/Organizations.xml" viewPermission="ADMIN_SETTINGS_VIEW"
+            configuredBy="Configuration administrator" sequenceNum="5"/>
+    <moqui.server.SettingsEntry settingsKey="admin.constitution" version="1" ownerApp="Admin" title="Constitution"
+            description="The shared guidance for people and agent runs, for the instance and each organization"
+            settingsGroupEnumId="AdmSgCompany" scopeEnumId="AdmScOrganization" destinationRoute="adminConstitution"
+            screenLocation="component://mr-boss/screen/Admin/Settings/Constitution.xml" viewPermission="ADMIN_SETTINGS_VIEW"
+            configuredBy="Configuration administrator" sequenceNum="6"/>
+
+    <!-- Admin P8 (impl-admin P8; design-admin §7 InstanceSettings, Localization and ReferenceData, §1.1): InstanceSettings and
+        Localization join the configuration administrator's Settings screens (BOSS_ADM_ORGANIZATIONS: denied to the root user
+        group, ALWAYS for the configuration administrator and the administrator); the framework's
+        org.moqui.admin.ConfigurationServices check ADMIN_SETTINGS_VIEW and ADMIN_SETTINGS_MANAGE whatever opens the screens, and
+        write registered preferences and translations only. ReferenceData is every Admin user's, as the settings index: it links
+        the owners' screens and changes nothing. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_ORGANIZATIONS">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/InstanceSettings.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/Localization.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+    </artifactGroups>
+    <!-- Admin's own settings index entries of P8, each shown to a user Admin › Settings opens them to -->
+    <moqui.server.SettingsEntry settingsKey="admin.instanceSettings" version="1" ownerApp="Admin" title="Instance settings"
+            description="What the instance is called, its default locale and time zone, the new-device sign-in window, the group recipient ceiling, and where each deployment value comes from"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance"
+            destinationRoute="adminInstanceSettings" screenLocation="component://mr-boss/screen/Admin/Settings/InstanceSettings.xml" viewPermission="ADMIN_SETTINGS_VIEW"
+            configuredBy="Configuration administrator" sequenceNum="101"/>
+    <moqui.server.SettingsEntry settingsKey="admin.localization" version="1" ownerApp="Admin" title="Localization"
+            description="Translations of messages and of the names of statuses, options, units and places"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance"
+            destinationRoute="adminLocalization" screenLocation="component://mr-boss/screen/Admin/Settings/Localization.xml" viewPermission="ADMIN_SETTINGS_VIEW"
+            configuredBy="Configuration administrator" sequenceNum="102"/>
+    <moqui.server.SettingsEntry settingsKey="admin.referenceData" version="1" ownerApp="Admin" title="Reference data"
+            description="Where units, currencies, tax, types, statuses and workflows are changed, each by its owner"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance" destinationRoute="adminReferenceData"
+            screenLocation="component://mr-boss/screen/Admin/Settings/ReferenceData.xml"
+            configuredBy="Each owner's administrators" sequenceNum="103"/>
+    <!-- The reference kinds of ReferenceData (design §7 ReferenceOwners, §14.2: a deep link inside an owner's settings is a
+        further entry with the owner's permission): a group of the settings index, each entry its owner's screen and shown only
+        to a viewer that screen opens to. Each owner's rows follow its design; Admin changes none of these records. -->
+    <moqui.basic.Enumeration enumId="AdmSgReference" enumTypeId="AdminSettingsGroup" description="Reference data" sequenceNum="4"/>
+    <!-- Products (design-products: it owns units and conversions; changing a unit is an instance administrator's write) -->
+    <moqui.server.SettingsEntry settingsKey="reference.units" version="1" ownerApp="Products" title="Units of measure"
+            description="Units, their conversions and barcodes; a unit a document already uses keeps its meaning"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" destinationRoute="productsUnits"
+            screenLocation="component://mr-boss/screen/Products/Units.xml"
+            configuredBy="Catalog administrator; unit changes an instance administrator" sequenceNum="210"/>
+    <moqui.server.SettingsEntry settingsKey="reference.identificationTypes" version="1" ownerApp="Products"
+            title="Product identification types" description="The kinds of product identifier (SKU, GTIN, supplier code)"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" destinationRoute="productsIdentificationTypes"
+            screenLocation="component://mr-boss/screen/Products/Settings/IdentificationTypes.xml"
+            configuredBy="Catalog administrator" sequenceNum="220"/>
+    <!-- Accounting (design-accounting: currencies, tax, terms and posting policy are its own) -->
+    <moqui.server.SettingsEntry settingsKey="reference.currencies" version="1" ownerApp="Accounting" title="Currencies"
+            description="The currencies in use and their exchange rates" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" destinationRoute="accountingCurrencies"
+            screenLocation="component://mr-boss/screen/Accounting/Settings/Currencies.xml" configuredBy="Finance administrator"
+            sequenceNum="230"/>
+    <moqui.server.SettingsEntry settingsKey="reference.paymentTerms" version="1" ownerApp="Accounting" title="Payment terms"
+            description="Settlement terms offered to customers and taken from suppliers" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" destinationRoute="accountingPaymentTerms"
+            screenLocation="component://mr-boss/screen/Accounting/Settings/PaymentTerms.xml"
+            configuredBy="Finance administrator" sequenceNum="240"/>
+    <moqui.server.SettingsEntry settingsKey="reference.tax" version="1" ownerApp="Accounting" title="Tax authorities and rates"
+            description="Tax authorities, their rates and what they apply to" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" destinationRoute="accountingTaxAuthorities"
+            screenLocation="component://mr-boss/screen/Accounting/Tax/TaxAuthorities.xml" configuredBy="Finance administrator"
+            sequenceNum="250"/>
+    <!-- Customer Service, Projects and Manufacturing: their own types, statuses and reasons -->
+    <moqui.server.SettingsEntry settingsKey="reference.caseTypes" version="1" ownerApp="Customer Service" title="Case types"
+            description="The kinds of case and what each asks for" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" destinationRoute="customerServiceCaseTypes"
+            screenLocation="component://mr-boss/screen/CustomerService/Settings/CaseTypes.xml"
+            configuredBy="Customer service administrator or manager" sequenceNum="260"/>
+    <moqui.server.SettingsEntry settingsKey="reference.caseStatusCategories" version="1" ownerApp="Customer Service"
+            title="Case status categories" description="How case statuses are grouped for queues and reports"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScOrganization"
+            destinationRoute="customerServiceStatusCategories"
+            screenLocation="component://mr-boss/screen/CustomerService/Settings/StatusCategories.xml"
+            configuredBy="Customer service administrator or manager" sequenceNum="270"/>
+    <moqui.server.SettingsEntry settingsKey="reference.workItemTypes" version="1" ownerApp="Projects" title="Work item types"
+            description="The kinds of work item and their fields" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" destinationRoute="projectsWorkItemTypes"
+            screenLocation="component://mr-boss/screen/Projects/Settings/WorkItemTypes.xml" configuredBy="Projects managers"
+            sequenceNum="280"/>
+    <moqui.server.SettingsEntry settingsKey="reference.workflows" version="1" ownerApp="Projects" title="Work item workflows"
+            description="The statuses a work item moves through and the moves allowed" settingsGroupEnumId="AdmSgReference"
+            scopeEnumId="AdmScOrganization" destinationRoute="projectsWorkflows"
+            screenLocation="component://mr-boss/screen/Projects/Settings/Workflows.xml" configuredBy="Projects managers"
+            sequenceNum="290"/>
+    <moqui.server.SettingsEntry settingsKey="reference.reasonCodes" version="1" ownerApp="Manufacturing"
+            title="Production reason codes" description="Reasons for scrap, downtime and rework"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScOrganization" destinationRoute="manufacturingReasonCodes"
+            screenLocation="component://mr-boss/screen/Manufacturing/Settings/ReasonCodes.xml"
+            configuredBy="Production or resource administrator" sequenceNum="300"/>
+    <!-- Tools (the framework's generic editors, an instance administrator's): status flows, and every message and label -->
+    <moqui.server.SettingsEntry settingsKey="reference.statusFlows" version="1" ownerApp="Tools" title="Status flows"
+            description="The generic status-flow editor; an app's own workflow screen is the place to change its flow"
+            settingsGroupEnumId="AdmSgReference" scopeEnumId="AdmScInstance" destinationRoute="toolsStatusFlows"
+            screenLocation="component://tools/screen/Tools.xml" configuredBy="Instance administrator" sequenceNum="310"/>
+    <!-- Insights P6 (impl-insights P6; design-insights §4 Drill and business annotations, §5 Analysis, §10): drill, Analysis, the
+        record contexts and business events.
+        Drill: the report engine's get#Drill, a reading operation (it reads a saved panel as the viewer and each dataset by its own
+        artifact and row filter), ALWAYS for the groups that read, past BOSS_INS_REPORT_ENGINE's deny; Insights' own Drill screen and
+        the Records mounts are open to every Insights user by the root's ALLOW, and ironstone.insights.DrillServices check
+        INSIGHTS_VIEW. That ALLOW is inheritable, so it also covers the shared record screens' own transitions and tabs when they
+        are reached under Insights/Records: no row here can deny them without denying them in their owners' apps (a transition's
+        artifact is its screen's location, not its mount), so Records.xml refuses every path below a record screen but its
+        InsightsRecord subscreen (the P6 review). No Insights group holds a dataset's records artifact (org.moqui.report.rows.<id>): a dataset whose definition
+        restricts its records gives them totals only.
+        Business events: the dataset mantle-business-events (Mantle's ReportAnnotationSource over the engine's annotations, scoped
+        to the viewer's organizations), view only; writing one (org.moqui.report.annotation.business) is no Insights group's, its
+        owner's service does it after its commit.
+        Analysis: the author's and the dataset steward's, as the editors (BOSS_INS_AUTHORING): the root user group and the
+        administrator are denied it, and the non-inheritable ALWAYS names its one transition. -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_DRILL" description="Insights: drilling a saved panel">
+        <artifacts artifactName="org.moqui.report.ReportServices.get#Drill" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_DRILL_ADMIN" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_INS_EVENTS" description="Insights: business events on the time series">
+        <artifacts artifactName="org.moqui.report.dataset.mantle-business-events" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_EVENTS_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_INS_ANALYSIS" description="Insights: Analysis">
+        <artifacts artifactName="component://mr-boss/screen/Insights/ReportBuilder/Analysis.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Insights/ReportBuilder/Analysis.xml/saveAnalysis"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_ROOTDENY" userGroupId="BOSS_INSIGHTS"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_INS_ANALYSIS_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+
+    <!-- Admin P10 (impl-admin P10; design-admin §6, §1.1, §1.2): the Security area (SignInPolicy, IdentityProviders,
+        IdentityProviderDetail) for the access administrator, the configuration administrator, the integration administrator
+        and the administrator, denying the root user group as the other areas do. Each screen shows a viewer what the
+        framework's services answer them: the policy with ADMIN_SETTINGS_VIEW or ADMIN_ACCESS_VIEW, the groups' sign-in rules
+        with ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE, a provider's configuration with ADMIN_CONNECTION_VIEW and
+        ADMIN_CONNECTION_MANAGE, its role mappings and enabling with ADMIN_ACCESS_MANAGE, checked by
+        org.moqui.admin.ConfigurationServices and AccessServices whatever opens the screens. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_SECURITY" description="Admin sign-in policy and identity providers">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Security.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_ACCESS" userGroupId="BOSS_ADMIN_ACCESS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_CONFIGURE" userGroupId="BOSS_ADMIN_CONFIGURE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_INTEGRATIONS" userGroupId="BOSS_ADMIN_INTEGRATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_SECURITY_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- The new-device sign-in notice (the framework's AccountSignIn topic, org.moqui.admin.IdentityServices
+        notify#NewDeviceSignIn; design-admin §4 Sessions): its link opens Commons Account, where the account's owner signs that
+        session out ("Where you are signed in"; design-drawers-commons Account). Only the link is set here. -->
+    <moqui.security.user.NotificationTopic topic="AccountSignIn" linkTemplate="/qapps/Commons/Settings/Account"/>
+</entity-facade-xml>

@@ -1,4 +1,4 @@
-// Commerce's demo (impl-commerce P1, F17; DemoServices.load#CommerceDemo, run from BossZCommerceDemoData.xml): the two PASS
+// Commerce's demo (impl-commerce P1, F17; DemoServices.load#CommerceDemo, run from demo/58CommerceSites.xml): the two PASS
 // sites of the demo stores, disabled until published, with their Shop mounts (Shop P1): ZIZI_SHOP on
 // shop.zizi.localhost for POPC_DEFAULT's organization, Ziziwork Retail, and ZIZI_DIGITAL on digital.zizi.localhost for
 // BOSS_COM_DIGITAL's, Ziziwork Services, each with Shop, Account, Billing and Support mounts (Billing and Support targeting the
@@ -186,7 +186,7 @@ function ensureRecoveryConsent() {
 // (store#Category), its audience (members of the category, published, qualifying subscription and manual grants:
 // set#CategoryAccess) and the binding (store#SubscriptionBinding), so a subscriber's grant opens that category to them once
 // they are a member of the site; made once. The category is made by load#CommerceForumDemo, from a data file of its own after
-// this one (BossZZCommerceForumDemoData.xml): the Forum's operations lock the operator's account row, which the data load's
+// this one (demo/72CommerceForum.xml): the Forum's operations lock the operator's account row, which the data load's
 // own transaction holds once the demo signs its administrator in, so they run in that transaction, not one of their own
 const paidAccess = {
     siteId: "ZIZI_DIGITAL",

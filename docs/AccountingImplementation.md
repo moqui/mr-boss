@@ -181,7 +181,7 @@ public screen, group or token route; a customer or supplier contact is a PASS pu
   A payment made from a pay link is an ordinary card payment for the invoice, applied when the gateway confirms it.
 - **Bills.** A supplier's upload is an incoming bill on Bills like one AP uploads, waiting for review; its file is the
   scanned one.
-- **Demo** (`BossZPortalDemoData.xml`, `load#PortalDemo`). ORG_ZIZI_RETAIL's site ZIZI_PORTAL on
+- **Demo** (`demo/64AccountingPortal.xml`, `load#PortalDemo`). ORG_ZIZI_RETAIL's site ZIZI_PORTAL on
   `portal.zizi.localhost` with `/account`, `/billing` and `/supplier`; the hosted test gateway ZIZI_PORTAL_HOSTED; the
   invoice ZIZI_PORTAL_INVOICE to JoeDist with the pay link token `ZiziPortalDemoInvoicePayLink000000000000000001`; the
   approved purchase order ZIZI_PORTAL_PO from ZiddlemanInc with the bill link token

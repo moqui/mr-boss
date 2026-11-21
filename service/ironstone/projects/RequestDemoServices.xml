@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The requests demo of IronStone Projects (impl-projects.md P5): data/BossProjectsDemoDataRequests.xml calls load#ProjectRequestsDemo
+<!-- The requests demo of IronStone Projects (impl-projects.md P5): data/demo/32ProjectRequests.xml calls load#ProjectRequestsDemo
     after the projects and the mail demo. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
 
@@ -41,7 +41,7 @@ along with this software (see the LICENSE.md file). If not, see
             const wasDisabled = ec.artifactExecution.disableAuthz()
             try {
                 if (ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'IRON').one() == null) {
-                    ec.logger.warn('The requests demo needs the project IRON (BossProjectsDemoData.xml); nothing loaded')
+                    ec.logger.warn('The requests demo needs the project IRON (demo/30Projects.xml); nothing loaded')
                     return
                 }
                 const setting = (type, value) => ec.service.sync().name('store#mantle.work.effort.WorkEffortSetting').parameters({workEffortId: 'IRON',

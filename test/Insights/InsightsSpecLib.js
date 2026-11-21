@@ -1,4 +1,4 @@
-// Helpers the Insights specs share: the demo ids (data/BossUsersDemoData.xml), the demo users by group, a block run as a user with
+// Helpers the Insights specs share: the demo ids (data/demo/42Users.xml), the demo users by group, a block run as a user with
 // artifact authorization on, a call's refusal message, an Insights page render and the shell's menu and providers. Later phases
 // add their ids and users here.
 const ids = {

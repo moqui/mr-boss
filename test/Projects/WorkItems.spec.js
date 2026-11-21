@@ -1,6 +1,6 @@
 // Projects WorkItems and QuickCreate (screen/Projects/WorkItems/List.xml, screen/Projects/QuickCreate.xml and QuickProject.xml,
 // service/ironstone/projects/WorkItemServices.xml; design-projects.md §5 WorkItems, §3 QuickCreate; impl-projects.md P2) on the
-// Projects demo (data/BossProjectsDemoData.xml: IRON on the development flow with a tree, ACME, HIRE only john.doe is on):
+// Projects demo (data/demo/30Projects.xml: IRON on the development flow with a tree, ACME, HIRE only john.doe is on):
 // the smart lists and the find, each row decorated with its roll-up; the projects a user sees (Joe Developer not HIRE,
 // impl-projects.md F1); the list in qvt with its views, peek pane and saved finds; the quick-add row; the in-place edits,
 // the board (status along the flow, assignee, milestone), the calendar and the tree (a level, the ancestors, a move); the
@@ -41,7 +41,7 @@ const rows = (parameters) => sys(() => call("ironstone.projects.WorkItemServices
 // the demo's items (this component's data files), not those another spec made, here (BOSS_TEST names) or in another
 // component's run before
 const demoItems = new Set()
-for (const fileRef of ec.resource.getLocationReference("component://mr-boss/data").getDirectoryEntries())
+for (const fileRef of ec.resource.getLocationReference("component://mr-boss/data/demo").getDirectoryEntries())
     if (fileRef.location.endsWith(".xml"))
         for (const match of String(ec.resource.getLocationText(fileRef.location) || "").matchAll(/<mantle\.work\.effort\.WorkEffort workEffortId="([^"]+)"/g))
             demoItems.add(match[1])

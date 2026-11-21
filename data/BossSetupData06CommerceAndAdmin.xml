@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="seed-initial">
+    <!-- Commerce P1 (impl-commerce P1, F1, F45; design-commerce §1.1): the root user group and the capability groups; the
+        administrator group BOSS_COMMERCE_ADMIN is above. Groups are not nested: a Commerce user is in BOSS_USERS, BOSS_COMMERCE
+        and a capability group, the administrator in BOSS_USERS and BOSS_COMMERCE_ADMIN. -->
+    <moqui.security.UserGroup userGroupId="BOSS_COMMERCE" description="Commerce app users (the launcher)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_COMMERCE_MANAGER" description="Store manager"/>
+    <moqui.security.UserGroup userGroupId="BOSS_COMMERCE_MERCHANDISER" description="Merchandiser"/>
+    <moqui.security.UserGroup userGroupId="BOSS_COMMERCE_DESIGNER" description="Store designer"/>
+    <moqui.security.UserGroup userGroupId="BOSS_COMMERCE_THEME_DEVELOPER" description="Theme developer"/>
+    <moqui.security.UserGroup userGroupId="BOSS_COMMERCE_PUBLISHER" description="Store publisher"/>
+    <moqui.security.UserGroup userGroupId="BOSS_COMMERCE_OPERATOR" description="Store operator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_COMMERCE_CHANNEL_OPERATOR" description="Channel operator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_COMMERCE_SUBSCRIPTION_OPERATOR" description="Subscription operator"/>
+    <!-- the root user group's authorization on the Commerce root and the app's services (ironstone.commerce: its context, record
+        checks, choices, palette and demo), beside the administrators' rows of the BOSS_COMMERCE artifact group above. The
+        Mantle store, order, promotion and site services check their own permissions and are not here, nor are their raw
+        mutators or the /mantle REST paths (impl-commerce §2, F9). -->
+    <artifactGroups artifactGroupId="BOSS_COMMERCE" description="IronStone Commerce App (via root screen)">
+        <artifacts artifactName="ironstone\.commerce\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_COMMERCE_ROOT" userGroupId="BOSS_COMMERCE" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Commerce areas for their capability groups only (impl-commerce P1, F45), as Customer Service's BOSS_CS_<Area>: each denies
+        the root user group BOSS_COMMERCE and allows its groups, with the root's filter sets. Home, Stores, Merchandising and
+        Promotions are every Commerce user's (a reader reads them; each list and record is limited by
+        ironstone.commerce.ContextServices); Website to the merchandiser (navigation), designer, theme developer and publisher;
+        Orders and Customers to the store and subscription operators; Integrations to the channel operator; Reports to the
+        manager and the operators; Settings to the manager. The administrator opens every area. Commerce.js reads these
+        authorizations as the website, orders, customers, integrations, reports and settings capabilities. Each service still
+        checks its own permission, the organization and the store. A later phase that opens an area to another group adds its
+        authz row here. -->
+    <artifactGroups artifactGroupId="BOSS_COM_WEBSITE">
+        <artifacts artifactName="component://mr-boss/screen/Commerce/Website.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_COM_WEBSITE_DENY" userGroupId="BOSS_COMMERCE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_COM_WEBSITE_MERCHANDISER" userGroupId="BOSS_COMMERCE_MERCHANDISER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_WEBSITE_DESIGNER" userGroupId="BOSS_COMMERCE_DESIGNER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_WEBSITE_DEVELOPER" userGroupId="BOSS_COMMERCE_THEME_DEVELOPER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_WEBSITE_PUBLISHER" userGroupId="BOSS_COMMERCE_PUBLISHER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_WEBSITE_ADMIN" userGroupId="BOSS_COMMERCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_COM_ORDERS">
+        <artifacts artifactName="component://mr-boss/screen/Commerce/Orders.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Commerce/Customers.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_COM_ORDERS_DENY" userGroupId="BOSS_COMMERCE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_COM_ORDERS_OPERATOR" userGroupId="BOSS_COMMERCE_OPERATOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_ORDERS_SUBSCRIPTIONS" userGroupId="BOSS_COMMERCE_SUBSCRIPTION_OPERATOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_ORDERS_ADMIN" userGroupId="BOSS_COMMERCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_COM_INTEGRATIONS">
+        <artifacts artifactName="component://mr-boss/screen/Commerce/Integrations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_COM_INTEGRATIONS_DENY" userGroupId="BOSS_COMMERCE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_COM_INTEGRATIONS_CHANNEL" userGroupId="BOSS_COMMERCE_CHANNEL_OPERATOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_INTEGRATIONS_ADMIN" userGroupId="BOSS_COMMERCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_COM_REPORTS">
+        <artifacts artifactName="component://mr-boss/screen/Commerce/Reports.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_COM_REPORTS_DENY" userGroupId="BOSS_COMMERCE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_COM_REPORTS_MANAGER" userGroupId="BOSS_COMMERCE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_REPORTS_OPERATOR" userGroupId="BOSS_COMMERCE_OPERATOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_REPORTS_CHANNEL" userGroupId="BOSS_COMMERCE_CHANNEL_OPERATOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_REPORTS_SUBSCRIPTIONS" userGroupId="BOSS_COMMERCE_SUBSCRIPTION_OPERATOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_REPORTS_ADMIN" userGroupId="BOSS_COMMERCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_COM_SETTINGS">
+        <artifacts artifactName="component://mr-boss/screen/Commerce/Settings.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_COM_SETTINGS_DENY" userGroupId="BOSS_COMMERCE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_COM_SETTINGS_MANAGER" userGroupId="BOSS_COMMERCE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_SETTINGS_ADMIN" userGroupId="BOSS_COMMERCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the record links of the palette, Today and notifications for Commerce users (stores route through ironstone.commerce's
+        scope, P1; orders and carts in P8) -->
+    <artifactGroups artifactGroupId="BOSS_COM_RECORD_LINK">
+        <artifacts artifactName="ironstone.commons.PaletteServices.get#RecordLink" artifactTypeEnumId="AT_SERVICE"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_COM_RECORD_LINK" userGroupId="BOSS_COMMERCE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COM_RECORD_LINK_ADMIN" userGroupId="BOSS_COMMERCE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Commerce P1 (impl-commerce P1, F2; design-commerce §1.1's table): the Mantle permissions of each group. The root user
+        group (a Commerce reader) holds COMMERCE_VIEW and the product master read (PRODUCT_CATALOG_VIEW, so the shared catalog
+        screens open, P3); the manager, merchandiser and store operator read prices (PRICE_VIEW, as Customer Service F87); the
+        administrator holds every COMMERCE_* permission with both reads. Operator host allowlists, credentials and other apps'
+        financial, price-edit and stock privileges stay their owners' (design §1.1). Later phases append their grants below. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE" userPermissionId="COMMERCE_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_MANAGER" userPermissionId="COMMERCE_STORE_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_MANAGER" userPermissionId="COMMERCE_PROMOTION_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_MANAGER" userPermissionId="PRICE_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_MERCHANDISER" userPermissionId="COMMERCE_MERCHANDISE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_MERCHANDISER" userPermissionId="PRICE_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_DESIGNER" userPermissionId="COMMERCE_THEME_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_THEME_DEVELOPER" userPermissionId="COMMERCE_THEME_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_THEME_DEVELOPER" userPermissionId="COMMERCE_THEME_CODE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_PUBLISHER" userPermissionId="COMMERCE_PUBLISH"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_PUBLISHER" userPermissionId="COMMERCE_THEME_PUBLISH"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_OPERATOR" userPermissionId="COMMERCE_ORDER_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_OPERATOR" userPermissionId="COMMERCE_RECOVERY"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_OPERATOR" userPermissionId="PRICE_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_CHANNEL_OPERATOR" userPermissionId="COMMERCE_CHANNEL_OPERATE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_SUBSCRIPTION_OPERATOR" userPermissionId="COMMERCE_ORDER_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_SUBSCRIPTION_OPERATOR" userPermissionId="COMMERCE_SUBSCRIPTION_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_STORE_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_MERCHANDISE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_PUBLISH"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_THEME_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_THEME_CODE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_THEME_PUBLISH"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_ORDER_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_RECOVERY"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_PROMOTION_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_CHANNEL_OPERATE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_SUBSCRIPTION_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="PRICE_VIEW"
+            fromDate="0"/>
+    <!-- Commerce P1 (impl-commerce F50): the store filter. The organization filters limit ProductStore by its organization only
+        (MANTLE_USER_ORG_D), so a store-limited staff member (a current StoreStaff ProductStoreParty row) would see every
+        store of their organizations through them. COMMERCE_STORE applies only when the Commerce root's
+        ironstone.commerce.ContextServices.setup#StoreScope put the member's stores in the user context (commerceStoreIds;
+        _NA_ when they could not be read), so a user with no assignment still sees every store of their organizations. It
+        is on every Commerce authorization; the filters miss a store's child records, its orders, reads with authorization
+        disabled, REST and the search indexes, so the Commerce services condition on the store scope themselves
+        (Commerce.js storeIn, storeFind; get#StoreScope). -->
+    <moqui.security.EntityFilterSet entityFilterSetId="COMMERCE_STORE" description="Commerce store-limited staff"
+            allowMissingAlias="Y" applyCond="ec.user.context.commerceStoreIds != null">
+        <filters entityFilterId="COMMERCE_STORE_PS" entityName="mantle.product.store.ProductStore"
+                filterMap="({productStoreId: ec.user.context.commerceStoreIds || ['_NA_']})"/>
+    </moqui.security.EntityFilterSet>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COMMERCE_ADMIN" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COMMERCE_APPADMIN" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COMMERCE_ROOT" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_WEBSITE_MERCHANDISER" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_WEBSITE_DESIGNER" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_WEBSITE_DEVELOPER" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_WEBSITE_PUBLISHER" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_WEBSITE_ADMIN" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_ORDERS_OPERATOR" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_ORDERS_SUBSCRIPTIONS" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_ORDERS_ADMIN" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_INTEGRATIONS_CHANNEL" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_INTEGRATIONS_ADMIN" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_REPORTS_MANAGER" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_REPORTS_OPERATOR" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_REPORTS_CHANNEL" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_REPORTS_SUBSCRIPTIONS" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_REPORTS_ADMIN" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_SETTINGS_MANAGER" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_SETTINGS_ADMIN" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_RECORD_LINK" entityFilterSetId="COMMERCE_STORE"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_COM_RECORD_LINK_ADMIN" entityFilterSetId="COMMERCE_STORE"/>
+    <!-- Commerce P6 review (F-P6-3): the administrator, whose authorizations carry the active organization filter, works every
+        organization's stores (the active one's when one is active) in Mantle's store services too, as in Commerce.js -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_ALL_ORGANIZATIONS"
+            fromDate="0"/>
+    <!-- Shop P8 (impl-commerce F108): resolving a stuck Shop placement (retry it, or release or refund its kept payment) is the
+        Commerce administrator's; the store operators read it in CartDetail -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_PLACEMENT_RESOLVE"
+            fromDate="0"/>
+    <!-- Admin P1 (impl-admin P1, F1, F2; design-admin §1.1): the root user group and the capability groups; the administrator group
+        BOSS_ADMIN_ADMIN is above. Groups are not nested: an Admin user is in BOSS_USERS, BOSS_ADMIN and a capability group, the
+        administrator in BOSS_USERS and BOSS_ADMIN_ADMIN. BOSS_ADMIN_ACCESS, BOSS_ADMIN_BACKUP and BOSS_ADMIN_ADMIN are privileged
+        (MoquiConf.xml): only a member changes their membership. BOSS_ADMIN_PRIVACY holds no permission until PrivacyServices
+        (impl-admin §7); Customer Service's Privacy team holds it (impl-customer-service F80). -->
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN" description="Admin app users (the launcher)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_READ" description="Administrative reader"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_IDENTITY" description="Identity operator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_ACCESS" description="Access administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_CONFIGURE" description="Configuration administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_INTEGRATIONS" description="Integration administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_OPERATIONS" description="Operations operator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_DATA" description="Data operator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_AUDIT" description="Audit reader"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_PRIVACY" description="Privacy administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_BACKUP" description="Backup operator"/>
+    <!-- the root user group's authorization on the Admin root and the app's services (ironstone.admin: its context, record checks,
+        choices, palette and registries), beside the administrators' rows of the BOSS_ADMIN artifact group above. The root grant
+        opens navigation only; each screen and service checks its own permission. No BOSS_ADMIN_* group is authorized for the raw
+        framework security entities, org.moqui.impl.UserServices' administrative services or their REST paths (impl-admin §2);
+        ADMIN keeps Tools. -->
+    <artifactGroups artifactGroupId="BOSS_ADMIN" description="IronStone Admin App (via root screen)">
+        <artifacts artifactName="ironstone\.admin\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADMIN_ROOT" userGroupId="BOSS_ADMIN" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin areas for their capability groups only (impl-admin P1; impl-commerce F45's pattern): each denies the root user group
+        BOSS_ADMIN and allows its groups, with the root's filter sets. Home is every Admin user's; Operations (Monitoring in P1)
+        the administrative reader's, the operations operator's and the administrator's; Agents the
+        administrator's (AgentsHome then checks AgentAdmin). Admin.js reads these
+        authorizations as the operations and agents capabilities. A later phase that adds an area, or opens one to
+        another group, adds its rows here. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_OPERATIONS">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Operations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_OPERATIONS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_OPERATIONS_READ" userGroupId="BOSS_ADMIN_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_OPERATIONS_OPERATIONS" userGroupId="BOSS_ADMIN_OPERATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_OPERATIONS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_ADM_AGENTS">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Agents.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_AGENTS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_AGENTS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin › System (impl-admin F2; design-admin §13): the Tools System screens mounted under the Admin root stay ADMIN's. The
+        Admin groups' inheritable ALLOW on the root would otherwise open System.xml, which has no grant of theirs, so they are
+        denied it by its location; Tools' own SYSTEM_APP ALWAYS (ADMIN's) still opens it, there and at /qapps/system. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_SYSTEM">
+        <artifacts artifactName="component://tools/screen/System.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_SYSTEM_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_SYSTEM_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Admin P1 (impl-admin §4; design-admin §1.1's table): the framework's ADMIN_* permissions of each group (the framework seeds
+        them, each granted to ADMIN). The administrator holds every one of the groups' permissions; ADMIN_IDENTITY_GLOBAL and
+        ADMIN_BACKUP_DOWNLOAD, which the identity operator and backup operator "additionally need", and ADMIN_CONSTITUTION_GLOBAL
+        stay the instance administrators' (ADMIN), granted only by a holder. BOSS_ADMIN_PRIVACY has none yet. Later phases append
+        their grants below (each data target's domain permission on BOSS_ADMIN_DATA, P15). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_READ" userPermissionId="ADMIN_OVERVIEW_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="ADMIN_IDENTITY_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="ADMIN_IDENTITY_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ACCESS" userPermissionId="ADMIN_ACCESS_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ACCESS" userPermissionId="ADMIN_ACCESS_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ADMIN_SETTINGS_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ADMIN_SETTINGS_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_INTEGRATIONS" userPermissionId="ADMIN_CONNECTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_INTEGRATIONS" userPermissionId="ADMIN_CONNECTION_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_OPERATIONS" userPermissionId="ADMIN_OPERATION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_OPERATIONS" userPermissionId="ADMIN_OPERATION_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_DATA" userPermissionId="ADMIN_TRANSFER_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_DATA" userPermissionId="ADMIN_TRANSFER_RUN"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_AUDIT" userPermissionId="ADMIN_AUDIT_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_BACKUP" userPermissionId="ADMIN_BACKUP_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_BACKUP" userPermissionId="ADMIN_BACKUP_RUN"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_OVERVIEW_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_IDENTITY_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_IDENTITY_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_ACCESS_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_ACCESS_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_SETTINGS_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_SETTINGS_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_CONNECTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_CONNECTION_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_OPERATION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_OPERATION_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_TRANSFER_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_TRANSFER_RUN"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_AUDIT_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_BACKUP_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_BACKUP_RUN"
+            fromDate="0"/>
+</entity-facade-xml>

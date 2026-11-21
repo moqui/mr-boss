@@ -1,6 +1,6 @@
 // Commons Calendar/EventDetail (screen/Commons/Calendar/EventDetail.xml, service/ironstone/commons/EventServices.xml; impl-drawers-commons.md
 // M7, design-drawers-commons.md §7 EventDetail): one event as john.doe sees and changes it, on the calendar demo
-// (data/BossCalendarDemoData.xml, loaded again here). The screen renders the weekly sync's instance with its header, repeat and
+// (data/demo/12CalendarChatAndConsent.xml, loaded again here). The screen renders the weekly sync's instance with its header, repeat and
 // tabs, and Joe Developer's planning with john.doe's RSVP; When and Overview save by scope, a changed instance shows itself; the
 // repeat editor writes the RRULE; attendees are invited (a user by notification, an outside address as a new personal contact by
 // email), made optional and removed (the removed outside address told by email); the user's reminders; meeting rooms and

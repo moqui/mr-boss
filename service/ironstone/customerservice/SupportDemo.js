@@ -1,5 +1,5 @@
 // Customer Service's demo of the Support app (impl-customer-service P15; DemoServices.load#SupportDemo, run from
-// BossZZZCustomerServiceSupportDemoData.xml after the feedback demo, on Accounting's ZIZI_PORTAL site whose /support mount
+// demo/82SupportPortal.xml after the feedback demo, on Accounting's ZIZI_PORTAL site whose /support mount
 // targets ORG_ZIZI_RETAIL): the Support mount's settings (the Support queue, the help of ZZW_RETAIL); Joe's Distributing's
 // contact and its customer administrator as PASS public accounts (demo password moqui), invited through invite#Contact and
 // redeemed; Joe Q Public's own account (CustJqp, a person: invite#Contact is for a contact, his own account reaches his

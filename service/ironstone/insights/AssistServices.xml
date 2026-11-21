@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     read tools of the insights-analyst skill and the service behind "Add to my dashboard". A question about a number is a typed
     query (Analysis' choices), run by the report engine as the signed-in user over an admitted dataset they read, under its row
     filter and guards; what may be asked is decided by the dataset's class (ironstone.insights.DatasetClass). The Assist and MCP
-    surfaces are separate services, since a tool exposure (moqui.agent.AgentToolExposure, data/BossSetupData.xml) is offered to
+    surfaces are separate services, since a tool exposure (moqui.agent.AgentToolExposure, data/BossSetupData13SettingsAndOperations.xml) is offered to
     one or the other by its row: the MCP ones never read a cost or margin, whatever the caller holds. The report engine's own
     run#Query is not exposed. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">

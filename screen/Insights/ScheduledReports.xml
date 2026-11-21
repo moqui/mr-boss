@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     whose rows are kept and listed under Mine. The three screens are the framework's Dashboards screens, mounted by location
     (mr-moqui plans/archive/Admin-Screens-Down.md, Track I; docs/tools/Monitoring.md, "Mounting the report screens"): no grant names
     them or a transition of theirs, and Insights adds nothing but its policy. Every Insights user opens the area (Received is
-    every reader's); what each is offered follows their own grant of the report engine's operations (data/BossSetupData.xml:
+    every reader's); what each is offered follows their own grant of the report engine's operations (data/BossSetupData12DeliveryAlertsAndFlows.xml:
     reading deliveries, scheduling for oneself, delivering to others), which BOSS_INS_REPORT_ENGINE refuses to anyone else,
     and the engine checks each recipient. The screens read Insights' policy, which the root and this area set and no request
     supplies: the recipients proposed and accepted are Insights' readers (recipientPermissionId), a schedule is delivered

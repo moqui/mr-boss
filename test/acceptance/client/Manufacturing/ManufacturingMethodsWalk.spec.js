@@ -1,6 +1,6 @@
 // Manufacturing P2's walk (impl-manufacturing P2, §8): the method engineer publishes an operation template's instruction,
 // starts a routing and asks for its release; the method approver finds it in Approvals and releases it; the BOM list and a
-// method fit 390 px. The demo method of DEMO_1_1 (data/BossManufacturingDemoData.xml) is there from the start.
+// method fit 390 px. The demo method of DEMO_1_1 (data/demo/24Manufacturing.xml) is there from the start.
 // Run: ./moq test-client mr-boss --serve -- --spec ManufacturingMethodsWalk
 let pages = {}
 spec({

@@ -1,6 +1,6 @@
 // Comms Chat (screen/Comms/Chat.xml and Chat.qvue, service/ironstone/comms/ChatServices.xml over org.moqui.chat.ChatServices;
 // impl-drawers-commons.md M10, design-drawers-commons.md §13): the JSON transitions the screen calls under the Comms app root,
-// as john.doe, on the chat demo (data/BossChatDemoData.xml, ChatDemoServices.load#ChatDemo, loaded again here). The rail with
+// as john.doe, on the chat demo (data/demo/12CalendarChatAndConsent.xml, ChatDemoServices.load#ChatDemo, loaded again here). The rail with
 // its records, unread and mention counts; a room with its members and first page; the timeline pages (before, after,
 // around, a thread, the pinned messages); send, edit, react, pin and delete, a reply and a thread reply, a mention that
 // notifies with the room's link; a message's /qapps link as its record card; read markers; files up and down; direct

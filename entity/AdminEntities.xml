@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     lifecycle participants after them. -->
 <entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-entity-definition.xsd">
     <!-- Insights' registries (impl-insights §4, P4; design-insights §6.1, §6.2): the report catalog and the metric registrations
-        of the domain report services, BOSS seed records each owner fills in its own block of BossSetupData. They hold navigation
+        of the domain report services, BOSS seed records each owner fills in its own block of BossSetupData12DeliveryAlertsAndFlows.xml. They hold navigation
         and meaning only: whether a viewer reads an entry is its owner's catalogue service where one is registered, else the
         route's own screen authorization; a metric's formula, scope and private-field projection stay its owner's service or
         dataset. ironstone.insights.RegistryServices reads them; a row naming a missing service is logged by name and left out. -->
@@ -99,7 +99,7 @@ along with this software (see the LICENSE.md file). If not, see
     </entity>
     <!-- Insights' attention providers (impl-insights §4, P5; design-insights §3 Home, review Z9): each built app's Home work
         counts whose count is the query of the worklist they open (impl-insights F29), and Monitor's Business operations dashboard
-        (F19), BOSS seed records each owner fills in its own block of BossSetupData. A registration grants nothing: get#Attention
+        (F19), BOSS seed records each owner fills in its own block of BossSetupData12DeliveryAlertsAndFlows.xml. A registration grants nothing: get#Attention
         shows a provider only when its route opens to the viewer (and the viewer holds its permission, when it names one), calls
         its count service as the viewer, and leaves it out when the owner answers no count for the viewer; a count that fails is
         named on its own card. Configuration rows with no organization, so the view-entity pattern of impl-admin §4 does not
@@ -136,7 +136,7 @@ along with this software (see the LICENSE.md file). If not, see
     </entity>
 
     <!-- Admin P6 (impl-admin P6; design-admin §4.1 Offboarding, §14 Lifecycle participant): the owners whose resources an account's
-        lifecycle hands to new owners, each seeded by its owner in its own block of BossSetupData. -->
+        lifecycle hands to new owners, each seeded by its owner in its own block of BossSetupData12DeliveryAlertsAndFlows.xml. -->
     <entity entity-name="LifecycleParticipant" package="ironstone.admin" use="configuration">
         <description>A lifecycle participant (design §14): an owner of a kind of resource a user can own (a shared drive, a shared
             mail account, a calendar, a contact book, a work app's assignments, a report schedule), with its lookup of what a user
@@ -168,7 +168,7 @@ along with this software (see the LICENSE.md file). If not, see
     </entity>
 
     <!-- Insights' flow targets (impl-insights §4, P9; design-insights §9): the worklists a flow map's step may open, each built
-        app's own route with the parameters it takes, BOSS seed records each owner fills in its own block of BossSetupData,
+        app's own route with the parameters it takes, BOSS seed records each owner fills in its own block of BossSetupData12DeliveryAlertsAndFlows.xml,
         beside the catalog entries and attention providers a step may also name. ironstone.insights.FlowMapServices check a
         step's target and parameters against this when a map is saved and again when it is read, so a map can link nowhere
         else; a registration grants nothing: the link is answered only to a viewer whose own groups open the route.

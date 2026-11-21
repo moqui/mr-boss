@@ -44,7 +44,7 @@ const capabilityPermissions = {
     paymentRefund: "PAYMENT_EDIT",
     returnCredit: "RETURN_CREDIT_APPROVE"
 }
-// The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_CS_<Area>): Returns and Reports for the
+// The menu areas whose authorization is a capability (data/BossSetupData05PurchasingAndCustomerService.xml BOSS_CS_<Area>): Returns and Reports for the
 // agent, manager and return authorizer, Approvals for the manager and return authorizer, Settings for the administrator.
 // Home, Cases, Customers, Orders, Availability and Knowledge are every Customer Service user's.
 const areas = {

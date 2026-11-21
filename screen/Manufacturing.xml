@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- IronStone Manufacturing (design-manufacturing §1): the root of the app for production planners, method engineers,
     supervisors, quality and the shop floor. The root user group BOSS_MANUFACTURING and the administrator group
-    BOSS_MANUFACTURING_ADMIN open it (data/BossSetupData.xml); its areas are the files of screen/Manufacturing/, in the menu
+    BOSS_MANUFACTURING_ADMIN open it (data/BossSetupData01GroupsAndLaunchers.xml); its areas are the files of screen/Manufacturing/, in the menu
     order of design §1.2 by their default-menu-index:
     1 Home; 2 Work orders (WorkOrders); 3 Shop floor (ShopFloor); 4 BOMs (BillsOfMaterials); 5 Routings; 6 Work centers
     (WorkCenters); 7 Quality; 8 Planning; 9 Subcontracting; 10 Settings; 11 Approvals; 12 Reports.

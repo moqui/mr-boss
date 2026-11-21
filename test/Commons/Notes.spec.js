@@ -1,6 +1,6 @@
 // Commons Notes (screen/Commons/Notes.xml and Notes.qvue, service/ironstone/commons/KnowledgeServices.xml; impl-drawers-commons.md M9,
 // R22; design-drawers-commons.md §10 Notes): the JSON transitions the screen calls under the Commons app root, on john.doe's demo
-// notes (data/BossKnowledgeDemoData.xml). The list pinned first, then the latest changed, with the tags and their counts; search
+// notes (data/demo/20FilesKnowledgeAndMail.xml). The list pinned first, then the latest changed, with the tags and their counts; search
 // and a tag narrow it; a new note, saved on idle with no note and as a named version, a save that met another; pin, tags, a
 // linked request; delete; Move to a space (database files keep the rows, a git space gets the history replayed); QuickCreate's
 // note kind lands here; and the recent pages (Commons Home lists them, CommonsSettings' render of Home). Joe Developer and Bob Developer may not read, change or find another

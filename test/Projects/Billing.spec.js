@@ -1,5 +1,5 @@
 // IronStone Projects billing, P8a (impl-projects.md P8a; design-projects.md §10 Unbilled, Invoices, InvoiceDetail, Rates, §12
-// BillingSettings, §3 Home's Unbilled), with authorization on: the billing demo (data/BossProjectsDemoDataTimeBilling.xml: SUPP billed to
+// BillingSettings, §3 Home's Unbilled), with authorization on: the billing demo (data/demo/34ProjectBilling.xml: SUPP billed to
 // Brightwater Dental Group, its rates, a draft invoice of Joe's approved week) in Unbilled, Invoices, InvoiceDetail and on Home and SUPP's header; then in a
 // project of its own (BIL, john.doe its manager, joe.developer a programmer, in the week of July 5, 2027): the invoice dialog's
 // refusals (nothing selected, a project with no client), a draft's header edited (the terms move the due date), a line removed and the

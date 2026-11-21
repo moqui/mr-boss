@@ -3,7 +3,7 @@
 // no cost, the storeless seller's tax through its gateway, Conversation and Files) and its "not available" for another
 // organization's rep; Quotes' one html render (the rep's quotes, not another organization's, the saved lists, New quote); and
 // PriceExplain's one html render for a rep without PRICE_VIEW (the quote line's safe explanation, no trace form). The rules are
-// Mantle's SalesQuoteDrafts and StorelessOrderTax. Demo data: data/BossZSalesDemoData.xml (P7 block).
+// Mantle's SalesQuoteDrafts and StorelessOrderTax. Demo data: data/demo/70Sales.xml (P7 block).
 // Run: ./moq test mr-boss --spec SalesQuotes
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, page} = lib

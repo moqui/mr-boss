@@ -1,4 +1,4 @@
-// Helpers the Sales specs share: the demo ids (data/BossUsersDemoData.xml and the other apps' demo organizations), the demo users by
+// Helpers the Sales specs share: the demo ids (data/demo/42Users.xml and the other apps' demo organizations), the demo users by
 // group, a block run as a user with artifact authorization on, a call's refusal message, a Sales page render and the shell's menu
 // and providers. Later phases add their ids and users here.
 const ids = {
@@ -14,7 +14,7 @@ const ids = {
     reportsMenu: ["Catalogue", "SalesSummary", "SalesAnalysis", "TargetAttainment", "PipelineAnalysis", "WinLoss"],
     accountsMenu: ["Accounts", "Contacts"],
     keys: ["g s", "g a", "g c", "g o", "g l", "g q", "g r", "g m"],
-    // P3's demo accounts and contacts (data/BossYSalesAccountsDemoData.xml): Retail's Wingtip Traders (sales.rep's, under its parent
+    // P3's demo accounts and contacts (data/demo/54SalesAccounts.xml): Retail's Wingtip Traders (sales.rep's, under its parent
     // Wingtip Group), Contoso Labs (a prospect, sales.rep2's), Kim Park (an individual customer) and the duplicate pair Adatum
     // Corporation and Adatum Corp; Dana Morales, a contact of Wingtip Traders and Contoso Labs; Ziziwork Sales' Fabrikam
     // Industrial (sales.rep3's, with its contact Lee Chen) and Tailspin Outfitters
@@ -29,7 +29,7 @@ const ids = {
         tailspin: "BOSS_SAL_ACC_TAILSPIN"
     },
     contacts: {dana: "BOSS_SAL_CON_DANA", lee: "BOSS_SAL_CON_LEE"},
-    // P15: Retail's demo agreements (data/BossZSalesDemoData.xml): Contoso's active supply terms and the standard terms template
+    // P15: Retail's demo agreements (data/demo/70Sales.xml): Contoso's active supply terms and the standard terms template
     agreements: {contoso: "BOSS_SAL_AGR_CONTOSO", standard: "BOSS_SAL_AGR_STANDARD"},
     // P2: Settings, the administrator's and, for Teams, the manager's (with Accounts and Reports a manager's menu); its tabs
     managerMenu: ["Home", "Pipeline", "Accounts", "Quotes", "Orders", "Agreements", "Reports", "Settings"],
@@ -46,7 +46,7 @@ const ids = {
         "ApprovalPolicies"
     ],
     managerSettingsMenu: ["Teams", "Targets"],
-    // P4: Pipeline's tabs, and the demo deals (data/BossZSalesDemoData.xml): Retail East's (sales.rep's) Wingtip refit in Proposal with
+    // P4: Pipeline's tabs, and the demo deals (data/demo/70Sales.xml): Retail East's (sales.rep's) Wingtip refit in Proposal with
     // an activity, its maintenance plan (recurring), Kim Park's renewal (won), a website lead and the trade fair lead in East's queue;
     // Retail West's (sales.rep2's) Contoso pilot on West's pipeline, Adatum's racks (lost), Contoso's second site (a lead) and a partner
     // referral in West's queue (no owner);
@@ -67,22 +67,22 @@ const ids = {
         callsLead: "BOSS_SAL_OPP_LEAD_CALLS"
     },
     wingtipActivity: "BOSS_SAL_ACT_WINGTIP",
-    // P7: the demo quotes (data/BossZSalesDemoData.xml): Retail East's draft for Wingtip (sales.rep; a customer price line and an
+    // P7: the demo quotes (data/demo/70Sales.xml): Retail East's draft for Wingtip (sales.rep; a customer price line and an
     // entered price), Ziziwork Sales' storeless draft for Fabrikam (sales.rep3; taxed through the seller's gateway); Quotes' tabs
     quotes: {wingtip: "BOSS_SAL_QTE_WINGTIP", fabrikam: "BOSS_SAL_QTE_FABRIKAM"},
     // P12 adds Quote templates
     quotesMenu: ["Quotes", "QuoteRequests", "QuoteTemplates"],
-    // P8: the demo requests for quote (data/BossZSalesDemoData.xml): sales.rep's phoned request from Wingtip (three lines, the third
+    // P8: the demo requests for quote (data/demo/70Sales.xml): sales.rep's phoned request from Wingtip (three lines, the third
     // with no product), and the mail to sales+rfq@ that East's queue took (its request found by the message)
     rfqs: {wingtip: "BOSS_SAL_RFQ_WINGTIP", mailMessage: "BOSS_SAL_MSG_RFQ"},
-    // P9: Quotes' tabs for a sales approver (Approvals), and Retail's demo approval rules (data/BossZSalesDemoData.xml): a discount of
+    // P9: Quotes' tabs for a sales approver (Approvals), and Retail's demo approval rules (data/demo/70Sales.xml): a discount of
     // 5 % or more (the Wingtip draft's refit line) and a free line, each a sales approver's
     approverQuotesMenu: ["Quotes", "QuoteRequests", "QuoteTemplates", "Approvals"],
     approvalRules: {discount: "BOSS_SAL_APR_RETAIL_DISCOUNT", free: "BOSS_SAL_APR_RETAIL_FREE"},
-    // P12: Retail's demo quote templates (data/BossZSalesDemoData.xml): the published store refit starter (sales.manager's: Demo
+    // P12: Retail's demo quote templates (data/demo/70Sales.xml): the published store refit starter (sales.manager's: Demo
     // Product One-One priced on the quote's date, Demo Product One-Two at a fixed bundle rate, an installation charge) and a draft
     templates: {refit: "BOSS_SAL_TPL_REFIT", service: "BOSS_SAL_TPL_SERVICE"},
-    // P18: Retail's 2026 Q4 sales period and its targets (data/BossZSalesDemoData.xml): Retail's, Retail East's under it and sales.rep's
+    // P18: Retail's 2026 Q4 sales period and its targets (data/demo/70Sales.xml): Retail's, Retail East's under it and sales.rep's
     // under East (with the rep's submitted forecast), and sales.rep2's measured on placed orders
     periods: {q4: "BOSS_SAL_TP_2026Q4"},
     forecasts: {

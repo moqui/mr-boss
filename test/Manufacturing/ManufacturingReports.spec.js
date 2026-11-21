@@ -1,7 +1,7 @@
 // Manufacturing reports (impl-manufacturing P16, design-manufacturing §9 and Home's Kpis): Home shows the plant's Kpis this
 // month, each opening its report with the same filters, and counts the work orders completed this month; a production reader
 // gets the cost report's quantities and no money columns on screen and in the export, a financial reader the amounts; each
-// report renders with its scope and as-of time, and the performance report its factors and downtime. On the demo data (BossManufacturingDemoData.xml, BossWarehouseDemoData.xml).
+// report renders with its scope and as-of time, and the performance report its factors and downtime. On the demo data (demo/24Manufacturing.xml, demo/44Warehouse.xml).
 // Run: ./moq test mr-boss --spec ManufacturingReports
 const lib = ec.resource.script("component://mr-boss/test/Manufacturing/ManufacturingSpecLib.js")
 const {ids, users, asUser, invoke} = lib

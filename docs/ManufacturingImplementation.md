@@ -32,7 +32,7 @@ and override).
 
 ## Access
 
-Groups (`data/BossSetupData.xml`): `BOSS_MANUFACTURING` is the root user group (`MANTLE_USER_ORG`,
+Groups (`data/BossSetupData01GroupsAndLaunchers.xml`): `BOSS_MANUFACTURING` is the root user group (`MANTLE_USER_ORG`,
 `MANTLE_PRIVATE_CONTACT`); `BOSS_MANUFACTURING_ADMIN` has every authorization with `MANTLE_ACTIVE_ORG`. The capability
 groups hold no root authorization of their own, so a member opens Manufacturing only with the root group.
 
@@ -97,11 +97,11 @@ The calibration evidence waits for Gauges (§7).
 
 ## Demo
 
-Users (`data/BossUsersDemoData.xml`, password `moqui`), agents of Ziziwork Retail: `manufacturing.read` (a reader with no
+Users (`data/demo/42Users.xml`, password `moqui`), agents of Ziziwork Retail: `manufacturing.read` (a reader with no
 other launcher), `.plan`, `.schedule`, `.method`, `.methodapprove`, `.operate`, `.supervise`, `.inspect`, `.verify`,
 `.qualityadmin`, `.cost`, `.resource`, `.admin`; `.material` (an operator with Warehouse's issue and move groups),
 `.finance` (Accounting read), `.buyer` (Purchasing's buyer), `.costclose` (Accounting's approver); `.display` (no root);
-`manufacturing.services`, a reader of Ziziwork Services. Records (`data/BossManufacturingDemoData.xml`): Retail's plant
+`manufacturing.services`, a reader of Ziziwork Services. Records (`data/demo/24Manufacturing.xml`): Retail's plant
 `ZIRET_WH` with lines `BOSS_MFG_LINE_A` and `_B`, the released BOM `BOSS_MFG_BOM_PILOT` of DEMO_1_1 and routing
 `BOSS_MFG_ROUTING_A`, the draft run `BOSS_MFG_RUN_A`, the running quality run `BOSS_MFG_RUN_Q`, Warehouse's released
 `BOSS_WH_RUN` with its subcontracted coating; Ziziwork Services' plant `BOSS_MFG_SVC_PLANT` and run `BOSS_MFG_SVC_RUN`.

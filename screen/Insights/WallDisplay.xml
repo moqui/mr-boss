@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Insights › Wall display, played (design-insights §4 Playlists, CX-DEVICE; impl-insights P11): the page a wall display opens,
-    the homePath of the INSIGHTS_PLAYLISTS route group (data/BossSetupData.xml), which admits this screen's render and its data
+    the homePath of the INSIGHTS_PLAYLISTS route group (data/BossSetupData13SettingsAndOperations.xml), which admits this screen's render and its data
     transition and nothing else. It is the framework's wall display (Tools Dashboards/WallDisplay.xml, mr-moqui
     docs/tools/Monitoring.md "Playlists and the wall display") included at this location with its one transition, data, so
     the route group (BOSS_DEV_INS_WALL) and the display account's grant (BOSS_INS_WALL_DISPLAY) keep naming this file and

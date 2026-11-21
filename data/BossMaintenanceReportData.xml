@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Maintenance's shipped datasets (design-maintenance §1.4 Shipped reports, CX-OPS-REPORTS; impl-maintenance P17, F37), on Customer
-    Service's pattern (BossCustomerServiceReportData.xml): three DataDocuments indexed by the BossMaintenanceReports push feed as their
+    Service's pattern (BossAppReportData.xml): three DataDocuments indexed by the BossMaintenanceReports push feed as their
     records are written, each carrying its organization (organizationPartyId), on which Mantle's organization row filter scopes the
     datasets, and no cost, rate or amount:
     - BossMaintenanceWorkOrder: a work order (MaintenanceWorkOrder, only an execution root has one; a procedure and a process step

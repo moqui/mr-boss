@@ -1,6 +1,6 @@
 // Projects Home (screen/Projects/Home.xml, service/ironstone/projects/ProjectServices.xml get#ProjectsHome over
 // mantle.work.ProjectServices.get#ProjectHomeCounts; design-projects.md §3 Home; impl-projects.md P2) on the Projects demo
-// (data/BossProjectsDemoData.xml): a manager's counters (with the projects at risk and the milestones soon), my work items,
+// (data/demo/30Projects.xml): a manager's counters (with the projects at risk and the milestones soon), my work items,
 // the recent changes and the projects I manage; a team member's Home without the managers' counters; the first-run card for a
 // user on no project. Read only. Authorization stays on.
 // Run: ./moq test mr-boss --spec ProjectsHome

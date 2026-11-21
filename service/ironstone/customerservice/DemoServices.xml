@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Customer Service demo (impl-customer-service P1; Demo.js), loaded from data/BossCustomerServiceDemoData.xml. -->
+<!-- Customer Service demo (impl-customer-service P1; Demo.js), loaded from data/demo/16CustomerService.xml. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="load" noun="CustomerServiceDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
         <description>Idempotent Customer Service demo orders for ORG_ZIZI_RETAIL, by fixed ID through Mantle's order, shipment
@@ -41,7 +41,7 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
     </service>
     <service verb="load" noun="CaseDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
-        <description>P2: the demo requests of BossCustomerServiceDemoData.xml made cases through Mantle's
+        <description>P2: the demo requests of demo/16CustomerService.xml made cases through Mantle's
             ensure#CaseProfile, each in its own transaction; one that fails is named in errors and the others are made.
             Idempotent. Only data loading or a system administrator may run it.</description>
         <out-parameters>
@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="load" noun="WorkingHoursDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
         <description>P4: the Retail support team's working hours (Monday to Friday 9:00-17:00, America/Chicago) through Mantle's
-            store#WorkingHours, from BossXCustomerServiceHoursDemoData.xml, before the demo requests become cases. Idempotent.
+            store#WorkingHours, from demo/50ServiceHours.xml, before the demo requests become cases. Idempotent.
             Only data loading or a system administrator may run it.</description>
         <out-parameters>
             <parameter name="complete" type="Boolean"/>

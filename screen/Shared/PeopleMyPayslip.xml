@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     totals, the year to date, its issued corrections with the net effect and the inputs it paid; Download statement gives the
     statement as it was issued, never rendered again. "Explain this payslip" (the people-payslip-explain skill) answers from the same
     service, the user's own. Amounts are opted out of AI on the page. A self-service employee opens it by its own grant
-    (BOSS_PPL_PAYSLIP_SELF, non-inheritable, data/BossSetupData.xml). P26 review (the user's call of Nov 12, 2026): with legacyKey, the
+    (BOSS_PPL_PAYSLIP_SELF, non-inheritable, data/BossSetupData15PeopleTimeAndPayroll.xml). P26 review (the user's call of Nov 12, 2026): with legacyKey, the
     user's own legacy pay record (EmploymentPayHistory, by its key), labelled historical, read only and never recalculated; the
     download asks get#MyPayslipStatement, since get#MyPayslip (the Assistant's tool) names no stored statement's location. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"

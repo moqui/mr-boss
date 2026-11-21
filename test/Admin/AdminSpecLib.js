@@ -1,4 +1,4 @@
-// Helpers the Admin specs share: the demo ids (data/BossUsersDemoData.xml), the demo users by group, a block run as a user with
+// Helpers the Admin specs share: the demo ids (data/demo/42Users.xml), the demo users by group, a block run as a user with
 // artifact authorization on or off, a call's refusal message, an Admin page render, the shell's menu and providers, and the
 // acceptance sweeps' screens and demo records (P19). Later phases add their ids and users here.
 const ids = {

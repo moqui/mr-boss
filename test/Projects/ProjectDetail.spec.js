@@ -1,7 +1,7 @@
 // ProjectDetail and its tabs (screen/Projects/Projects/ProjectDetail.xml and ProjectDetail/, StatusReport.xml;
 // service/ironstone/projects/ProjectServices.xml; design-projects.md §4 ProjectDetail, ProjectOverview, ProjectWorkItems, ProjectTeam,
 // ProjectFiles, ProjectSettings, §14 the status report; impl-projects.md P2) on the Projects demo
-// (data/BossProjectsDemoData.xml): the header (status stages, health, numbers, the primary action by status), the overview's
+// (data/demo/30Projects.xml): the header (status stages, health, numbers, the primary action by status), the overview's
 // boxes, the Work items tab with the project fixed, a status update setting the health, the team's members, the settings boxes,
 // the status report printed, the project the team may not see or manage, clone and save as template, and an empty project
 // deleted. The spec makes its own projects (keys BT…) and moves back what it changes on the demo's. Authorization stays on.
@@ -234,7 +234,7 @@ feature("the Team tab: the members with their roles, the client contacts and the
         !tab.broken
         tab.output.includes("Add member")
         tab.output.includes("Client contacts")
-        // the Allocations box on the resource demo (data/BossProjectsDemoDataTimeResources.xml), with the placeholder to staff
+        // the Allocations box on the resource demo (data/demo/35ProjectReportsAndResources.xml), with the placeholder to staff
         tab.output.includes("Allocations · 4") && tab.output.includes("Ana Designer") && tab.output.includes("To staff")
         tab.output.includes("Request allocation")
         team.memberList.map((row) => row.name).includes("Joe Developer")

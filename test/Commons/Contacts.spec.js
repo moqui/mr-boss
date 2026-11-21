@@ -6,7 +6,7 @@
 // the contact's photo (add, change, remove). Privacy (impl R7): Joe Developer's personal contact Sam Secret (the demo's, with the same email and
 // phone as the demo's duplicate pair Pat and Patricia Quinn) never shows to john.doe through the list (every scope, the search
 // by name, email and phone), the record by id, its transitions or the palette's People source; john.doe's personal contacts never
-// show to Joe Developer. Duplicates, Compare and Merge are ContactsDuplicates.spec.js's. The demo is data/BossDemoData.xml (M4).
+// show to Joe Developer. Duplicates, Compare and Merge are ContactsDuplicates.spec.js's. The demo is data/demo/18Commons.xml (M4).
 // Authorization stays on, as for a browser request.
 // Run: ./moq test mr-boss --spec Contacts
 const webroot = "component://webroot/screen/webroot.xml"

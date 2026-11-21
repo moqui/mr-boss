@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Commerce demo (impl-commerce P1; Demo.js), loaded from data/BossZCommerceDemoData.xml. -->
+<!-- Commerce demo (impl-commerce P1; Demo.js), loaded from data/demo/58CommerceSites.xml. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-service-definition.xsd">
     <service verb="load" noun="CommerceDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
         <description>Idempotent Commerce demo sites by fixed ID: ZIZI_SHOP (shop.zizi.localhost) for Ziziwork Retail and
@@ -40,7 +40,7 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.resource.script('component://mr-boss/service/ironstone/commerce/Demo.js').execute('runStep', context)</script>
         </actions>
     </service>
-    <!-- P15 (Shop F107): ZIZI_DIGITAL's members' Forum category, from data/BossZZCommerceForumDemoData.xml -->
+    <!-- P15 (Shop F107): ZIZI_DIGITAL's members' Forum category, from data/demo/72CommerceForum.xml -->
     <service verb="load" noun="CommerceForumDemo" authenticate="anonymous-all" allow-remote="false">
         <description>Idempotent: ZIZI_DIGITAL's members' Forum category (made through the Forum's staff services, published to
             the category's members with subscription and manual grants qualifying) and the monthly membership's paid access

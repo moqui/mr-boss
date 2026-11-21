@@ -30,7 +30,7 @@ const organizationOptionLimit = 100
 // the technicians a typed name is looked for among: Mantle's find#MaintenanceCandidates ranks at most 200
 const candidateSearchLimit = 200
 
-// The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_MNT_<Area>): Settings the Maintenance
+// The menu areas whose authorization is a capability (data/BossSetupMaintenanceData.xml BOSS_MNT_<Area>): Settings the Maintenance
 // administrator's (P1). Home is every Maintenance user's. Each also needs its Mantle capability (the user's call of Nov 12 on
 // F346): a custom group given Maintenance in Admin is no member of BOSS_MAINTENANCE, so the area's deny rows do not reach it.
 const areas = {

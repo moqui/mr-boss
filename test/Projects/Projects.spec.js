@@ -1,5 +1,5 @@
 // Projects (screen/Projects/Projects/List.xml, service/ironstone/projects/ProjectServices.xml find#Projects, bulk#Projects and
-// set#ProjectStatus; design-projects.md §4 Projects; impl-projects.md P2) on the Projects demo (data/BossProjectsDemoData.xml):
+// set#ProjectStatus; design-projects.md §4 Projects; impl-projects.md P2) on the Projects demo (data/demo/30Projects.xml):
 // the chips and the find over the projects the user sees, not templates (Joe Developer not HIRE, impl-projects.md F1), each row
 // decorated (client, manager, health, items, hours, next milestone); the sub-projects under their program; the list in qvt with
 // its board; a board move along the Default flow by a manager and refused for the team; the bulk changes, each project on its
@@ -36,7 +36,7 @@ const setStatus = (workEffortId, statusId) => sys(() => { const row = ec.entity.
 const rows = (parameters) => sys(() => call("ironstone.projects.ProjectServices.find#Projects", Object.assign({ pageSize: 200 }, parameters || {})))
 // the demo's projects (this component's data files), not those another spec made, here or in another component's run before
 const demoProjects = new Set()
-for (const fileRef of ec.resource.getLocationReference("component://mr-boss/data").getDirectoryEntries())
+for (const fileRef of ec.resource.getLocationReference("component://mr-boss/data/demo").getDirectoryEntries())
     if (fileRef.location.endsWith(".xml"))
         for (const match of String(ec.resource.getLocationText(fileRef.location) || "").matchAll(/<mantle\.work\.effort\.WorkEffort workEffortId="([^"]+)" workEffortTypeEnumId="WetProject"/g))
             demoProjects.add(match[1])

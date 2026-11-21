@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The demo of IronStone Commons M2 and M3 (data/BossDemoData.xml calls load#CommonsDemo and load#ChatterDemo, as the elements
+<!-- The demo of IronStone Commons M2 and M3 (data/demo/18Commons.xml calls load#CommonsDemo and load#ChatterDemo, as the elements
     ironstone.commons.DemoServices.load-CommonsDemo and load-ChatterDemo): john.doe's Today and notifications with
     dates relative to the load, so the Today and Notifications panels and Commons Home have content on the day the demo data
     is loaded, and the demo approval topic's decision services. Only the BOSS_DEMO_* records are written; loading again
@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
             - BOSS_DEMO_TODAY_DUE, a task due today at 17:00 that Joe Developer is also assigned: Due today;
             - BOSS_DEMO_TODAY_MEETING, a meeting today at 15:00 for 30 minutes (from 14:00 an hour from now): Later today;
             - the demo request's response due today at 16:00, which the Requests today source lists, and the times of day of the
-              demo request, event and message of data/BossDemoData.xml;
+              demo request, event and message of data/demo/18Commons.xml;
             - notifications in the Notifications inbox (a mention, a reminder, a chat mention, an invitation read yesterday
               and an approval waiting on the BossDemoApproval topic) and in the Updates inbox (a followed-record note, an
               invitation answer, and one read two days ago).</description>
@@ -111,7 +111,7 @@ along with this software (see the LICENSE.md file). If not, see
                 workEffort('BOSS_DEMO_TODAY_MEETING', {workEffortTypeEnumId: 'WetEvent', purposeEnumId: 'WepMeeting', priority: 5,
                     workEffortName: 'Calendar setup review', description: 'Go over the options and pick one.',
                     estimatedStartDate: new Date(meetingStart), estimatedCompletionDate: new Date(meetingStart + 1800000), estimatedWorkDuration: 0.5}, [partyId, 'ORG_ZIZI_JD'])
-                // the demo request (BossDemoData.xml) has a response due today, for the Requests today source; it, the demo event and
+                // the demo request (demo/18Commons.xml) has a response due today, for the Requests today source; it, the demo event and
                 // the demo message of the data file get their times of day here, in john.doe's zone (a data file's times load as UTC)
                 store('mantle.request.Request', {requestId: 'BOSS_DEMO_REQUEST', requestDate: new Date(at('2026-10-01', '09:00')),
                     responseRequiredDate: new Date(at(todayText, '16:00'))})
@@ -307,7 +307,7 @@ along with this software (see the LICENSE.md file). If not, see
             const wasDisabled = ec.artifactExecution.disableAuthz()
             try {
                 if (ec.entity.find('mantle.party.Party').condition('partyId', 'BOSS_DEMO_PC_ROBIN').one() == null) {
-                    ec.logger.warn('The Contacts demo needs BOSS_DEMO_PC_ROBIN (data/BossDemoData.xml); nothing loaded')
+                    ec.logger.warn('The Contacts demo needs BOSS_DEMO_PC_ROBIN (data/demo/18Commons.xml); nothing loaded')
                     return
                 }
                 const now = Number(String(ec.user.nowTimestamp))
@@ -446,7 +446,7 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
 
-    <!-- The demo approval topic, BossDemoApproval (data/BossDemoData.xml): its approve and refuse services, which the
+    <!-- The demo approval topic, BossDemoApproval (data/demo/18Commons.xml): its approve and refuse services, which the
         framework's approve#NotificationMessage and refuse#NotificationMessage call as the user (IronStone R23). The decision
         is a note on the record (mantle.party.CommunicationServices.log#RecordNote), nothing else changes. -->
     <service verb="approve" noun="DemoPurchase">

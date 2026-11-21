@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The code demo of IronStone Projects P3b (data/BossProjectsDemoData.xml calls load#CodeDemo as the element
+<!-- The code demo of IronStone Projects P3b (data/demo/30Projects.xml calls load#CodeDemo as the element
     ironstone.projects.CodeDemoServices.load-CodeDemo, after the projects): repositories in the database linked to IRON and ACME with
     commits by the demo users, branches, tags, checks and a merge request, written through the framework's git services so the
     objects, the push log and Mantle's links are real. Git hosting is a build feature: without it the parts log that they were

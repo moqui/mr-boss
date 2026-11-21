@@ -415,7 +415,7 @@ feature("each Purchasing user opens Purchasing and none of the other app roots",
             if (home.status != 200 || home.errors.length) problems.push(`${username} cannot open Purchasing: ${home.errors}`)
             asUser(username, () => {
                 for (const root of otherRoots) {
-                    // the demo's receiving buyer is in Warehouse's root group as well (BossUsersDemoData.xml); the walk's
+                    // the demo's receiving buyer is in Warehouse's root group as well (demo/42Users.xml); the walk's
                     // standalone buyer holds the receive group without it
                     if (username === users.buyReceive && root === "Warehouse") continue
                     const other = render(root, "", {})

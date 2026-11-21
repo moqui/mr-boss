@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The calendar demo of IronStone Commons M7 (data/BossCalendarDemoData.xml calls load#CalendarDemo as the element
+<!-- The calendar demo of IronStone Commons M7 (data/demo/12CalendarChatAndConsent.xml calls load#CalendarDemo as the element
     ironstone.commons.CalendarDemoServices.load-CalendarDemo): john.doe's calendars, events, invitations and bookings dated from the day
     the data is loaded, in john.doe's time zone (US/Central) whatever the server's is, so the week of the load has content.
     Only the BOSS_DEMO_* records are written; loading again moves their dates to the new day. -->

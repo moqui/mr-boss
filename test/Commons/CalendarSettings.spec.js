@@ -1,6 +1,6 @@
 // Commons Settings/Calendars and the calendar defaults of Settings/Preferences (screen/Commons/Settings/Calendars.xml, Preferences.xml,
 // service/ironstone/commons/CalendarServices.xml; impl-drawers-commons.md M7, design-drawers-commons.md §11): john.doe's calendars on the
-// calendar demo (data/BossCalendarDemoData.xml, loaded again here). The page lists his own, the shared ones and the
+// calendar demo (data/demo/12CalendarChatAndConsent.xml, loaded again here). The page lists his own, the shared ones and the
 // subscription whose fetch failed; a calendar is created, renamed, colored, made the default and deleted; Family is shared with
 // Joe Developer, who then sees its events, and unshared; a feed is subscribed to, fetched now from an address that does not
 // answer (its status failed, with the reason) and stored from a feed's text (ok, its event on the grid); an .ics file is

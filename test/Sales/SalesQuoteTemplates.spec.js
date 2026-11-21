@@ -2,7 +2,7 @@
 // render as the manager (the record header with the published state, Start successor and New quote, the lines with their pricing: One-
 // Two's fixed bundle rate and its reason, the overview, the preview priced for Wingtip with its total, the history), and Quote templates'
 // one html render as the rep (the published template listed, the manager's draft not, no New template). The rules are Mantle's
-// SalesQuoteTemplates. Demo data: data/BossZSalesDemoData.xml (P12 block).
+// SalesQuoteTemplates. Demo data: data/demo/70Sales.xml (P12 block).
 // Run: ./moq test mr-boss --spec SalesQuoteTemplates
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, page} = lib

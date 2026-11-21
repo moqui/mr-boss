@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- IronStone Commerce (design-commerce §1): the root of the app for store managers, merchandisers, designers, theme
     developers, publishers, store, channel and subscription operators and the Commerce administrator. The root user group
-    BOSS_COMMERCE and the administrator group BOSS_COMMERCE_ADMIN open it (data/BossSetupData.xml); its areas are the files
+    BOSS_COMMERCE and the administrator group BOSS_COMMERCE_ADMIN open it (data/BossSetupData06CommerceAndAdmin.xml); its areas are the files
     of screen/Commerce/, in the menu order of design §1.2 by their default-menu-index:
     1 Home; 2 Stores; 3 Merchandising; 4 Website; 5 Orders; 6 Customers; 7 Promotions; 8 Integrations; 9 Reports; 10 Settings.
     Home, Stores, Merchandising and Promotions are every Commerce user's; Website, Orders, Customers, Integrations, Reports and

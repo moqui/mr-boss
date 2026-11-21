@@ -1,5 +1,5 @@
 // Chatter (screen/Shared/Chatter.xml and Chatter.qvue, service/ironstone/shared/ChatterServices.xml, impl-drawers-commons.md M3): the
-// JSON transitions the panel calls under the Commons app root, as john.doe. The demo request's timeline (data/BossDemoData.xml,
+// JSON transitions the panel calls under the Commons app root, as john.doe. The demo request's timeline (data/demo/18Commons.xml,
 // DemoServices.load#ChatterDemo) has its notes, the email with its quoted text, the message, the call done, the status change
 // and the files; the panel data has its planned call, followers, files and parties. Log note with a mention notifies the user
 // mentioned; Send message writes an internal message filed on the request; Reply answers a note; Schedule activity puts the

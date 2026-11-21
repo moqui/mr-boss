@@ -1,6 +1,6 @@
 // Commons Calendar/Schedules and Schedules/ResourceDetail (screen/Commons/Calendar/Schedules.xml and Schedules.qvue,
 // ResourceDetail.xml, service/ironstone/commons/ScheduleServices.xml; impl-drawers-commons.md M7, design-drawers-commons.md §7): the
-// meeting rooms and equipment john.doe may book, on the calendar demo (data/BossCalendarDemoData.xml, loaded again here). The
+// meeting rooms and equipment john.doe may book, on the calendar demo (data/demo/12CalendarChatAndConsent.xml, loaded again here). The
 // resources with their policy (Bob Developer approves the Board room and the video kit) and the type, text and seats filters, not the
 // manufacturing equipment; the bookings of a week with their status; a booking made at once, one waiting for approval, a clash
 // refused with no event left behind, a booking cancelled with the event made for it; ResourceDetail with its policy, the user's

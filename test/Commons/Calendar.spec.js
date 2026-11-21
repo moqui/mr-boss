@@ -1,6 +1,6 @@
 // Commons Calendar (screen/Commons/Calendar.xml and Calendar.qvue, service/ironstone/commons/CalendarServices.xml; impl-drawers-commons.md
 // M7, design-drawers-commons.md §7): the JSON transitions the calendar calls under the Commons app root, as john.doe, on the
-// calendar demo (data/BossCalendarDemoData.xml, CalendarDemoServices.load#CalendarDemo, loaded again here so the dates are
+// calendar demo (data/demo/12CalendarChatAndConsent.xml, CalendarDemoServices.load#CalendarDemo, loaded again here so the dates are
 // from today in john.doe's time zone). The rail's calendars and defaults; the events of a day, a week, a month and the
 // agenda, with the calendars turned off, declined invitations and the tasks (the Tasks list's Calendar link, showTasks=Y);
 // the quick event; a move and a resize, notifying the attendees; a move onto another booking of its room refused, then kept

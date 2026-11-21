@@ -1,5 +1,5 @@
 // IronStone Projects P7 Resources (impl-projects.md P7; design-projects.md §9 TeamPlanner, Allocations, PersonDetail, §4 ProjectTeam's
-// allocations and NewProject's Team step, §3 Home's allocation requests) on the resource demo (data/BossProjectsDemoDataTimeResources.xml,
+// allocations and NewProject's Team step, §3 Home's allocation requests) on the resource demo (data/demo/35ProjectReportsAndResources.xml,
 // dated from the week it was loaded), with authorization on: john.doe (a Projects manager, who approves allocations) sees the team
 // plan with Joe over-allocated this week and the placeholder UI designer to staff, Allocations' Requested list, Ana Designer's
 // PersonDetail tabs (impl-projects.md F52: AppStructure renders the tabs' header only); ACME's Team tab with its Allocations box is

@@ -1,9 +1,9 @@
 // Projects' access spec: client access is its access model (impl-projects.md P10a, P10b; design-projects.md §1.1, §4
 // ProjectCode, §7 Code, §15 Client access and Chatter for client users). With authorization on, a client contact who signs in
 // (sheldon.acme of Acme on ACME; gob.bluth of Bluth Corp on BLUTH, both in BOSS_PROJECT_CLIENT, which holds Mantle's
-// PROJECT_CLIENT and the framework's EXTERNAL_USER; data/BossUsersDemoData.xml) opens Projects alone; reads its own project's
+// PROJECT_CLIENT and the framework's EXTERNAL_USER; data/demo/42Users.xml) opens Projects alone; reads its own project's
 // part and never another client's record, an internal note, a rate or a cost; writes only through ironstone.client.ClientServices
-// (every other IronStone write is in the deny pattern BOSS_PROJECTS_INTERNAL, data/BossSetupData.xml); reaches no record chat
+// (every other IronStone write is in the deny pattern BOSS_PROJECTS_INTERNAL, data/BossSetupData02Projects.xml); reaches no record chat
 // room, records drive, internal presence or agent; and reads, read only, the repositories its project shares. Internal users
 // keep what they had: Commons and Comms are AUTHZT_ALLOW for BOSS_USERS (not ALWAYS), so the client group's deny reaches; an
 // account in no group but ALL_USERS (a public account) opens neither (impl-drawers-commons.md R29).

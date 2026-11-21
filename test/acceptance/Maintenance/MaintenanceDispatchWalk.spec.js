@@ -11,7 +11,7 @@ const lib = ec.resource.script("component://mr-boss/test/Maintenance/Maintenance
 const {ids, users, asUser, system, invoke, page} = lib
 const state = {}
 const S = "mantle.work.MaintenanceServices."
-// the demo's week of Owen's leave (BossZMaintenanceDemoData.xml, P8): Tuesday morning
+// the demo's week of Owen's leave (demo/62MaintenanceWork.xml, P8): Tuesday morning
 const windowFrom = "2026-11-17 08:00:00.000"
 const windowThru = "2026-11-17 12:00:00.000"
 const stamp = text => ec.l10n.parseTimestamp(text, "yyyy-MM-dd HH:mm:ss.SSS")

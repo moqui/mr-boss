@@ -1,6 +1,6 @@
 // IronStone Marketing's demo loader (impl-marketing P14; ironstone.marketing.DemoServices): the content demo's wiki pages, which demo
 // rows cannot write (their text is a versioned file of the wiki), through the wiki services; the rest of the demo is
-// data/BossZZMarketingDemoData.xml's rows, in whose transaction it runs (they reference its campaign and list). Idempotent by fixed ID;
+// data/demo/80Marketing.xml's rows, in whose transaction it runs (they reference its campaign and list). Idempotent by fixed ID;
 // a part that fails is named and the other made (AGENTS.md failure tolerance). Run by data loading or a system administrator
 // (john.doe, artifact authorization off).
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")

@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- IronStone Insights (design-insights §1): the root of the app for owners, management and authorized analysts. The root user
-    group BOSS_INSIGHTS and the administrator group BOSS_INSIGHTS_ADMIN open it (data/BossSetupData.xml), as ADMIN does; the root
+    group BOSS_INSIGHTS and the administrator group BOSS_INSIGHTS_ADMIN open it (data/BossSetupData07InsightsAndAdminAccess.xml), as ADMIN does; the root
     grant opens navigation only, and each screen and service checks its own permission (ironstone.insights.ContextServices.get#Context
     resolves the organizations, capabilities, safe defaults and links for every subscreen) while the report engine checks its own
     artifacts. The menu of design §1.2 grows by phase: P1 builds Home's frame and P5 its panels, attention board and pins; P2 the dashboards (Dashboards, Library
@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
     organization's analytics defaults, and Data readiness, over Admin's readiness registry), every Insights user's to open, each
     transition reaching a service that checks its own permission (INSIGHTS_SETTINGS_EDIT; a refresh registration's own), and
     Assist: the prompts and the response action below, the insights-analyst skill (skill/insights-analyst.md) and the read tools
-    of ironstone.insights.AssistServices (data/BossSetupData.xml), each run as the signed-in user. P11 adds the hidden WallDisplay,
+    of ironstone.insights.AssistServices (data/BossSetupData13SettingsAndOperations.xml), each run as the signed-in user. P11 adds the hidden WallDisplay,
     the page a registered wall display plays its playlist on (the INSIGHTS_PLAYLISTS route group admits it alone), whose
     request runs as the device's display account: get#Context is not called for it (below). The framework's report screens that
     need nothing of Insights' own are mounted by location (mr-moqui plans/archive/Admin-Screens-Down.md, Track I): Library panels here,
@@ -91,7 +91,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Panels" location="component://tools/screen/Dashboards/Panels.xml" menu-title="Library panels" menu-index="3"/>
         <!-- the framework's CalcGrid (mr-moqui docs/tools/Database.md, CalcGrid and access profiles): spreadsheets over the
             relational database, by location: no grant names it and Insights adds nothing. What a viewer reads there is the
-            access profile they hold (the sales profile for the Sales administrators: BossSetupData.xml), never this root's
+            access profile they hold (the sales profile for the Sales administrators: BossSetupData01GroupsAndLaunchers.xml), never this root's
             grant: the engine enters the profile before it reads, and a viewer who holds none is told so -->
         <subscreens-item name="CalcGrid" location="component://tools/screen/Dashboards/CalcGrid.xml" menu-title="CalcGrid" menu-index="13"/>
     </subscreens>

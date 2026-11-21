@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- P9: reports (design-projects.md §11; impl-projects.md P9). Load after 34ProjectBilling.xml to use ACME's client rate and the workers' pay. service/ironstone/projects/ReportDemoServices.xml
+        load#ReportDemo logs the time behind ACME's actual hours (ACME-1 16 h, ACME-2 9 h, ACME-3 7 h, which the demo set by hand), by
+        Joe Developer and Bob Developer in the weeks three and four back from the load, so ACME's actual hours stay as they were and
+        its billable value and cost read from its time: the reports then show two clients' projects, Home's Hours by project two
+        projects, and the profitability a margin on each. -->
+    <ironstone.projects.ReportDemoServices.load-ReportDemo/>
+
+    <!-- P7: resources (design-projects.md §9; impl-projects.md P7). These allocations use SUPP from 33ProjectTime.xml. The skills the services firm plans by (SkillType enumerations; an
+        organization keeps its own) and its people's ratings (PartySkill); Ana Designer, a part-time UI designer with no user, on ACME
+        and in Ziziwork Dev Team A beside Joe and Bob; then service/ironstone/projects/ResourceDemoServices.xml load#ResourceDemo dates the rest
+        from the week the data is loaded: Ana's working hours (Monday to Thursday, 9 to 5, a WetAvailable work effort as Commons'
+        calendar settings write it; the others plan by the timesheet policy's week), a day of leave for Bob, and the allocations on
+        IRON, ACME and SUPP: Joe over-allocated (IRON, ACME and SUPP, 48 hours a week of 40), John Doe at a percent on IRON, a
+        placeholder UI designer requested on ACME, and Bob requested on ACME. -->
+    <moqui.basic.Enumeration enumId="BossSkMoqui" enumTypeId="SkillType" description="Moqui development" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="BossSkRust" enumTypeId="SkillType" description="Rust" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="BossSkJavaScript" enumTypeId="SkillType" description="JavaScript and Vue" sequenceNum="3"/>
+    <moqui.basic.Enumeration enumId="BossSkUiDesign" enumTypeId="SkillType" description="UI design" sequenceNum="4"/>
+    <moqui.basic.Enumeration enumId="BossSkTesting" enumTypeId="SkillType" description="Testing" sequenceNum="5"/>
+    <moqui.basic.Enumeration enumId="BossSkProjectMgmt" enumTypeId="SkillType" description="Project management" sequenceNum="6"/>
+
+    <mantle.party.Party partyId="EX_PRJ_ANA" partyTypeEnumId="PtyPerson" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.party.Person partyId="EX_PRJ_ANA" firstName="Ana" lastName="Designer"/>
+    <mantle.party.PartyRole partyId="EX_PRJ_ANA" roleTypeId="Employee"/>
+    <mantle.party.PartyRole partyId="EX_PRJ_ANA" roleTypeId="Assignee"/>
+    <mantle.party.PartyRelationship partyRelationshipId="EX_PRJ_ANA_EMP" relationshipTypeEnumId="PrtEmployee"
+            fromPartyId="EX_PRJ_ANA" fromRoleTypeId="Employee" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgEmployer" fromDate="2026-09-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="EX_PRJ_ANA_TM" relationshipTypeEnumId="PrtMember"
+            fromPartyId="EX_PRJ_ANA" fromRoleTypeId="Assignee" toPartyId="ORG_ZIZI_DEVA" toRoleTypeId="OrgTeam" fromDate="2026-09-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="EX_PRJ_ANA_MGR" relationshipTypeEnumId="PrtManager"
+            fromPartyId="EX_JOHN_DOE" toPartyId="EX_PRJ_ANA" fromDate="2026-09-01 00:00:00"/>
+    <mantle.party.contact.ContactMech contactMechId="EX_PRJ_ANA_EM" contactMechTypeEnumId="CmtEmailAddress" infoString="ana.designer@ziziwork.example"/>
+    <mantle.party.contact.PartyContactMech partyId="EX_PRJ_ANA" contactMechId="EX_PRJ_ANA_EM" contactMechPurposeId="EmailPrimary" fromDate="2026-09-01 00:00:00"/>
+    <mantle.work.effort.WorkEffortParty workEffortId="ACME" partyId="EX_PRJ_ANA" roleTypeId="UiDesigner" fromDate="2026-09-14 09:00:00" statusId="WeptAssigned"/>
+
+    <mantle.humanres.ability.PartySkill partyId="ORG_ZIZI_JD" skillTypeEnumId="BossSkMoqui" rating="5" yearsExperience="6"/>
+    <mantle.humanres.ability.PartySkill partyId="ORG_ZIZI_JD" skillTypeEnumId="BossSkRust" rating="4" yearsExperience="3"/>
+    <mantle.humanres.ability.PartySkill partyId="ORG_ZIZI_JD" skillTypeEnumId="BossSkJavaScript" rating="4" yearsExperience="8"/>
+    <mantle.humanres.ability.PartySkill partyId="ORG_ZIZI_BD" skillTypeEnumId="BossSkTesting" rating="5" yearsExperience="7"/>
+    <mantle.humanres.ability.PartySkill partyId="ORG_ZIZI_BD" skillTypeEnumId="BossSkJavaScript" rating="3" yearsExperience="4"/>
+    <mantle.humanres.ability.PartySkill partyId="ORG_ZIZI_BD" skillTypeEnumId="BossSkUiDesign" rating="2" yearsExperience="1"/>
+    <mantle.humanres.ability.PartySkill partyId="EX_PRJ_ANA" skillTypeEnumId="BossSkUiDesign" rating="5" yearsExperience="9"/>
+    <mantle.humanres.ability.PartySkill partyId="EX_PRJ_ANA" skillTypeEnumId="BossSkJavaScript" rating="3" yearsExperience="2"/>
+    <mantle.humanres.ability.PartySkill partyId="EX_JOHN_DOE" skillTypeEnumId="BossSkProjectMgmt" rating="5" yearsExperience="12"/>
+
+    <ironstone.projects.ResourceDemoServices.load-ResourceDemo/>
+</entity-facade-xml>

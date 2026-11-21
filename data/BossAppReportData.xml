@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="seed-initial">
+<!-- Commerce's shipped store operations datasets (design-commerce §1.4 Shipped reports, CX-OPS-REPORTS, R-COM-L03;
+    impl-commerce P11, F22): Shop's checkouts (mantle.order.StoreCheckout) as the DataDocument BossStoreCheckout and its
+    payment attempts (mantle.account.payment.PortalPaymentAttempt of a store) as BossStorePaymentAttempt, indexed by the
+    BossCommerceOperations feed as each is written, which report/boss-commerce-checkouts.json and
+    report/boss-commerce-payment-attempts.json read, with Mantle's sales orders dataset (mantle-sales-orders), in the Store
+    operations dashboard (report/boss-commerce-store-operations.json) and the alert templates for checkout failures
+    (boss-commerce-checkout-failures) and long-unresolved payment attempts (boss-commerce-payment-unresolved). Feed build
+    failures (P14, BossStoreFeedBuild below) and intake error spikes (P13) come with their records. Each document carries its
+    store's organization (organizationPartyId), on which Mantle's organization row filter scopes the datasets (Insights P3,
+    impl-insights F30); Insights admitted them (data/BossSetupData09DatasetAccess.xml, Insights P3) and they are read by Commerce's store
+    managers and administrators and the Insights groups (the grants there), each viewer their own organizations' rows.
+    Commerce's own Reports screens read through the store-scoped services. -->
+    <dataDocuments dataDocumentId="BossStoreCheckout" indexName="boss_commerce" documentName="Store Checkout"
+            primaryEntityName="mantle.order.StoreCheckout" documentTitle="${checkoutId}">
+        <fields fieldSeqId="01" fieldPath="checkoutId"/>
+        <fields fieldSeqId="02" fieldPath="orderId"/>
+        <fields fieldSeqId="03" fieldPath="siteId"/>
+        <fields fieldSeqId="04" fieldPath="productStoreId"/>
+        <fields fieldSeqId="05" fieldPath="currencyUomId"/>
+        <fields fieldSeqId="06" fieldPath="statusId"/>
+        <fields fieldSeqId="07" fieldPath="accountCheckout"/>
+        <fields fieldSeqId="08" fieldPath="paymentInstrumentEnumId"/>
+        <fields fieldSeqId="09" fieldPath="dueAmount"/>
+        <fields fieldSeqId="10" fieldPath="placementTries"/>
+        <fields fieldSeqId="11" fieldPath="failureCode"/>
+        <fields fieldSeqId="12" fieldPath="createdDate"/>
+        <fields fieldSeqId="13" fieldPath="frozenDate"/>
+        <fields fieldSeqId="14" fieldPath="placedDate"/>
+        <fields fieldSeqId="15" fieldPath="completedDate"/>
+        <!-- the store's organization, which scopes the dataset (impl-insights P3, F30) -->
+        <fields fieldSeqId="16" fieldPath="productStore:organizationPartyId"/>
+    </dataDocuments>
+    <dataDocuments dataDocumentId="BossStorePaymentAttempt" indexName="boss_commerce" documentName="Store Payment Attempt"
+            primaryEntityName="mantle.account.payment.PortalPaymentAttempt" documentTitle="${paymentId}">
+        <fields fieldSeqId="01" fieldPath="paymentId"/>
+        <fields fieldSeqId="02" fieldPath="siteId"/>
+        <fields fieldSeqId="03" fieldPath="productStoreId"/>
+        <fields fieldSeqId="04" fieldPath="purposeEnumId"/>
+        <fields fieldSeqId="05" fieldPath="orderId"/>
+        <fields fieldSeqId="06" fieldPath="checkoutId"/>
+        <fields fieldSeqId="07" fieldPath="phase"/>
+        <fields fieldSeqId="08" fieldPath="outcome"/>
+        <fields fieldSeqId="09" fieldPath="checkCount"/>
+        <fields fieldSeqId="10" fieldPath="createdDate"/>
+        <fields fieldSeqId="11" fieldPath="settledDate"/>
+        <fields fieldSeqId="12" fieldPath="lastCheckDate"/>
+        <fields fieldSeqId="13" fieldPath="productStore:organizationPartyId"/>
+    </dataDocuments>
+    <moqui.entity.feed.DataFeed dataFeedId="BossCommerceOperations" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
+            feedName="Commerce store operations" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
+            feedDeleteServiceName="org.moqui.search.SearchServices.delete#DataDocument">
+        <documents dataDocumentId="BossStoreCheckout"/>
+        <documents dataDocumentId="BossStorePaymentAttempt"/>
+    </moqui.entity.feed.DataFeed>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreCheckout" userGroupId="ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStorePaymentAttempt" userGroupId="ADMIN"/>
+    <!-- impl-commerce P14: the stores' product feed builds (mantle.product.store.ProductStoreFeedBuild, metadata only, never the
+        artifact) as BossStoreFeedBuild, indexed by its own feed as each build is written, which
+        report/boss-commerce-feed-builds.json reads and the alert template boss-commerce-feed-build-failures fires on; granted
+        as the datasets above -->
+    <dataDocuments dataDocumentId="BossStoreFeedBuild" indexName="boss_commerce" documentName="Store Feed Build"
+            primaryEntityName="mantle.product.store.ProductStoreFeedBuild" documentTitle="${feedBuildId}">
+        <fields fieldSeqId="01" fieldPath="feedBuildId"/>
+        <fields fieldSeqId="02" fieldPath="productStoreFeedId"/>
+        <fields fieldSeqId="03" fieldPath="productStoreId"/>
+        <fields fieldSeqId="04" fieldPath="siteId"/>
+        <fields fieldSeqId="05" fieldPath="buildStatusEnumId"/>
+        <fields fieldSeqId="06" fieldPath="formatEnumId"/>
+        <fields fieldSeqId="07" fieldPath="generation"/>
+        <fields fieldSeqId="08" fieldPath="startedDate"/>
+        <fields fieldSeqId="09" fieldPath="completedDate"/>
+        <fields fieldSeqId="10" fieldPath="scheduled"/>
+        <fields fieldSeqId="11" fieldPath="rowCount"/>
+        <fields fieldSeqId="12" fieldPath="skipCount"/>
+        <fields fieldSeqId="13" fieldPath="errorCount"/>
+        <fields fieldSeqId="14" fieldPath="failureCode"/>
+        <fields fieldSeqId="15" fieldPath="store:organizationPartyId"/>
+    </dataDocuments>
+    <moqui.entity.feed.DataFeed dataFeedId="BossCommerceFeedBuilds" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
+            feedName="Commerce store feed builds" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
+            feedDeleteServiceName="org.moqui.search.SearchServices.delete#DataDocument">
+        <documents dataDocumentId="BossStoreFeedBuild"/>
+    </moqui.entity.feed.DataFeed>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreFeedBuild" userGroupId="ADMIN"/>
+
+<!-- Customer Service's shipped service dataset (design-customer-service §1 Stack contributions, CS-STACK and CX-OPS-REPORTS,
+    review L6; impl-customer-service P14): the case clocks of Mantle's SlaServices (CaseSlaEpisode, P4) as the DataDocument
+    BossServiceClock, indexed by the BossServiceClocks feed as each clock is written, which report/boss-service-clocks.json
+    (by the clock's start) and report/boss-service-breaches.json (by its breach) read, and the SLA-breach alert template
+    report/boss-service-sla-breach.json over the breaches. The clocks carry their organization (organizationPartyId), on which
+    Mantle's organization row filter scopes both datasets (Insights P3); Insights admitted them (data/BossSetupData09DatasetAccess.xml, Insights
+    P3) and they are read by Customer Service's managers and administrators and the Insights groups, each viewer their own
+    organizations' clocks (F-P14-3). -->
+    <dataDocuments dataDocumentId="BossServiceClock" indexName="boss_service" documentName="Service Clock"
+            primaryEntityName="mantle.request.support.CaseSlaEpisode" documentTitle="${requestId}:${clockEnumId}">
+        <fields fieldSeqId="01" fieldPath="caseSlaEpisodeId"/>
+        <fields fieldSeqId="02" fieldPath="requestId"/>
+        <fields fieldSeqId="03" fieldPath="clockEnumId"/>
+        <fields fieldSeqId="04" fieldPath="sequenceNum"/>
+        <fields fieldSeqId="05" fieldPath="stateEnumId"/>
+        <fields fieldSeqId="06" fieldPath="organizationPartyId"/>
+        <fields fieldSeqId="07" fieldPath="priorityBandEnumId"/>
+        <fields fieldSeqId="08" fieldPath="serviceLevelPolicyId"/>
+        <fields fieldSeqId="09" fieldPath="calendarId"/>
+        <fields fieldSeqId="10" fieldPath="targetMinutes"/>
+        <fields fieldSeqId="11" fieldPath="pausedMinutes"/>
+        <fields fieldSeqId="12" fieldPath="startDate"/>
+        <fields fieldSeqId="13" fieldPath="dueDate"/>
+        <fields fieldSeqId="14" fieldPath="actualDate"/>
+        <fields fieldSeqId="15" fieldPath="breachedDate"/>
+        <fields fieldSeqId="16" fieldPath="carriedFromEpisodeId"/>
+        <fields fieldSeqId="21" fieldPath="request:requestCategoryId"/>
+        <fields fieldSeqId="22" fieldPath="request:requestTypeEnumId"/>
+        <fields fieldSeqId="23" fieldPath="request:salesChannelEnumId"/>
+        <fields fieldSeqId="24" fieldPath="request:statusId" fieldNameAlias="requestStatusId"/>
+    </dataDocuments>
+    <moqui.entity.feed.DataFeed dataFeedId="BossServiceClocks" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
+            feedName="Customer Service clocks" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
+            feedDeleteServiceName="org.moqui.search.SearchServices.delete#DataDocument">
+        <documents dataDocumentId="BossServiceClock"/>
+    </moqui.entity.feed.DataFeed>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossServiceClock" userGroupId="ADMIN"/>
+
+<!-- Marketing's shipped datasets (design-marketing §11 Shipped definitions, CX-OPS-REPORTS; impl-marketing P20), on Maintenance's pattern
+    (BossMaintenanceReportData.xml): two DataDocuments indexed by the BossMarketingReports push feed as their records are written, each
+    carrying its organization (organizationPartyId), on which Marketing's row filter (MarketingReportServices get#ReportRowFilter, the
+    ReportScopePolicy MantleMarketingScope: a report reader's Marketing organizations) scopes the datasets. Aggregates only: no person, no
+    address, no token.
+    - BossMarketingDelivery: a campaign delivery of the ledger (MessageDelivery of the source MdsrcCampaignSend) with its organization,
+      channel, sending profile, state, receipt and times, read by report/boss-marketing-deliveries.json and the bounce, complaint and
+      uncertain-backlog alert templates; never its recipient, address or parameters;
+    - BossMarketingMembership: a Marketing list membership (ContactListParty, never a mailbox's) with its list, the list's organization,
+      its state and dates, read by report/boss-marketing-audience.json; never the member.
+    Granted here to ADMIN; Marketing's report readers and the Insights groups, the admission, the dataset classes and the readiness and
+    refresh rows are in BossSetupMarketingData.xml. -->
+    <dataDocuments dataDocumentId="BossMarketingDelivery" indexName="boss_marketing" documentName="Marketing Delivery"
+            primaryEntityName="mantle.party.MessageDelivery" documentTitle="${deliveryId}">
+        <fields fieldSeqId="01" fieldPath="deliveryId"/>
+        <fields fieldSeqId="02" fieldPath="sourceEnumId"/>
+        <fields fieldSeqId="03" fieldPath="organizationPartyId"/>
+        <fields fieldSeqId="04" fieldPath="channelEnumId"/>
+        <fields fieldSeqId="05" fieldPath="sendingProfileId"/>
+        <fields fieldSeqId="06" fieldPath="stateEnumId"/>
+        <fields fieldSeqId="07" fieldPath="receiptEnumId"/>
+        <fields fieldSeqId="08" fieldPath="attempts"/>
+        <fields fieldSeqId="09" fieldPath="createdDate"/>
+        <fields fieldSeqId="10" fieldPath="sentDate"/>
+        <fields fieldSeqId="11" fieldPath="receiptDate"/>
+        <conditions conditionSeqId="01" fieldNameAlias="sourceEnumId" fieldValue="MdsrcCampaignSend"/>
+    </dataDocuments>
+    <dataDocuments dataDocumentId="BossMarketingMembership" indexName="boss_marketing" documentName="Marketing Membership"
+            primaryEntityName="mantle.marketing.contact.ContactListParty" documentTitle="${contactListId}">
+        <fields fieldSeqId="01" fieldPath="contactListId"/>
+        <fields fieldSeqId="02" fieldPath="statusId"/>
+        <fields fieldSeqId="03" fieldPath="fromDate"/>
+        <fields fieldSeqId="04" fieldPath="thruDate"/>
+        <fields fieldSeqId="11" fieldPath="ContactList:ownerPartyId" fieldNameAlias="organizationPartyId"/>
+        <fields fieldSeqId="12" fieldPath="ContactList:contactListName" sortable="Y"/>
+        <fields fieldSeqId="13" fieldPath="ContactList:contactListTypeEnumId"/>
+        <conditions conditionSeqId="01" fieldNameAlias="contactListTypeEnumId" operator="not-equals" fieldValue="MAILBOX"/>
+    </dataDocuments>
+    <moqui.entity.feed.DataFeed dataFeedId="BossMarketingReports" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
+            feedName="Marketing reports" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
+            feedDeleteServiceName="org.moqui.search.SearchServices.delete#DataDocument">
+        <documents dataDocumentId="BossMarketingDelivery"/>
+        <documents dataDocumentId="BossMarketingMembership"/>
+    </moqui.entity.feed.DataFeed>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingDelivery" userGroupId="ADMIN"/>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossMarketingMembership" userGroupId="ADMIN"/>
+</entity-facade-xml>

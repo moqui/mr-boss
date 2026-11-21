@@ -79,7 +79,7 @@ const capabilityPermissions = {
     // P6: AP's supplier prepayment (PAYABLE_EDIT, above), and Accounting's landed costs (ACCOUNTING_GL_POST)
     landedCost: "ACCOUNTING_GL_POST"
 }
-// The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_PUR_<Area>): listRead, the buying lists
+// The menu areas whose authorization is a capability (data/BossSetupData05PurchasingAndCustomerService.xml BOSS_PUR_<Area>): listRead, the buying lists
 // (suppliers, sourcing, orders, agreements, receiving, returns, bills, performance), which every Purchasing group but the
 // requester's opens; Replenishment, Approvals and Settings for their groups. Home and Requests are every Purchasing user's.
 const areas = {

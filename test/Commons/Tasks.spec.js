@@ -1,6 +1,6 @@
 // Commons Tasks and TaskDetail (screen/Commons/Tasks/List.xml and TaskDetail.xml, service/ironstone/commons/TaskServices.xml,
 // template/StatusBar.xml; impl-drawers-commons.md M6, design-drawers-commons.md §8): john.doe's smart lists on the demo
-// (data/BossDemoData.xml, DemoServices.load#TasksDemo with the Today demo of load#CommonsDemo); the list with its chips, the
+// (data/demo/18Commons.xml, DemoServices.load#TasksDemo with the Today demo of load#CommonsDemo); the list with its chips, the
 // quick-add row, the done checks, the in-place due and priority, the bulk actions and the row actions; TaskDetail with its
 // stage chips, tabs and actions: complete through the status action, reassign, set due, clone, convert to request, time
 // (clock in and out, add time), add to Today, sub-tasks and delete own; the list's board (a card moved to another status

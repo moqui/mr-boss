@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- People › Time › Clocking kiosk (design-people §6 ClockingKiosk, §1.4 Devices, CX-DEVICE; impl-people P30, F55): the page a
-    registered clocking device opens, the homePath of the PEOPLE_CLOCKING route group (data/BossSetupData.xml), which admits this
+    registered clocking device opens, the homePath of the PEOPLE_CLOCKING route group (data/BossSetupData15PeopleTimeAndPayroll.xml), which admits this
     screen's render and its punch and scanResolve transitions and nothing else. A page of its own rather than the /qapps shell, which
     a device may not load (impl-admin F285), as Insights' WallDisplay is: standalone and hidden from the menu, its html mode a bare
     document that loads the qvt client's files and mounts this screen's qvt render as an island (WebrootPublic.qvt.js), with no

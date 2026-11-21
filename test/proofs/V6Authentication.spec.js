@@ -127,7 +127,7 @@ feature("v5.0.0-6.2.7: BOSS's password fields take a paste and are not closed to
     },
 })
 
-// The demo data's role accounts with the demo password (mr-boss data/BossUsersDemoData.xml, type demo: one password for
+// The demo data's role accounts with the demo password (mr-boss data/demo/42Users.xml, type demo: one password for
 // all 144). A deployment's proof: the project's test server loads every data type, the demo data with it, so in the
 // fixtures profile it skips. Each name is tried once; a refused sign-in counts toward that account's lock and this client's
 // sign-in limits, so four are tried. The control: the deployment's own account, when the run names one, signs in at the

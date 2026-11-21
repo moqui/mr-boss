@@ -18,7 +18,7 @@ const ORG = "BOSS_P17_ORG",
 // nets the next plan): set by setup
 const at = {product: null, order: null}
 const SECRET = /P17 secret/
-// Retail's demo Manufacturing records by the names its screens show (BossManufacturingDemoData.xml, BossWarehouseDemoData.xml);
+// Retail's demo Manufacturing records by the names its screens show (demo/24Manufacturing.xml, demo/44Warehouse.xml);
 // not their ids, which a refusal names back
 const RETAIL =
     /Ziziwork Retail|Assembly line A|Assembly line B|Demo assemblies|Coated filters|Welded frames|Line A pilot assembly|Line A assembly/
@@ -39,7 +39,7 @@ const p17Users = {
     // STOCK_ISSUE from Warehouse's issue group, without the Warehouse root (no Warehouse launcher)
     "p17.material": ["BOSS_MANUFACTURING_OPERATE", "BOSS_WAREHOUSE_ISSUE"]
 }
-// Retail's demo Manufacturing users with no other launcher (BossUsersDemoData.xml), and those of the route sweeps
+// Retail's demo Manufacturing users with no other launcher (demo/42Users.xml), and those of the route sweeps
 const retailUsers = [
     "manufacturing.read",
     "manufacturing.plan",

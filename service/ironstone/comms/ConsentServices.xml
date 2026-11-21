@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     PartyContactMech.allowSolicitation, ContactListParty statuses); these services decide who may and shape what a screen shows.
 
     Who may: the registry, the history, the exports and every change are for contact admins (the CONTACT_ADMIN permission,
-    which BossSetupData gives the BOSS_CONTACT_ADMIN group and Mantle the ADMIN group); each service checks it before it reads
+    which BossSetupData03CommonsAndPermissions.xml gives the BOSS_CONTACT_ADMIN group and Mantle the ADMIN group); each service checks it before it reads
     anything, as Comms is open to every user. Anyone who may see a contact (ironstone.commons.ContactServices.check#ContactAccess) reads
     its current state on the contact record, without the history. Another user's personal contact is "not found".
 

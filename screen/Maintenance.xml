@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- IronStone Maintenance (design-maintenance §1): the root of the app for facilities and equipment managers, planners,
     technicians, supervisors, procedure authors and approvers, resource approvers and administrators, and cost readers. The root
-    user group BOSS_MAINTENANCE and the administrator group BOSS_MAINTENANCE_ADMIN open it (data/BossSetupData.xml), as ADMIN
+    user group BOSS_MAINTENANCE and the administrator group BOSS_MAINTENANCE_ADMIN open it (data/BossSetupData01GroupsAndLaunchers.xml), as ADMIN
     does (impl-maintenance F1: the grant was live for ADMIN and BOSS_MAINTENANCE_ADMIN before P1, whatever this comment said);
     BOSS_MAINTENANCE_REQUEST has no root grant (a requester reports a problem from Commons' intake, P4). The root grant opens
     navigation only: ironstone.maintenance.ContextServices.get#SharedContext checks the user and resolves their capabilities,

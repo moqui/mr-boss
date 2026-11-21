@@ -1,6 +1,6 @@
 // The Projects settings pages (screen/Projects/Settings/Index.xml, WorkItemTypes.xml, Workflows.xml, Labels.xml, Templates.xml;
 // service/ironstone/projects/ProjectServices.xml; design-projects.md §12; impl-projects.md P2) on the Projects demo
-// (data/BossProjectsDemoData.xml, Ziziwork Services' settings): the index; the work item types offered, their order and icons
+// (data/demo/30Projects.xml, Ziziwork Services' settings): the index; the work item types offered, their order and icons
 // and a type of the organization's own, which QuickCreate then offers; a move of the Development flow added and removed and a
 // status's color set and cleared; labels made, renamed, merged and deleted; templates listed and made. The team may change none.
 // The spec puts back what it changes on the demo. Authorization stays on.

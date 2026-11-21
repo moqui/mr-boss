@@ -45,7 +45,7 @@ const capabilityPermissions = {
     catalogView: "PRODUCT_CATALOG_VIEW",
     priceView: "PRICE_VIEW"
 }
-// The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_COM_<Area>): Website for the merchandiser,
+// The menu areas whose authorization is a capability (data/BossSetupData06CommerceAndAdmin.xml BOSS_COM_<Area>): Website for the merchandiser,
 // designer, theme developer and publisher; Orders and Customers for the store and subscription operators; Integrations for
 // the channel operator; Reports for the manager and the operators; Settings for the manager. Home, Stores, Merchandising
 // and Promotions are every Commerce user's.

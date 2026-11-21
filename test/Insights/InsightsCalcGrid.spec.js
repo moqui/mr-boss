@@ -1,5 +1,5 @@
 // CalcGrid under Insights (screen/Insights.xml, mounted by location; mr-moqui docs/tools/Database.md, CalcGrid and access
-// profiles): a Sales administrator who is an Insights user holds the sales profile (data/BossSetupData.xml), authors, and reads
+// profiles): a Sales administrator who is an Insights user holds the sales profile (data/BossSetupData01GroupsAndLaunchers.xml), authors, and reads
 // the orders of the organization they work in on a data sheet; an Insights reader who holds no profile is offered none and
 // reads nothing; and the Tools app's own access is not offered under the mount. The profile's own rules (the entities offered,
 // another organization's rows, an entity no filter applies to) are Mantle's spec's, mr-mantle test/order/CalcGridSales.spec.js.

@@ -23,7 +23,7 @@ const areaLocation = area => "component://mr-boss/screen/People/" + area + ".xml
 const choiceLimit = 30
 const organizationOptionLimit = 100
 
-// The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_PPL_<Area>): Settings the People
+// The menu areas whose authorization is a capability (data/BossSetupData14PeopleAccess.xml BOSS_PPL_<Area>): Settings the People
 // administrator's (P1); P6: the hire and employment change wizards (BOSS_PPL_EMPLOYMENT), HR's. Home is every People user's.
 const areas = {
     settings: "Settings",

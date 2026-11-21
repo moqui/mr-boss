@@ -1,5 +1,5 @@
 // Customer Service's demo feedback (impl-customer-service P13; DemoServices.load#FeedbackDemo, run from
-// BossZZCustomerServiceFeedbackDemoData.xml after Accounting's portal demo, whose ZIZI_PORTAL site now mounts the Support
+// demo/76ServiceFeedback.xml after Accounting's portal demo, whose ZIZI_PORTAL site now mounts the Support
 // app for ORG_ZIZI_RETAIL): Retail's feedback form (the default rating 1 to 5 with a reason, comment and consent; Mantle's
 // create#FeedbackForm and publish#FeedbackForm), its delivery policy (an hour after resolving, once per case, a reminder
 // after three days, a score of 2 or less followed up by the Support team), and one answered invitation: Joe Q Public's

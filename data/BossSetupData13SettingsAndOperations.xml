@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="seed-initial">
+    <!-- Insights P10 (impl-insights P10, §4; design-insights §11 Settings, DataReadiness, §1.2 "Assist and MCP analytics"; INS-01,
+        INS-09, INS-10): Settings, data readiness and Assist. -->
+    <!-- The organization's analytics defaults (impl-insights §4): PartySetting types registered for internal organizations, so
+        Admin's OrganizationDefaults lists them too. ironstone.insights.ContextServices.store#Settings writes them (Settings.js);
+        the two typed ones (an enumeration each) may also be changed in Admin as any typed default, and the others carry no
+        pattern, so Admin shows them as set by their owner: the recipient cap is refused above the instance ceiling
+        (report.groupRecipientCeiling) on its one path, and a default definition or time zone is checked as it will be read. The
+        cap's default is the engine's own (50); an empty default stays empty. -->
+    <moqui.basic.EnumerationType enumTypeId="InsightsWeekStart" description="Insights week start"/>
+    <!-- enumCode: the date histogram offset that starts a calendar week on the day (mr-moqui crates/moqui-core/src/search/time.rs) -->
+    <moqui.basic.Enumeration enumId="InsWsMonday" enumTypeId="InsightsWeekStart" description="Monday" enumCode="0d" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="InsWsSunday" enumTypeId="InsightsWeekStart" description="Sunday" enumCode="-1d" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="InsWsSaturday" enumTypeId="InsightsWeekStart" description="Saturday" enumCode="-2d" sequenceNum="3"/>
+    <moqui.basic.EnumerationType enumTypeId="InsightsFreshnessPolicy" description="Insights freshness policy"/>
+    <!-- enumCode: the minutes after its last rebuild at which Data readiness shows a source as stale -->
+    <moqui.basic.Enumeration enumId="InsFpHour" enumTypeId="InsightsFreshnessPolicy" description="One hour" enumCode="60" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="InsFpDay" enumTypeId="InsightsFreshnessPolicy" description="One day" enumCode="1440" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="InsFpWeek" enumTypeId="InsightsFreshnessPolicy" description="One week" enumCode="10080" sequenceNum="3"/>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsDefaultDashboard" description="Insights Home dashboard">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsDefaultMap" description="Insights flow map">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsDefaultDigest" description="Insights management digest">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsDisplayTimeZone" description="Insights display time zone">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsWeekStart" description="Insights week start"
+            enumTypeId="InsightsWeekStart">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsFreshnessPolicy" description="Insights source freshness"
+            enumTypeId="InsightsFreshnessPolicy" defaultValue="InsFpDay">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <mantle.party.PartySettingType partySettingTypeId="InsightsGroupRecipientCap" description="Insights group recipient cap"
+            defaultValue="50">
+        <roles roleTypeId="OrgInternal"/></mantle.party.PartySettingType>
+    <!-- Insights' row in Admin's settings index (owner contract, design-admin §14.2): shown to a viewer whose own groups open the
+        route and who holds INSIGHTS_SETTINGS_VIEW. Its sources' readiness is Data readiness (one provider per source, so the
+        entry names none). -->
+    <moqui.server.SettingsEntry settingsKey="insights.settings" version="1" ownerApp="Insights" title="Insights settings"
+            description="Analytics defaults by organization: the Home dashboard, flow map and digest, display time zone and week, source freshness and the group recipient cap; data readiness of the business datasets"
+            settingsGroupEnumId="AdmSgApplications" scopeEnumId="AdmScOrganization" destinationRoute="insightsSettings"
+            screenLocation="component://mr-boss/screen/Insights/Settings/AnalyticsSettings.xml"
+            viewPermission="INSIGHTS_SETTINGS_VIEW" configuredBy="Insights administrator" sequenceNum="95"/>
+    <!-- Data readiness for every Insights reader (design §11 DataReadiness; §13.3 "Source quality"): the framework's
+        get#Readiness, any signed-in user's. Each provider's own permission and its owner's check decide what a reader sees;
+        a refresh asks its registration's permission (INSIGHTS_DATASET_EDIT), which a reader does not hold. -->
+    <!-- and the engine's listing of the business datasets a viewer reads (find#BusinessDatasets, which answers a non-steward only
+        the admitted datasets they read): each source's readiness check and Assist's choice of datasets read it, so the reading
+        groups hold it as the author and the steward do (BOSS_INS_DATASET_READ above), ALWAYS past BOSS_INS_REPORT_ENGINE's
+        deny. It lists; each dataset's own artifact and row filter still decide every read. -->
+    <artifactGroups artifactGroupId="BOSS_INS_DATASET_READ">
+        <authz artifactAuthzId="BOSS_INS_DATASET_READ_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_READ_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_DATASET_READ_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- The class of each business dataset for Assist and MCP (design §1.2; entity/AdminEntities.xml DatasetClass), each domain
+        owner's row beside its readiness provider (owner contracts). Sales items holds each line's acquire cost and margins, so it
+        is a cost dataset: Assist reads it only for a holder of PRODUCT_COST_VIEW and an MCP client never. The others are
+        business operations; a field of theirs named for a cost or a margin (sales orders' item cost totals) is refused the same
+        way (Assist.js). A dataset without a row answers neither surface. -->
+    <moqui.basic.EnumerationType enumTypeId="InsightsDatasetClass" description="Insights dataset class"/>
+    <moqui.basic.Enumeration enumId="InsDcOperations" enumTypeId="InsightsDatasetClass" description="Business operations" sequenceNum="1"/>
+    <moqui.basic.Enumeration enumId="InsDcCost" enumTypeId="InsightsDatasetClass" description="Costs and margins" sequenceNum="2"/>
+    <moqui.basic.Enumeration enumId="InsDcPeople" enumTypeId="InsightsDatasetClass" description="People and payroll" sequenceNum="3"/>
+    <ironstone.insights.DatasetClass datasetId="mantle-sales-orders" version="1" domainOwner="Sales" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="mantle-sales-items" version="1" domainOwner="Sales" classEnumId="InsDcCost"/>
+    <ironstone.insights.DatasetClass datasetId="mantle-inventory" version="1" domainOwner="Warehouse" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-commerce-checkouts" version="1" domainOwner="Commerce" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-commerce-payment-attempts" version="1" domainOwner="Commerce" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-commerce-feed-builds" version="1" domainOwner="Commerce" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-service-clocks" version="1" domainOwner="Customer Service" classEnumId="InsDcOperations"/>
+    <ironstone.insights.DatasetClass datasetId="boss-service-breaches" version="1" domainOwner="Customer Service" classEnumId="InsDcOperations"/>
+    <!-- Assist and MCP (design §1.2, INS-10): the read tools of the insights-analyst skill (skill/insights-analyst.md), each run
+        as the signed-in user under the framework's read fence. The catalog and a measure's meaning are navigation and wording,
+        offered to both surfaces. A number is a saved panel's own result or a typed query over an admitted dataset
+        (ironstone.insights.AssistServices), one service per surface since a tool is offered to Assist or to MCP by its row: the MCP pair never reads a cost or a
+        margin. The report engine's run#Query is not exposed: a raw query could not be held to a dataset's class. -->
+    <moqui.agent.AgentToolExposure toolName="insights_find_reports" serviceName="ironstone.insights.RegistryServices.find#Reports"
+            title="Report catalog"
+            description="find#Reports: the catalog reports the user may read, each with its owner app, business purpose, date or status basis, formats and route; narrow by ownerApp, purpose or text. No report runs and no figure is returned."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_get_metric" serviceName="ironstone.insights.RegistryServices.get#Metric"
+            title="What a measure means"
+            description="get#Metric: a registered business measure's meaning (owner, version, grain, basis, aggregation, numerator and denominator, unit policy, dimensions, exclusions, scope, freshness and comparison rules), by metricId, or by the definitionId and panelId of a dashboard panel that names it. A panel without a registered measure answers available false. No figure is returned."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_datasets" serviceName="ironstone.insights.AssistServices.find#QuerySources"
+            title="Datasets to ask"
+            description="find#QuerySources: the admitted business datasets the user reads that insights_query can ask, each with its title, domain owner and whether it holds costs; with a datasetId, its measureFields, groupFields and filterFields, the aggregates and the time grains. Cost and margin datasets and fields are listed only for a user who may see costs."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_query" serviceName="ironstone.insights.AssistServices.run#DatasetQuery"
+            title="Ask a business number"
+            description="run#DatasetQuery: one aggregate over an admitted business dataset from typed choices: datasetId, aggregate (count, sum, avg, min, max, cardinality), measureField, groupBy, groupBy2, timeGrain (day, week, month, quarter, year), filterField with filterValue, from and thru (relative such as now-30d, now-1M/M, now/M, or ISO dates; the last 30 days when empty) and organizationPartyId for one of the user's organizations. It runs as the user with the dataset's row filter and guards, as a dashboard does. Group an amount by its currency field. A refusal (available false with refusedCode and reason) is the answer."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_panel" serviceName="ironstone.insights.AssistServices.run#PanelQuery"
+            title="Read a dashboard panel"
+            description="run#PanelQuery: a saved panel's own numbers as its dashboard shows them to the user, by the dashboard's definitionId and the panel's panelId (or a library panel's definitionId), with from and thru (relative such as now-30d, now-1M/M, now/M, or ISO dates; the last 30 days when empty) and organizationPartyId for one of the user's organizations. Use it for a number that is on a dashboard: it runs the panel's saved query, filters and exclusions, and answers its rows, the count of source records and the measure's registered meaning. No record is returned."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_operations_panel" serviceName="ironstone.insights.AssistServices.run#OperationsPanel"
+            title="Read a business operations panel"
+            description="run#OperationsPanel: a saved panel's own numbers as its dashboard shows them to the user, by the dashboard's definitionId and the panel's panelId (or a library panel's definitionId), with from, thru and organizationPartyId for one of the user's organizations. A panel that reads cost, margin, People or payroll data in any of its queries is refused, whatever the user holds."
+            classificationEnumId="AgclRead" exposeAssistant="N" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_operations_datasets" serviceName="ironstone.insights.AssistServices.find#OperationsSources"
+            title="Business operations datasets"
+            description="find#OperationsSources: the admitted business operations datasets the user reads that insights_operations_query can ask and, with a datasetId, its measureFields, groupFields and filterFields. Cost, margin, People and payroll data are never listed."
+            classificationEnumId="AgclRead" exposeAssistant="N" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+    <moqui.agent.AgentToolExposure toolName="insights_operations_query" serviceName="ironstone.insights.AssistServices.run#OperationsQuery"
+            title="Ask a business operations number"
+            description="run#OperationsQuery: one aggregate over an admitted business operations dataset from typed choices: datasetId, aggregate (count, sum, avg, min, max, cardinality), measureField, groupBy, groupBy2, timeGrain, filterField with filterValue, from and thru, and organizationPartyId for one of the user's organizations. It runs as the user with the dataset's row filter and guards. Cost, margin, People and payroll datasets and fields are refused (DATASET_RESTRICTED, FIELD_RESTRICTED) whatever the user holds."
+            classificationEnumId="AgclRead" exposeAssistant="N" exposeMcp="Y" previewMode="none" lockVersion="1"/>
+
+    <!-- Admin P13 (impl-admin P13; design-admin §2, §8): system messages for the operations operator. The Integrations area
+        is the integration administrator's whole (BOSS_ADM_INTEGRATIONS, which now holds MessageTypes and MessageTypeDetail
+        too); the operator opens only SystemMessages and SystemMessageDetail in it: the area's screen itself, not inherited
+        (so Connections, ConnectionDetail and the message types stay refused), and the two screens, each inheritable for its
+        own transitions, which reach framework services that check their own permission (find#Messages, get#Message and
+        preview#Recovery ADMIN_OPERATION_VIEW; execute#Recovery ADMIN_OPERATION_MANAGE and, for an owner's messages, the
+        owner's own permission and scope). ALWAYS, to beat the area's deny of the root group, with the root's filter sets,
+        under which an owner's recovery service (Mantle's store channels) resolves the operator's organizations. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_INTEGRATIONS_OPS" description="Admin system messages">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Integrations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Integrations/SystemMessages.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Integrations/SystemMessageDetail.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_INTEGRATIONS_OPS_OPERATIONS" userGroupId="BOSS_ADMIN_OPERATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin's settings index entry of P13 (design §14.2), shown to a user its screen opens to -->
+    <moqui.server.SettingsEntry settingsKey="admin.messageTypes" version="1" ownerApp="Admin" title="Message types"
+            description="The kinds of message exchanged with other systems: what sends and consumes each, among the handlers its owner registered, and its transport options"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance"
+            destinationRoute="adminMessageTypes" screenLocation="component://mr-boss/screen/Admin/Integrations/MessageTypes.xml"
+            viewPermission="ADMIN_CONNECTION_VIEW" configuredBy="Integration administrator" sequenceNum="114"/>
+
+    <!-- Admin P14 (impl-admin P14; design-admin §2, §10): notification topics for the configuration administrator. The
+        Operations area is the reader's, the operations operator's and the administrator's whole (BOSS_ADM_OPERATIONS, which
+        now holds Jobs, JobDetail, JobRuns, JobRunDetail, Topics and TopicDetail too); the configuration administrator opens
+        only Topics and TopicDetail in it: the area's screen itself, not inherited (so Health, Monitoring and the jobs stay
+        refused), and the two screens, each inheritable for its own transitions, which reach framework services that check
+        their own permission (find#Topics and get#Topic ADMIN_OPERATION_VIEW or ADMIN_SETTINGS_VIEW; store#TopicDefaults
+        ADMIN_SETTINGS_MANAGE; store#TopicSubscription ADMIN_OPERATION_MANAGE, which this group does not hold). ALWAYS, to
+        beat the area's deny of the root group, with the root's filter sets. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_OPERATIONS_TOPICS" description="Admin notification topics">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Operations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Operations/Topics.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Operations/TopicDetail.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_OPERATIONS_TOPICS_CONFIGURE" userGroupId="BOSS_ADMIN_CONFIGURE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin's settings index entry of P14 (design §14.2), shown to a user its screen opens to -->
+    <moqui.server.SettingsEntry settingsKey="admin.topics" version="1" ownerApp="Admin" title="Notification topics"
+            description="What people are notified about and how each topic is delivered when a person chose nothing, for the topics their owners registered"
+            settingsGroupEnumId="AdmSgInstance" scopeEnumId="AdmScInstance"
+            destinationRoute="adminTopics" screenLocation="component://mr-boss/screen/Admin/Operations/Topics.xml" viewPermission="ADMIN_SETTINGS_VIEW"
+            configuredBy="Configuration administrator" sequenceNum="116"/>
+
+    <!-- Admin P15 (impl-admin P15; design-admin §2, §11): the Data area (Imports, DataImport, ImportDetail) for the data
+        operator and the administrator. The area is denied to the root group and opened whole to the two, with the root's
+        filter sets: its screens' transitions reach the framework's org.moqui.admin.DataTransferServices (and
+        ironstone.shared.DataImportServices over it), which check ADMIN_TRANSFER_VIEW, each target's registered permissions
+        and scope, and call a target's owner as the user, whose own permission and organization checks decide. The data
+        operator's group holds the two transfer permissions only: importing a target also needs that target's own domain
+        permission, through a group of the user's (design §1.1; impl-admin §4, the user's call whether BOSS_ADMIN_DATA
+        should carry any of them). -->
+    <artifactGroups artifactGroupId="BOSS_ADM_DATA" description="Admin data">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Data.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_DATA_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_DATA_DATA" userGroupId="BOSS_ADMIN_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_DATA_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- The staff-invitations import target is Mantle's (mr-mantle data/10-seed/PartyAndIdentity.xml). BOSS adds what its own
+        single invitation always includes (impl-admin §4: IronStone BOSS users in every invitation), as a value the
+        registration fixes for every row, never a column. -->
+    <moqui.server.TransferTarget targetId="staffInvitations"
+            fixedValuesJson="{&quot;alwaysBundleGroupIds&quot;:&quot;BOSS_USERS&quot;}"/>
+    <!-- The owner wizards that keep no run record yet (impl-admin F13, F43): listed as import targets with their place and no
+        runs, until Commons' contact import and Projects' work-item import keep one (impl-admin §7). Nothing is staged or
+        applied through these rows. -->
+    <moqui.server.TransferTarget targetId="commonsContacts" direction="import" targetMode="wizard" title="Contacts"
+            description="Contacts from a vCard or CSV file, into a personal or a shared contact book, in Commons' own wizard"
+            effectsNote="Each contact is created or merged by Commons' contact import; no run is kept yet."
+            ownerApp="Commons" targetVersion="1" ownerRoute="commonsContactImport" sequenceNum="50"/>
+    <moqui.server.TransferTarget targetId="projectsWorkItems" direction="import" targetMode="wizard" title="Work items"
+            description="Tasks and other work items of a project from a CSV file, in Projects' own wizard"
+            effectsNote="Each row becomes a work item of the chosen project; no run is kept yet."
+            ownerApp="Projects" targetVersion="1" ownerRoute="projectsWorkItemImport" sequenceNum="51"/>
+
+    <!-- Admin P16 (impl-admin P16; design-admin §2, §11): Exports, DataExport and Backups in the Data area. The data
+        operator and the administrator open them with the rest of the area (BOSS_ADM_DATA above). The backup operator
+        opens only Backups in it: the area's screen itself, not inherited (so the imports and the exports stay refused),
+        and Backups, inheritable for its own transition, which reaches the framework's org.moqui.admin.BackupServices:
+        they check ADMIN_BACKUP_VIEW and ADMIN_BACKUP_RUN themselves (the data operator, who holds neither, opens the
+        screen and is told it is not available), take no path, mode or destination, and offer no download. ALWAYS, to
+        beat the area's deny of the root group, with the root's filter sets. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_DATA_BACKUPS" description="Admin backups">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Data.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Data/Backups.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_DATA_BACKUPS_BACKUP" userGroupId="BOSS_ADMIN_BACKUP"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- The exports their owners make in their own place (impl-admin F43, P16): listed as export targets with that place
+        and nothing dispatched, as the owner wizards of the imports are. Dataset rows and report outputs are Insights'
+        (design-admin §11 DataExport: no second surface); Accounting's tax statement data and a billing batch's invoices
+        are exported on the record they are of, by Accounting's own permissions (an exported statement is kept as it
+        is); Projects' work items from their list. The exports dispatched here are their owners' seed rows: Commons'
+        contact books (mr-mantle data/10-seed/PartyAndIdentity.xml) and the framework's message translations. -->
+    <moqui.server.TransferTarget targetId="insightsDatasetRows" direction="export" targetMode="wizard" title="Dataset rows"
+            description="The rows of a business dataset you may read, as CSV, from the dataset's own view in Insights"
+            ownerApp="Insights" targetVersion="1" ownerRoute="insightsDatasets" sequenceNum="60"/>
+    <moqui.server.TransferTarget targetId="insightsReports" direction="export" targetMode="wizard" title="Reports"
+            description="A report's output, and its scheduled deliveries to its recipients, from the report in Insights"
+            ownerApp="Insights" targetVersion="1" ownerRoute="insightsReports" sequenceNum="61"/>
+    <moqui.server.TransferTarget targetId="accountingTaxStatements" direction="export" targetMode="wizard" title="Tax statement data"
+            description="A tax statement's data as CSV, from the statement in Accounting; an exported statement is kept as it is"
+            ownerApp="Accounting" targetVersion="1" ownerRoute="accountingTaxStatements" sequenceNum="62"/>
+    <moqui.server.TransferTarget targetId="accountingInvoiceBatch" direction="export" targetMode="wizard" title="Invoices of a billing batch"
+            description="The invoices of a billing batch as CSV, from the batch in Accounting"
+            ownerApp="Accounting" targetVersion="1" ownerRoute="accountingInvoiceBatch" sequenceNum="63"/>
+    <moqui.server.TransferTarget targetId="projectsWorkItemList" direction="export" targetMode="wizard" title="Work items"
+            description="The work items of a list as CSV, from the list in Projects"
+            ownerApp="Projects" targetVersion="1" ownerRoute="projectsWorkItems" sequenceNum="64"/>
+
+    <!-- Admin P17 (impl-admin P17; design-admin §2, §12): the Audit area (AuditChanges, AccessLog) for the audit reader and
+        the administrator. The area is denied to the root group and opened whole to the two, with the root's filter sets,
+        which Mantle's audit source reads the organizations by (an account's and a membership's changes of the
+        organizations the reader administers; the administrator's MANTLE_ACTIVE_ORG every one with none active). It has no
+        transition that writes. Its reads check ADMIN_AUDIT_VIEW themselves (ironstone.admin.AuditServices, the framework's
+        org.moqui.admin.AuditServices and Mantle's find#IdentityChanges), so the area's inheritable ALWAYS is not what
+        decides one. The audit reader holds no other Admin area, no System, no Dashboards and no dataset grant. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_AUDIT" description="Admin audit">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Audit.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_AUDIT_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_AUDIT_AUDIT" userGroupId="BOSS_ADMIN_AUDIT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_AUDIT_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- The access log dataset (report/admin-access-log.json; design-admin §12 AccessLog, ADM-REPORTS): the log lines of the
+        report engine's and monitoring's audit targets, by the dataset's own row filter, and of the reader's organizations'
+        people, by its row-filter service. Its artifact (org.moqui.report.dataset.admin-access-log) is granted to no group,
+        on purpose (P17 review): a dataset has no field list, so a grant of it lets its holder read each line whole through
+        the engine (Explore, a panel, an export, an agent's tools) wherever they may call it, a scheduled export's
+        addresses and a runtime setting's value with it. ironstone.admin.AuditServices.get#AccessLog checks
+        ADMIN_AUDIT_VIEW under Admin and reads the dataset itself, answering only its safe fields. Never grant the
+        artifact to a group, alone or as part of a wider dataset pattern. -->
+    <!-- Admin P18 (impl-admin P18; design-admin §6 Devices, §14 shared-device registration; crosscut CX-DEVICE): the route
+        group a shared device may be registered for, the framework's moqui.security.DeviceRouteGroup, each owner's row: Insights'
+        wall display first. Its artifact group is the device's allow-list and grants nothing: no authz row names it. A device
+        registered for it opens Insights' WallDisplay (with the playlist its registration fixed, definitionId, whatever its
+        browser asks for, and its read-only data transition) and nothing else; what it shows is still authorized as its
+        display account, by that account's own groups and organizations. Insights P11 set the members and homePath (below);
+        ShopFloor and the
+        People, Maintenance and Marketing kiosks register theirs when they are built (impl-admin §7). The Devices screen is
+        in the Security area (BOSS_ADM_SECURITY above), whose services check ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE. -->
+    <!-- Insights P11 (impl-insights P11; design-insights §4 Playlists, crosscut CX-DEVICE): the route group's members, the wall
+        display's page and nothing else. A wall display opens Insights' WallDisplay (homePath; the bare page, its qvt island and its
+        tui twin, all the screen's own render) and calls its data transition (the framework Playlist's over a fixed range: a dashboard of the stored
+        playlist by its index, read only); the qvt client's files are static and need no member. The /qapps shell, Playlists and
+        the Dashboard screens are not members (impl-admin F285): the page needs none of them. The members are in a new artifact
+        group, BOSS_DEV_INS_WALL, which the route group names instead of P18's BOSS_DEV_INS_PLAYLISTS (Playlists and its data
+        transition), so an instance that loaded P18's rows keeps them in a group nothing names. The idle timeout stays a week: a
+        display asks for data at every turn of its playlist all day, so the week ends only a display switched off or replaced
+        (over a long holiday it is registered again). -->
+    <moqui.security.ArtifactGroup artifactGroupId="BOSS_DEV_INS_WALL" description="Shared device route group: Insights wall display"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_INS_WALL" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/Insights/WallDisplay.xml"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="BOSS_DEV_INS_WALL" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"
+            nameIsPattern="N" artifactName="component://mr-boss/screen/Insights/WallDisplay.xml/data"/>
+    <moqui.security.DeviceRouteGroup routeGroupId="INSIGHTS_PLAYLISTS" description="Insights wall display" ownerName="Insights"
+            artifactGroupId="BOSS_DEV_INS_WALL" homePath="/apps/Insights/WallDisplay" parameterName="definitionId"
+            parameterTitle="Playlist" parameterRequired="Y" defaultIdleMinutes="10080" defaultLifetimeDays="365" sequenceNum="10"/>
+    <!-- Insights P11: what a display account holds (impl-admin F286; design-insights §4 Playlists). The Insights root is the
+        launcher group's (BOSS_INSIGHTS), which opens every Insights screen, so a display account is not in it: it holds the reader
+        bundle (BOSS_INSIGHTS_READ: the engine's read operations, the admitted datasets and their documents, INSIGHTS_VIEW), which
+        alone opens no screen, and this one, which opens the wall display's page and its data transition, view only, and nothing
+        else of Insights even if a route group were wider (the root's always-actions call no Insights service for a device's
+        request, screen/Insights.xml). A registered bundle with no permission, so ADMIN_ACCESS_MANAGE assigns it (P3's delegation
+        rules), and with the organization filters as every Insights grant. Meant for display accounts: a person with it alone
+        gets no Insights context. -->
+    <moqui.security.UserGroup userGroupId="BOSS_INSIGHTS_DISPLAY" description="Insights wall display (display accounts)"/>
+    <artifactGroups artifactGroupId="BOSS_INS_WALL_DISPLAY" description="Insights: the wall display's page alone">
+        <artifacts artifactName="component://mr-boss/screen/Insights/WallDisplay.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Insights/WallDisplay.xml/data" artifactTypeEnumId="AT_XML_SCREEN_TRANS" inheritAuthz="N"/>
+        <authz artifactAuthzId="BOSS_INS_WALL_DISPLAY" userGroupId="BOSS_INSIGHTS_DISPLAY" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_DISPLAY" appName="Insights" description="Insights wall display: plays a registered playlist on a shared device, with the reader bundle (display accounts only)" scopeDependency="organization; each source by its own view permission" sequenceNum="935"/>
+</entity-facade-xml>

@@ -3,7 +3,7 @@
 // menu data builds, which also defines the sibling and default screens the menu lists. Placeholders are found by their
 // "Placeholder:" label. Every other screen under the Commons, Comms, Insights and Projects roots and in screen/Shared (the
 // screens built there, the ones moved from the first SimpleScreens port and Projects' section screens over its placeholders)
-// renders the same way, on the demo records of data/BossDemoData.xml and data/BossMailDemoData.xml, and shows them; a .qvue screen (render-modes vue,qvue: Shared/Chatter,
+// renders the same way, on the demo records of data/demo/18Commons.xml and data/demo/20FilesKnowledgeAndMail.xml, and shows them; a .qvue screen (render-modes vue,qvue: Shared/Chatter,
 // Shared/RecordFiles, Comms/Inbox/Mail, Comms/Inbox/Compose, Comms/Chat, Comms/Panel/Chat, Comms/Settings/Rules,
 // Comms/Settings/MailAccounts/SignIn, Commons/Knowledge, Commons/Notes and Commons/Files, which the shell loads in their best
 // client mode) renders in qvue, its component.
@@ -43,7 +43,7 @@ function findScreenFiles(appList, matches) {
     return found
 }
 
-// what a screen shows of the demo records (data/BossDemoData.xml), by app and path, with the id parameters of a screen
+// what a screen shows of the demo records (data/demo/18Commons.xml), by app and path, with the id parameters of a screen
 // that opens on one
 const demoRecords = {
     "Shared/DataImport/": {text:"Product import"},
@@ -117,7 +117,7 @@ const demoRecords = {
     "Commons/Settings/Account": { text: "john.doe" },
     "Commons/Calendar/EventDetail": { parameters: { workEffortId: "BOSS_DEMO_EVENT" }, text: "Weekly team meeting" },
     // M7: the calendar's resource detail (under the .qvue Schedules, which writes no subscreen here: test/Commons/Schedules.spec.js
-    // checks its content) and settings (the demo of data/BossCalendarDemoData.xml)
+    // checks its content) and settings (the demo of data/demo/12CalendarChatAndConsent.xml)
     "Commons/Calendar/Schedules/ResourceDetail": { parameters: { resourceType: "room", resourceId: "BOSS_DEMO_ROOM_MAPLE" } },
     "Commons/Settings/Calendars": { text: "Holidays (demo feed)" },
     // M6: Tasks and Requests, each a list (the default subscreen) and a detail
@@ -146,20 +146,20 @@ const demoRecords = {
     // P5: the shared request detail, here in the Commons context (no app root)
     "Shared/RequestDetail/": { parameters: { requestId: "BOSS_DEMO_REQUEST" }, text: "Set up the shared team calendar" },
     // M9: Knowledge and Notes (.qvue screens: their components) and Knowledge's Spaces, SpaceDetail and Review on the knowledge
-    // demo (data/BossKnowledgeDemoData.xml; test/Commons/Knowledge.spec.js, KnowledgeReview.spec.js and Notes.spec.js call their transitions)
+    // demo (data/demo/20FilesKnowledgeAndMail.xml; test/Commons/Knowledge.spec.js, KnowledgeReview.spec.js and Notes.spec.js call their transitions)
     "Commons/Knowledge": { text: "BossKnowledge" },
     "Commons/Notes": { text: "BossNotes" },
     "Commons/Knowledge/Spaces": { text: "Team handbook" },
     "Commons/Knowledge/SpaceDetail": { parameters: { wikiSpaceId: "BOSSKB" }, text: "Policies/Security" },
     "Commons/Knowledge/Review": { text: "Release process" },
     // M8: Files (a .qvue screen: its component), the drives with one drive's settings and members, the shares (the files demo of
-    // data/BossFilesDemoData.xml)
+    // data/demo/20FilesKnowledgeAndMail.xml)
     "Commons/Files": { text: "BossFiles" },
     "Commons/Files/Drives": { text: "Team" },
     "Commons/Files/DriveSettings": { parameters: { driveId: "BOSS_DEMO_TEAM" }, text: "Joe Developer" },
     "Commons/Files/Shares": { text: "Photos for the family" },
     // M5: the Inbox (the default subscreen Inbox/Mail, a .qvue screen like Compose) and MessageDetail on a message of the mail
-    // demo (data/BossMailDemoData.xml) that no spec changes
+    // demo (data/demo/20FilesKnowledgeAndMail.xml) that no spec changes
     "Comms/Inbox": { text: "Inbox" },
     // M10: Chat and the tray's Chat tab (.qvue screens: their components, the room view in Chat's), and the chat settings
     "Comms/Chat": { text: "BossChatRoom" },
@@ -175,7 +175,7 @@ const demoRecords = {
     "Comms/Settings/Identities": { text: "Ziziwork Support" },
     "Comms/Settings/OutOfOffice": { text: "Away until Monday" },
     "Comms/Settings/TextBlocks": { text: "Directions to the office" },
-    // M11: the consent registry and one contact's consent (data/BossConsentDemoData.xml); the public page /u/<token> is
+    // M11: the consent registry and one contact's consent (data/demo/12CalendarChatAndConsent.xml); the public page /u/<token> is
     // test/Unsubscribe.spec.js's
     "Comms/Consent": { text: "Alex Rivera" },
     "Comms/Consent/List": { text: "Alex Rivera" },
@@ -243,7 +243,7 @@ const demoRecords = {
     "Projects/Projects/ProjectDetail/Files": { parameters: { workEffortId: "IRON" }, text: "ProjectStatusBar" },
     "Projects/Projects/ProjectDetail/Settings": { parameters: { workEffortId: "IRON" }, text: "ProjectStatusBar" },
     "Projects/Projects/StatusReport": { parameters: { workEffortId: "IRON" }, text: "Open the printable status report" },
-    // P4b: the roadmap, a milestone and a release (data/BossProjectsDemoData.xml)
+    // P4b: the roadmap, a milestone and a release (data/demo/30Projects.xml)
     "Projects/Projects/Roadmap": { text: "General availability" },
     "Projects/Projects/MilestoneDetail": { parameters: { workEffortId: "IRON-MS-1" }, text: "MilestoneStatusBar" },
     "Projects/Projects/ReleaseDetail": { parameters: { workEffortId: "IRON-REL-2" }, text: "ReleaseStatusBar" },
@@ -347,7 +347,7 @@ const demoRecords = {
     "Shared/InvoiceDetail/": { invoice: true, text: "Brightwater Dental Group" },
     "Projects/Settings/Billing": { text: "Billing defaults" },
     // Projects P8b: the Money tab on ACME (by the header of ProjectDetail, as the shell loads the tab after it: test/Projects/MilestoneBillingWalk.spec.js
-    // renders the tab itself), the estimate print, the shared order detail on Acme's order (data/BossProjectsDemoDataTimeBilling.xml)
+    // renders the tab itself), the estimate print, the shared order detail on Acme's order (data/demo/34ProjectBilling.xml)
     "Projects/Projects/ProjectDetail/Money": { parameters: { workEffortId: "ACME" }, text: "ProjectStatusBar" },
     // the client's Hours tab (impl-projects.md P10b): the header still renders here (the shell's -2 level); the tab itself is
     // refused to an internal user (P11, F133: test/Projects/ClientBilling.spec.js and test/Projects/ProjectsTui.spec.js)

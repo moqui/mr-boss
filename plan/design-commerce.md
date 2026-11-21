@@ -43,7 +43,7 @@ the Java PopRestStore source.
 ### 1.1 Root and access
 
 Root `screen/Commerce.xml`, app path `Commerce`, icon `sym_o_storefront`. The root exists and
-mr-boss `MoquiConf.xml` mounts it. The `BOSS_COMMERCE` artifact group in `data/BossSetupData.xml`
+mr-boss `MoquiConf.xml` mounts it. The `BOSS_COMMERCE` artifact group in `data/BossSetupData01GroupsAndLaunchers.xml`
 is active: it gives `ADMIN` and the existing `BOSS_COMMERCE_ADMIN` group all authz on the root,
 with the `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT` filters. The root's comment that the
 grant is commented out is stale. Placeholder Home, Stores, Merchandising, Orders, Integrations and

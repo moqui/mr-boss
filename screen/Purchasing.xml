@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- IronStone Purchasing (design-purchasing §1): the root of the app for buyers, requesters, planners, purchase approvers,
     readers and the purchasing administrator. The root user group BOSS_PURCHASING and the administrator group
-    BOSS_PURCHASING_ADMIN open it (data/BossSetupData.xml); its areas are the files of screen/Purchasing/, in the menu order
+    BOSS_PURCHASING_ADMIN open it (data/BossSetupData01GroupsAndLaunchers.xml); its areas are the files of screen/Purchasing/, in the menu order
     of design §1 by their default-menu-index:
     1 Home; 2 Suppliers; 3 Purchase requests (Requests); 4 RFQs (Sourcing); 5 Purchase orders (Orders); 6 Approvals;
     7 Agreements; 8 Replenishment; 9 Receiving; 10 Supplier returns (Returns); 11 Bills &amp; matching (Bills);

@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     requests they made, with their state, who decides next and a refusal's reason (find#MyRequests); Emergency contacts: theirs,
     added, changed and ended here (template/PeopleEmergencyContacts.xml). Open my employee record is the primary action (their
     Employee360 under People for a People user, else under Commons). A self-service employee without People opens it under either
-    root by its own grant (BOSS_PPL_SELF, non-inheritable, data/BossSetupData.xml); every other People screen stays refused to them.
+    root by its own grant (BOSS_PPL_SELF, non-inheritable, data/BossSetupData14PeopleAccess.xml); every other People screen stays refused to them.
     P10: My time (the user's own week, People's time area) and the missing-week card, the user's own weeks to submit
     (get#SelfService's weeksToSubmit, the rule of Projects' Today), opening the oldest in My time. P11: My leave balances, the user's own
     (mantle.humanres.LeaveServices.get#MyBalances, which takes no party), each leave type's balance and what is available, by the

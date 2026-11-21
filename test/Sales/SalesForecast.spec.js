@@ -3,7 +3,7 @@
 // them, the deals with whether each counts, Submit forecast; not sales.rep2's Contoso pilot nor the maintenance plan closing next
 // year); with no organization chosen, a manager of two organizations is asked to choose one, not told the forecast is unavailable.
 // The rules (the weighted amount, the reasons, the roll-up, the refusals, attainment by basis) are Mantle's SalesForecasts;
-// the target's access case is SalesAccess'. Demo data: data/BossZSalesDemoData.xml (P4 and P18 blocks).
+// the target's access case is SalesAccess'. Demo data: data/demo/70Sales.xml (P4 and P18 blocks).
 // Run: ./moq test mr-boss --spec SalesForecast
 const lib = ec.resource.script("component://mr-boss/test/Sales/SalesSpecLib.js")
 const {ids, users, asUser, page} = lib

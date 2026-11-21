@@ -1,5 +1,5 @@
 // The public page of a link (screen/PublicShare.xml and PublicShare.qvue at /s/<token>, the token-route "s" of MoquiConf.xml;
-// impl-drawers-commons.md R16, M8), as a visitor who is not signed in, on the demo links (data/BossFilesDemoData.xml): the
+// impl-drawers-commons.md R16, M8), as a visitor who is not signed in, on the demo links (data/demo/20FilesKnowledgeAndMail.xml): the
 // route's token check, the page's transitions with the token the route gives them (a bad, revoked or expired token, or no
 // grant for a link with a password, reads nothing), the password and its grant, a folder with its files and a zip, one file,
 // and the file drop of an upload-only link with the uploader's name in the version note, a name already there kept beside it.

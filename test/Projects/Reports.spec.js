@@ -1,7 +1,7 @@
 // The usable-when walk of IronStone Projects P9 Reports and outputs (impl-projects.md P9; design-projects.md §11 Reports, §3 Home's manager
 // charts, §14 the timesheet and team timesheet prints) on the demo data, with authorization on: john.doe (a Projects manager who manages
 // money) opens the report index with all seven reports, and each report renders on the demo (ACME's demo time is
-// data/BossProjectsDemoDataTimeReports.xml), in html-print and the terminal too; the measures as §11 defines them are mr-mantle's
+// data/demo/35ProjectReportsAndResources.xml), in html-print and the terminal too; the measures as §11 defines them are mr-mantle's
 // WorkProjectReports. Home's charts are checked in the terminal here (its qvt render is Billing.spec.js's). joe.developer (the team,
 // no money) sees five reports, may not open Profitability or Utilization, and sees no money in any report. The timesheet and the team
 // timesheet print. Nothing is changed. Profitability's worker cost (its cost, margin and chart) is opted out of AI (the user's call

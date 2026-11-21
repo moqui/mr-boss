@@ -1,4 +1,4 @@
-// Helpers the Customer Service specs share: the demo ids (data/BossCustomerServiceDemoData.xml, BossUsersDemoData.xml), the
+// Helpers the Customer Service specs share: the demo ids (data/demo/16CustomerService.xml, demo/42Users.xml), the
 // demo users by group, a block run as a user with artifact authorization on or off, a call's refusal message, a Customer
 // Service page render, the shell's menu and providers, and the route fixtures the acceptance AppStructure renders. Later
 // phases add their ids, users and routes here.
@@ -20,7 +20,7 @@ const ids = {
     serializedProductId: "BOSS_CS_THERMOSTAT",
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SERVICES",
-    // P2: the queues, teams and cases (BossCustomerServiceDemoData.xml, made cases by load#CaseDemo): Joe Q Public's two open
+    // P2: the queues, teams and cases (demo/16CustomerService.xml, made cases by load#CaseDemo): Joe Q Public's two open
     // cases (the thermostat one assigned to the agent), Joe's Distributing's waiting one, Joe's privacy request in the
     // restricted Privacy queue, and Ziziwork Services' case
     supportQueueId: "BOSS_CS_Q_SUPPORT",
@@ -53,7 +53,7 @@ const ids = {
     formRouteId: "BOSS_CS_ROUTE_FORM",
     // P10: the filter's equivalent (a substitute for a short pick of the filter)
     substituteProductId: "BOSS_CS_FILTER_PLUS",
-    // P9: Retail's return policy, and the Warehouse demo's requested return of Joe Q Public to Retail (BossWarehouseDemoData.xml)
+    // P9: Retail's return policy, and the Warehouse demo's requested return of Joe Q Public to Retail (demo/44Warehouse.xml)
     returnPolicyId: "BOSS_CS_RPOL_RETAIL",
     warehouseReturnId: "BOSS_WH_RETURN",
     // P11: Retail's warranty claim template (the RqtWarranty type's) and the thermostat's 12-month warranty feature
