@@ -237,7 +237,7 @@ along with this software (see the LICENSE.md file). If not, see
         under its parent by a dated PrtOrgRollup, its members by dated PrtMember rows (from role Assignee) and its lead by one from
         role Manager. Retail: Store Operations (lead Hannah; Tomas, Ines and Rafael) with its Sales Floor team (lead Ines; Tomas),
         and Merchandising (lead Priya; Leon). Services: Service Delivery (lead Amara; Kenji, Sofia and Owen), under which Mantle's
-        two demo teams (Ziziwork Dev Team A and B, data/ZbaOrganizationDemoData.xml) now sit, keeping their members. Mantle's
+        two demo teams (Ziziwork Dev Team A and B, data/30-demo/20Organizations.xml) now sit, keeping their members. Mantle's
         internal demo departments (ORG_ZIZI_HR, ORG_ZIZI_SALES) stay legal organizations (§5 Q6). Priya, employed by Retail and
         Services, reports to Greta at Retail and to Amara at Services: a reporting line is per employment (F86). -->
     <mantle.party.PartyRole partyId="BOSS_PPL_INES" roleTypeId="Manager"/>

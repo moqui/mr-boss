@@ -52,7 +52,7 @@ their own (a member is also in `BOSS_WAREHOUSE`), so Products' stock planner ope
 | `BOSS_WAREHOUSE_ADMIN` | every permission above, and `FACILITY_ALL_ORGANIZATIONS` (Mantle's guards in every organization, P2) |
 | `BOSS_WAREHOUSE`, `BOSS_WAREHOUSE_ADMIN` | `PRODUCT_CATALOG_VIEW`: product names on stock and scans (F56) |
 
-The permissions are Mantle's (`MantleSetupData.xml`; `STOCK_RECEIVE` in `AccountingAccessData.xml`). Financial read is
+The permissions are Mantle's (`15-seed-initial/Access.xml`; `STOCK_RECEIVE` in `10-seed/Accounting.xml`). Financial read is
 Accounting's `ACCOUNTING_VIEW` (capability `financialRead`), never a Warehouse grant. No Warehouse group has artifact
 authorization for the raw Mantle stock services or the `/mantle` REST paths (F3, F36). The Inspection, Counts and
 Picking (with the move group) areas deny `BOSS_WAREHOUSE` and allow their groups (`BOSS_WH_<Area>` artifact groups); a new restricted area
@@ -484,7 +484,7 @@ cancelled through `cancel#OrderItem` with that explicit cancelQuantity, the line
 by it, the reason as an internal OrderNote; a part with every line received (accepted and rejected) completed (F181); a
 completed or cancelled order's open budget commitments released by the internal
 `mantle.other.BudgetServices.release#ClosedSourceCommitments` (F179). Permission `PURCHASE_ORDER_EDIT` and the topic
-`WarehouseReceiptException` (to the facility owner's STOCK_POLICY_MANAGE holders) are in MantleSetupData.
+`WarehouseReceiptException` (to the facility owner's STOCK_POLICY_MANAGE holders) are in 15-seed-initial/Notifications.xml.
 
 **BOSS.** `ironstone.warehouse.ReceiptServices` (`Receipts.js`, reads only): `get#Receipts` (incoming purchase, return and
 transfer shipments received at the user's facilities, open by default, by supplier, status, source type, overdue and text, a
@@ -516,7 +516,7 @@ from ClosePurchaseOrders; Manufacturing's ReceiveOutput uses `generate#TrackingI
 **Mantle** (`mantle.facility.PutawayServices`, script `service/mantle/facility/Putaway.js`; the entry point
 `mantle.shipment.WarehouseTaskServices.putaway#Stock`; mr-mantle spec `test/Warehouse/WarehousePutaway.spec.js`).
 
-**Records** (`entity/PutawayEntities.xml`, seed `data/PutawayData.xml`). `mantle.facility.PutawayRule`: a dated row of a
+**Records** (`entity/PutawayEntities.xml`, seed `data/10-seed/InventoryAndQuality.xml`). `mantle.facility.PutawayRule`: a dated row of a
 facility (sequenced `putawayRuleId`, `organizationPartyId` the facility's owner, `previousPutawayRuleId`, key fields
 audit-logged under `changeReason`). It applies to stock at `fromLocationSeqId` or of `fromLocationTypeEnumId` (a receipt
 counts as receiving), of `productId`, `productCategoryId` or `storageTypeEnumId` (each optional, all given must match),
@@ -634,7 +634,7 @@ facility's organization, and checking again under its locks what a screen posts 
 
 Records (`entity/ShipmentPickEntities.xml`): `ShipmentPickException` with the ShortPickReason and ShortPickResolution enumerations;
 `ShipmentItemSource.putBackQuantity`, `putBackDate`; an index on `PostingOperation.resultId` for a line's pick operations. The
-topic `WarehouseShortPick` (`data/ShipmentPickSetupData.xml`).
+topic `WarehouseShortPick` (`data/15-seed-initial/CommerceAndShipping.xml`).
 
 **BOSS.** `ironstone.warehouse.PickingServices` (`Picking.js`, reads only, limited in the query to the user's facilities):
 `get#Picklists`, `get#PicklistDetail` (the bin with its source, line or shipment); for the Picking area's groups only, also
@@ -756,8 +756,8 @@ same key asks again.
 | `ship#OutgoingShipment`, `get#ShipReadiness` | ShipmentShip, `SHIPMENT_SHIP` | ShipConfirm through `ShipmentServices.ship#Shipment` after the blockers, each named: TRACKING_REQUIRED (a label not refunded or a code by hand on every package; none for ShMthPickUp), PACKAGE_TOTALS, EMPTY_PACKAGE, NO_PACKAGES, INSPECTION_HOLD (issued stock quarantined or held by an open inspection, or an open inspection of the shipment), ASSET_EXPIRED (P5b's gate, `check#AssetExpiryGate`); the period checked without locking (D3's ShipShipped SECA finalizes the invoice). SHIPPED_ELSEWHERE for a transfer or supplier return |
 | `request#ReturnLabel` (P14) | ReturnLabelRequest | Now on the same path (F331): `record#ReturnLabelRequest` commits the package, segment and request, then the carrier is called; LABEL_REQUESTED, LABEL_PENDING (not stored, a retry asks), LABEL_FAILED, LABEL_EXISTS, LABEL_NOT_CONFIGURED; takes the package's `weight` and `weightUomId` |
 
-**The Mantle test carrier** `mantle.shipment.carrier.TestGatewayServices` (`TestCarrier.js`; install data `TestCarrierData.xml`:
-only the ShippingGatewayConfig `TEST_SHIPPING` in test mode; demo data `TestCarrierDemoData.xml`: the carrier `TEST_CARRIER` with
+**The Mantle test carrier** `mantle.shipment.carrier.TestGatewayServices` (`TestCarrier.js`; install data `20-install/Carriers.xml`:
+only the ShippingGatewayConfig `TEST_SHIPPING` in test mode; demo data `30-demo/10Integrations.xml`: the carrier `TEST_CARRIER` with
 Ground, Second Day and Next Day and its binding to the gateway; its own `TestCarrierLabel` record) implements every carrier interface: rates by weight (rounded up to the pound) and a zone table (the
 zone from the two postal codes' first digits), a 4×6 PDF label with the tracking number as Code 128 (the framework's
 `barcodeSvg`, drawn into a hand-built PDF, so it needs no Chromium), refund, tracking (in transit with an estimate) and address
@@ -776,7 +776,7 @@ PRINTING_UNAVAILABLE when this build has no print client, PRINT_FAILED, NO_LABEL
 (`FACILITY_EDIT`; copies 1 to 20, `fromDate`, `thruDate`, `endNow`). FacilityPrinter gains `copies`, `fromDate`, `thruDate`
 (not in its key: one binding per purpose and facility), and the purposes PtpLotLabel, PtpLocationLabel, PtpCountDocuments.
 Carrier setup: `mantle.shipment.carrier.CarrierSetupServices.store#CarrierShipmentMethod` and `store#ShippingGatewayCarrier`
-(`SHIPPING_CARRIER_EDIT`, ShippingSetupData.xml). View `mantle.shipment.ShipmentPackageTracking` (a package's route segment with
+(`SHIPPING_CARRIER_EDIT`, 15-seed-initial/CommerceAndShipping.xml). View `mantle.shipment.ShipmentPackageTracking` (a package's route segment with
 its shipment and segment).
 
 **BOSS.** `ironstone.warehouse.ShippingServices` (`Shipping.js`, reads only, limited in the query to the user's facilities):
@@ -806,7 +806,7 @@ recovered); ZPL with FacilityPrinter's format is §7; packages for transfers (§
 Crosscut CX-QUALITY (design-crosscut §3.19, design-warehouse WH-QUALITY), built in Mantle for every app; Warehouse's context
 on the two shared screens.
 
-**The records** (mr-mantle `entity/QualityEntities.xml`, package `mantle.product.quality`; seed `data/QualityData.xml`):
+**The records** (mr-mantle `entity/QualityEntities.xml`, package `mantle.product.quality`; seed `data/10-seed/InventoryAndQuality.xml`):
 `InspectionTemplate` (organization, context, product, category and facility applicability, sample policy, state QtDraft,
 QtPublished, QtRetired), `InspectionTemplateItem` (effective-dated characteristics: a draft item has no `fromDate`;
 publishing stamps it; a change to a published item ends it and starts a new row with the same `characteristicId` and its
@@ -895,7 +895,7 @@ with D11 on through `store#Preferences`); Retail itself, whose returns Mantle's 
 | `ReturnServices.create#ReturnContent`, `save#ReturnContentFile` | a return permission and the return's party in scope (`save#` internal) | `mantle.order.return.ReturnContent`, a return's files, registered in `get#RecordLinkInfo` (follows its return) |
 
 Records (`entity/ReturnStockEntities.xml`): `ReturnItem.assetReceiptId`, `assetId`; `QualityInspectionDisposition.returnedQuantity`;
-`ReturnContent` with the ReturnContentType enumeration. Permission RETURN_AUTHORIZE (MantleSetupData).
+`ReturnContent` with the ReturnContentType enumeration. Permission RETURN_AUTHORIZE (15-seed-initial/Access.xml).
 
 The return lot is the lot the item's order line was issued from, else one the product's stock was in (a given lot must hold
 the product), and the receipt names it. The match base (`get#SourceInspectionStatus`, InvoiceMatch.js) is accepted less held less
@@ -990,7 +990,7 @@ Manufacturing's runs and production stock guards (design-manufacturing §12 M2 a
 (PUR-RECEIPT), built in Mantle for every app; Warehouse's context on MaterialIssueReceipt and SubcontractShipmentDetail.
 Manufacturing's own screens and its transition, change, loss and cost services stay Manufacturing's.
 
-**Records** (mr-mantle `entity/ProductionEntities.xml`, seed `data/ProductionData.xml`): the run's audit-logged fields on
+**Records** (mr-mantle `entity/ProductionEntities.xml`, seed `data/10-seed/Production.xml`): the run's audit-logged fields on
 WorkEffort (`productionRevision`, `productionMethodDate`, `productionReleaseDate`, `productBomId`, `productionRoutingId`,
 `productStandardCostId`, `demandOrderId`, `demandOrderItemSeqId`, `demandRequirementId`; on an operation child
 `routingOperationWorkEffortId`, `operationSequenceNum`, `workCenterFacilityId`); `mantle.work.production.ProductionRunLine` (a
@@ -1000,7 +1000,7 @@ exact `conversionFactor`, scrap factor, source `bomItemId` and BOM, the routing 
 `operationWorkEffortId` on both and `AssetReceipt.costProvisional`; `mantle.order.purchase.ServiceAcceptance`;
 `WorkEffort.productionMethodRefs` (the BOMs and routings a run was read from). No unrelease transition is seeded: the framework
 accepts any flow's transition on any WorkEffort, so it comes with Manufacturing's guard (F366). Permissions PRODUCTION_VIEW and PRODUCTION_PLAN
-(MantleSetupData, ADMIN; Manufacturing P1 grants them).
+(15-seed-initial/Access.xml, ADMIN; Manufacturing P1 grants them).
 
 **Mantle** `mantle.work.ProductionServices` (`Production.js`; spec `test/work/WarehouseProduction.spec.js`). The guards take
 StockPosting.js's steps (begin, the run's line and the stock locked, settled, the period without locking, the primitive,

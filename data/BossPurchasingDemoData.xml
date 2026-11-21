@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <entity-facade-xml type="demo">
     <!-- The Purchasing demo (impl-purchasing P1) over Mantle's ZiddlemanInc supplier, ORG_ZIZI_RETAIL as the buyer, ZIRET_WH
-        (owned by Retail) and the DEMO_* purchase offers of ZcaProductDemoData.xml, and the Warehouse demo's approved
+        (owned by Retail) and the DEMO_* purchase offers of 30-demo/40Catalog.xml, and the Warehouse demo's approved
         purchase order BOSS_WH_PO (Retail from Ziddleman, BossWarehouseDemoData.xml). Suppliers by owner (§4): Ziddleman and
         Common Fasteners are shared (_NA_), the others Retail's, and a supplier of Ziziwork Services that Retail's users never
         reach (isolation). The buyers' PartyRelationship rows and the demo users are in BossUsersDemoData.xml. Later phases

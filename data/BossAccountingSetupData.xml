@@ -76,7 +76,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="RETURN_CREDIT_APPROVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="PRODUCTION_COST_POST" fromDate="0"/>
     <!-- the finance administrator's ACCOUNTING_ADMIN works in its holder's own organizations; ACCOUNTING_ALL_ORGANIZATIONS
-        (every internal organization) is ADMIN's alone (SEC-BOS-02, mr-mantle AccountingAccessData.xml) -->
+        (every internal organization) is ADMIN's alone (SEC-BOS-02, mr-mantle 10-seed/Accounting.xml) -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_ADMIN" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_GL_POST" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_VIEW" fromDate="0"/>

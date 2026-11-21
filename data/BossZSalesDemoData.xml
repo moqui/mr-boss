@@ -59,7 +59,7 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_SAL_TM_DIRECT_MGR" relationshipTypeEnumId="PrtSalesTeamMember"
             fromPartyId="BOSS_SAL_MANAGER2" fromRoleTypeId="Manager" toPartyId="BOSS_SAL_TEAM_DIRECT" toRoleTypeId="SalesTeam"
             fromDate="2026-01-01 00:00:00"/>
-    <!-- West's own pipeline for its key accounts; Retail's default stays the shared one (data/SalesData.xml in mr-mantle) -->
+    <!-- West's own pipeline for its key accounts; Retail's default stays the shared one (data/15-seed-initial/MarketingAndSales.xml in mr-mantle) -->
     <mantle.sales.opportunity.SalesPipeline salesPipelineId="BOSS_SAL_PL_WEST" organizationPartyId="ORG_ZIZI_RETAIL"
             pipelineName="West key accounts" teamPartyId="BOSS_SAL_TEAM_WEST" defaultFlag="N" fromDate="2026-01-01 00:00:00"
             description="Longer cycles for the West team's key accounts"/>

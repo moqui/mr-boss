@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Sales' demo accounts and contacts (impl-sales P3; design-sales §4): customers and prospects of both demo organizations, owned by
-    each (Party.ownerPartyId) and managed by their representatives (PrtAccountManager, data/SalesAccountData.xml in Mantle), a
+    each (Party.ownerPartyId) and managed by their representatives (PrtAccountManager, data/10-seed/Sales.xml in Mantle), a
     parent account, a contact of two accounts and a duplicate pair for MergeAccounts. Named to load after BossUsersDemoData.xml,
     whose Sales users manage them; kept apart from BossSalesDemoData.xml, the pipeline setup's (P2).
     - Ziziwork Retail (sales.rep, sales.rep2): Wingtip Group, the parent of Wingtip Traders (a customer, sales.rep's);

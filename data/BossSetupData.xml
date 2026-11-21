@@ -136,7 +136,7 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_SALES_APPADMIN" userGroupId="BOSS_SALES_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/><filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
-    <!-- CalcGrid's sales access profile (mr-mantle data/CalcGridProfileData.xml; mr-moqui docs/tools/Database.md, CalcGrid and
+    <!-- CalcGrid's sales access profile (mr-mantle data/10-seed/Sales.xml; mr-moqui docs/tools/Database.md, CalcGrid and
         access profiles) for the Sales administrators: orders, returns, invoices, payments, customers and products on a
         spreadsheet's data sheet, the rows of the organizations they work in (MANTLE_USER_ORG), of the active one when one is
         chosen (MANTLE_ACTIVE_ORG), and no private contact of another user's. ALWAYS, for view: CalcGrid enters the profile
@@ -1086,7 +1086,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPPING_CARRIER_EDIT"
             fromDate="0"/>
     <!-- the administrator works in its own organizations' facilities; every organization's is ADMIN's alone
-        (FACILITY_ALL_ORGANIZATIONS, MantleSetupData.xml; the owner's call of Nov 19, 2026, SEC-BAP-86) -->
+        (FACILITY_ALL_ORGANIZATIONS, 15-seed-initial/Access.xml; the owner's call of Nov 19, 2026, SEC-BAP-86) -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_RECEIVE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_ISSUE" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_MOVE" fromDate="0"/>
@@ -1535,7 +1535,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PRODUCT_COST_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="STOCK_POLICY_PLAN" fromDate="0"/>
     <moqui.security.user.NotificationTopic topic="CatalogImportResult" inboxEnumId="NinUpdates" description="Catalog import results" titleTemplate="${title}" showAlert="N" persistOnSend="Y" receiveNotifications="Y" emailNotifications="N" isPrivate="Y" typeString="info"/>
-    <!-- Manufacturing P2: the method release requests (mr-mantle MethodNotificationSetupData) open the method in Manufacturing -->
+    <!-- Manufacturing P2: the method release requests (mr-mantle 15-seed-initial/Accounting.xml) open the method in Manufacturing -->
     <moqui.security.user.NotificationTopic topic="BomRelease"
             linkTemplate="/qapps/Manufacturing/BillsOfMaterials/BillOfMaterialsDetail?productBomId=${productBomId}"/>
     <moqui.security.user.NotificationTopic topic="RoutingRelease"
@@ -1753,7 +1753,7 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
-    <!-- Purchasing P4: the approval topics Mantle seeds (PurchaseApprovalSetupData.xml) open the purchase order and the
+    <!-- Purchasing P4: the approval topics Mantle seeds (15-seed-initial/Purchasing.xml) open the purchase order and the
         supplier under Purchasing; the decision is made there or from Approvals (approve#PurchaseSource,
         refuse#PurchaseSource) -->
     <!-- P13: an agreement's activation comes on the purchase order topic with the agreement as source, and opens
@@ -1794,7 +1794,7 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
-    <!-- Purchasing P10: a purchase request's approval (Mantle's PurchaseRequestApproval topic, PurchaseRequestSetupData.xml)
+    <!-- Purchasing P10: a purchase request's approval (Mantle's PurchaseRequestApproval topic, 15-seed-initial/Purchasing.xml)
         opens the request under Purchasing, decided there or from Approvals -->
     <moqui.security.user.NotificationTopic topic="PurchaseRequestApproval"
             linkTemplate="/qapps/Purchasing/Requests/RequestDetail?requestId=${requestId}"/>
@@ -1816,7 +1816,7 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <!-- Purchasing P12: an award of an RFQ's quotes waiting for its approval (Mantle's PurchaseAwardApproval topic,
-        SourcingAwardSetupData.xml) opens the RFQ under Purchasing, decided from Approvals or the Commons inbox -->
+        15-seed-initial/Purchasing.xml) opens the RFQ under Purchasing, decided from Approvals or the Commons inbox -->
     <moqui.security.user.NotificationTopic topic="PurchaseAwardApproval"
             linkTemplate="/qapps/Purchasing/Sourcing/QuoteRequestDetail?requestId=${requestId}"/>
     <!-- Customer Service areas for their capability groups only (impl-customer-service P1, design-customer-service §1), as
@@ -5126,7 +5126,7 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
-    <!-- The staff-invitations import target is Mantle's (mr-mantle data/PartyInvitationData.xml). BOSS adds what its own
+    <!-- The staff-invitations import target is Mantle's (mr-mantle data/10-seed/PartyAndIdentity.xml). BOSS adds what its own
         single invitation always includes (impl-admin §4: IronStone BOSS users in every invitation), as a value the
         registration fixes for every row, never a column. -->
     <moqui.server.TransferTarget targetId="staffInvitations"
@@ -5165,7 +5165,7 @@ along with this software (see the LICENSE.md file). If not, see
         (design-admin §11 DataExport: no second surface); Accounting's tax statement data and a billing batch's invoices
         are exported on the record they are of, by Accounting's own permissions (an exported statement is kept as it
         is); Projects' work items from their list. The exports dispatched here are their owners' seed rows: Commons'
-        contact books (mr-mantle data/PartyContactExportData.xml) and the framework's message translations. -->
+        contact books (mr-mantle data/10-seed/PartyAndIdentity.xml) and the framework's message translations. -->
     <moqui.server.TransferTarget targetId="insightsDatasetRows" direction="export" targetMode="wizard" title="Dataset rows"
             description="The rows of a business dataset you may read, as CSV, from the dataset's own view in Insights"
             ownerApp="Insights" targetVersion="1" ownerRoute="insightsDatasets" sequenceNum="60"/>
@@ -5394,7 +5394,7 @@ along with this software (see the LICENSE.md file). If not, see
     <artifactGroups artifactGroupId="BOSS_ADMIN" description="IronStone Admin App (via root screen)">
         <artifacts artifactName="mantle.humanres.PeopleServices.get#Readiness" artifactTypeEnumId="AT_SERVICE" inheritAuthz="Y"/>
     </artifactGroups>
-    <!-- impl-people P5: a position's activation to approve (Mantle's PeoplePositionApproval topic, PeopleApprovalSetupData.xml) opens
+    <!-- impl-people P5: a position's activation to approve (Mantle's PeoplePositionApproval topic, 15-seed-initial/People.xml) opens
         the position under People, decided there, from People's Approvals or from the notification tray -->
     <moqui.security.user.NotificationTopic topic="PeoplePositionApproval"
             linkTemplate="/qapps/People/Staffing/PositionDetail?emplPositionId=${emplPositionId}"/>

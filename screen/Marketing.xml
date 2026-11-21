@@ -169,7 +169,7 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P16 (design §14.3 QuickEvent): the Events screen's NewEvent; a user without the events permission is told so -->
         <quick-create kind="marketingEvent" label="Marketing event" icon="sym_o_event" screen="Marketing/QuickCreate/NewEvent"
                 sequence="94"/>
-        <!-- P2: the approval topics (Mantle's MarketingSeedData; their links BossSetupMarketingData); sends' and automations' are sent
+        <!-- P2: the approval topics (Mantle's 10-seed/MarketingAndCommerce.xml; their links BossSetupMarketingData); sends' and automations' are sent
             from P8 and P11 -->
         <notification-topic topic="MarketingCampaignApproval"/>
         <notification-topic topic="MarketingSendApproval"/>
