@@ -7,7 +7,9 @@
 "use strict";
 (function () {
     const store = (window.store = { user: "U1", keys: {}, checks: [], vaults: {}, items: {}, sent: [], fail: {}, served: [] });
-    const answer = (body, status) => new Response(JSON.stringify(body), { status: status || 200, headers: { "Content-Type": "application/json" } });
+    // store.clockOffsetMs: the server's clock that far ahead of the page's, in each answer's Date header (Codes tell a skew)
+    const answer = (body, status) => new Response(JSON.stringify(body), { status: status || 200, headers: Object.assign({ "Content-Type": "application/json" },
+        store.clockOffsetMs == null ? {} : { Date: new Date(Date.now() + store.clockOffsetMs).toUTCString() }) });
     const refuse = (text) => answer({ errors: text }, 400);
     const realFetch = window.fetch.bind(window);
     window.realFetch = realFetch;

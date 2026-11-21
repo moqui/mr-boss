@@ -934,3 +934,28 @@ After the review of V3 and with mr-moqui's V4 merged (its client ops for Commons
   export check, a refused removal's rollback, the stranded wraps and decision (c). VaultPersonal's organization recovery step
   runs against V4's services.
 
+
+### One-time codes, Nov 20, 2026
+
+Commons › Vault is also the user's authenticator, the other side of a site's two-step sign-in
+([Vaults, One-time codes](https://github.com/moqui/mr-moqui/blob/master/docs/security/Vaults.md#one-time-codes)).
+
+- **Codes** (`?view=codes`, the Codes button beside the search): every item of the open vaults with a seed (the framework's
+  `otp` type, "One-time code", or a login's `totp`), by issuer and account, narrowed by the search. Each row shows the code
+  in two groups, the next code, and a ring counting the seconds down; the code and ring turn to the warning color at 10 seconds
+  and the negative color at 5 (no ring animation under reduced motion). A click or Enter copies the code (cleared from the
+  clipboard after the vault's clipboard time); in its last 5 seconds it copies the next code and says so. The arrow keys move
+  between rows. An item's own page shows its seed field as its live code, with Show still revealing the seed and Copy copying
+  the code.
+- **The module makes the codes** (`item_otp`, from the item's ciphertext): the page holds codes and the summary's `otp` (issuer,
+  account, digits, period), never a seed. The timer runs each second only while codes show and the tab is seen; a hidden tab,
+  leaving Codes and a lock drop every code. `itemOtp` is passive, so a vault left showing codes still locks at its idle time.
+- **Add a code** (in Codes and the More menu): the camera (BarcodeDetector), a QR image picked or pasted, or the text of an
+  `otpauth` link, a setup key, or a Google Authenticator export of many accounts, each read in the module (`otp_parse`), with
+  the issuer and account to edit and the current code to compare for one seed. Each seed is sealed as an `otp` item; one that
+  fails to save is told and the others are added. A browser without BarcodeDetector (Firefox, Chrome on Linux) is told to paste
+  the key.
+- **Clock.** The server's clock is read from its answers' `Date`; at 15 seconds or more apart Codes says which way the device's
+  clock is off, and "Use the server's time" makes the codes by the server's clock for the tab (sessionStorage).
+- **Tests.** VaultLock's Codes feature: the codes of an `otp` item and a login's seed equal the module's, no seed is on the page,
+  kept by it or stored, the tone at 20, 9 and 4 seconds, a pasted key saved as an item, and a clock 60 seconds off told.

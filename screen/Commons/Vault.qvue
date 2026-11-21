@@ -25,6 +25,13 @@ along with this software (see the LICENSE.md file). If not, see
     item now). Items sent to the user are filed into a vault here. Import reads a Bitwarden JSON export, a KeePass XML or CSV
     export, or an encrypted vault export, in the browser; Export writes an encrypted export file made here.
 
+    Codes (?view=codes) lists the one-time codes of every item with a seed in the open vaults (a One-time code item, or a login's
+    seed), as an authenticator app does: the code, the next one, and a ring counting down the seconds, warning at 10 and alarming
+    at 5. The vault module makes each code from the item's seed (item_otp), so the list holds codes and never a seed; a code is
+    copied with a click (in its last 5 seconds the next one is copied). Add a code reads a QR code from the camera or an image
+    (BarcodeDetector), a pasted otpauth link or setup key, or a Google Authenticator export of many accounts. A device clock 15 s
+    or more off the server's is told, and the codes can follow the server's time for the tab.
+
     The session (window.BossVaultSession, one per page) holds the vault module's client and what is shown of the open vaults:
     names, types, websites, tags and the fields that are not masked. Masked values are opened from the worker one item at a
     time when asked for. Commons › Contacts reads the session's open contact items (Contacts/VaultContacts.qvue). Lock, the
@@ -178,11 +185,14 @@ along with this software (see the LICENSE.md file). If not, see
             <div class="col text-h5">{{t('Vault')}}</div>
             <q-input v-if="openVaults.length && !phone" dense outlined clearable v-model="search" :placeholder="t('Search the open vaults')" style="width:280px" autocomplete="off">
                 <template v-slot:prepend><q-icon name="sym_o_search"></q-icon></template></q-input>
+            <q-btn v-if="openVaults.length" unelevated no-caps :color="codesView ? 'primary' : undefined" :class="codesView ? 'boss-vault-codes-toggle' : 'm-btn-tonal boss-vault-codes-toggle'"
+                    icon="sym_o_pin" :label="phone ? '' : t('Codes')" :aria-pressed="codesView ? 'true' : 'false'" @click="toggleCodes"><q-tooltip>{{t('One-time codes of the open vaults')}}</q-tooltip></q-btn>
             <q-btn unelevated no-caps :color="current && current.open && writable(current) ? 'primary' : undefined" :class="current && current.open && writable(current) ? '' : 'm-btn-tonal'"
                     icon="sym_o_add" :label="current && current.open && writable(current) ? t('New item') : t('New vault')"
                     @click="current && current.open && writable(current) ? openEdit(null) : openMake()"></q-btn>
             <q-btn flat dense round icon="more_horiz" :aria-label="t('More')"><q-menu auto-close><q-list dense style="min-width:240px">
                 <q-item v-if="current && current.open && writable(current)" clickable @click="openMake"><q-item-section avatar><q-icon name="sym_o_add_box"></q-icon></q-item-section><q-item-section>{{t('New vault')}}</q-item-section></q-item>
+                <q-item clickable :disable="!writableOpen.length" @click="openAddCode"><q-item-section avatar><q-icon name="sym_o_qr_code_scanner"></q-icon></q-item-section><q-item-section>{{t('Add a one-time code')}}</q-item-section></q-item>
                 <q-item clickable :disable="!writableOpen.length" @click="openImport"><q-item-section avatar><q-icon name="sym_o_upload_file"></q-icon></q-item-section><q-item-section>{{t('Import')}}</q-item-section></q-item>
                 <q-item clickable :disable="!openVaults.length" @click="openExport"><q-item-section avatar><q-icon name="sym_o_download"></q-icon></q-item-section><q-item-section>{{t('Export, encrypted')}}</q-item-section></q-item>
                 <q-item clickable @click="openDeliveries"><q-item-section avatar><q-icon name="sym_o_inbox"></q-icon></q-item-section><q-item-section>{{t('Sent to you')}}</q-item-section>
@@ -212,7 +222,7 @@ along with this software (see the LICENSE.md file). If not, see
 
         <div class="row no-wrap items-start">
             <!-- the vaults -->
-            <div v-if="wide || !current" :class="wide ? 'col-auto q-pr-md' : 'col-12'" :style="wide ? {width: '280px'} : {}">
+            <div v-if="wide || (!current && !codesView)" :class="wide ? 'col-auto q-pr-md' : 'col-12'" :style="wide ? {width: '280px'} : {}">
                 <q-list bordered separator class="rounded-borders">
                     <q-item v-for="v in S.vaults" :key="v.vaultId" clickable :class="current && current.vaultId === v.vaultId ? (dark ? 'bg-grey-9' : 'bg-blue-1') : ''" @click="selectVault(v.vaultId)">
                         <q-item-section avatar><q-icon :name="v.open ? 'sym_o_lock_open' : 'sym_o_lock'" :color="v.open ? 'positive' : undefined"></q-icon></q-item-section>
@@ -231,8 +241,51 @@ along with this software (see the LICENSE.md file). If not, see
             </div>
 
             <!-- the vault chosen -->
-            <div v-if="wide || current" class="col" style="min-width:0">
-                <div v-if="search && openVaults.length" class="boss-vault-results">
+            <div v-if="wide || current || codesView" class="col" style="min-width:0">
+                <!-- the one-time codes of the open vaults -->
+                <div v-if="codesView" class="boss-vault-codes">
+                    <div class="row items-center no-wrap q-mb-sm">
+                        <q-btn v-if="!wide" flat dense round icon="arrow_back" class="q-mr-xs" :aria-label="t('Back')" @click="toggleCodes"></q-btn>
+                        <div class="col" style="min-width:0">
+                            <div class="text-h6">{{t('One-time codes')}}</div>
+                            <div class="text-caption m-muted">{{t('Made here from the seeds in your open vaults. Click a code to copy it.')}}</div>
+                        </div>
+                        <q-btn unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_qr_code_scanner" :label="phone ? '' : t('Add a code')" :aria-label="t('Add a code')"
+                                :disable="!writableOpen.length" @click="openAddCode"></q-btn>
+                    </div>
+                    <q-banner v-if="skewSeconds" dense rounded class="m-tonal text-warning q-mb-sm boss-vault-skew">
+                        <template v-slot:avatar><q-icon name="sym_o_schedule"></q-icon></template>
+                        {{fill(skewSeconds > 0 ? t('This device\'s clock is {seconds} s behind the server\'s. Sites may refuse its codes: set the clock to update by itself.') : t('This device\'s clock is {seconds} s ahead of the server\'s. Sites may refuse its codes: set the clock to update by itself.'), {seconds: Math.abs(skewSeconds)})}}
+                        <template v-slot:action><q-toggle v-model="serverTime" dense :label="t('Use the server\'s time')"></q-toggle></template></q-banner>
+                    <q-list v-if="codeRows.length" bordered separator class="rounded-borders">
+                        <q-item v-for="(row, index) in codeRows" :key="row.key" clickable class="boss-vault-code-row" :data-item="row.item.id" @click="copyCode(row)"
+                                @keydown.down.prevent="focusCode(index + 1)" @keydown.up.prevent="focusCode(index - 1)">
+                            <q-item-section avatar><q-avatar size="36px" class="m-tonal text-primary text-weight-medium">{{initialOf(row.issuer)}}</q-avatar></q-item-section>
+                            <q-item-section style="min-width:0">
+                                <q-item-label class="ellipsis">{{row.issuer}}</q-item-label>
+                                <q-item-label caption class="ellipsis">{{row.account}}<span v-if="openVaults.length > 1">{{row.account ? ' · ' : ''}}{{vault(row.vaultId).name}}</span></q-item-label>
+                            </q-item-section>
+                            <q-item-section side>
+                                <span v-if="row.error" class="text-negative text-caption">{{row.error}}</span>
+                                <div v-else-if="row.codes" class="row items-center no-wrap">
+                                    <div class="text-right q-mr-md">
+                                        <div class="boss-vault-code" :class="toneClass(row.tone)" :aria-label="fill(t('Code {code}, {seconds} seconds left'), {code: row.codes.code, seconds: row.left})">{{grouped(row.codes.code)}}</div>
+                                        <div class="boss-vault-code-next m-muted">{{t('Next')}} {{grouped(row.codes.next)}}</div>
+                                    </div>
+                                    <q-circular-progress :value="row.period ? (row.left / row.period) * 100 : 0" size="34px" :thickness="0.2" :color="row.tone || 'primary'" track-color="grey-4"
+                                            show-value font-size="12px" :instant-feedback="reducedMotion" class="boss-vault-ring"><span class="boss-vault-ring-text" :class="toneClass(row.tone)">{{row.left}}</span></q-circular-progress>
+                                </div>
+                                <q-skeleton v-else type="text" width="96px"></q-skeleton>
+                            </q-item-section>
+                        </q-item>
+                    </q-list>
+                    <div v-else class="text-center q-pa-lg">
+                        <q-icon name="sym_o_pin" size="40px" class="m-muted"></q-icon>
+                        <div class="text-body2 m-muted q-mt-sm">{{!openVaults.length ? t('Open a vault to see its one-time codes.') : search ? t('No code matches in the open vaults') : t('No one-time codes in the open vaults yet. When a site turns on two-step sign-in it shows a QR code and a setup key: add it here, and this page shows its codes as an authenticator app does.')}}</div>
+                        <q-btn v-if="!search && openVaults.length" unelevated no-caps color="primary" class="q-mt-sm" icon="sym_o_qr_code_scanner" :label="t('Add a code')" :disable="!writableOpen.length" @click="openAddCode"></q-btn>
+                    </div>
+                </div>
+                <div v-else-if="search && openVaults.length" class="boss-vault-results">
                     <div class="text-subtitle2 q-mb-xs">{{fill(t('{count} found'), {count: results.length})}}</div>
                     <q-list bordered separator class="rounded-borders">
                         <q-item v-for="hit in results" :key="hit.vaultId + hit.item.id" clickable @click="selectItem(hit.vaultId, hit.item.id)">
@@ -304,12 +357,23 @@ along with this software (see the LICENSE.md file). If not, see
                                 <q-item-label caption>{{field.label}}</q-item-label>
                                 <q-item-label v-if="!field.masked" :class="field.kind === 'multi-line' ? 'boss-vault-pre' : ''">
                                     <a v-if="field.kind === 'url'" :href="safeUrl(field.value)" target="_blank" rel="noopener noreferrer">{{field.value}}</a><span v-else>{{field.value}}</span></q-item-label>
+                                <q-item-label v-else-if="field.kind === 'totp' && detailCode && revealed[field.name] == null" class="boss-vault-detail-code">
+                                    <span v-if="detailCode.error" class="text-negative text-body2">{{detailCode.error}}</span>
+                                    <span v-else-if="detailCode.codes" class="row items-center no-wrap q-gutter-x-sm">
+                                        <span class="boss-vault-code" :class="toneClass(detailCode.tone)">{{grouped(detailCode.codes.code)}}</span>
+                                        <span class="boss-vault-code-next m-muted">{{t('Next')}} {{grouped(detailCode.codes.next)}}</span>
+                                        <q-circular-progress :value="detailCode.period ? (detailCode.left / detailCode.period) * 100 : 0" size="28px" :thickness="0.2" :color="detailCode.tone || 'primary'"
+                                                track-color="grey-4" show-value font-size="11px" :instant-feedback="reducedMotion"><span class="boss-vault-ring-text" :class="toneClass(detailCode.tone)">{{detailCode.left}}</span></q-circular-progress>
+                                    </span>
+                                    <q-skeleton v-else type="text" width="96px"></q-skeleton>
+                                </q-item-label>
                                 <q-item-label v-else class="boss-vault-value" :class="field.kind === 'multi-line' && revealed[field.name] != null ? 'boss-vault-pre' : ''">{{revealed[field.name] != null ? revealed[field.name] : '••••••••••'}}</q-item-label>
                             </q-item-section>
                             <q-item-section side><div class="row no-wrap">
                                 <q-btn v-if="field.masked" flat dense round :icon="revealed[field.name] != null ? 'sym_o_visibility_off' : 'sym_o_visibility'" class="boss-vault-show"
                                         :aria-label="revealed[field.name] != null ? t('Hide') : t('Show')" @click="toggleReveal(field)"><q-tooltip>{{revealed[field.name] != null ? t('Hide') : t('Show')}}</q-tooltip></q-btn>
-                                <q-btn flat dense round icon="sym_o_content_copy" :aria-label="t('Copy')" @click="copyField(field)"><q-tooltip>{{t('Copy')}}</q-tooltip></q-btn>
+                                <q-btn flat dense round icon="sym_o_content_copy" :aria-label="field.kind === 'totp' && detailCode && detailCode.codes ? t('Copy the code') : t('Copy')" @click="copyField(field)">
+                                    <q-tooltip>{{field.kind === 'totp' && detailCode && detailCode.codes ? t('Copy the code') : t('Copy')}}</q-tooltip></q-btn>
                             </div></q-item-section>
                         </q-item>
                         <q-item v-if="currentItem.uris.length"><q-item-section><q-item-label caption>{{t('Websites')}}</q-item-label>
@@ -606,6 +670,46 @@ along with this software (see the LICENSE.md file). If not, see
         </q-list>
     </m-dialog>
 
+    <!-- a one-time code added: scanned, read from an image, or pasted; read in the module, sealed into a vault -->
+    <m-dialog v-model="addCode.open" :title="t('Add a one-time code')" width="560">
+        <div class="q-gutter-y-sm boss-vault-add-code" @paste="pasteCodeImage">
+            <div class="text-body2">{{t('When a site turns on two-step sign-in it shows a QR code and a setup key. Scan the QR code, read it from a screenshot, or paste the key or its otpauth link. A Google Authenticator export (Transfer accounts) brings every account in it. It is read here and sealed in your vault: the server never sees it.')}}</div>
+            <div class="row q-gutter-sm">
+                <q-btn v-if="canScan" unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_photo_camera" :label="addCode.scanning ? t('Stop the camera') : t('Scan with the camera')"
+                        @click="addCode.scanning ? stopScan() : startScan()"></q-btn>
+                <q-btn v-if="canReadImage" unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_image" :label="t('Read a QR image')" @click="$refs.codeImage.click()"></q-btn>
+                <input ref="codeImage" type="file" accept="image/*" class="hidden" @change="codeImageFile">
+            </div>
+            <video v-show="addCode.scanning" ref="codeVideo" class="boss-vault-scan" muted playsinline></video>
+            <div v-if="canReadImage" class="text-caption m-muted">{{t('You can also paste a screenshot of the QR code here.')}}</div>
+            <div v-else class="text-caption m-muted">{{t('This browser cannot read QR codes: paste the setup key or the otpauth link instead.')}}</div>
+            <q-input v-model="addCode.text" outlined dense autogrow type="textarea" autocomplete="off" :label="t('Setup key or otpauth link')"
+                    :input-class="addCode.show ? 'boss-vault-value' : 'boss-vault-value boss-vault-masked'" @update:model-value="parseCode">
+                <template v-slot:append><q-icon :name="addCode.show ? 'sym_o_visibility_off' : 'sym_o_visibility'" class="cursor-pointer" @click="addCode.show = !addCode.show"></q-icon></template></q-input>
+            <div v-if="addCode.error" class="text-negative text-body2">{{addCode.error}}</div>
+            <template v-if="addCode.entries.length === 1">
+                <q-input v-model="addCode.issuer" outlined dense autocomplete="off" :label="t('Issuer: the site or app')"></q-input>
+                <q-input v-model="addCode.account" outlined dense autocomplete="off" :label="t('Account')"></q-input>
+                <div class="text-body2 boss-vault-add-preview">{{t('Its code now')}}: <span class="boss-vault-code">{{grouped(addCode.entries[0].code)}}</span>
+                    <span class="m-muted"> · {{fill(t('{digits} digits, a new one every {period} s'), {digits: addCode.entries[0].digits, period: addCode.entries[0].period})}}</span></div>
+                <div class="text-caption m-muted">{{t('A site that asks for a code to finish turning it on takes this one.')}}</div>
+            </template>
+            <template v-else-if="addCode.entries.length">
+                <div class="text-body2">{{fill(t('{count} accounts in the export'), {count: addCode.entries.length})}}</div>
+                <q-list dense bordered separator class="rounded-borders" style="max-height:240px; overflow:auto">
+                    <q-item v-for="(entry, index) in addCode.entries" :key="index"><q-item-section>{{entry.issuer || t('No issuer')}}</q-item-section>
+                        <q-item-section side class="ellipsis">{{entry.account}}</q-item-section></q-item>
+                </q-list>
+            </template>
+            <q-select v-model="addCode.vaultId" outlined dense emit-value map-options :options="writableOptions" :label="t('Into the vault')"></q-select>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Close')" @click="closeAddCode"></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="addCode.entries.length > 1 ? fill(t('Add {count} codes'), {count: addCode.entries.length}) : t('Add the code')"
+                        :loading="addCode.busy" :disable="!addCode.entries.length || !addCode.vaultId" @click="saveCodes"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
     <!-- import, read in the browser -->
     <m-dialog v-model="importer.open" :title="t('Import')" width="640">
         <div class="q-gutter-y-sm">
@@ -801,7 +905,11 @@ const IMPORT_MAX_BYTES = 10 * 1024 * 1024;
 const RECOVERY_PREFIX = 'recovery:';
 const EXPORT_ID = /^export-[0-9a-f]{24}$/;
 const ROLE_OF = { VrManage: 'manage', VrWrite: 'write', VrRead: 'read' };
-const ICONS = { login: 'sym_o_key', note: 'sym_o_sticky_note_2', card: 'sym_o_credit_card', identity: 'sym_o_badge', contact: 'sym_o_person',
+// a device clock this far off the server's is told in Codes: a site checking a code allows a step or so either side
+const SKEW_WARN_MS = 15000;
+// Codes follow the server's time for the tab when the user asks (sessionStorage)
+const SERVER_TIME_KEY = 'bossVault.serverTime';
+const ICONS = { login: 'sym_o_key', otp: 'sym_o_pin', note: 'sym_o_sticky_note_2', card: 'sym_o_credit_card', identity: 'sym_o_badge', contact: 'sym_o_person',
     'ssh-key': 'sym_o_terminal', 'api-key': 'sym_o_api', 'database-credential': 'sym_o_database', 'tls-key-pair': 'sym_o_verified_user',
     'registry-login': 'sym_o_inventory_2', 'recovery-code': 'sym_o_password', 'recovery-share': 'sym_o_vpn_key' };
 // plans/Vault-Instances.md §3.11, in its exact words
@@ -996,7 +1104,7 @@ function parseImport(text) {
 function makeSession() {
     const S = Vue.reactive({ config: null, base: '', loading: false, failed: '', personal: null, unlocked: false, keyChecks: [], vaults: [],
         deliveries: [], names: {}, lockCount: 0, idleLocked: false, needsFactor: false, recoveryKeys: [], recoverySessions: [],
-        memory: { available: false, kind: null, until: null, open: false, maxMinutes: 0 } });
+        memory: { available: false, kind: null, until: null, open: false, maxMinutes: 0 }, skewMs: 0 });
     let client = null;
     let starting = null;
     let locking = false;
@@ -1047,9 +1155,9 @@ function makeSession() {
                 // a call that trapped locks the module (VaultWorker.js): the page forgets what it showed too. The arguments go as
                 // plain JSON: a Vue proxy (the key checks, a chosen key) cannot be posted to a worker
                 const call = made.call.bind(made);
-                made.call = async (op, args) => {
+                made.call = async (op, args, options) => {
                     try {
-                        return await call(op, args == null ? args : JSON.parse(JSON.stringify(args)));
+                        return await call(op, args == null ? args : JSON.parse(JSON.stringify(args)), options);
                     } catch (err) {
                         if (/was locked/.test(String(err && err.message))) forget(false);
                         throw err;
@@ -1077,7 +1185,9 @@ function makeSession() {
             init.headers['X-CSRF-Token'] = moqui.sessionToken || '';
             init.body = JSON.stringify(body || {});
         }
+        const sent = Date.now();
         const response = await fetch(url, init);
+        clockFrom(response, sent, Date.now());
         const token = response.headers.get('X-CSRF-Token');
         if (token && moqui.onSessionToken) moqui.onSessionToken(token);
         if (response.status === 401) {
@@ -1098,6 +1208,13 @@ function makeSession() {
             throw Object.assign(new Error(plainMessage(message)), { reasonCode: reason, status: response.status });
         }
         return json;
+    }
+    /** How far the server's clock is ahead of this device's, from a quick answer's Date header (whole seconds, so half a second
+     * is added): Codes tell a device clock that would make codes a site refuses. */
+    function clockFrom(response, sent, received) {
+        const date = Date.parse(response.headers.get('Date') || '');
+        if (isNaN(date) || received - sent > 5000) return;
+        S.skewMs = date + 500 - (sent + received) / 2;
     }
     function screenRequest(name, params) {
         return moqui.request(S.base + '/' + name, { params: params || {} }).then((result) => result.json || {});
@@ -1266,9 +1383,23 @@ function makeSession() {
             const def = type ? type.fields.find((field) => field.name === name) : null;
             if (def && !def.masked && value != null && value !== '') shown[name] = String(value);
         }
+        // what the module says of a one-time code seed: issuer, account, digits and period, or why it does not read; never the seed
+        const otp = summary.otp && typeof summary.otp === 'object' ? Vue.markRaw(Object.assign({}, summary.otp)) : null;
         return { id: row.vaultItemId, row, type: String(summary.type || ''), name: String(summary.name || ''), uris: arr(summary.uris), tags: arr(summary.tags), shown,
-            changed: row.lastModifiedDate || row.createdDate || null, broken: '' };
+            otp, changed: row.lastModifiedDate || row.createdDate || null, broken: '' };
     }
+    /** The names of the one-time code seed fields of every type, which the module reads a seed from. */
+    const otpFields = () => Array.from(new Set(((S.config && S.config.itemTypes) || []).flatMap((type) => type.fields.filter((field) => field.kind === 'totp').map((field) => field.name))));
+    /** An item's codes at `now`, made in the module from its seed: {code, next, remaining_ms, period, digits}. A passive call: a list
+     * refreshing its codes does not keep the vault open past its idle time. */
+    async function itemCodes(vaultId, itemId, now) {
+        const v = vault(vaultId);
+        const item = v && v.open && v.items.find((entry) => entry.id === itemId);
+        if (!item) throw new Error(t('No such item'));
+        return (await ensureClient()).itemOtp(Object.assign(openArgs(vaultId, item.row), { otp_fields: otpFields(), now: Math.round(now) }));
+    }
+    /** What a user scanned or pasted, read in the module: {entries: [{issuer, account, digits, period, seed, code, ...}]}. */
+    async function otpParse(text, now) { return (await ensureClient()).otpParse({ text: String(text || ''), now: Math.round(now) }); }
     async function openVault(vaultId, secret) {
         const v = vault(vaultId);
         if (!v) throw new Error(t('No such vault'));
@@ -1355,7 +1486,7 @@ function makeSession() {
             try {
                 // the masked names of every type: the summary leaves them out whatever the item's type says it is
                 const masked = ((S.config && S.config.itemTypes) || []).flatMap((type) => type.fields.filter((field) => field.masked).map((field) => field.name));
-                const summary = await c.itemSummary(Object.assign(openArgs(v.vaultId, row), { masked: Array.from(new Set(masked)) }));
+                const summary = await c.itemSummary(Object.assign(openArgs(v.vaultId, row), { masked: Array.from(new Set(masked)), otp_fields: otpFields() }));
                 if (summary.type === INFO_TYPE) {
                     v.info = raw;
                     if (!v.headerCipher) v.name = String(summary.name || '');
@@ -1785,7 +1916,8 @@ function makeSession() {
         changePassphrase, unlockWithCode, strongReady, makeKey, saveKey, discardKey, checked, publicKeyOf, fingerprintOf, storeCheck, openVault, loadItems,
         itemBody, saveItem, deleteItem, prepareGenerated, discardPrepared, makeVault, deleteVault, renameVault, setMember, recoveryOn, removeMember, replaceRecovery,
         fileDelivery, sendItem, exportVault, readExport, importItems, makeRecoveryKey, startRecovery, deliverShare, finishRecovery, cancelRecovery, myHolder,
-        lock, touch, copy, typeOf, vault, anyOpen, lastOpened, openRow, parseBody, refreshMemory, rememberKey, restoreKey, forgetMemory, watchLeave, keepsOpen, INFO_TYPE };
+        lock, touch, copy, typeOf, vault, anyOpen, lastOpened, openRow, parseBody, refreshMemory, rememberKey, restoreKey, forgetMemory, watchLeave, keepsOpen, INFO_TYPE,
+        itemCodes, otpParse };
 }
 const session = window.BossVaultSession || (window.BossVaultSession = makeSession());
 
@@ -1793,6 +1925,15 @@ const blankMake = () => ({ open: false, step: 'choose', name: '', lock: SHARED, 
     typed: '', stored: false, busy: false, error: '' });
 const blankMembers = () => ({ open: false, keys: {}, words: {}, busy: false, error: '', remove: null, reencrypt: true, recoveryKeyId: null,
     add: { userId: null, key: null, words: '', match: false, role: 'write' } });
+const blankAddCode = () => ({ open: false, vaultId: null, text: '', show: false, entries: [], issuer: '', account: '', scanning: false, busy: false, error: '' });
+const sessionValue = {
+    get(key) { try { return window.sessionStorage.getItem(key); } catch (err) { return null; } },
+    set(key, value) { try { if (value == null) window.sessionStorage.removeItem(key); else window.sessionStorage.setItem(key, value); } catch (err) { /* nothing kept */ } }
+};
+// a code being made for a row, outside Vue's data: one call at a time for each
+const codeBusy = new Set();
+// the camera while Add a code scans: its stream and the timer of the next look
+let scan = null;
 // a generated key prepared for New vault, outside Vue's data: its vault key is in the worker until the vault is made or the dialog closes
 let prepared = null;
 
@@ -1820,6 +1961,10 @@ module.exports = {
             importer: { open: false, vaultId: null, fileName: '', parsed: null, password: '', busy: false, progress: 0, total: 0, result: '', error: '' },
             exporter: { open: false, vaultId: null, password: '', password2: '', busy: false, error: '' },
             about: false,
+            // Codes: the codes made for each row (vaultId/itemId: {code, next, period, digits, changeAt} or {error}), the clock they
+            // count down by (this device's, or the server's when serverTime), and Add a code
+            codes: {}, codeNow: Date.now(), serverTime: sessionValue.get(SERVER_TIME_KEY) === 'Y', addCode: blankAddCode(), parseSeq: 0,
+            reducedMotion: !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches),
             setup: { open: false, mode: 'new', step: 'passphrase', passphrase: '', passphrase2: '', code: '', group: 0, typed: '', fingerprint: '', busy: false, error: '' },
             recover: { open: false, code: '', passphrase: '', passphrase2: '', busy: false, error: '' },
             change: { open: false, current: '', passphrase: '', passphrase2: '', busy: false, error: '' }
@@ -1870,6 +2015,31 @@ module.exports = {
             return Array.from(counts.entries()).map(([id, count]) => ({ id, count, label: this.typeLabel(id) })).sort((a, b) => a.label.localeCompare(b.label));
         },
         shownItems() { return this.current ? this.current.items.filter((item) => !this.typeFilter || item.type === this.typeFilter) : []; },
+        codesView() { return this.params.view === 'codes' && !this.keyView && !this.recoveryView; },
+        // every item of the open vaults with a one-time code seed, by issuer then account; the search narrows it
+        otpItems() {
+            const text = String(this.search || '').trim().toLowerCase();
+            const rows = [];
+            for (const v of this.openVaults) for (const item of v.items) {
+                if (!item.otp || item.broken) continue;
+                const row = { key: v.vaultId + '/' + item.id, vaultId: v.vaultId, item, issuer: item.shown.issuer || item.otp.issuer || item.name || t('One-time code'),
+                    account: item.shown.account || item.otp.account || item.shown.username || '' };
+                if (!text || [row.issuer, row.account, item.name].concat(item.tags).join('\n').toLowerCase().includes(text)) rows.push(row);
+            }
+            return rows.sort((a, b) => a.issuer.localeCompare(b.issuer) || a.account.localeCompare(b.account));
+        },
+        codeRows() { return this.otpItems.map((row) => this.codeRow(row)); },
+        detailTarget() {
+            const item = this.currentItem;
+            return item && item.otp && !item.broken ? { key: this.current.vaultId + '/' + item.id, vaultId: this.current.vaultId, item } : null;
+        },
+        detailCode() { return this.detailTarget ? this.codeRow(this.detailTarget) : null; },
+        // the rows whose codes the timer keeps made: the list in Codes, or the item open
+        codeTargets() { return this.codesView ? this.otpItems : (this.detailTarget ? [this.detailTarget] : []); },
+        // the server's clock ahead of this device's, in whole seconds, once it is off enough to matter
+        skewSeconds() { return Math.abs(this.S.skewMs) >= SKEW_WARN_MS ? Math.round(this.S.skewMs / 1000) : 0; },
+        canReadImage() { return typeof window.BarcodeDetector === 'function'; },
+        canScan() { return this.canReadImage && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia); },
         results() {
             const text = String(this.search || '').trim().toLowerCase();
             if (!text) return [];
@@ -1913,6 +2083,10 @@ module.exports = {
     },
     watch: {
         'S.lockCount'() { this.forgetShown(); },
+        codesView(on) { if (!on) this.codes = {}; },
+        codeTargets() { this.$nextTick(() => this.tickCodes()); },
+        serverTime(on) { sessionValue.set(SERVER_TIME_KEY, on ? 'Y' : null); this.codes = {}; this.tickCodes(); },
+        'addCode.open'(open) { if (!open) { this.stopScan(); this.addCode = blankAddCode(); } },
         'make.open'(open) { if (!open) this.dropPrepared(); },
         'params.itemId'() { this.revealed = {}; this.detail = null; this.loadDetail(); },
         'params.vaultId'() { this.unlockForm.error = ''; this.unlockForm.check = []; this.unlockForm.secret = ''; this.typeFilter = ''; },
@@ -1944,7 +2118,7 @@ module.exports = {
             const last = session.lastOpened(v.vaultId) || (v.createdDate ? new Date(v.createdDate).getTime() : Date.now());
             return Date.now() - Number(last) > 30 * DAY;
         },
-        subtitle(item) { return item.shown.username || item.shown.email || item.shown.organization || item.shown.cardholder || item.uris[0] || this.typeLabel(item.type); },
+        subtitle(item) { return item.shown.username || item.shown.account || item.shown.email || item.shown.organization || item.shown.cardholder || item.uris[0] || this.typeLabel(item.type); },
         dateText(value) {
             if (value == null || value === '') return '';
             const date = new Date(typeof value === 'number' || /^\d+$/.test(String(value)) ? Number(value) : value);
@@ -1991,6 +2165,9 @@ module.exports = {
             this.startRec = { open: false, keyRow: null, vaultId: '', userId: null, key: null, words: '', checked: false, match: false, busy: false, error: '' };
             this.checksWords = {};
             this.myWords = '';
+            this.codes = {};
+            this.stopScan();
+            this.addCode = blankAddCode();
             prepared = null;
         },
         // any use of the page counts: dialogs render outside this component's element, so the document is listened to
@@ -2111,6 +2288,183 @@ module.exports = {
                 await session.refreshMemory().catch(() => {});
             } catch (err) { this.fail(err); }
         },
+        // ----- one-time codes -----
+        toggleCodes() { this.setParams(this.codesView ? {} : { view: 'codes' }); },
+        codeTime() { return Date.now() + (this.serverTime ? this.S.skewMs : 0); },
+        /** A row with its codes as they stand at the timer's clock: the seconds left, and the tone (warning at 10, negative at 5). */
+        codeRow(row) {
+            const got = this.codes[row.key];
+            const error = (row.item.otp && row.item.otp.error) || (got && got.error) || '';
+            const codes = got && !got.error ? got : null;
+            const left = codes ? Math.max(0, Math.ceil((codes.changeAt - this.codeNow) / 1000)) : 0;
+            const tone = !codes ? '' : (left <= 5 ? 'negative' : (left <= 10 ? 'warning' : ''));
+            return Object.assign({}, row, { codes, error, left, period: codes ? codes.period : (row.item.otp && row.item.otp.period) || 30, tone });
+        },
+        toneClass(tone) { return tone ? 'text-' + tone : ''; },
+        grouped(code) { const text = String(code || ''); const half = Math.ceil(text.length / 2); return text.length > 4 ? text.slice(0, half) + ' ' + text.slice(half) : text; },
+        initialOf(text) { return (String(text || '').trim()[0] || '#').toUpperCase(); },
+        /** Each second while codes show and the tab is seen: the clock moves, and a row whose code ended gets its next ones from the module. */
+        tickCodes() {
+            if (document.visibilityState === 'hidden') return;
+            const targets = this.codeTargets;
+            if (!targets.length) return;
+            const now = this.codeTime();
+            this.codeNow = now;
+            for (const row of targets) {
+                const got = this.codes[row.key];
+                if (row.item.otp.error || codeBusy.has(row.key) || (got && (got.error || now < got.changeAt))) continue;
+                this.fetchCode(row, now);
+            }
+        },
+        async fetchCode(row, now) {
+            codeBusy.add(row.key);
+            const lockCount = this.S.lockCount;
+            let made;
+            try {
+                const out = await session.itemCodes(row.vaultId, row.item.id, now);
+                made = { code: String(out.code), next: String(out.next), period: Number(out.period) || 30, digits: Number(out.digits) || 6, changeAt: now + Number(out.remaining_ms) };
+            } catch (err) {
+                made = { error: messageOf(err) };
+            } finally { codeBusy.delete(row.key); }
+            // a lock, or leaving the codes, while the module answered: nothing is kept
+            if (this.S.lockCount === lockCount && this.codeTargets.some((target) => target.key === row.key)) this.codes = Object.assign({}, this.codes, { [row.key]: made });
+        },
+        /** The code copied (cleared from the clipboard after the vault's clipboard time); in its last 5 seconds the next one, which a
+         * site still takes once this one ends. */
+        async copyCode(row) {
+            if (!row || !row.codes) return;
+            const late = row.left <= 5;
+            try {
+                await session.copy(late ? row.codes.next : row.codes.code);
+                this.notify(late ? fill(t('Copied the next code: this one ends in {seconds} s'), { seconds: row.left }) : t('Copied the code'));
+            } catch (err) { this.fail(err); }
+        },
+        focusCode(index) {
+            const rows = this.$el.querySelectorAll('.boss-vault-code-row');
+            if (index >= 0 && index < rows.length) rows[index].focus();
+        },
+        onVisibility() { if (document.visibilityState === 'hidden') this.codes = {}; else this.tickCodes(); },
+        openAddCode() {
+            const vaultId = this.current && this.current.open && this.writable(this.current) ? this.current.vaultId : (this.writableOpen[0] || {}).vaultId || null;
+            this.addCode = Object.assign(blankAddCode(), { open: true, vaultId });
+        },
+        closeAddCode() { this.addCode.open = false; },
+        /** The text read in the module, as it is typed or scanned: one seed, or the many of an export. */
+        async parseCode() {
+            const a = this.addCode;
+            const seq = ++this.parseSeq;
+            const text = String(a.text || '').trim();
+            if (!text) { a.entries = []; a.error = ''; return; }
+            try {
+                const out = await session.otpParse(text, this.codeTime());
+                if (seq !== this.parseSeq) return;
+                a.entries = (out.entries || []).map((entry) => Vue.markRaw(entry));
+                a.error = a.entries.length ? '' : t('The export holds no time-based codes');
+                if (a.entries.length === 1) { a.issuer = a.entries[0].issuer || a.issuer; a.account = a.entries[0].account || a.account; }
+            } catch (err) {
+                if (seq !== this.parseSeq) return;
+                a.entries = [];
+                a.error = messageOf(err).replace(/^bad format: /, '');
+            }
+        },
+        async saveCodes() {
+            const a = this.addCode;
+            const v = session.vault(a.vaultId);
+            if (!v || !v.open || a.busy || !a.entries.length) return;
+            a.busy = true;
+            a.error = '';
+            const single = a.entries.length === 1;
+            const left = [];
+            const failed = [];
+            let added = 0;
+            for (const entry of a.entries) {
+                const issuer = String(single ? a.issuer : entry.issuer || '').trim();
+                const account = String(single ? a.account : entry.account || '').trim();
+                const body = { v: 1, type: 'otp', name: issuer || account || t('One-time code'), fields: clean({ issuer, account, totp: entry.seed }), notes: '', tags: [], uris: [] };
+                // one that fails is told, and the others are still added
+                try {
+                    await session.saveItem(v.vaultId, null, body);
+                    added++;
+                } catch (err) {
+                    console.error('Vault: a one-time code was not added: ' + messageOf(err));
+                    failed.push((issuer || account || t('One-time code')) + ': ' + messageOf(err));
+                    left.push(entry);
+                }
+            }
+            await session.loadItems(v).catch((err) => this.fail(err));
+            a.busy = false;
+            if (!failed.length) {
+                this.closeAddCode();
+                this.notify(added === 1 ? t('The code is added') : fill(t('{count} codes added'), { count: added }));
+                if (!this.codesView) this.setParams({ view: 'codes' });
+                return;
+            }
+            a.entries = left;
+            a.error = fill(t('{added} added; these were not: {failed}'), { added, failed: failed.join('; ') });
+        },
+        async startScan() {
+            const a = this.addCode;
+            a.error = '';
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+                scan = { stream, timer: null };
+                a.scanning = true;
+                await this.$nextTick();
+                const video = this.$refs.codeVideo;
+                video.srcObject = stream;
+                await video.play();
+                const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+                const look = async () => {
+                    if (!scan || scan.stream !== stream) return;
+                    try {
+                        const found = await detector.detect(video);
+                        const hit = found.find((code) => /^otpauth/i.test(code.rawValue)) || found[0];
+                        if (hit) { this.stopScan(); a.text = hit.rawValue; this.parseCode(); return; }
+                    } catch (err) { /* a frame not ready yet */ }
+                    if (scan && scan.stream === stream) scan.timer = setTimeout(look, 250);
+                };
+                look();
+            } catch (err) {
+                this.stopScan();
+                a.error = t('The camera did not start') + ': ' + messageOf(err);
+            }
+        },
+        stopScan() {
+            const running = scan;
+            scan = null;
+            if (running) {
+                clearTimeout(running.timer);
+                running.stream.getTracks().forEach((track) => track.stop());
+            }
+            const video = this.$refs.codeVideo;
+            if (video) video.srcObject = null;
+            if (this.addCode) this.addCode.scanning = false;
+        },
+        async readCodeImage(blob) {
+            const a = this.addCode;
+            a.error = '';
+            try {
+                const bitmap = await createImageBitmap(blob);
+                const found = await new window.BarcodeDetector({ formats: ['qr_code'] }).detect(bitmap);
+                if (bitmap.close) bitmap.close();
+                const hit = found.find((code) => /^otpauth/i.test(code.rawValue)) || found[0];
+                if (!hit) { a.error = t('No QR code found in the image'); return; }
+                a.text = hit.rawValue;
+                this.parseCode();
+            } catch (err) { a.error = t('The image could not be read') + ': ' + messageOf(err); }
+        },
+        codeImageFile(event) {
+            const file = event.target.files && event.target.files[0];
+            event.target.value = '';
+            if (file) this.readCodeImage(file);
+        },
+        pasteCodeImage(event) {
+            const items = Array.from((event.clipboardData && event.clipboardData.items) || []);
+            const image = items.find((item) => String(item.type).startsWith('image/'));
+            if (!image || !this.canReadImage) return;
+            event.preventDefault();
+            this.readCodeImage(image.getAsFile());
+        },
         // ----- an item -----
         async toggleReveal(field) {
             if (this.revealed[field.name] != null) { delete this.revealed[field.name]; this.revealed = Object.assign({}, this.revealed); return; }
@@ -2121,6 +2475,7 @@ module.exports = {
             } catch (err) { this.fail(err); }
         },
         async copyField(field) {
+            if (field.kind === 'totp' && this.detailCode && this.detailCode.codes) return this.copyCode(this.detailCode);
             try {
                 let value = field.value;
                 if (field.masked) {
@@ -2650,6 +3005,8 @@ module.exports = {
     mounted() {
         document.addEventListener('keydown', this.onActivity, true);
         document.addEventListener('pointerdown', this.onActivity, true);
+        document.addEventListener('visibilitychange', this.onVisibility);
+        this.codeTimer = setInterval(() => this.tickCodes(), 1000);
         session.watchLeave(this.$root);
         this.start().then(() => {
             this.loadKeyWords();
@@ -2661,6 +3018,9 @@ module.exports = {
     beforeUnmount() {
         document.removeEventListener('keydown', this.onActivity, true);
         document.removeEventListener('pointerdown', this.onActivity, true);
+        document.removeEventListener('visibilitychange', this.onVisibility);
+        clearInterval(this.codeTimer);
+        this.stopScan();
         this.dropPrepared();
     }
 };
@@ -2672,4 +3032,13 @@ module.exports = {
 .boss-vault-pre { white-space: pre-wrap; word-break: break-word; }
 .boss-vault-value { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
 .boss-vault-masked { -webkit-text-security: disc; }
+.boss-vault-code { font-family: var(--m-font-mono, ui-monospace, monospace); font-size: 1.5rem; font-weight: 500;
+    letter-spacing: 0.06em; font-variant-numeric: tabular-nums; white-space: nowrap; transition: color 0.3s; }
+.boss-vault-code-next { font-family: var(--m-font-mono, ui-monospace, monospace); font-size: 0.8rem;
+    font-variant-numeric: tabular-nums; white-space: nowrap; }
+.boss-vault-detail-code .boss-vault-code { font-size: 1.25rem; }
+.boss-vault-add-preview .boss-vault-code { font-size: 1.1rem; }
+.boss-vault-ring-text { font-variant-numeric: tabular-nums; }
+.boss-vault-scan { width: 100%; max-height: 320px; border-radius: 8px; object-fit: cover; }
+@media (prefers-reduced-motion: reduce) { .boss-vault-code { transition: none; } }
 </style>
