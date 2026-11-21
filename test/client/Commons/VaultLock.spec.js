@@ -6,7 +6,8 @@
 // another screen than the vault's and Contacts locks it, and a browser keeps the highest item revisions it saw per user and vault. A removal the server refuses leaves no key version behind, so the same removal works next; a manager's changed key
 // is given access with the wraps the server names to remake; the first write after a rotation makes a new item key. A masked
 // value is not on the page until Show asks the worker for it, and the vault locks by itself after the idle time (a short one
-// here, boss/vault@idle-minutes in a deployment), dropping the value and every key.
+// here, boss/vault@idle-minutes in a deployment), dropping the value and every key. Codes shows the one-time codes the module
+// makes from the open vaults' seeds, with no seed on the page, and tells a device clock off the server's.
 // Run: ./moq test-client mr-boss --offline --spec VaultLock (an offline spec: it needs no server)
 const PASSWORD = "Tr0ub4dor-and-3-more!"
 const SECRET = "s3cret-Value-shown-only-on-ask"
@@ -27,7 +28,9 @@ function open(idleMinutes) {
             itemTypes: [{id: "login", label: "Login", fields: [{name: "username", label: "Username", kind: "text", masked: false},
                 {name: "password", label: "Password", kind: "secret", masked: true}]},
                 {id: "contact", label: "Private contact", fields: [{name: "fullName", label: "Name", kind: "text", masked: false},
-                    {name: "email", label: "Email", kind: "text", masked: false}]}]})
+                    {name: "email", label: "Email", kind: "text", masked: false}]},
+                {id: "otp", label: "One-time code", fields: [{name: "issuer", label: "Issuer", kind: "text", masked: false},
+                    {name: "account", label: "Account", kind: "text", masked: false}, {name: "totp", label: "One-time code seed", kind: "totp", masked: true}]}]})
         return true
     }, idleMinutes)
     page.waitFor(() => !!(window.BossVaultSession && BossVaultSession.S.personal && BossVaultSession.S.config), {timeout: 10})
@@ -119,6 +122,70 @@ feature("a rename seals the new name under the vault's key from the revision rea
         !sent.includes("Household")
         !stored.includes("Household")
         stale.includes("changed since")
+    }
+})
+
+feature("Codes lists the module's codes of the open vaults' seeds, never a seed; Add a code seals a pasted key; a clock off the server's is told", {
+    when() {
+        const made = page.evaluate(async () => {
+            const s = window.BossVaultSession
+            // RFC 6238's SHA1 key, as base32
+            const seed = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+            store.clockOffsetMs = 60000
+            await s.saveItem(homeId, null, {v: 1, type: "otp", name: "Example", fields: {issuer: "Example", account: "ada@example.com",
+                totp: "otpauth://totp/Example:ada%40example.com?secret=" + seed + "&issuer=Example"}})
+            await s.saveItem(homeId, null, {v: 1, type: "login", name: "Forge", fields: {username: "ada", password: "pw-1", totp: seed}})
+            await s.loadItems(s.vault(homeId))
+            vm.setUrl("/qapps/Commons/Vault?view=codes")
+            return {seed}
+        })
+        page.waitFor(() => document.querySelectorAll(".boss-vault-code-row .boss-vault-code").length === 2, {timeout: 10})
+        return page.evaluate(async ({seed}) => {
+            const s = window.BossVaultSession
+            const screen = vm.$refs.screen
+            const now = screen.codeTime()
+            const expected = (await s.otpParse(seed, now)).entries[0]
+            const rows = Array.from(document.querySelectorAll(".boss-vault-code-row")).map((row) => row.innerText.replace(/\s+/g, " "))
+            const shown = Array.from(document.querySelectorAll(".boss-vault-code-row .boss-vault-code")).map((el) => el.innerText.replace(/\s/g, ""))
+            const kept = JSON.stringify(s.S.vaults.map((v) => v.items)) + JSON.stringify(screen.codes)
+            // the tone by the seconds left: warning from 10, negative from 5
+            const tones = [20000, 9000, 4000].map((ms) => {
+                screen.codes = Object.assign({}, screen.codes, {probe: {code: "1", next: "2", period: 30, digits: 6, changeAt: screen.codeNow + ms}})
+                return screen.codeRow({key: "probe", vaultId: homeId, item: {otp: {period: 30}}}).tone
+            })
+            // a pasted setup key, read in the module and sealed as a One-time code item
+            screen.openAddCode()
+            screen.addCode.text = "jbsw y3dp ehpk 3pxp"
+            await screen.parseCode()
+            const preview = screen.addCode.entries.map((entry) => entry.code.length)
+            screen.addCode.issuer = "Pasted Co"
+            await screen.saveCodes()
+            await new Promise((resolve) => setTimeout(resolve, 1500))
+            return {rows, shown, expected: [expected.code, expected.next], onPage: document.body.innerText.includes(seed), kept: kept.includes(seed),
+                skew: (document.querySelector(".boss-vault-skew") || {}).innerText || "", tones, preview, open: screen.addCode.open,
+                after: Array.from(document.querySelectorAll(".boss-vault-code-row")).map((row) => row.innerText.replace(/\s+/g, " ")),
+                stored: JSON.stringify(store.items).includes(seed) || JSON.stringify(store.items).includes("Pasted Co")}
+        }, made)
+    },
+    then({rows, shown, expected, onPage, kept, skew, tones, preview, open, after, stored}) {
+        rows.length == 2
+        rows[0].includes("Example")
+        rows[0].includes("ada@example.com")
+        // the login's seed shows under its name and username
+        rows[1].includes("Forge")
+        // both seeds are RFC 6238's key: the same code, made by the module now (or the next, at a step's edge)
+        shown[0] == shown[1]
+        expected.includes(shown[0])
+        // no seed on the page, kept by it, or on the server
+        onPage == false
+        kept == false
+        stored == false
+        skew.includes("60 s behind")
+        tones == ["", "warning", "negative"]
+        preview == [6]
+        open == false
+        after.length == 3
+        after.some((row) => row.includes("Pasted Co"))
     }
 })
 
