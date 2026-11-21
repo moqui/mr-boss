@@ -75,9 +75,9 @@ Record routes are contextual, not extra menu depth. Approvals is a top-level ent
 | Current source | Verified behavior and design consequence |
 | --- | --- |
 | [ManufacturingServices.xml](../../mr-mantle/service/mantle/work/ManufacturingServices.xml) | Active `create#ProductionRun`, display/produce-consume queries, assembly issue/unissue/breakdown and pick information exist. Create sets production purpose and draft status and builds simple consume/produce rows. With `produceProductId` it writes `WeptConsume` rows from legacy single-level `PatMfgBom` through `get#ProductBomDetail`, and it does not set `WorkEffort.ownerPartyId`; BOSS calls it only inside `create#ProductionOrder`, without `produceProductId` or `consumeProductId` (D15). `get#ProductBomDetail` is single-level and does not implement the dated scrap/effectivity explosion of M3. These services are a foundation, not an implemented production scheduler or controlled release workflow. |
-| [WorkEffortEntities.xml](../../mr-mantle/entity/WorkEffortEntities.xml) | Active WorkEffort, WorkEffortProduct, assignments, asset/skill needs, TimeEntry, ProductionEstimate and joins exist. WorkEffortProduct has product/fromDate identity and estimatedQuantity/estimatedCost, but no independent same-product operation line or quantity UOM. WorkEffort's `estimatedCost` field is commented out; do not write to it. BOSS leaves ProductionEstimate unused (§13). |
-| [ProductDefinitionEntities.xml](../../mr-mantle/entity/ProductDefinitionEntities.xml) | Active ProductAssoc `PatMfgBom` is the baseline material relationship with quantity, scrapFactor, instruction, routingWorkEffortId and effectivity. It has no BOM header, stable line identity or quantityUomId; packaging-unit extension is proposed in crosscut. It cannot be stretched into immutable repeated-line production history merely by adding one foreign key. BOSS keeps `PatMfgBom` only for the components of `PtPickAssembly` kits (D15). |
-| [FacilityEntities.xml](../../mr-mantle/entity/FacilityEntities.xml) | Active Facility and `FcTpLine` identity are reused. Existing `capacity` is people capacity, not throughput. Production resource capacity needs the proposed extension. |
+| [EffortEntities.xml](../../mr-mantle/entity/work/EffortEntities.xml), [EstimateAndMaintenanceAndMethodAndTimeEntities.xml](../../mr-mantle/entity/work/EstimateAndMaintenanceAndMethodAndTimeEntities.xml) | Active WorkEffort, WorkEffortProduct, assignments, asset/skill needs, TimeEntry, ProductionEstimate and joins exist. WorkEffortProduct has product/fromDate identity and estimatedQuantity/estimatedCost, but no independent same-product operation line or quantity UOM. WorkEffort's `estimatedCost` field is commented out; do not write to it. BOSS leaves ProductionEstimate unused (§13). |
+| [ProductEntities.xml](../../mr-mantle/entity/product/ProductEntities.xml) | Active ProductAssoc `PatMfgBom` is the baseline material relationship with quantity, scrapFactor, instruction, routingWorkEffortId and effectivity. It has no BOM header, stable line identity or quantityUomId; packaging-unit extension is proposed in crosscut. It cannot be stretched into immutable repeated-line production history merely by adding one foreign key. BOSS keeps `PatMfgBom` only for the components of `PtPickAssembly` kits (D15). |
+| [FacilityEntities.xml](../../mr-mantle/entity/facility/FacilityEntities.xml) | Active Facility and `FcTpLine` identity are reused. Existing `capacity` is people capacity, not throughput. Production resource capacity needs the proposed extension. |
 | [AssetServices.xml](../../mr-mantle/service/mantle/product/AssetServices.xml) and [AssetAutoPostServices.xml](../../mr-mantle/service/mantle/ledger/AssetAutoPostServices.xml) | Active issue-to-work-effort, receipt and ledger hooks provide stock/WIP integration. Shared wrappers must add request identity, line linkage, authorization and reviewed correction behavior; raw services alone do not prove all release/period/quality guarantees. Screens never directly invoke ledger EECA hooks as a second posting. The hooks are the SECAs `AssetIssuanceGlPost` (an issue posts Dr WIP, Cr Inventory when the work effort owner is the asset owner, otherwise Dr COGS), `AssetIssuanceGlRePost` (any update of an issuance unposts, deletes and reposts the transaction) and `AssetReceiptGlPost` (a receipt with a work effort posts Dr Inventory, Cr WIP at `Asset.acquireCost`, and nothing when that cost is missing); §13 says which are kept. |
 | [TimesheetServices.xml](../../mr-mantle/service/mantle/work/TimesheetServices.xml) and [TimeServices.xml](../../mr-mantle/service/mantle/work/TimeServices.xml) | Current timer and weekly-timesheet policy/access/approval/locking services already exist. Use these. Legacy store#TimeEntryWorkEffort creates/updates a WorkEffort and requires client/time inputs; it is not a ready production timer wrapper. |
 | [Projects design](design-projects.md) and [Commons design](design-drawers-commons.md) plus current shared screens | RequestWorkEffort/WorkEffortRecord links, request intake, calendar/work hours, approvals, time and files are existing facilities to extend narrowly. No new Manufacturing task/case/calendar subsystem is assumed. |
@@ -246,7 +246,7 @@ Built (impl-manufacturing P16): the Kpis are `get#ProductionDashboard`'s complet
 
 **States.** Run labels map to existing `WeInPlanning` Draft, `WeApproved` Released, `WeInProgress` Running, `WeOnHold` Paused, `WeComplete` Completed, `WeClosed` Closed, `WeCancelled` Cancelled. New transition guards must respect the existing status-flow graph and provide explicit reopen/correction services where a generic transition is absent. Hold before start needs a seeded `WeApproved`→`WeOnHold` transition, its resume as released a seeded `WeOnHold`→`WeApproved`, and unrelease a seeded `WeApproved`→`WeInPlanning` transition (M4 seed data); unrelease is allowed only while no stock, time or quantity fact exists. The three are seeded in their own `WorkEffortProduction` flow, each with the permission of its action (`PRODUCTION_PLAN` to unrelease, `PRODUCTION_SUPERVISE` to hold and resume), so no generic update takes them without it. A shortage under the default policy is released staged once a supervisor approves it on the run (the planner may ask, a ProductionStagedRelease notice in Approvals); the approval holds at the run's revision, and the short lines stay blocked for issue until the stock covers them (impl-manufacturing P5a). The guards refuse the generic `WeInPlanning`→`WeComplete` transition, and, once cost is posted, `WeComplete`→`WeInProgress` and `WeClosed`→`WeInPlanning` (R-MFG-11, R-SA-11). App access alone grants no transition.
 
-**Source.** research §4; [EditRun](../../mr-marble/screen/SimpleScreens/Manufacturing/Run/EditRun.xml); [WorkEffort model](../../mr-mantle/entity/WorkEffortEntities.xml); Dolibarr `htdocs/mrp/mo_production.php`.
+**Source.** research §4; [EditRun](../../mr-marble/screen/SimpleScreens/Manufacturing/Run/EditRun.xml); [WorkEffort model](../../mr-mantle/entity/work/EffortEntities.xml); Dolibarr `htdocs/mrp/mo_production.php`.
 
 **Needs.** M1, M2, M4, M8.
 
@@ -583,7 +583,7 @@ The task stays Accounting's contract, built with Manufacturing's cost events, ou
 
 **Actions.** Open, clone revision, import legacy associations and where-used. Import reads the existing `PatMfgBom` rows of a manufactured product into draft lines, with explicit validation before their first release; release never writes `PatMfgBom` back (D15). `PtPickAssembly` kit products are excluded from this list and from the import: their components stay `PatMfgBom` rows, edited in Products' Product360 Kit components pane through proposed `mantle.product.ProductServices.store#KitComponent` (D15, R-PRD-10). A list does not imply revision control already exists. Product360's BOM tab mounts BillOfMaterialsDetail and related editors from this file. Products retains product identity and permissions.
 
-**Source.** research §2; [ProductAssoc](../../mr-mantle/entity/ProductDefinitionEntities.xml); Odoo `odoo/addons/mrp/views/mrp_bom_views.xml`.
+**Source.** research §2; [ProductAssoc](../../mr-mantle/entity/product/ProductEntities.xml); Odoo `odoo/addons/mrp/views/mrp_bom_views.xml`.
 
 **Needs.** M1, M3.
 
@@ -609,7 +609,7 @@ The task stays Accounting's contract, built with Manufacturing's cost events, ou
 
 **Navigation.** Cost estimate opens Products CostRollup for this BOM as of the selected date; prices use the shared resolver and supplier price scope. Work-center rates and standard times reach Products through proposed `mantle.work.RoutingServices.get#OperationCostBasis`, which returns the effective WorkCenterRate × standards (R-MFG-25). No BOM edit revalues current stock.
 
-**Source.** research §2; [ProductAssoc](../../mr-mantle/entity/ProductDefinitionEntities.xml); Odoo `odoo/addons/mrp/views/mrp_bom_views.xml`; ERPNext `erpnext/manufacturing/doctype/bom/bom.json`.
+**Source.** research §2; [ProductAssoc](../../mr-mantle/entity/product/ProductEntities.xml); Odoo `odoo/addons/mrp/views/mrp_bom_views.xml`; ERPNext `erpnext/manufacturing/doctype/bom/bom.json`.
 
 **Needs.** M1, M3, M4, M8.
 
@@ -676,7 +676,7 @@ The task stays Accounting's contract, built with Manufacturing's cost events, ou
 | Routings | list | Open templates and revision history | routing ID, last release date, status, operations, draft operations | revision history link | `mantle.work.RoutingServices.find#Routings` (proposed) | ERPNext routing/routing.json |
 | NewRouting | dialog | Create a draft routing | name, organization, description | text | `mantle.work.RoutingServices.store#Routing` (proposed) | ERPNext Routing |
 
-**Source.** research §3; [WorkEffort model](../../mr-mantle/entity/WorkEffortEntities.xml); ERPNext `erpnext/manufacturing/doctype/routing/routing.json`.
+**Source.** research §3; [WorkEffort model](../../mr-mantle/entity/work/EffortEntities.xml); ERPNext `erpnext/manufacturing/doctype/routing/routing.json`.
 
 **Needs.** M1, M3, M5.
 
@@ -697,7 +697,7 @@ The task stays Accounting's contract, built with Manufacturing's cost events, ou
 
 **Actions.** Copy operations from another routing with explicit duplicate/replace choices; validate cycles and consuming-material references before release. The routing model remains WorkEffort `WepRouting`, operation templates `WepRoutingTask`, `WeatRoutingComp` sequence and `WeptRouting` product link. The `WeatRoutingComp` rows are dated and their standards audit-logged; a release is an approval decision that stamps the draft rows' from date and the replaced rows' thru date, as a BOM release does, so a routing as of a date is its rows then. Executable children use `parentWorkEffortId` and `WeatDependsOn`, and each carries its routing operation, sequence and work center, audit-logged. Cost/hour is effective-dated work-center policy, separate from person time rates. Equipment needed and skill standards use current entities, with actual assignments on the run.
 
-**Source.** research §3; [WorkEffortEntities](../../mr-mantle/entity/WorkEffortEntities.xml); ERPNext `erpnext/manufacturing/doctype/routing/routing.json`; Odoo `odoo/addons/mrp/views/mrp_workorder_views.xml`.
+**Source.** research §3; [EffortEntities](../../mr-mantle/entity/work/EffortEntities.xml); ERPNext `erpnext/manufacturing/doctype/routing/routing.json`; Odoo `odoo/addons/mrp/views/mrp_workorder_views.xml`.
 
 **Needs.** M1, M3, M4, M5.
 
@@ -739,7 +739,7 @@ The task stays Accounting's contract, built with Manufacturing's cost events, ou
 
 **Actions.** Open FacilityDetail, load, production schedule, downtime or equipment. Capacity is an explicit quantity per duration/product or parallel slots; existing Facility.capacity is a number of people and is not reinterpreted as machine throughput. Equipment assignments and offline intervals affect feasible work but do not themselves authorize maintenance operations.
 
-**Source.** research §3; [FacilityEntities](../../mr-mantle/entity/FacilityEntities.xml); Odoo `odoo/addons/mrp/views/mrp_workcenter_views.xml`.
+**Source.** research §3; [FacilityEntities](../../mr-mantle/entity/facility/FacilityEntities.xml); Odoo `odoo/addons/mrp/views/mrp_workcenter_views.xml`.
 
 **Needs.** M1, M5, M10.
 
@@ -869,7 +869,7 @@ Nothing yet holds an unapproved stop out of a total: the OEE and downtime report
 
 **Actions.** Corrective/preventive action is a linked Projects-owned Request with Work Items and evidence, not a new case lifecycle. Quality extension tracks cause, containment, effectiveness due/result, risk assessment and disposition links. Containment uses canonical holds. Closing the Request alone cannot release held inventory; the canonical disposition remains required. The services and the proposed `mantle.product.quality.QualityNonconformance` record belong to the shared quality model (crosscut §3.19), so Warehouse and Purchasing use the same records; this screen fixes a production context filter only (R-MFG-07).
 
-**Source.** research §8, §14; Carbon `apps/erp/app/modules/quality/quality.models.ts` (issues, required actions, risk and calibration); current [Request model](../../mr-mantle/entity/RequestEntities.xml).
+**Source.** research §8, §14; Carbon `apps/erp/app/modules/quality/quality.models.ts` (issues, required actions, risk and calibration); current [Request model](../../mr-mantle/entity/request/RequestEntities.xml).
 
 **Needs.** M1, M6.
 
