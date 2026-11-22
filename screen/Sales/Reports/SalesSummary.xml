@@ -95,37 +95,37 @@ along with this software (see the LICENSE.md file). If not, see
             invoiceDiscountPercentMaList = column(invoiceSummaryNoTotals, 'discountPercentMa', percent)
 
             countSummaryDatasets = [
-                    {label: 'Orders', backgroundColor: defaultColors[0], borderColor: defaultColors[0], fill: false,
+                    {label: ec.l10n.localize('Orders'), backgroundColor: defaultColors[0], borderColor: defaultColors[0], fill: false,
                             data: column(orderSummaryNoTotals, 'orderCount')},
-                    {label: 'New Customers', backgroundColor: defaultColors[1], borderColor: defaultColors[1], fill: false,
+                    {label: ec.l10n.localize('New Customers'), backgroundColor: defaultColors[1], borderColor: defaultColors[1], fill: false,
                             data: column(orderSummaryNoTotals, 'newCustomerOrderCount')},
-                    {label: 'New Customer %', backgroundColor: defaultColors[3].replace('1.0', '0.5'), borderColor: defaultColors[3].replace('1.0', '0.5'), fill: false,
+                    {label: ec.l10n.localize('New Customer %'), backgroundColor: defaultColors[3].replace('1.0', '0.5'), borderColor: defaultColors[3].replace('1.0', '0.5'), fill: false,
                             yAxisID:'rightSide', data:newCustomerPercentList},
-                    {label: 'Invoices', backgroundColor: defaultColors[2], borderColor: defaultColors[2], fill: false,
+                    {label: ec.l10n.localize('Invoices'), backgroundColor: defaultColors[2], borderColor: defaultColors[2], fill: false,
                             data: column(invoiceSummaryNoTotals, 'invoiceCount')},
             ]
             orderAmountsDatasets = [
-                    {label: 'Product Ordered', backgroundColor: defaultColors[0], borderColor: defaultColors[0], fill: false,
+                    {label: ec.l10n.localize('Product Ordered'), backgroundColor: defaultColors[0], borderColor: defaultColors[0], fill: false,
                             data: orderProductSaleTotalList},
-                    {label: 'Order Discounts', backgroundColor: defaultColors[1], borderColor: defaultColors[1], fill: false,
+                    {label: ec.l10n.localize('Order Discounts'), backgroundColor: defaultColors[1], borderColor: defaultColors[1], fill: false,
                             data: column(orderSummaryNoTotals, 'discountTotal', (value) => -amount(value))},
-                    {label: 'Discount %', backgroundColor: defaultColors[3].replace('1.0', '0.5'), borderColor: defaultColors[3].replace('1.0', '0.5'), fill: false,
+                    {label: ec.l10n.localize('Discount %'), backgroundColor: defaultColors[3].replace('1.0', '0.5'), borderColor: defaultColors[3].replace('1.0', '0.5'), fill: false,
                             yAxisID: 'rightSide', data: orderDiscountPercentList },
             ]
             invoiceMarginDatasets = [
-                    {label: 'Product Invoiced', backgroundColor: defaultColors[0], borderColor: defaultColors[0], fill: false, type:'line',
+                    {label: ec.l10n.localize('Product Invoiced'), backgroundColor: defaultColors[0], borderColor: defaultColors[0], fill: false, type:'line',
                             data: column(invoiceSummaryNoTotals, 'productSaleTotal', amount)},
-                    {label: 'Invoice Discounts', backgroundColor: defaultColors[1].replace('1.0', '0.4'), borderColor: defaultColors[1], stack:'DiscCost',
+                    {label: ec.l10n.localize('Invoice Discounts'), backgroundColor: defaultColors[1].replace('1.0', '0.4'), borderColor: defaultColors[1], stack:'DiscCost',
                             data: column(invoiceSummaryNoTotals, 'discountTotal', (value) => -amount(value))},
-                    costShown ? {label: 'Product Cost', backgroundColor: defaultColors[4].replace('1.0', '0.4'), borderColor: defaultColors[4], stack:'DiscCost',
+                    costShown ? {label: ec.l10n.localize('Product Cost'), backgroundColor: defaultColors[4].replace('1.0', '0.4'), borderColor: defaultColors[4], stack:'DiscCost',
                             data: column(invoiceSummaryNoTotals, 'productCostTotal', amount)} : null,
             ].filter(Boolean)
             discountCostDatasets = [
-                    {label: 'Order Discount %', backgroundColor: defaultColors[0], borderColor: defaultColors[0], fill: false,
+                    {label: ec.l10n.localize('Order Discount %'), backgroundColor: defaultColors[0], borderColor: defaultColors[0], fill: false,
                             data: orderDiscountPercentList},
-                    {label: 'Invoice Discount %', backgroundColor: defaultColors[1], borderColor: defaultColors[1], fill: false,
+                    {label: ec.l10n.localize('Invoice Discount %'), backgroundColor: defaultColors[1], borderColor: defaultColors[1], fill: false,
                             data: invoiceDiscountPercentList},
-                    costShown ? {label: 'Invoice Cost %', backgroundColor: defaultColors[2], borderColor: defaultColors[2], fill: false,
+                    costShown ? {label: ec.l10n.localize('Invoice Cost %'), backgroundColor: defaultColors[2], borderColor: defaultColors[2], fill: false,
                             data: invoiceCostPercentList} : null,
             ].filter(Boolean)
 
@@ -153,9 +153,10 @@ along with this software (see the LICENSE.md file). If not, see
                 const [valThis, valLast, valPrior, valAvg] = lines.map((line) => (line && line[field]) || 0)
                 chartList = chartList || column(list, field)
                 chartMaList = chartMaList || column(list, field + 'Ma')
-                return {title: title, id: title.replace(/[ -]/g, '_'),
-                    rows: [{label:'this', value:ec.l10n.format(valThis, format), versus:[versus(valThis, valLast, 'last', format), versus(valThis, valAvg, 'avg', format)]},
-                           {label:'last', value:ec.l10n.format(valLast, format), versus:[versus(valLast, valPrior, 'prev', format), versus(valLast, valAvg, 'avg', format)]}],
+                const shown = ec.l10n.localize(title)
+                return {title: shown, detailTitle: ec.resource.expand('${panel.title} Detail', '', {panel: {title: shown}}), id: title.replace(/[ -]/g, '_'),
+                    rows: [{label:ec.l10n.localize('this'), value:ec.l10n.format(valThis, format), versus:[versus(valThis, valLast, ec.l10n.localize('last'), format), versus(valThis, valAvg, ec.l10n.localize('avg'), format)]},
+                           {label:ec.l10n.localize('last'), value:ec.l10n.format(valLast, format), versus:[versus(valLast, valPrior, ec.l10n.localize('prev'), format), versus(valLast, valAvg, ec.l10n.localize('avg'), format)]}],
                     smallConfig: trendConfig(labels, chartList, chartMaList, false), bigConfig: trendConfig(labels, chartList, chartMaList, true)}
             }
             const orderLines = [ordersThis, ordersLast, ordersPrior, ordersAverage]

@@ -4,6 +4,8 @@
 // is limited to the user's Warehouse facilities in the query; the moves themselves are Mantle's guarded
 // WarehouseTaskServices entry points, which the screens call after AccessServices.check#Record.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
+const labelOf = (table, key) => (table[key] != null ? L(table[key]) : key)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, denied, dateText, calendarDateText} = lib
 
@@ -173,7 +175,7 @@ function recentMoves() {
         recentRows: answers.map(({row, result}) => ({
             operationKey: result.operationKey,
             whenText: dateText(row.completedDate),
-            kindText: moveTypes[row.operationType] || row.operationType,
+            kindText: labelOf(moveTypes, row.operationType),
             recordText: result.containerId && !result.assetId ? "Container " + result.containerId : result.assetId || "",
             productName: products.get(result.productId) || result.productId || "",
             fromText: result.fromLocationSeqId || result.locationSeqId || "",

@@ -53,10 +53,10 @@ along with this software (see the LICENSE.md file). If not, see
         <iterate list="load?.centerList || []" entry="center">
             <iterate list="center.periodList || []" entry="period">
                 <script>loadRows.push(Object.assign({}, period, {facilityId: center.facilityId, facilityName: center.facilityName,
-                    plantName: center.plantName, slotsText: center.slotsConfigured ? String(center.parallelSlots) : '1 (not set)',
+                    plantName: center.plantName, slotsText: center.slotsConfigured ? String(center.parallelSlots) : ec.l10n.localize('1 (not set)'),
                     efficiencyPercent: center.efficiencyPercent, missingText: center.missingText,
                     overloadColor: period.overloaded ? 'negative' : 'positive',
-                    utilizationText: period.utilizationPercent == null ? 'No available hours' : period.utilizationPercent + '%'}))</script>
+                    utilizationText: period.utilizationPercent == null ? ec.l10n.localize('No available hours') : period.utilizationPercent + '%'}))</script>
             </iterate>
         </iterate>
         <set field="missingRows" from="(load?.centerList || []).filter((center) =&gt; (center.missingList || []).length)

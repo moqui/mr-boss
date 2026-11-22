@@ -96,8 +96,10 @@ along with this software (see the LICENSE.md file). If not, see
             assignValues = schedule ? {workingScheduleId: schedule.workingScheduleId} : {}
             previewValues = {workingScheduleId: workingScheduleId, previewPartyId: previewParty, previewFromDate: previewFromDate || null,
                 previewThruDate: previewThruDate || null}
-            headerCaption = schedule ? [schedule.organizationName, schedule.timeZone, schedule.weeklyHours + ' h a week',
-                schedule.holidayCalendarName ? 'Holidays: ' + schedule.holidayCalendarName : 'No holiday calendar'].join(' · ') : ''
+            headerCaption = schedule ? ec.resource.expand(schedule.holidayCalendarName
+                ? '${org} · ${zone} · ${hours} h a week · Holidays: ${calendar}'
+                : '${org} · ${zone} · ${hours} h a week · No holiday calendar', '', {
+                org: schedule.organizationName, zone: schedule.timeZone, hours: schedule.weeklyHours, calendar: schedule.holidayCalendarName}) : ''
         ]]></script>
     </actions>
     <widgets>

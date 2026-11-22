@@ -41,25 +41,25 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="llmBase" from="sharedLinks['System'] + '/Llm/'"/>
         <set field="open" from="can.agentAdmin &amp;&amp; can.system"/>
         <set field="agentLinks" from="[
-                {name: 'Models and endpoints', purpose: 'Models, endpoints and feature bindings', path: 'Models'},
-                {name: 'Tools and policies', purpose: 'Tool exposure, approval and policies', path: 'Tools'},
-                {name: 'Skills', purpose: 'Procedure skills', path: 'Skills'},
-                {name: 'Lessons', purpose: 'Lessons agents keep', path: 'Lessons'},
-                {name: 'Runs', purpose: 'Agent runs and their steps', path: 'Runs'},
-                {name: 'Approvals', purpose: 'Tool calls waiting for approval', path: 'Approvals'},
-                {name: 'Triggers', purpose: 'What starts an agent run', path: 'Triggers'},
-                {name: 'Remote agents', purpose: 'Remote MCP and A2A servers', path: 'Remote'},
-                {name: 'Gateway', purpose: 'The model gateway and its clients', path: 'Gateway'},
-                {name: 'Calls and usage', purpose: 'Model calls, tokens and cost', path: 'Usage'},
-                {name: 'Agent definitions', purpose: 'Surfaces, instructions, run-as user and cost limits', path: null},
-                {name: 'A2A tasks', purpose: 'Tasks other agents sent', path: null},
-                {name: 'Gateway client keys', purpose: 'A client key, shown once', path: null}
+                {name: ec.l10n.localize('Models and endpoints'), purpose: ec.l10n.localize('Models, endpoints and feature bindings'), path: 'Models'},
+                {name: ec.l10n.localize('Tools and policies'), purpose: ec.l10n.localize('Tool exposure, approval and policies'), path: 'Tools'},
+                {name: 'Skills', purpose: ec.l10n.localize('Procedure skills'), path: 'Skills'},
+                {name: 'Lessons', purpose: ec.l10n.localize('Lessons agents keep'), path: 'Lessons'},
+                {name: 'Runs', purpose: ec.l10n.localize('Agent runs and their steps'), path: 'Runs'},
+                {name: 'Approvals', purpose: ec.l10n.localize('Tool calls waiting for approval'), path: 'Approvals'},
+                {name: 'Triggers', purpose: ec.l10n.localize('What starts an agent run'), path: 'Triggers'},
+                {name: ec.l10n.localize('Remote agents'), purpose: ec.l10n.localize('Remote MCP and A2A servers'), path: 'Remote'},
+                {name: 'Gateway', purpose: ec.l10n.localize('The model gateway and its clients'), path: 'Gateway'},
+                {name: ec.l10n.localize('Calls and usage'), purpose: ec.l10n.localize('Model calls, tokens and cost'), path: 'Usage'},
+                {name: ec.l10n.localize('Agent definitions'), purpose: ec.l10n.localize('Surfaces, instructions, run-as user and cost limits'), path: null},
+                {name: ec.l10n.localize('A2A tasks'), purpose: ec.l10n.localize('Tasks other agents sent'), path: null},
+                {name: ec.l10n.localize('Gateway client keys'), purpose: ec.l10n.localize('A client key, shown once'), path: null}
             ].map(entry =&gt; Object.assign(entry, {
                 url: entry.path &amp;&amp; open ? llmBase + entry.path : '',
-                stateText: !entry.path ? 'Not available' : open ? '' : 'Opens in System for instance administrators'}))"/>
+                stateText: !entry.path ? ec.l10n.localize('Not available') : open ? '' : ec.l10n.localize('Opens in System for instance administrators')}))"/>
         <!-- P7: the Constitution every agent run gets, in Admin's canonical screen -->
-        <script>agentLinks.unshift({name: 'Constitution', purpose: 'The shared guidance every agent run gets, for the instance and each organization',
-            url: can.organizations ? sharedLinks['Settings/Constitution'] : '', stateText: can.organizations ? '' : 'For configuration administrators'})</script>
+        <script>agentLinks.unshift({name: ec.l10n.localize('Constitution'), purpose: ec.l10n.localize('The shared guidance every agent run gets, for the instance and each organization'),
+            url: can.organizations ? sharedLinks['Settings/Constitution'] : '', stateText: can.organizations ? '' : ec.l10n.localize('For configuration administrators')})</script>
     </actions>
     <widgets>
         <section name="Summary" condition="can.agentAdmin">

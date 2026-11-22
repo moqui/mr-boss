@@ -63,9 +63,9 @@ along with this software (see the LICENSE.md file). If not, see
                     ec.message.popErrors()
                 }
                 if (evaluationRefusal) evaluationRefusal = evaluationRefusal.includes('SOURCE_UNAVAILABLE')
-                    ? 'Not evaluated: its filter reads a source you cannot read in this organization, so no count is shown.'
-                    : evaluationRefusal.includes('AUDIENCE_TOO_LARGE') ? 'Not evaluated: the organization\'s audience is too large to evaluate here.'
-                    : 'Not evaluated: ' + evaluationRefusal.replace(/^Error: /, '')
+                    ? ec.l10n.localize('Not evaluated: its filter reads a source you cannot read in this organization, so no count is shown.')
+                    : evaluationRefusal.includes('AUDIENCE_TOO_LARGE') ? ec.l10n.localize('Not evaluated: the organization\'s audience is too large to evaluate here.')
+                    : ec.resource.expand('Not evaluated: ${reason}', '', {reason: evaluationRefusal.replace(/^Error: /, '')})
             ]]></script>
         </if>
         <set field="segment" from="detail?.segment || {}"/>

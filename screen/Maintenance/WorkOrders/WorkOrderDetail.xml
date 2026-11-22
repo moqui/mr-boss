@@ -72,9 +72,9 @@ along with this software (see the LICENSE.md file). If not, see
                         note:note, operationKey:operationKey}"/>
             <if condition="!ec.message.hasError()"><script><![CDATA[
                 const eventLink = '/qapps/Commons/Calendar/EventDetail?workEffortId=' + encodeURIComponent(videoCall.eventWorkEffortId)
-                ec.message.addMessage(videoCall.skippedCount ? 'Video call added; ' + videoCall.skippedCount + ' could not be invited'
-                        : 'Video call added and the invitations sent', videoCall.skippedCount ? 'warning' : 'success')
-                ec.message.addMessage('The call is in your calendar: ' + eventLink, 'info')
+                ec.message.addMessage(videoCall.skippedCount ? ec.resource.expand('Video call added; ${skippedCount} could not be invited', '', {skippedCount: videoCall.skippedCount})
+                        : ec.l10n.localize('Video call added and the invitations sent'), videoCall.skippedCount ? 'warning' : 'success')
+                ec.message.addMessage(ec.resource.expand('The call is in your calendar: ${eventLink}', '', {eventLink: eventLink}), 'info')
             ]]></script></if>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>

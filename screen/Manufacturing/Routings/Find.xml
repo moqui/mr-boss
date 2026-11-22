@@ -44,9 +44,10 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- each routing's outcome by name: ready or imported, and failed with its rows' messages -->
             <script><![CDATA[
             for (const version of imported.versionRows || []) {
-                if (version.status === 'failed') ec.message.addError(version.routingName + ' not imported: ' + version.messages.join('; '))
-                else if (version.status === 'ready') ec.message.addMessage(version.routingName + ' is ready: ' + version.lineCount + ' operations')
-                else ec.message.addMessage(version.routingName + ' imported as draft operations: ' + version.lineCount + ' operations')
+                const detail = version.messages.join('; ')
+                if (version.status === 'failed') ec.message.addError(ec.resource.expand('${name} not imported: ${detail}', '', {name: version.routingName, detail: detail}))
+                else if (version.status === 'ready') ec.message.addMessage(ec.resource.expand('${name} is ready: ${count} operations', '', {name: version.routingName, count: version.lineCount}))
+                else ec.message.addMessage(ec.resource.expand('${name} imported as draft operations: ${count} operations', '', {name: version.routingName, count: version.lineCount}))
             }
             ]]></script>
         </actions>

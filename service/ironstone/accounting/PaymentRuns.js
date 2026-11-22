@@ -10,7 +10,7 @@ const readsRuns = scope => ["apRead", "paymentRead", "reportRead", "admin", "sys
 // A page of the organization's runs, newest first, each with its bank account (masked), dates, total and progress.
 function runs(parameters) {
     const scope = lib.access(parameters)
-    if (!readsRuns(scope)) throw new Error("PERMISSION_DENIED: Payables or payment read authority is required")
+    if (!readsRuns(scope)) throw new Error(ec.l10n.localize("PERMISSION_DENIED: Payables or payment read authority is required"))
     const organizationPartyId = policy.organization(parameters).organizationPartyId
     const query = () => {
         let found = policy.find("mantle.account.payment.PaymentRun", {organizationPartyId})

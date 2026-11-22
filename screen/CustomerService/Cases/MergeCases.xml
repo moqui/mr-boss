@@ -96,10 +96,10 @@ along with this software (see the LICENSE.md file). If not, see
             </if>
         </if>
         <set field="mergePreview" from="previewOut?.preview || null"/>
-        <set field="mergeRows" from="mergePreview ? [Object.assign({}, mergePreview.target, {roleText: 'Kept'})].concat(mergePreview.sources.map((row) =&gt;
-                Object.assign({}, row, {roleText: 'Merged into it'}))).map((row) =&gt; Object.assign({}, row, {
-                messagesText: row.messageCount + ' (' + row.customerMessageCount + ' customer-visible, ' + row.internalMessageCount + ' internal)',
-                clocksText: row.openClockCount + ' running' + (row.breachedClockCount ? ', ' + row.breachedClockCount + ' breached' : '')})) : []"/>
+        <set field="mergeRows" from="mergePreview ? [Object.assign({}, mergePreview.target, {roleText: ec.l10n.localize('Kept')})].concat(mergePreview.sources.map((row) =&gt;
+                Object.assign({}, row, {roleText: ec.l10n.localize('Merged into it')}))).map((row) =&gt; Object.assign({}, row, {
+                messagesText: ec.resource.expand('$' + '{count} ($' + '{customer} customer-visible, $' + '{internal} internal)', '', {count: row.messageCount, customer: row.customerMessageCount, internal: row.internalMessageCount}),
+                clocksText: row.breachedClockCount ? ec.resource.expand('$' + '{open} running, $' + '{breached} breached', '', {open: row.openClockCount, breached: row.breachedClockCount}) : ec.resource.expand('$' + '{open} running', '', {open: row.openClockCount})})) : []"/>
         <set field="mergeSelection" from="{requestId:requestId || mergeTarget, targetRequestId:mergeTarget, sourceRequestIds:mergeSourceList,
                 reason:reason || ''}"/>
         <set field="mergeConfirm" from="{targetRequestId:mergeTarget, sourceIdsText:mergeSourceList.join(','), reason:reason || '',
@@ -117,8 +117,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box type="warning">
                     <box-header title="Not available"/>
                     <box-body>
-                        <label type="p" text="${!can.caseManage ? 'Merging cases is for service managers.'
-                                : 'Open the case to keep, then Merge cases from its More menu: case ' + mergeTarget + ' is not available to you.'}"/>
+                        <label type="p" text="${!can.caseManage ? ec.l10n.localize('Merging cases is for service managers.')
+                                : ec.resource.expand('Open the case to keep, then Merge cases from its More menu: case $' + '{requestId} is not available to you.', '', {requestId: mergeTarget})}"/>
                         <link url="../Cases" text="Back to Cases" link-type="anchor"/>
                     </box-body>
                 </container-box>

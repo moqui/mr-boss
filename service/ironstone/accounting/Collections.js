@@ -17,13 +17,13 @@ const calendarDay = value => (value == null || value === "" ? "" : policy.calend
 const inIds = (entity, field, ids, conditions = {}) =>
     ids.length ? array(policy.find(entity, conditions).condition(field, "in", ids).list()) : []
 const readsReceivables = scope => ["arRead", "reportRead", "admin", "systemAdmin"].some(name => scope.capabilities[name])
-const bucketLabels = {current: "Not yet due", d30: "1–30 days", d60: "31–60 days", d90: "61–90 days", over: "Over 90 days"}
+const bucketLabels = {current: ec.l10n.localize("Not yet due"), d30: ec.l10n.localize("1–30 days"), d60: ec.l10n.localize("31–60 days"), d90: ec.l10n.localize("61–90 days"), over: ec.l10n.localize("Over 90 days")}
 const bucketOf = days => (days <= 0 ? "current" : days <= 30 ? "d30" : days <= 60 ? "d60" : days <= 90 ? "d90" : "over")
 const promiseColors = {open: "primary", kept: "positive", broken: "negative", cancelled: "grey-7"}
 
 function receivableScope(parameters) {
     const scope = lib.access(parameters)
-    if (!readsReceivables(scope)) throw new Error("PERMISSION_DENIED: Receivables read authority is required")
+    if (!readsReceivables(scope)) throw new Error(ec.l10n.localize("PERMISSION_DENIED: Receivables read authority is required"))
     return Object.assign(scope, {organizationPartyId: policy.organization(parameters).organizationPartyId})
 }
 
@@ -199,7 +199,7 @@ function dunningRuns(parameters) {
 function policies(parameters) {
     const scope = lib.access(parameters)
     if (!scope.capabilities.admin && !scope.capabilities.systemAdmin)
-        throw new Error("PERMISSION_DENIED: Finance administration is required")
+        throw new Error(ec.l10n.localize("PERMISSION_DENIED: Finance administration is required"))
     const org = policy.organization(parameters).organizationPartyId
     const dated = ec.entity.conditionFactory.makeConditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
     const templates = Object.fromEntries(
@@ -331,10 +331,10 @@ function schedules(parameters) {
             recurrenceText: row.recurCronExpression,
             // auto-invoice bills each order made once it is approved, by the job or later by a person (impl-sales follow-up 2)
             autoInvoiceText: shopBaseIds.includes(row.orderId)
-                ? "Invoiced by the store at renewal"
+                ? ec.l10n.localize("Invoiced by the store at renewal")
                 : row.recurAutoInvoice === "Y"
-                  ? "Invoiced on approval"
-                  : "Not invoiced automatically",
+                  ? ec.l10n.localize("Invoiced on approval")
+                  : ec.l10n.localize("Not invoiced automatically"),
             lastOrderedText: row.lastOrderedDate ? policy.dateText(row.lastOrderedDate) : "",
             lastCopyId: copy?.orderId || "",
             lastInvoiceId: billing?.invoiceId || "",
@@ -355,7 +355,7 @@ function schedules(parameters) {
               resultText: run.hasError === "Y" ? "Failed: " + String(run.errors || "").slice(0, 200) : "Finished",
               failed: run.hasError === "Y"
           }
-        : {startText: "", endText: "", resultText: "The job has not run yet", failed: false}
+        : {startText: "", endText: "", resultText: ec.l10n.localize("The job has not run yet"), failed: false}
     return Object.assign(lib.paging(page, "schedules"), {
         scheduleRows,
         orderRows,

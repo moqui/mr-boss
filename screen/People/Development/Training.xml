@@ -90,11 +90,11 @@ along with this software (see the LICENSE.md file). If not, see
             stateColors = {scheduled: 'primary', running: 'warning', ended: 'grey-8', cancelled: 'negative'}
             findValues = {show: showing, trainingClassId: trainingClassId || null}
             newCourse = {organizationPartyId: people?.defaultOrganizationPartyId || null}
-            emptyText = showing == 'mine' ? 'You hold no training place yet. Upcoming lists the sessions you may ask for.'
-                : showing == 'training' ? 'You train no session.'
-                : showing == 'past' ? 'No past session.'
-                : canSchedule ? 'No session is scheduled. Schedule session plans one of a course; add the course first under Courses.'
-                : 'No session is scheduled for you yet.'
+            emptyText = showing == 'mine' ? ec.l10n.localize('You hold no training place yet. Upcoming lists the sessions you may ask for.')
+                : showing == 'training' ? ec.l10n.localize('You train no session.')
+                : showing == 'past' ? ec.l10n.localize('No past session.')
+                : canSchedule ? ec.l10n.localize('No session is scheduled. Schedule session plans one of a course; add the course first under Courses.')
+                : ec.l10n.localize('No session is scheduled for you yet.')
         ]]></script>
     </actions>
     <widgets>

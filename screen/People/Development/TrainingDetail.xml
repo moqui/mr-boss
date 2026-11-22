@@ -128,7 +128,7 @@ along with this software (see the LICENSE.md file). If not, see
             assessFormName = assessing && training?.assessmentFormId ? 'DbForm#' + training.assessmentFormId : 'AssessmentNone'
             // development and the trainer read every place; an approver the one they decide; the person their own
             placesTitle = found?.isDevelop || found?.isTrainer ? 'Enrollment'
-                : enrollmentRows.some(row => row.partyId != people?.partyId) ? 'Place to decide' : 'Your place'
+                : enrollmentRows.some(row => row.partyId != people?.partyId) ? ec.l10n.localize('Place to decide') : ec.l10n.localize('Your place')
             primaryRequest = !!found?.canRequest
             primaryEnroll = !primaryRequest && !!found?.canEnrollOthers
             trainingUrl = sharedLinks?.['Development/Training'] || null

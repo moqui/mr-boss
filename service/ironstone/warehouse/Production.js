@@ -7,6 +7,7 @@
 // receive#ProductionOutput), which runAction names for the screen's materialAction transition after check#Record of the
 // run with issue. This module is Packing.js sources' productionRun entry.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, rows, call, denied} = lib
 
@@ -151,7 +152,7 @@ function runSource(p, app = warehouseApp) {
         }))
         .concat(
             Array.from(order.receipts || []).map(row => ({
-                kind: row.kind === "output" ? (row.costProvisional ? "Output (provisional cost)" : "Output") : "Unused return",
+                kind: row.kind === "output" ? (row.costProvisional ? L("Output (provisional cost)") : "Output") : "Unused return",
                 productName: names.get(row.productId) || row.productId,
                 assetId: row.assetId,
                 lotId: row.lotId || "",
@@ -184,7 +185,7 @@ function runSource(p, app = warehouseApp) {
     )
     const standardText =
         run.productStandardCostId == null
-            ? "No approved standard: output is received at the issued cost, provisional"
+            ? L("No approved standard: output is received at the issued cost, provisional")
             : financial && run.standardUnitCost != null
               ? "Frozen standard " +
                 run.productStandardCostId +
@@ -208,15 +209,15 @@ function runSource(p, app = warehouseApp) {
                     .join(" · ") + (run.releaseDate ? " · released " + lib.dateText(run.releaseDate) : ""),
             statusText: statuses.get(run.statusId) || run.statusId,
             detailText: standardText,
-            emptyText: "This run has no material lines.",
+            emptyText: L("This run has no material lines."),
             actionText: "Issue",
-            submitText: "Issue component",
+            submitText: L("Issue component"),
             actionField: "asset",
             words: {
                 groupTitle: "Operation",
                 doneTitle: "Issued",
-                historyTitle: "Posted issues and receipts",
-                historyEmpty: "Nothing is issued to this run yet."
+                historyTitle: L("Posted issues and receipts"),
+                historyEmpty: L("Nothing is issued to this run yet.")
             },
             links
         },

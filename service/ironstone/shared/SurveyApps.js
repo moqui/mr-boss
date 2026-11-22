@@ -15,6 +15,7 @@
 // name mounts: the builder mounted again under one of the app's areas (the mounting screen's always-actions set surveyMount
 // to the mount's name), with its own purposes, edit capabilities (any one of which shows the edit actions), routes and words over the
 // app's (People's Development: the learning administrator's training assessments, impl-people P19 review).
+const L = text => ec.l10n.localize(text)
 const D = "mantle.party.FormDefinitionServices."
 // impl-marketing P12: Marketing's registration
 const M = "mantle.marketing.MarketingFormServices."
@@ -46,42 +47,42 @@ const marketingApp = {
         response: "Surveys/ResponseDetail"
     },
     words: {
-        listTitle: "Surveys and forms",
+        listTitle: L("Surveys and forms"),
         listCaption:
             "Marketing's surveys, lead forms and registration questions. A form changes by dated questions and options, so earlier answers keep the questions they answered; publish it to a site or to a campaign's list from Distribution.",
-        newButton: "New survey or form",
-        empty: "No survey or form yet. Make one with New survey or form, add its questions and publish them, then open Distribution to share it.",
-        formLabel: "Survey",
-        formsLink: "All surveys and forms",
+        newButton: L("New survey or form"),
+        empty: L("No survey or form yet. Make one with New survey or form, add its questions and publish them, then open Distribution to share it."),
+        formLabel: L("Survey"),
+        formsLink: L("All surveys and forms"),
         backLink: "Back to surveys and forms",
         unavailable: "it does not exist or is not one of your organization's Marketing forms.",
-        previewTitle: "Preview: what a respondent answers",
+        previewTitle: L("Preview: what a respondent answers"),
         previewCaption:
-            "The public page (PASS Marketing's SubmitForm) asks the published questions with these rules, and the server checks the answer again.",
+            L("The public page (PASS Marketing's SubmitForm) asks the published questions with these rules, and the server checks the answer again."),
         firstQuestion:
             "No question yet. Add the questions a respondent answers; a choice's options may carry scores (value | label | score).",
-        distributionLink: "Distribution: publish and share"
+        distributionLink: L("Distribution: publish and share")
     },
     accessRows: [
         {
-            who: "Content authors of its organization",
-            what: "Change and publish the form, and publish it to a site or a campaign",
-            how: "Marketing content edit (MARKETING_CONTENT_EDIT)"
+            who: L("Content authors of its organization"),
+            what: L("Change and publish the form, and publish it to a site or a campaign"),
+            how: L("Marketing content edit (MARKETING_CONTENT_EDIT)")
         },
         {
-            who: "Send authors",
-            what: "Make an invitation send to a campaign's list, approved and released as every send",
-            how: "Marketing send edit (MARKETING_SEND_EDIT)"
+            who: L("Send authors"),
+            what: L("Make an invitation send to a campaign's list, approved and released as every send"),
+            how: L("Marketing send edit (MARKETING_SEND_EDIT)")
         },
         {
-            who: "Audience and report readers",
+            who: L("Audience and report readers"),
             what: "Read the responses and their summary; respondents are named for audience readers only",
-            how: "MARKETING_AUDIENCE_VIEW or MARKETING_REPORT_VIEW"
+            how: L("MARKETING_AUDIENCE_VIEW or MARKETING_REPORT_VIEW")
         },
         {
             who: "A respondent",
-            what: "Answer on the public page, or once from their invitation link",
-            how: "The publication's site and access (PASS Marketing)"
+            what: L("Answer on the public page, or once from their invitation link"),
+            how: L("The publication's site and access (PASS Marketing)")
         }
     ]
 }
@@ -111,40 +112,40 @@ const apps = {
             response: "Reports/ResponseDetail"
         },
         words: {
-            listTitle: "Feedback forms",
+            listTitle: L("Feedback forms"),
             listCaption:
-                "The questions a customer answers once a case is resolved. A form changes by dated questions and options, so earlier answers keep the questions they answered.",
-            newButton: "New feedback form",
-            empty: "No feedback form yet: resolved cases ask nothing. Make one with New feedback form, publish it, then choose it in Service defaults.",
-            formLabel: "Feedback form",
-            formsLink: "All feedback forms",
-            backLink: "Back to feedback forms",
+                L("The questions a customer answers once a case is resolved. A form changes by dated questions and options, so earlier answers keep the questions they answered."),
+            newButton: L("New feedback form"),
+            empty: L("No feedback form yet: resolved cases ask nothing. Make one with New feedback form, publish it, then choose it in Service defaults."),
+            formLabel: L("Feedback form"),
+            formsLink: L("All feedback forms"),
+            backLink: L("Back to feedback forms"),
             unavailable: "it does not exist or is not one of your organization's feedback forms.",
-            previewTitle: "Preview: what the customer answers",
+            previewTitle: L("Preview: what the customer answers"),
             previewCaption:
-                "The customer's page (the Support app's Feedback) asks the published questions with these rules, and the server checks the answer again.",
-            firstQuestion: "No question yet. Add the rating first: a choice whose values are its scores."
+                L("The customer's page (the Support app's Feedback) asks the published questions with these rules, and the server checks the answer again."),
+            firstQuestion: L("No question yet. Add the rating first: a choice whose values are its scores.")
         },
         accessRows: [
             {
-                who: "Service administrators of its organization",
-                what: "Change and publish the form",
-                how: "Support policy edit (SUPPORT_POLICY_EDIT)"
+                who: L("Service administrators of its organization"),
+                what: L("Change and publish the form"),
+                how: L("Support policy edit (SUPPORT_POLICY_EDIT)")
             },
             {
-                who: "Service managers",
-                what: "Read the answers and their comments, follow up low scores",
-                how: "Support case manage (SUPPORT_CASE_MANAGE)"
+                who: L("Service managers"),
+                what: L("Read the answers and their comments, follow up low scores"),
+                how: L("Support case manage (SUPPORT_CASE_MANAGE)")
             },
             {
-                who: "The follow-up team",
+                who: L("The follow-up team"),
                 what: "Read the answers of the follow-ups it is given; comments only when the customer agreed to be contacted",
-                how: "Its team membership"
+                how: L("Its team membership")
             },
             {
-                who: "The customer",
-                what: "Answer once, from the invitation link",
-                how: "The invitation link (Support app, Feedback)"
+                who: L("The customer"),
+                what: L("Answer once, from the invitation link"),
+                how: L("The invitation link (Support app, Feedback)")
             }
         ]
     },
@@ -168,35 +169,35 @@ const apps = {
         capabilities: {context: "people", edit: "configure"},
         links: {forms: "Settings/Forms", formDetail: "Settings/FormDetail", responses: null, response: null},
         words: {
-            listTitle: "Forms",
+            listTitle: L("Forms"),
             listCaption:
                 "The private questionnaires People asks: interview scorecards, reviews, training assessments and exit interviews. Only the people a People record assigns answer one, never from a public or invitation link; a form changes by dated questions, so earlier answers keep the questions they answered.",
-            newButton: "New form",
+            newButton: L("New form"),
             empty: "No form yet. Make one with New form, add its questions and publish it; an opening's interviews then ask its scorecard.",
-            formLabel: "Form",
-            formsLink: "All forms",
-            backLink: "Back to forms",
+            formLabel: L("Form"),
+            formsLink: L("All forms"),
+            backLink: L("Back to forms"),
             unavailable: "it does not exist or is not one of your employers' People forms.",
-            previewTitle: "Preview: what the respondent answers",
+            previewTitle: L("Preview: what the respondent answers"),
             previewCaption:
-                "An assigned respondent answers the published questions with these rules in People (an interviewer on the application), and the server checks the answer again.",
-            firstQuestion: "No question yet. Add the questions the respondent answers."
+                L("An assigned respondent answers the published questions with these rules in People (an interviewer on the application), and the server checks the answer again."),
+            firstQuestion: L("No question yet. Add the questions the respondent answers.")
         },
         accessRows: [
             {
-                who: "The People administrator of its employer",
+                who: L("The People administrator of its employer"),
                 what: "Change and publish the form; a training assessment also the learning administrator",
                 how: "People configure (PEOPLE_CONFIGURE); a training assessment and a review form also People develop edit (PEOPLE_DEVELOP_EDIT)"
             },
             {
-                who: "Recruiters, development and HR readers of the employer",
+                who: L("Recruiters, development and HR readers of the employer"),
                 what: "Read the form; recruiters read every scorecard of their applications",
-                how: "The form's purpose (PEOPLE_RECRUIT_VIEW, PEOPLE_DEVELOP_VIEW, PEOPLE_HR_VIEW)"
+                how: L("The form's purpose (PEOPLE_RECRUIT_VIEW, PEOPLE_DEVELOP_VIEW, PEOPLE_HR_VIEW)")
             },
             {
-                who: "The assigned respondent",
-                what: "Answer once and read their own answer, never another's",
-                how: "Their assignment on the record (an interview's panel)"
+                who: L("The assigned respondent"),
+                what: L("Answer once and read their own answer, never another's"),
+                how: L("Their assignment on the record (an interview's panel)")
             }
         ],
         mounts: {
@@ -217,26 +218,26 @@ const apps = {
                     listCaption:
                         "The training assessments a trainer answers for each person they assess. A course or session names its form; the answers are read by development and the session's trainer, never by the person assessed, and a form changes by dated questions, so earlier answers keep the questions they answered.",
                     empty: "No assessment form yet. Make one with New form, add its questions and publish it; a course or session then names it.",
-                    formsLink: "All assessment forms",
-                    backLink: "Back to assessment forms",
+                    formsLink: L("All assessment forms"),
+                    backLink: L("Back to assessment forms"),
                     previewCaption:
-                        "The trainer answers the published questions with these rules in People (assessing a person enrolled), and the server checks the answer again."
+                        L("The trainer answers the published questions with these rules in People (assessing a person enrolled), and the server checks the answer again.")
                 },
                 accessRows: [
                     {
-                        who: "The learning administrator or the People administrator of its employer",
-                        what: "Change and publish the form",
-                        how: "People develop edit (PEOPLE_DEVELOP_EDIT) or People configure (PEOPLE_CONFIGURE)"
+                        who: L("The learning administrator or the People administrator of its employer"),
+                        what: L("Change and publish the form"),
+                        how: L("People develop edit (PEOPLE_DEVELOP_EDIT) or People configure (PEOPLE_CONFIGURE)")
                     },
                     {
-                        who: "Development readers of the employer",
-                        what: "Read the form and every assessment's answers on the session",
-                        how: "People develop view (PEOPLE_DEVELOP_VIEW)"
+                        who: L("Development readers of the employer"),
+                        what: L("Read the form and every assessment's answers on the session"),
+                        how: L("People develop view (PEOPLE_DEVELOP_VIEW)")
                     },
                     {
-                        who: "The session's trainer",
-                        what: "Answer it for each person they assess, and read their session's answers",
-                        how: "The session's trainer, while they work for its employer"
+                        who: L("The session's trainer"),
+                        what: L("Answer it for each person they assess, and read their session's answers"),
+                        how: L("The session's trainer, while they work for its employer")
                     }
                 ]
             },
@@ -256,26 +257,26 @@ const apps = {
                     listCaption:
                         "The questions of a review's self assessment, reviewer's assessment and feedback. A review template names its forms; the answers are read through the review (the person their own self assessment and, once released, the reviewer's), and a form changes by dated questions, so earlier answers keep the questions they answered.",
                     empty: "No review form yet. Make one with New form, add its questions and publish it; a review template then names it.",
-                    formsLink: "All review forms",
-                    backLink: "Back to review forms",
+                    formsLink: L("All review forms"),
+                    backLink: L("Back to review forms"),
                     previewCaption:
-                        "The person, the reviewer or a colleague asked for feedback answers the published questions with these rules in People (on the review), and the server checks the answer again."
+                        L("The person, the reviewer or a colleague asked for feedback answers the published questions with these rules in People (on the review), and the server checks the answer again.")
                 },
                 accessRows: [
                     {
-                        who: "The review administrator or the People administrator of its employer",
-                        what: "Change and publish the form",
-                        how: "People develop edit (PEOPLE_DEVELOP_EDIT) or People configure (PEOPLE_CONFIGURE)"
+                        who: L("The review administrator or the People administrator of its employer"),
+                        what: L("Change and publish the form"),
+                        how: L("People develop edit (PEOPLE_DEVELOP_EDIT) or People configure (PEOPLE_CONFIGURE)")
                     },
                     {
-                        who: "Development readers of the employer",
-                        what: "Read the form and every review's answers",
-                        how: "People develop view (PEOPLE_DEVELOP_VIEW)"
+                        who: L("Development readers of the employer"),
+                        what: L("Read the form and every review's answers"),
+                        how: L("People develop view (PEOPLE_DEVELOP_VIEW)")
                     },
                     {
-                        who: "The review's person, reviewer and the colleagues asked for feedback",
+                        who: L("The review's person, reviewer and the colleagues asked for feedback"),
                         what: "Answer their own step once; the person reads the reviewer's answers once released",
-                        how: "Their step on the review"
+                        how: L("Their step on the review")
                     }
                 ]
             }

@@ -131,14 +131,14 @@ along with this software (see the LICENSE.md file). If not, see
             previewFindings = Array.from(preview?.findings || [])
             const totals = preview?.totals
             totalRows = totals ? [
-                {label: 'Gross earnings', amount: totals.gross},
-                {label: 'Deductions', amount: totals.deductions},
-                {label: 'Localization, employee', amount: totals.localizationEmployee},
+                {label: ec.l10n.localize('Gross earnings'), amount: totals.gross},
+                {label: ec.l10n.localize('Deductions'), amount: totals.deductions},
+                {label: ec.l10n.localize('Localization, employee'), amount: totals.localizationEmployee},
                 {label: 'Net', amount: totals.net},
-                {label: 'Net payable, rounded to the currency', amount: totals.netPayable},
-                {label: 'Employer contributions', amount: totals.contributions},
-                {label: 'Localization, employer', amount: totals.localizationEmployer},
-                {label: 'Employer cost', amount: totals.employerCost}
+                {label: ec.l10n.localize('Net payable, rounded to the currency'), amount: totals.netPayable},
+                {label: ec.l10n.localize('Employer contributions'), amount: totals.contributions},
+                {label: ec.l10n.localize('Localization, employer'), amount: totals.localizationEmployer},
+                {label: ec.l10n.localize('Employer cost'), amount: totals.employerCost}
             ] : []
             previewCurrency = preview?.currencyUomId || structure?.currencyUomId
             for (const row of totalRows) row.currencyUomId = previewCurrency
@@ -150,7 +150,9 @@ along with this software (see the LICENSE.md file). If not, see
             approvalText = approval ? approval.statusText + (approval.waitingText ? ': ' + approval.waitingText : '') + ' · asked by ' +
                 approval.requestedByName + ' on ' + approval.requestedDateText + (approval.effectiveDateText ? ', from ' + approval.effectiveDateText : '') +
                 (approval.justification ? ' · ' + approval.justification : '') : ''
-            previewSummary = preview ? (preview.complete ? 'Complete' : 'Incomplete: a finding below blocks a result') + (preview.localizationName ? ' · ' + preview.localizationName : '') : ''
+            previewSummary = !preview ? '' : preview.localizationName
+                ? ec.resource.expand(preview.complete ? 'Complete · ${name}' : 'Incomplete: a finding below blocks a result · ${name}', '', {name: preview.localizationName})
+                : (preview.complete ? 'Complete' : ec.l10n.localize('Incomplete: a finding below blocks a result'))
         ]]></script>
     </actions>
     <widgets>

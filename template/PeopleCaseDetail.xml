@@ -73,7 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <set field="caseTasks" from="Array.from(caseOut.tasks || [])"/>
                         <set field="handlerOptions" from="Array.from(caseOut.handlerOptions || [])"/>
                         <set field="currentHandlers" from="Array.from(pc.handlers || []).map((one) =&gt; ({partyId: one.partyId, label: one.name}))"/>
-                        <set field="caseCaption" from="[pc.roleText, pc.organizationText, 'filed ' + pc.submittedDateText].filter(Boolean).join(' · ')"/>
+                        <set field="caseCaption" from="[pc.roleText, pc.organizationText, ec.resource.expand('filed $' + '{date}', '', {date: pc.submittedDateText})].filter(Boolean).join(' · ')"/>
                         <set field="moveValues" from="{requestId:requestId, expectedRevision:pc.revision}"/>
                         <set field="taskValues" from="{requestId:requestId}"/>
                     </actions>

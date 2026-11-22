@@ -41,9 +41,11 @@ along with this software (see the LICENSE.md file). If not, see
                 if (!ec.message.hasError()) {
                     const result = recorded.result || {}
                     if (result.resultCode === 'APPROVAL_REQUESTED') ec.message.addMessage(result.message, 'warning')
-                    else ec.message.addMessage('Recorded: good ' + result.good + ', held ' + result.held + ', remaining ' +
-                        result.remaining + (result.completed ? '; the work order is complete' : ''), 'success')
-                    if ((result.pendingLossIds || []).length) ec.message.addMessage('A loss waits for a supervisor\'s approval', 'warning')
+                    else ec.message.addMessage(ec.resource.expand(result.completed
+                        ? 'Recorded: good ${good}, held ${held}, remaining ${remaining}; the work order is complete'
+                        : 'Recorded: good ${good}, held ${held}, remaining ${remaining}', '',
+                        {good: result.good, held: result.held, remaining: result.remaining}), 'success')
+                    if ((result.pendingLossIds || []).length) ec.message.addMessage(ec.l10n.localize("A loss waits for a supervisor's approval"), 'warning')
                 }
             ]]></script>
         </actions>
@@ -59,8 +61,8 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{operationKey:operationKey, workEffortId:workEffortId, lossTypeEnumId:lossTypeEnumId,
                         productionRunLineId:productionRunLineId || null, assetId:assetId || null, quantity:quantity,
                         reasonCode:reasonCode || null, reason:reason || null, comments:comments || null}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage(recorded.result?.pendingApproval ? 'The loss waits for a supervisor\'s approval'
-                    : 'Loss ' + recorded.result?.productionLossId + ' recorded', recorded.result?.pendingApproval ? 'warning' : 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(recorded.result?.pendingApproval ? ec.l10n.localize("The loss waits for a supervisor's approval")
+                    : ec.resource.expand('Loss ${productionLossId} recorded', '', {productionLossId: recorded.result?.productionLossId}), recorded.result?.pendingApproval ? 'warning' : 'success')</script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>
@@ -73,8 +75,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.work.ProductionServices.change#ProductionQuantity" out-map="changed"
                     in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
                         productionRunLineId:productionRunLineId || null, targetQuantity:targetQuantity, reason:reason || null}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage('Target changed from ' + changed.result?.previousTarget + ' to ' +
-                    changed.result?.target, 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand('Target changed from ${previous} to ${target}', '',
+                    {previous: changed.result?.previousTarget, target: changed.result?.target}), 'success')</script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>
@@ -89,7 +91,7 @@ along with this software (see the LICENSE.md file). If not, see
                         productionRunLineId:productionRunLineId || null, lineRoleEnumId:lineRoleEnumId || null,
                         productId:productId || null, quantity:quantity || null, quantityUomId:quantityUomId || null,
                         remove:remove == 'true'}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage(remove == 'true' ? 'Output removed' : 'Output saved', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(remove == 'true' ? ec.l10n.localize('Output removed') : ec.l10n.localize('Output saved'), 'success')</script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>
@@ -104,7 +106,7 @@ along with this software (see the LICENSE.md file). If not, see
                         expectedRevision:expectedRevision, reason:reason || null, finishRemainder:finishRemainder == 'true',
                         acceptMaterialVariance:acceptMaterialVariance == 'true',
                         closeUnreportedOperations:closeUnreportedOperations == 'true'}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage('Work order ' + workEffortId + ' completed', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand('Work order ${workEffortId} completed', '', {workEffortId: workEffortId}), 'success')</script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>
@@ -119,7 +121,7 @@ along with this software (see the LICENSE.md file). If not, see
                         productionLossId:productionLossId || null,
                         productionQuantityEventId:productionQuantityEventId || null, decision:decision || 'approve',
                         reason:reason || null}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage(decided.result?.resultCode == 'REFUSED' ? 'Refused' : 'Approved', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(decided.result?.resultCode == 'REFUSED' ? ec.l10n.localize('Refused') : ec.l10n.localize('Approved'), 'success')</script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>

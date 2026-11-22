@@ -126,8 +126,8 @@ along with this software (see the LICENSE.md file). If not, see
             organizationScopes = Array.from(admin?.organizationPartyIds || []).map(partyId => Object.assign({partyId, name: nameOf(partyId)}, accessOf(partyId)))
                 .filter(row => row.canRead).sort((a, b) => String(a.name).localeCompare(String(b.name)))
             const editsGlobal = canManage && ec.user.hasPermission('ADMIN_CONSTITUTION_GLOBAL')
-            scopeOptions = [{key: 'global', text: 'Instance (every organization without its own)' + (editsGlobal ? '' : ' • read only')}]
-                .concat(organizationScopes.map(row => ({key: row.partyId, text: row.name + (canManage && row.canEdit ? '' : ' • read only')})))
+            scopeOptions = [{key: 'global', text: editsGlobal ? ec.l10n.localize('Instance (every organization without its own)') : ec.l10n.localize('Instance (every organization without its own) • read only')}]
+                .concat(organizationScopes.map(row => ({key: row.partyId, text: canManage && row.canEdit ? row.name : ec.resource.expand('${name} • read only', '', {name: row.name})})))
             if (!scope) {
                 const active = admin?.activeOrganizationPartyId
                 scope = organizationScopes.some(row => row.partyId === active) ? active
@@ -143,7 +143,7 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
             <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.ConstitutionServices.get#Constitution',
                     {scope:(isGlobal ? 'global' : null), organizationPartyId:(isGlobal ? null : scope), locale:(locale || null),
-                        includeDocument:(isGlobal &amp;&amp; canEdit)}, 'The Constitution is not available to you.')"/>
+                        includeDocument:(isGlobal &amp;&amp; canEdit)}, ec.l10n.localize('The Constitution is not available to you.'))"/>
             <set field="cons" from="called.out"/>
             <set field="consFailure" from="called.failure"/>
             <if condition="!isGlobal">
@@ -168,11 +168,12 @@ along with this software (see the LICENSE.md file). If not, see
             const change = Array.from(changeList)[0]
             const changedBy = change?.userId ? (ec.entity.find('moqui.security.UserAccount').condition('userId', change.userId).disableAuthz().one()?.userFullName || change.userId) : ''
             customized = isGlobal ? cons.customized == 'Y' : !!orgCons?.customized
-            sourceText = cons.available != 'Y' ? 'No Constitution is available.'
-                : !isGlobal ? (customized ? (scopeRow?.name || scope) + ' has its own Constitution; it replaces the instance Constitution for its members.'
-                    : (scopeRow?.name || scope) + ' uses the instance Constitution (' + (cons.customized == 'Y' ? "the instance's own" : 'the shipped one') + '); a change saves its own copy.')
+            const which = ec.l10n.localize(cons.customized == 'Y' ? "the instance's own" : 'the shipped one')
+            sourceText = cons.available != 'Y' ? ec.l10n.localize('No Constitution is available.')
+                : !isGlobal ? (customized ? ec.resource.expand('${name} has its own Constitution; it replaces the instance Constitution for its members.', '', {name: scopeRow?.name || scope})
+                    : ec.resource.expand('${name} uses the instance Constitution (${which}); a change saves its own copy.', '', {name: scopeRow?.name || scope, which: which}))
                 : ''
-            changeText = !isGlobal && customized && change ? 'Last changed ' + when(change.contentDate) + (changedBy ? ' by ' + changedBy : '') : ''
+            changeText = !isGlobal && customized && change ? (changedBy ? ec.resource.expand('Last changed ${when} by ${name}', '', {when: when(change.contentDate), name: changedBy}) : ec.resource.expand('Last changed ${when}', '', {when: when(change.contentDate)})) : ''
             hashText = (isGlobal ? cons.globalHash : orgCons?.contentHash) ? String(isGlobal ? cons.globalHash : orgCons.contentHash).substring(0, 12) : ''
             expectedHash = isGlobal ? cons.globalHash : orgCons?.contentHash
             diagnostics = (cons.diagnosticList || []).map(text => ({text}))

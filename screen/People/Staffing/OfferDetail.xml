@@ -111,11 +111,11 @@ along with this software (see the LICENSE.md file). If not, see
             headerCaption = offer ? [offer.positionName, offer.openingTitle, offer.organizationName].filter(Boolean).join(' · ') : ''
             // the offer's pay is opted out of AI (the user's call of Nov 12, 2026): an agent's render names none
             const payShown = offer?.paySees ? (sri.isAgentRender() ? 'Not shared with AI' : offer.payText || 'None')
-                : offer?.hasPayTerms ? 'Set by payroll' : 'Not set by payroll yet'
+                : offer?.hasPayTerms ? 'Set by payroll' : ec.l10n.localize('Not set by payroll yet')
             termRows = offer ? [['Position', offer.positionName], ['Department', offer.departmentName], ['Reports to', offer.managerName],
-                ['Work location', offer.facilityName], ['Working schedule', offer.scheduleName], ['Starts', offer.fromDateText],
-                ['Ends', offer.thruDateText || 'Open-ended'], ['Open until', offer.expireDateText], ['Pay', payShown],
-                ['Note for the letter', offer.note]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
+                ['Work location', offer.facilityName], [ec.l10n.localize('Working schedule'), offer.scheduleName], ['Starts', offer.fromDateText],
+                ['Ends', offer.thruDateText || 'Open-ended'], [ec.l10n.localize('Open until'), offer.expireDateText], ['Pay', payShown],
+                [ec.l10n.localize('Note for the letter'), offer.note]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
             answerRows = offer && offer.responseDateText ? [[offer.statusId == 'OfrDeclined' ? 'Declined' : 'Accepted', offer.responseDateText],
                 ['Note', offer.responseNote]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
             approval = offer?.approval || null

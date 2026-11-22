@@ -16,56 +16,66 @@ const sides = {
         read: ["arRead", "paymentRead", "reportRead", "admin", "systemAdmin"],
         edit: "arEdit",
         party: "Customer",
-        kinds: {invoice: "Invoice", credit: "Credit", payment: "Receipt", paymentTarget: "Payment"},
+        kinds: {
+            invoice: ec.l10n.localize("Invoice"),
+            credit: ec.l10n.localize("Credit"),
+            payment: ec.l10n.localize("Receipt"),
+            paymentTarget: ec.l10n.localize("Payment")
+        },
         invoiceDetail: "Receivables/InvoiceDetail",
         workbench: "Receivables/ReceivablesWorkbench",
-        title: "Allocate receipts and credits",
+        title: ec.l10n.localize("Allocate receipts and credits"),
         hint: "Choose a customer and currency. Balances are current; the dates limit the documents listed.",
-        sources: "Available receipts and credits",
-        sourceLabel: "Receipt or credit",
-        targetLabel: "Invoice or payment",
+        sources: ec.l10n.localize("Available receipts and credits"),
+        sourceLabel: ec.l10n.localize("Receipt or credit"),
+        targetLabel: ec.l10n.localize("Invoice or payment"),
         sourceRows: "Receipts",
         targetRows: "Invoices",
         targetPayments: "Payments",
-        resetHint: "Changing the customer, currency or dates starts a new selection.",
-        clearedHint: "The selection was cleared for the new customer, currency or dates."
+        resetHint: ec.l10n.localize("Changing the customer, currency or dates starts a new selection."),
+        clearedHint: ec.l10n.localize("The selection was cleared for the new customer, currency or dates.")
     },
     payable: {
         name: "Payable",
         read: ["apRead", "paymentRead", "reportRead", "admin", "systemAdmin"],
         edit: "apEdit",
         party: "Supplier",
-        kinds: {invoice: "Bill", credit: "Supplier credit", payment: "Payment", paymentTarget: "Supplier refund"},
+        kinds: {
+            invoice: ec.l10n.localize("Bill"),
+            credit: ec.l10n.localize("Supplier credit"),
+            payment: ec.l10n.localize("Payment"),
+            paymentTarget: ec.l10n.localize("Supplier refund")
+        },
         invoiceDetail: "Payables/BillDetail",
         workbench: "Payables/PayablesWorkbench",
-        title: "Apply supplier credits and payments",
+        title: ec.l10n.localize("Apply supplier credits and payments"),
         hint: "Choose a supplier and currency. Balances are current; a bill's discount is open through its date.",
-        sources: "Available payments and supplier credits",
-        sourceLabel: "Payment or supplier credit",
-        targetLabel: "Bill or supplier refund",
+        sources: ec.l10n.localize("Available payments and supplier credits"),
+        sourceLabel: ec.l10n.localize("Payment or supplier credit"),
+        targetLabel: ec.l10n.localize("Bill or supplier refund"),
         sourceRows: "Payments",
         targetRows: "Bills",
-        targetPayments: "Supplier refunds",
-        resetHint: "Changing the supplier, currency or dates starts a new selection.",
-        clearedHint: "The selection was cleared for the new supplier, currency or dates."
+        targetPayments: ec.l10n.localize("Supplier refunds"),
+        resetHint: ec.l10n.localize("Changing the supplier, currency or dates starts a new selection."),
+        clearedHint: ec.l10n.localize("The selection was cleared for the new supplier, currency or dates.")
     }
 }
 const sideOf = direction => sides[direction] || sides.receivable
 // The side a request names, receivables when it names none.
 function directionOf(parameters) {
     const direction = parameters.direction || "receivable"
-    if (!sides[direction]) throw new Error("Choose receivables or payables")
+    if (!sides[direction]) throw new Error(ec.l10n.localize("Choose receivables or payables"))
     return direction
 }
 
 function parseDraft(value) {
     if (value == null || value === "") return {allocations: [], adjustments: []}
-    if (typeof value !== "string" || value.length > maxDraftBytes) throw new Error("The settlement selection is too large")
+    if (typeof value !== "string" || value.length > maxDraftBytes) throw new Error(ec.l10n.localize("The settlement selection is too large"))
     const draft = JSON.parse(value)
     if (!draft || !Array.isArray(draft.allocations) || !Array.isArray(draft.adjustments))
         throw new Error("The settlement selection is not available; choose the open items again")
     if (draft.allocations.length > 200 || draft.adjustments.length > 50)
-        throw new Error("Choose at most 200 allocations and 50 adjustments")
+        throw new Error(ec.l10n.localize("Choose at most 200 allocations and 50 adjustments"))
     return {
         scope: draft.scope,
         allocations: draft.allocations.map((row, index) => ({
@@ -90,7 +100,7 @@ function selection(draft) {
     const add = token => {
         const item = itemToken(token)
         if (versions.has(item.key) && versions.get(item.key) !== item.version)
-            throw new Error("An item has different reviewed revisions. Choose it again in each allocation before previewing")
+            throw new Error(ec.l10n.localize("An item has different reviewed revisions. Choose it again in each allocation before previewing"))
         versions.set(item.key, item.version)
         return item
     }
@@ -98,12 +108,12 @@ function selection(draft) {
         const source = add(row.sourceToken),
             target = add(row.targetToken)
         if (!["payment", "credit"].includes(source.kind) || !["invoice", "paymentTarget"].includes(target.kind))
-            throw new Error("Choose a receipt or credit and an invoice or payment target")
+            throw new Error(ec.l10n.localize("Choose a receipt or credit and an invoice or payment target"))
         return {sourceKey: source.key, targetKey: target.key, amount: row.amount}
     })
     const adjustments = draft.adjustments.map(row => {
         const target = add(row.targetToken)
-        if (target.kind !== "invoice") throw new Error("Choose an invoice for the adjustment")
+        if (target.kind !== "invoice") throw new Error(ec.l10n.localize("Choose an invoice for the adjustment"))
         return {
             invoiceId: target.id,
             itemTypeEnumId: row.itemTypeEnumId,
@@ -112,16 +122,27 @@ function selection(draft) {
             reason: row.reason
         }
     })
-    if (versions.size > 200) throw new Error("Choose at most 200 distinct open items in one settlement")
+    if (versions.size > 200) throw new Error(ec.l10n.localize("Choose at most 200 distinct open items in one settlement"))
     return {allocations, adjustments, sourceVersions: Object.fromEntries(versions)}
 }
 
 function scope(parameters, edit = false) {
     const direction = directionOf(parameters),
         side = sideOf(direction)
-    const access = lib.access(parameters, side.read, side.name + " settlement read authority is required")
+    const access = lib.access(
+        parameters,
+        side.read,
+        ec.resource.expand(ec.l10n.localize("${name} settlement read authority is required"), "", {
+            name: ec.l10n.localize(side.name)
+        })
+    )
     const cap = access.capabilities
-    if (edit && !cap[side.edit]) throw new Error(side.name + " editing authority is required")
+    if (edit && !cap[side.edit])
+        throw new Error(
+            ec.resource.expand(ec.l10n.localize("${name} editing authority is required"), "", {
+                name: ec.l10n.localize(side.name)
+            })
+        )
     return {
         organizationPartyId: access.organizationPartyId,
         partyId: parameters.partyId || null,
@@ -171,7 +192,7 @@ function editDraft(parameters) {
     const list = adjustment ? draft.adjustments : draft.allocations
     const index = list.findIndex(row => row.rowId === parameters.rowId)
     if (/^remove/.test(action || "")) {
-        if (index < 0) throw new Error("The selected allocation is not available")
+        if (index < 0) throw new Error(ec.l10n.localize("The selected allocation is not available"))
         list.splice(index, 1)
     } else {
         const target = itemToken(parameters.targetToken)
@@ -184,23 +205,23 @@ function editDraft(parameters) {
                   reason: String(parameters.reason || "")
               }
             : {sourceToken: parameters.sourceToken, targetToken: parameters.targetToken, amount: String(parameters.amount ?? "")}
-        if (adjustment && target.kind !== "invoice") throw new Error("Choose an invoice for the adjustment")
+        if (adjustment && target.kind !== "invoice") throw new Error(ec.l10n.localize("Choose an invoice for the adjustment"))
         if (
             !adjustment &&
             (!["payment", "credit"].includes(itemToken(parameters.sourceToken).kind) ||
                 !["invoice", "paymentTarget"].includes(target.kind))
         )
-            throw new Error("Choose a receipt or credit and an invoice or payment target")
+            throw new Error(ec.l10n.localize("Choose a receipt or credit and an invoice or payment target"))
         if (/^update/.test(action || "")) {
-            if (index < 0) throw new Error("The selected allocation is not available")
+            if (index < 0) throw new Error(ec.l10n.localize("The selected allocation is not available"))
             list[index] = row
         } else if (/^add/.test(action || "")) list.push(row)
-        else throw new Error("Choose a settlement action")
+        else throw new Error(ec.l10n.localize("Choose a settlement action"))
     }
     if (draft.allocations.length > 200 || draft.adjustments.length > 50)
-        throw new Error("Choose at most 200 allocations and 50 adjustments")
+        throw new Error(ec.l10n.localize("Choose at most 200 allocations and 50 adjustments"))
     const draftJson = JSON.stringify(draft)
-    if (draftJson.length > maxDraftBytes) throw new Error("The settlement selection is too large")
+    if (draftJson.length > maxDraftBytes) throw new Error(ec.l10n.localize("The settlement selection is too large"))
     const stored = policy.call(native + "store#SettlementDraft", {
         draftId: parameters.draftId || null,
         organizationPartyId: current.organizationPartyId,
@@ -253,7 +274,10 @@ function reviewPresentation(retained, organizationPartyId = retained.organizatio
     const after = new Map(rows(retained.afterBalances).map(row => [row.sourceKey, row]))
     const labelFor = key => {
         const item = itemToken(key + "~retained")
-        return (side.kinds[item.kind] || "Document") + " " + item.id
+        return ec.resource.expand("${kind} ${id}", "", {
+            kind: side.kinds[item.kind] || ec.l10n.localize("Document"),
+            id: item.id
+        })
     }
     const results = {
         allocationResults: rows(retained.results?.allocationResults).map(row =>
@@ -272,8 +296,14 @@ function reviewPresentation(retained, organizationPartyId = retained.organizatio
         selectionThroughDate: retained.selectionThroughDateText || day(retained.selectionThroughDate),
         allocationRows: rows(retained.allocationRows).map(row =>
             Object.assign(row, {
-                sourceLabel: (side.kinds[row.sourceKind] || "Source") + " " + row.sourceId,
-                targetLabel: (side.kinds[row.targetKind] || "Document") + " " + row.targetId
+                sourceLabel: ec.resource.expand("${kind} ${id}", "", {
+                    kind: side.kinds[row.sourceKind] || ec.l10n.localize("Source"),
+                    id: row.sourceId
+                }),
+                targetLabel: ec.resource.expand("${kind} ${id}", "", {
+                    kind: side.kinds[row.targetKind] || ec.l10n.localize("Document"),
+                    id: row.targetId
+                })
             })
         ),
         adjustmentRows: rows(retained.adjustmentRows).map(row =>
@@ -283,7 +313,10 @@ function reviewPresentation(retained, organizationPartyId = retained.organizatio
         ),
         balanceRows: rows(retained.beforeBalances).map(row => ({
             sourceKey: row.sourceKey,
-            label: (side.kinds[row.sourceKind] || "Document") + " " + row.sourceId,
+            label: ec.resource.expand("${kind} ${id}", "", {
+                kind: side.kinds[row.sourceKind] || ec.l10n.localize("Document"),
+                id: row.sourceId
+            }),
             currencyUomId,
             beforeRemaining: row.remaining,
             afterRemaining: after.get(row.sourceKey)?.remaining
@@ -292,17 +325,15 @@ function reviewPresentation(retained, organizationPartyId = retained.organizatio
         hasResults,
         canReadLedger,
         canConfirm: retained.canApply === true && !hasResults,
-        confirmation:
-            "Apply this settlement for " +
-            (retained.partyName || retained.partyId || "") +
-            " on " +
-            (retained.accountingDateText || "") +
-            "?",
+        confirmation: ec.resource.expand(ec.l10n.localize("Apply this settlement for ${party} on ${date}?"), "", {
+            party: retained.partyName || retained.partyId || "",
+            date: retained.accountingDateText || ""
+        }),
         factRows: lib.factRows([
-            [side.party, retained.partyName || retained.partyId],
-            ["Settlement date", retained.accountingDateText],
-            ["Documents through", retained.selectionThroughDateText || shown.selectionThroughDateText],
-            ["Expires", shown.expiresDateText]
+            [ec.l10n.localize(side.party), retained.partyName || retained.partyId],
+            [ec.l10n.localize("Settlement date"), retained.accountingDateText],
+            [ec.l10n.localize("Documents through"), retained.selectionThroughDateText || shown.selectionThroughDateText],
+            [ec.l10n.localize("Expires"), shown.expiresDateText]
         ]),
         confirmParameters: {
             organizationPartyId,
@@ -344,7 +375,7 @@ function workbench(parameters) {
             ...draft.adjustments.map(row => itemToken(row.targetToken).key)
         ])
     )
-    if (selectedKeys.length > 200) throw new Error("Choose at most 200 distinct open items in one settlement")
+    if (selectedKeys.length > 200) throw new Error(ec.l10n.localize("Choose at most 200 distinct open items in one settlement"))
     const requested = !!(current.organizationPartyId && current.partyId && current.currencyUomId)
     const found = requested
         ? policy.call(
@@ -402,9 +433,9 @@ function workbench(parameters) {
             targetLabel: target.label,
             reviewNote:
                 source.unavailable || target.unavailable
-                    ? "A selected item is no longer available"
+                    ? ec.l10n.localize("A selected item is no longer available")
                     : source.changed || target.changed
-                      ? "An item changed; choose its current version before previewing"
+                      ? ec.l10n.localize("An item changed; choose its current version before previewing")
                       : "",
             sourceRemaining: source.remaining,
             targetRemaining: target.remaining,
@@ -433,7 +464,7 @@ function workbench(parameters) {
             draftAction: "updateAdjustment",
             targetLabel: tokenLabel(row.targetToken).label,
             kindLabel: adjustmentLabels[row.itemTypeEnumId] || row.itemTypeEnumId,
-            accountLabel: row.glAccountId ? accountLabels[row.glAccountId] || row.glAccountId : "Choose a posting account",
+            accountLabel: row.glAccountId ? accountLabels[row.glAccountId] || row.glAccountId : ec.l10n.localize("Choose a posting account"),
             currencyUomId: current.currencyUomId
         })
     )
@@ -525,7 +556,7 @@ function settlementReview(parameters) {
           )
         : null
     if (retained?.direction && retained.direction !== current.direction)
-        throw new Error("This review belongs to the other workbench")
+        throw new Error(ec.l10n.localize("This review belongs to the other workbench"))
     const reviewFound = !!retained?.previewId
     const selection = reviewFound ? retainedDraft(retained).scope : draftScope(current)
     const review = reviewPresentation(reviewFound ? retained : {}, current.organizationPartyId, current.direction)
@@ -555,7 +586,7 @@ function checkReviewCurrent(parameters) {
         organizationPartyId: current.organizationPartyId
     })
     if (retained?.results?.settlementId || draftStillReviewed(retained, parameters.draftId)) return {current: true}
-    throw new Error("STALE_REVIEW: The selection changed after this review was prepared. Go back to the selection and preview it again")
+    throw new Error(ec.l10n.localize("STALE_REVIEW: The selection changed after this review was prepared. Go back to the selection and preview it again"))
 }
 
 // The texts and paths of a side's workbench and review screens (template/AccountingWorkbench.xml).

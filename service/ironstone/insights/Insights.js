@@ -129,7 +129,7 @@ function scope() {
     }
 }
 function required(userScope = scope()) {
-    if (!userScope.read) denied("INSIGHTS_UNAVAILABLE", "Insights is not available")
+    if (!userScope.read) denied("INSIGHTS_UNAVAILABLE", ec.l10n.localize("Insights is not available"))
     return userScope
 }
 const sees = (userScope, partyId) => !userScope.ownerIds || (!!partyId && userScope.ownerIds.includes(partyId))
@@ -330,8 +330,8 @@ function reportPolicy(capabilities, settings) {
         features: {alert: !!(capabilities.author || capabilities.distribute), share: !!capabilities.author},
         range: {from: defaultRange.from, thru: defaultRange.thru},
         datasetIdPrefix: "insights-",
-        datasetScopeLabel: "Organization field",
-        datasetScopeHelp: "The field that carries each row's organization",
+        datasetScopeLabel: ec.l10n.localize("Organization field"),
+        datasetScopeHelp: ec.l10n.localize("The field that carries each row's organization"),
         recipientPermissionId: capabilityPermissions.view,
         reportEmailTemplateId: "BOSS_INSIGHTS_REPORT",
         alertAudience: {
@@ -339,7 +339,7 @@ function reportPolicy(capabilities, settings) {
             emailTemplateId: "BOSS_INSIGHTS_ALERT",
             detailLink: "/qapps/Insights/Alerts/AlertDetail"
         },
-        shareGroups: [{value: wallDisplayGroupId, label: "Wall displays"}],
+        shareGroups: [{value: wallDisplayGroupId, label: ec.l10n.localize("Wall displays")}],
         calendar: settings.displayTimeZone || weekOffset ? {timeZone: settings.displayTimeZone || null, weekOffset} : null
     }
 }
@@ -362,7 +362,7 @@ function scopeVariables(found, definition) {
 // currency; the organization in scope's display zone and week start where it set them) and the canonical links. A requested organization outside the user's is refused (ORGANIZATION_UNAVAILABLE), whether
 // or not it exists, so a forged id learns nothing.
 function context(p) {
-    if (p.appRoot && p.appRoot !== "Insights") denied("INSIGHTS_CONTEXT", "Insights context is not available")
+    if (p.appRoot && p.appRoot !== "Insights") denied("INSIGHTS_CONTEXT", ec.l10n.localize("Insights context is not available"))
     const userScope = required()
     const ids = organizationIds(userScope)
     const requested = p.organizationPartyId || null
@@ -453,7 +453,7 @@ function answering(parameters, read) {
         ec.logger.warn("Insights read refused or failed for " + ec.user.username + ": " + text)
         return {
             refusalCode: "FAILED",
-            refusal: /not authorized/i.test(text) ? "You may not read this" : "This could not be read now"
+            refusal: /not authorized/i.test(text) ? ec.l10n.localize("You may not read this") : ec.l10n.localize("This could not be read now")
         }
     }
 }

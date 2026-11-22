@@ -581,7 +581,7 @@ function selectedValues(value) {
         : String(value).startsWith("[")
           ? JSON.parse(String(value))
           : String(value).split(",")
-    if (!Array.isArray(parsed) || parsed.length > 200) throw new Error("Choose at most 200 records")
+    if (!Array.isArray(parsed) || parsed.length > 200) throw new Error(ec.l10n.localize("Choose at most 200 records"))
     return [...new Set(parsed.filter(value => value != null && value !== "").map(String))]
 }
 function paymentChoices(parameters, scope) {
@@ -606,7 +606,7 @@ function paymentChoices(parameters, scope) {
         if (result.complete === false || result.incomplete)
             options.push({
                 value: "unavailable:internalTransferFeeAccounts",
-                label: "Some transfer fee accounts are unavailable",
+                label: ec.l10n.localize("Some transfer fee accounts are unavailable"),
                 disable: true
             })
         return {options}
@@ -628,7 +628,7 @@ function paymentChoices(parameters, scope) {
         for (const row of [...Array.from(result.rows || []), ...Array.from(result.selectedRows || [])])
             if (!options.some(option => option.value === row.paymentId)) options.push({value: row.paymentId, label: label(row)})
         if (result.incomplete || result.complete === false)
-            options.push({value: "unavailable:payments", label: "Some payment choices are unavailable", disable: true})
+            options.push({value: "unavailable:payments", label: ec.l10n.localize("Some payment choices are unavailable"), disable: true})
         return {options}
     }
     if (parameters.choice === "paymentGatewayProviders") {
@@ -648,7 +648,7 @@ function paymentChoices(parameters, scope) {
         if (result.complete === false)
             options.push({
                 value: "unavailable:paymentGatewayProviders",
-                label: "Some provider choices are unavailable",
+                label: ec.l10n.localize("Some provider choices are unavailable"),
                 disable: true
             })
         return {options}
@@ -778,17 +778,32 @@ function settlementChoices(parameters, scope) {
         unavailable = []
     const labels =
         parameters.direction === "payable"
-            ? {payment: "Payment", credit: "Supplier credit", invoice: "Bill", paymentTarget: "Supplier refund"}
-            : {payment: "Receipt", credit: "Credit", invoice: "Invoice", paymentTarget: "Payment"}
+            ? {
+                  payment: ec.l10n.localize("Payment"),
+                  credit: ec.l10n.localize("Supplier credit"),
+                  invoice: ec.l10n.localize("Bill"),
+                  paymentTarget: ec.l10n.localize("Supplier refund")
+              }
+            : {
+                  payment: ec.l10n.localize("Receipt"),
+                  credit: ec.l10n.localize("Credit"),
+                  invoice: ec.l10n.localize("Invoice"),
+                  paymentTarget: ec.l10n.localize("Payment")
+              }
     const label = row =>
-        labels[row.sourceKind] +
-        " " +
-        row.sourceId +
-        " · " +
-        (row.counterpartyName || "") +
-        " · " +
-        ec.l10n.formatCurrency(row.remaining, row.currencyUomId) +
-        (row.dueDateText ? " · Due " + row.dueDateText : "")
+        ec.resource.expand(
+            ec.l10n.localize(
+                row.dueDateText ? "${kind} ${id} · ${name} · ${amount} · Due ${due}" : "${kind} ${id} · ${name} · ${amount}"
+            ),
+            "",
+            {
+                kind: labels[row.sourceKind],
+                id: row.sourceId,
+                name: row.counterpartyName || "",
+                amount: ec.l10n.formatCurrency(row.remaining, row.currencyUomId),
+                due: row.dueDateText || ""
+            }
+        )
     for (const sourceKind of kinds) {
         try {
             const result = probe("mantle.account.PaymentServices.find#OpenItems", {
@@ -803,7 +818,7 @@ function settlementChoices(parameters, scope) {
                 pageSize: choiceLimit,
                 selectedKeyList: selections.filter(item => item.kind === sourceKind).map(item => item.key)
             })
-            if (result.incomplete || result.complete === false) throw new Error("Authoritative balances are unavailable")
+            if (result.incomplete || result.complete === false) throw new Error(ec.l10n.localize("Authoritative balances are unavailable"))
             lists.push(Array.from(result.rows || []).map(row => ({value: row.sourceKey + "~" + row.version, label: label(row)})))
             selected.push(...Array.from(result.selectedRows || []))
         } catch (error) {
@@ -834,7 +849,7 @@ function settlementChoices(parameters, scope) {
 // or payment edit authority.
 function runBankAccounts(parameters, scope) {
     if (!scope.capabilities.apEdit && !scope.capabilities.paymentEdit && !scope.capabilities.admin)
-        throw new Error("PERMISSION_DENIED: Payables or payment edit authority is required")
+        throw new Error(ec.l10n.localize("PERMISSION_DENIED: Payables or payment edit authority is required"))
     const organizationPartyId = policy.organization(parameters).organizationPartyId
     const methods = policy
         .rows("mantle.account.method.PaymentMethod", {
@@ -966,7 +981,7 @@ function selectOrganization(parameters) {
     const scope = policy.access()
     const organizationPartyId = parameters.organizationPartyId || null
     if (organizationPartyId && !scope.organizationPartyIds.includes(organizationPartyId))
-        throw new Error("Accounting organization is not available")
+        throw new Error(ec.l10n.localize("Accounting organization is not available"))
     ec.user.setPreference("ACTIVE_ORGANIZATION", organizationPartyId)
     policy.call("mantle.party.PartyServices.setup#UserOrganizationInfo")
     return {organizationPartyId}

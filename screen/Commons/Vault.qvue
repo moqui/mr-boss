@@ -994,7 +994,7 @@ function fromBitwarden(json) {
         }
         if (item.type === 4 && item.identity) {
             const id = item.identity;
-            const doc = id.passportNumber ? ['Passport', id.passportNumber] : id.licenseNumber ? ['Driver license', id.licenseNumber] : id.ssn ? ['Social security number', id.ssn] : ['', ''];
+            const doc = id.passportNumber ? [t('Passport'), id.passportNumber] : id.licenseNumber ? [t('Driver license'), id.licenseNumber] : id.ssn ? [t('Social security number'), id.ssn] : ['', ''];
             const more = [id.email ? 'Email: ' + id.email : '', id.phone ? 'Phone: ' + id.phone : '', id.company ? 'Company: ' + id.company : '', id.username ? 'Username: ' + id.username : ''];
             return Object.assign(base, { type: 'identity', notes: [notes].concat(more).filter((line) => line).join('\n'),
                 fields: Object.assign(clean({ fullName: [id.title, id.firstName, id.middleName, id.lastName].filter((part) => part).join(' '), documentType: doc[0], documentNumber: doc[1],
@@ -1093,11 +1093,11 @@ function parseImport(text) {
         try { json = JSON.parse(trimmed); } catch (err) { throw new Error(t('The file is not JSON')); }
         if (json.format === 'moqui-vault-export') return { format: 'export', label: t('Encrypted vault export'), export: json, items: [] };
         if (json.encrypted) throw new Error(t('This Bitwarden export is encrypted. Export from Bitwarden again as JSON, not encrypted, to import it here.'));
-        if (Array.isArray(json.items)) return { format: 'bitwarden', label: 'Bitwarden (JSON)', items: fromBitwarden(json) };
+        if (Array.isArray(json.items)) return { format: 'bitwarden', label: t('Bitwarden (JSON)'), items: fromBitwarden(json) };
         throw new Error(t('This JSON file is not a Bitwarden export'));
     }
-    if (trimmed.startsWith('<')) return { format: 'keepass-xml', label: 'KeePass (XML)', items: fromKeePassXml(trimmed) };
-    return { format: 'csv', label: 'KeePass (CSV)', items: fromCsv(trimmed) };
+    if (trimmed.startsWith('<')) return { format: 'keepass-xml', label: t('KeePass (XML)'), items: fromKeePassXml(trimmed) };
+    return { format: 'csv', label: t('KeePass (CSV)'), items: fromCsv(trimmed) };
 }
 
 // ===== the session: one per page, shared with Commons › Contacts =====

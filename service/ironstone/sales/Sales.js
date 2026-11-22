@@ -129,7 +129,7 @@ function scope() {
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
 }
 function required(userScope = scope()) {
-    if (!userScope.read) denied("SALES_UNAVAILABLE", "Sales is not available")
+    if (!userScope.read) denied("SALES_UNAVAILABLE", ec.l10n.localize("Sales is not available"))
     return userScope
 }
 const likeText = text => "%" + String(text).replace(/[\\%_]/g, character => "\\" + character) + "%"
@@ -216,7 +216,7 @@ const linkPaths = [
 ]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Sales"
-    if (!Object.hasOwn(mountRoots, appRoot)) denied("SALES_CONTEXT", "Sales context is not available")
+    if (!Object.hasOwn(mountRoots, appRoot)) denied("SALES_CONTEXT", ec.l10n.localize("Sales context is not available"))
     const userScope = required()
     const mantle = userScope.mantle
     const ids = organizationIds(userScope)
@@ -970,7 +970,7 @@ recordKinds.agreement = {
         return {
             organizationPartyId: found.organizationPartyId,
             label: found.agreement.description || "Agreement " + agreementId,
-            detail: found.agreement.isTemplate === "Y" ? "Agreement template" : "Agreement",
+            detail: found.agreement.isTemplate === "Y" ? ec.l10n.localize("Agreement template") : ec.l10n.localize("Agreement"),
             accountPartyId: found.agreement.otherPartyId || null
         }
     }

@@ -42,8 +42,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.humanres.AttendanceServices.import#Records" out-map="imported"
                     in-map="{attendanceImportId:attendanceImportId}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(imported.importedCount + ' imported, ' + imported.skippedCount + ' already recorded or repeated, ' +
-                    imported.errorCount + ' not imported', imported.errorCount ? 'warning' : 'success')</script>
+                <script>ec.message.addMessage(ec.resource.expand('${imported} imported, ${skipped} already recorded or repeated, ${errors} not imported', '', {imported: imported.importedCount, skipped: imported.skippedCount, errors: imported.errorCount}), imported.errorCount ? 'warning' : 'success')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="attendanceImportId"/></default-response>

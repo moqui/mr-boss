@@ -7,6 +7,7 @@
 // AccessServices.check#Record. A kit's cost and a movement's value are read only with financial read; an invoice shows its
 // status only.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, rows, denied} = lib
 
@@ -92,12 +93,12 @@ function packagesOf(shipmentId) {
             shipmentPackageSeqId: row.shipmentPackageSeqId,
             packageNumber: index + 1,
             shipmentBoxTypeId: row.shipmentBoxTypeId || null,
-            boxText: boxes.get(row.shipmentBoxTypeId) || row.shipmentBoxTypeId || "No box type",
+            boxText: boxes.get(row.shipmentBoxTypeId) || row.shipmentBoxTypeId || L("No box type"),
             weight: row.weight == null ? null : number(row.weight),
             weightUomId: row.weightUomId || null,
             weightText:
                 row.weight == null
-                    ? "Not weighed"
+                    ? L("Not weighed")
                     : quantityText(row.weight) + " " + (units.get(row.weightUomId) || row.weightUomId || ""),
             contentRows: inside.map(content => ({
                 shipmentPackageSeqId: row.shipmentPackageSeqId,
@@ -134,7 +135,7 @@ function invoiceStates(shipmentId) {
 // The Pack task's read: for the pack capability only, on the desk and the Handheld mount alike (F291, P11's F263 rule).
 function packContext(p) {
     const userScope = warehouse.required(warehouse.scope())
-    if (!userScope.capabilities.pack) denied("PERMISSION_DENIED", "Packing needs the pack permission")
+    if (!userScope.capabilities.pack) denied("PERMISSION_DENIED", L("Packing needs the pack permission"))
     return contextOf(p)
 }
 // What the packing slip and MaterialIssueReceipt read as well: the shipment's lines, packages and kits.
@@ -325,7 +326,7 @@ function unitOptions(uomTypeEnumId) {
 function facilityBoxTypes(p) {
     const userScope = warehouse.required(warehouse.scope())
     const facility = facilityOf(userScope, p.facilityId)
-    if (!facility) denied("FACILITY_UNAVAILABLE", "Choose a facility")
+    if (!facility) denied("FACILITY_UNAVAILABLE", L("Choose a facility"))
     const all = boxTypes({facilityId: facility.facilityId})
     return {
         facilityBoxRows: all.boxRows.filter(row => row.usedHere),
@@ -384,15 +385,15 @@ function assemblySource(p) {
             title: "Kit assembly for shipment " + shipment.shipmentId,
             caption: (effort?.workEffortName || "No assembly work yet") + " · " + (facility.facilityName || facility.facilityId),
             statusText: effort ? statuses.get(effort.statusId) || effort.statusId : "Not started",
-            emptyText: "This shipment has no kit to assemble.",
+            emptyText: L("This shipment has no kit to assemble."),
             actionText: "Pack",
             submitText: "Pack component",
             actionField: "package",
             words: {
                 groupTitle: "Kit",
                 doneTitle: "Packed",
-                historyTitle: "Issues and kit receipts",
-                historyEmpty: "Nothing is issued to this kit yet."
+                historyTitle: L("Issues and kit receipts"),
+                historyEmpty: L("Nothing is issued to this kit yet.")
             },
             links: [
                 {
@@ -435,7 +436,7 @@ function assemblySource(p) {
                 receipts.map(row => {
                     const kit = asset(row.assetId)
                     return {
-                        kind: "Kit received",
+                        kind: L("Kit received"),
                         productName: names.get(row.productId) || row.productId,
                         assetId: row.assetId,
                         lotId: kit?.lotId || "",
@@ -484,8 +485,8 @@ const sources = {
 }
 function sourceOf(p) {
     const type = p.sourceType || "shipmentAssembly"
-    if (!sources[type]) denied("SOURCE_UNAVAILABLE", "This kind of material work is not available here")
-    if (!p.sourceId) denied("RECORD_REQUIRED", "Choose the material work")
+    if (!sources[type]) denied("SOURCE_UNAVAILABLE", L("This kind of material work is not available here"))
+    if (!p.sourceId) denied("RECORD_REQUIRED", L("Choose the material work"))
     return sources[type]
 }
 const materialSource = p => sourceOf(p).read(p)

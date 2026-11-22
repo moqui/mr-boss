@@ -26,7 +26,7 @@ const variantPolicy = ec.resource.script("component://mr-mantle/service/mantle/p
 const access = () => call(C + "get#CatalogAccess")
 function record(id, need = "read", entity = P + "Product") {
     const r = call(C + "get#CatalogRecord", {recordId: id, need, recordEntityName: entity, checkOnly: true}).record
-    if (!r) throw new Error("Catalog record is not available for this action")
+    if (!r) throw new Error(ec.l10n.localize("Catalog record is not available for this action"))
     return r
 }
 function readable(id, entity = P + "Product") {
@@ -34,7 +34,7 @@ function readable(id, entity = P + "Product") {
 }
 function scope(p, need = "catalogEdit") {
     const b = record(p.productId, need)
-    if (b.productTypeEnumId !== "PtVirtual") throw new Error("Choose a virtual product")
+    if (b.productTypeEnumId !== "PtVirtual") throw new Error(ec.l10n.localize("Choose a virtual product"))
     const cfg =
         b.ownerPartyId === "_NA_"
             ? {fromDate: null, settings: {batchLimit: 1000, copyFields: defaultCopy, copyCategoryMembers: false}}
@@ -63,17 +63,17 @@ function scope(p, need = "catalogEdit") {
                 if (readable(a.productFeatureId, F + "ProductFeature")) allowedFeatureIds.add(a.productFeatureId)
         }
     }
-    if (groups.some(id => !groupOptions.has(id))) throw new Error("Feature group is not available for this product")
+    if (groups.some(id => !groupOptions.has(id))) throw new Error(ec.l10n.localize("Feature group is not available for this product"))
     const requested = p.copyFieldsJson != null && p.copyFieldsJson !== "" ? parse(p.copyFieldsJson, []) : p.copyFields,
         copyFields = requested == null ? cfg.settings.copyFields : ids(requested)
     if (copyFields.some(f => !cfg.settings.copyFields.includes(f)))
-        throw new Error("A requested field is outside the organization copy allowlist")
+        throw new Error(ec.l10n.localize("A requested field is outside the organization copy allowlist"))
     const copyCategoryMembers =
         p.copyCategoryMembers == null
             ? cfg.settings.copyCategoryMembers
             : p.copyCategoryMembers === true || p.copyCategoryMembers === "Y" || p.copyCategoryMembers === "true"
     if (copyCategoryMembers && !cfg.settings.copyCategoryMembers)
-        throw new Error("Category copying is not enabled by variant policy")
+        throw new Error(ec.l10n.localize("Category copying is not enabled by variant policy"))
     return {
         b,
         cfg,
@@ -99,7 +99,7 @@ function preview(p) {
         if (r.existingProductId && !readable(r.existingProductId)) {
             r.existingProductId = null
             r.allowed = false
-            r.reason = "Existing combination is not available"
+            r.reason = ec.l10n.localize("Existing combination is not available")
         }
     // Feature extras are price data, including extras embedded in the feature choices.
     if (!access().capabilities.priceRead) {
@@ -119,8 +119,8 @@ function preview(p) {
 }
 function selected(p) {
     const sets = parse(p.selectedFeatureSetsJson, p.selectedFeatureSets)
-    if (!Array.isArray(sets) || sets.length === 0) throw new Error("Select at least one feature combination")
-    if (sets.length > 100000) throw new Error("Submit at most 100000 combinations in one durable operation")
+    if (!Array.isArray(sets) || sets.length === 0) throw new Error(ec.l10n.localize("Select at least one feature combination"))
+    if (sets.length > 100000) throw new Error(ec.l10n.localize("Submit at most 100000 combinations in one durable operation"))
     return [
         ...new Map(
             sets.map(v => {
@@ -133,7 +133,7 @@ function selected(p) {
 function generate(p) {
     const s = scope(p),
         sets = selected(p)
-    if (!p.previewRevision) throw new Error("Preview the selection before generating")
+    if (!p.previewRevision) throw new Error(ec.l10n.localize("Preview the selection before generating"))
     if (sets.length > s.cfg.settings.batchLimit)
         throw new Error("Selection exceeds the interactive limit; submit a durable batch")
     // The XML twin carries this durable result key across its redirect, including an interrupted response.
@@ -154,7 +154,7 @@ function generate(p) {
 }
 function operation(p, need = "read") {
     const row = one(P + "ProductCatalogOperation", {operationKey: p.operationKey})
-    if (!row || row.operationType !== "variants") throw new Error("Variant operation is not available")
+    if (!row || row.operationType !== "variants") throw new Error(ec.l10n.localize("Variant operation is not available"))
     record(row.productId, need)
     return row
 }
@@ -193,7 +193,7 @@ function startBatch(p) {
     const s = scope(p),
         sets = selected(p)
     if (!/^[A-Za-z0-9_.-]{1,40}$/.test(p.operationKey || ""))
-        throw new Error("Provide an operation key with 1–40 letters, numbers, dots, dashes or underscores")
+        throw new Error(ec.l10n.localize("Provide an operation key with 1–40 letters, numbers, dots, dashes or underscores"))
     const fresh = call(M + "preview#VariantProducts", Object.assign({}, s.args, {pageSize: 1}))
     if (!p.previewRevision || fresh.previewRevision !== p.previewRevision)
         throw new Error("Variant preview changed; preview again before queuing")
@@ -205,7 +205,7 @@ function startBatch(p) {
     const old = one(P + "ProductCatalogOperation", {operationKey: p.operationKey})
     if (old) {
         operation(p, "catalogEdit")
-        if (old.requestJson !== requestJson) throw new Error("Operation key is already bound to another selection")
+        if (old.requestJson !== requestJson) throw new Error(ec.l10n.localize("Operation key is already bound to another selection"))
         return getBatch(p)
     }
     call("create#" + P + "ProductCatalogOperation", {
@@ -231,7 +231,7 @@ function runItem(p) {
         item = find(P + "ProductCatalogOperationItem", {operationKey: p.operationKey, itemSeqId: p.itemSeqId})
             .forUpdate(true)
             .one()
-    if (!item) throw new Error("Operation item is not available")
+    if (!item) throw new Error(ec.l10n.localize("Operation item is not available"))
     if (item.result && item.result !== "failed") return {result: item.result}
     const saved = JSON.parse(op.requestJson).request,
         s = scope(saved),
@@ -242,7 +242,7 @@ function runItem(p) {
         })
     const out = call(M + "create#VariantProducts", args)
     if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
-    const r = out.results?.[0] || {result: "failed", error: "Variant produced no result"}
+    const r = out.results?.[0] || {result: "failed", error: ec.l10n.localize("Variant produced no result")}
     call("update#" + P + "ProductCatalogOperationItem", {
         operationKey: p.operationKey,
         itemSeqId: p.itemSeqId,

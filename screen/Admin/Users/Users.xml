@@ -85,7 +85,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <set field="bulk" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Lifecycle.js').bulkDisable({userIds:userIds, reason:reason})"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(bulk.doneCount + ' disabled' + (bulk.failedCount ? '; ' + bulk.failedCount + ' refused: ' + bulk.failures.join('; ') : ''),
+                <script>ec.message.addMessage(ec.resource.expand(bulk.failedCount ? '${count} disabled; ${failed} refused: ${why}' : '${count} disabled', '', {count: bulk.doneCount, failed: bulk.failedCount, why: bulk.failures.join('; ')}),
                     bulk.failedCount ? 'warning' : 'success')</script>
             </if>
         </actions>
@@ -96,7 +96,7 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
         <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.find#Users', {text:(text || null), organizationPartyId:(organizationPartyId || null), state:(state || null),
-                    pageIndex:(pageIndex || 0), pageSize:50}, 'Users are not available to you.')"/>
+                    pageIndex:(pageIndex || 0), pageSize:50}, ec.l10n.localize('Users are not available to you.'))"/>
         <set field="found" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <set field="users" from="(found?.userList || []).map(row => Object.assign({}, row, {

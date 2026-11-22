@@ -9,6 +9,7 @@
 // PrintServices; CarrierSetupServices), which the screens call after AccessServices.check#Record. Invoice amounts are read
 // only with financial read.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, rows, denied, call, probe} = lib
 
@@ -126,7 +127,7 @@ function lastPrintOf(prefix) {
 function shipContext(p) {
     const userScope = warehouse.required(warehouse.scope())
     const can = userScope.capabilities
-    if (!can.ship) denied("PERMISSION_DENIED", "Shipping needs the ship permission")
+    if (!can.ship) denied("PERMISSION_DENIED", L("Shipping needs the ship permission"))
     if (blank(p.shipmentId)) return Object.assign({found: false}, shipmentsToShip(userScope, p))
     const sh = outgoing(userScope, p.shipmentId)
     const shipment = sh.shipment
@@ -164,16 +165,16 @@ function shipContext(p) {
         const hasLabel = routeSeg.labelImage != null || !blank(routeSeg.labelUrl)
         return {
             shipmentPackageSeqId: row.shipmentPackageSeqId,
-            boxText: boxes.get(row.shipmentBoxTypeId) || "No box type",
+            boxText: boxes.get(row.shipmentBoxTypeId) || L("No box type"),
             weightText:
-                number(row.weight) > 0 ? quantityText(row.weight) + " " + (units.get(row.weightUomId) || "") : "Not weighed",
+                number(row.weight) > 0 ? quantityText(row.weight) + " " + (units.get(row.weightUomId) || "") : L("Not weighed"),
             weighed: number(row.weight) > 0,
             contentsText: contents
                 .filter(item => item.shipmentPackageSeqId === row.shipmentPackageSeqId)
                 .map(item => quantityText(item.quantity) + " × " + (productNames.get(item.productId) || item.productId))
                 .join(", "),
             trackingCode: routeSeg.trackingCode || null,
-            labelState: refunded ? "Refunded" : hasLabel ? "Label" : routeSeg.trackingCode ? "Tracking by hand" : "No label",
+            labelState: refunded ? "Refunded" : hasLabel ? L("Label") : routeSeg.trackingCode ? L("Tracking by hand") : "No label",
             hasLabel: hasLabel && !refunded,
             refunded,
             returnTrackingCode: routeSeg.returnTrackingCode || null,
@@ -226,7 +227,7 @@ function shipContext(p) {
                   shipmentMethodEnumId: segment.shipmentMethodEnumId || null,
                   methodText: segment.shipmentMethodEnumId
                       ? enumTexts([segment.shipmentMethodEnumId]).get(segment.shipmentMethodEnumId)
-                      : "Not chosen",
+                      : L("Not chosen"),
                   actualCostText: segment.actualCost != null ? String(segment.actualCost) + " " + (segment.costUomId || "") : null
               }
             : null,
@@ -295,7 +296,7 @@ function shipmentsToShip(userScope, p) {
 function labelDocument(p) {
     const userScope = warehouse.required(warehouse.scope())
     if (!userScope.capabilities.ship && !userScope.capabilities.pack)
-        denied("PERMISSION_DENIED", "Labels need the ship permission")
+        denied("PERMISSION_DENIED", L("Labels need the ship permission"))
     const sh = outgoing(userScope, p.shipmentId)
     const routeSeg = rows(ROUTE_SEG, {shipmentId: sh.shipment.shipmentId, shipmentPackageSeqId: p.shipmentPackageSeqId})[0]
     const bytes = p.returnLabel === "Y" ? routeSeg?.returnLabelImage : routeSeg?.labelImage
@@ -382,7 +383,7 @@ function tracking(p) {
         carrierName: carrierName(names, row.carrierPartyId),
         trackingCode: row.trackingCode || "",
         trackingUrl: row.trackingUrl || null,
-        statusText: row.trackingStatusEnumId ? statuses.get(row.trackingStatusEnumId) : "No event yet",
+        statusText: row.trackingStatusEnumId ? statuses.get(row.trackingStatusEnumId) : L("No event yet"),
         subStatus: row.trackingSubStatus || "",
         delivered: row.trackingStatusEnumId === "ShTsDelivered",
         exception: ["ShTsFailure", "ShTsReturned"].includes(row.trackingStatusEnumId),
@@ -442,7 +443,7 @@ function carrierSetup(p) {
                               item.shippingGatewayConfigId
                       )
                       .join(", ")
-                : "No gateway: local rules and tracking by hand"
+                : L("No gateway: local rules and tracking by hand")
         }
     })
     const actions = g =>
@@ -451,8 +452,8 @@ function carrierSetup(p) {
             ["Labels", g.requestLabelsServiceName],
             ["Refunds", g.refundLabelsServiceName],
             ["Tracking", g.trackLabelsServiceName],
-            ["Address check", g.validateAddressServiceName],
-            ["Lookup after a timeout", g.findLabelServiceName]
+            [L("Address check"), g.validateAddressServiceName],
+            [L("Lookup after a timeout"), g.findLabelServiceName]
         ]
             .filter(pair => !blank(pair[1]))
             .map(pair => pair[0])
@@ -577,7 +578,7 @@ function printerIndex(p) {
 function facilityPrinters(p) {
     const userScope = warehouse.required(warehouse.scope())
     const facility = facilityOf(userScope, p.facilityId)
-    if (!facility) denied("FACILITY_UNAVAILABLE", "Choose a facility")
+    if (!facility) denied("FACILITY_UNAVAILABLE", L("Choose a facility"))
     const index = printerIndex({facilityId: facility.facilityId})
     return Object.assign(index, {facilityId: facility.facilityId, canEdit: !!userScope.capabilities.facilityEdit})
 }
@@ -604,7 +605,7 @@ function labelSheet(p) {
     }
     const kind = p.kind
     if (kind === "location") {
-        if (!facility) denied("FACILITY_UNAVAILABLE", "Choose a facility")
+        if (!facility) denied("FACILITY_UNAVAILABLE", L("Choose a facility"))
         let query = find("mantle.facility.FacilityLocation", {facilityId: facility.facilityId}).condition(
             "thruDate",
             "is-null",
@@ -659,13 +660,13 @@ function labelSheet(p) {
                 row.maxWeight != null ? "up to " + quantityText(row.maxWeight) : ""
             ])
         }
-    } else denied("KIND_INVALID", "Choose a kind of label")
+    } else denied("KIND_INVALID", L("Choose a kind of label"))
     const titles = {
-        location: "Location labels",
-        lot: "Lot labels",
-        serial: "Serial labels",
-        container: "Container labels",
-        box: "Box labels"
+        location: L("Location labels"),
+        lot: L("Lot labels"),
+        serial: L("Serial labels"),
+        container: L("Container labels"),
+        box: L("Box labels")
     }
     return {kind, title: titles[kind], facilityId: facility?.facilityId || null, labels}
 }
@@ -675,7 +676,7 @@ function labelSheet(p) {
 function manifest(p) {
     const userScope = warehouse.required(warehouse.scope())
     const facility = facilityOf(userScope, p.facilityId)
-    if (!facility) denied("FACILITY_UNAVAILABLE", "Choose a facility")
+    if (!facility) denied("FACILITY_UNAVAILABLE", L("Choose a facility"))
     const day = blank(p.day) ? todayText() : String(p.day).slice(0, 10)
     const from = ec.l10n.parseTimestamp(day + " 00:00:00", "yyyy-MM-dd HH:mm:ss")
     const thru = new Date(lib.ms(from) + 86400000)
@@ -715,14 +716,14 @@ function manifest(p) {
             methodText: methodTexts.get(row.shipmentMethodEnumId) || "",
             trackingCode: row.trackingCode || "",
             weightText: pkg?.weight != null ? quantityText(pkg.weight) + " " + (units.get(pkg.weightUomId) || "") : "",
-            stateText: row.statusId === "ShipPacked" ? "Waiting for pickup" : "Shipped"
+            stateText: row.statusId === "ShipPacked" ? L("Waiting for pickup") : L("Shipped")
         }
     })
     return {
         facilityId: facility.facilityId,
         facilityName: facility.facilityName || facility.facilityId,
         day,
-        carrierName: blank(p.carrierPartyId) ? "Every carrier" : carrierName(names, p.carrierPartyId),
+        carrierName: blank(p.carrierPartyId) ? L("Every carrier") : carrierName(names, p.carrierPartyId),
         manifestRows,
         packageCount: manifestRows.length
     }
@@ -801,13 +802,13 @@ function invoiceEvidence(p) {
         financialRead,
         invoice: {
             invoiceId: invoice.invoiceId,
-            typeText: typeTexts.get(invoice.invoiceTypeEnumId) || "Invoice",
+            typeText: typeTexts.get(invoice.invoiceTypeEnumId) || L("Invoice"),
             statusText: statusTexts([invoice.statusId]).get(invoice.statusId) || invoice.statusId,
             fromName: names[invoice.fromPartyId] || invoice.fromPartyId || "",
             toName: names[invoice.toPartyId] || invoice.toPartyId || "",
             invoiceDateText: invoice.invoiceDate ? lib.bookDay(null, invoice.invoiceDate) : "",
             dueDateText: invoice.dueDate ? lib.bookDay(null, invoice.dueDate) : "",
-            postedText: posted.some(row => row.isPosted === "Y") ? "Posted" : posted.length ? "Not posted yet" : "No posting"
+            postedText: posted.some(row => row.isPosted === "Y") ? L("Posted") : posted.length ? L("Not posted yet") : "No posting"
         },
         lineRows,
         shipmentRows: shipments.map(row => ({

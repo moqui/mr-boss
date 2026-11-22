@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Automations" default-menu-index="5" menu-image="sym_o_route" menu-image-type="icon">
     <always-actions>
-        <script>if(!marketing.capabilities.automations)throw new Error('PERMISSION_DENIED: Automations are for the Marketing authors, approvers, dispatchers and audience managers')</script>
+        <script>if(!marketing.capabilities.automations)throw new Error(ec.l10n.localize('PERMISSION_DENIED: Automations are for the Marketing authors, approvers, dispatchers and audience managers'))</script>
     </always-actions>
     <subscreens default-item="Automations" always-use-full-path="true">
         <subscreens-item name="Automations" location="component://mr-boss/screen/Marketing/Automations/Automations.xml" menu-index="1"/>

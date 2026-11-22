@@ -22,12 +22,12 @@ const openReceiptStatuses = ["ShipInput", "ShipScheduled", "ShipShipped"]
 const openInspectionStatuses = ["QiDraft", "QiSubmitted", "QiVerified"]
 // the Receipts list's views (design §9 Receipts: expected, partial, late, held and completed)
 const views = {
-    open: {label: "Expected", test: line => line.open},
-    partial: {label: "Partly received", test: line => line.open && line.receivedQuantity.compare(0) > 0},
-    late: {label: "Late", test: line => line.late},
+    open: {label: ec.l10n.localize("Expected"), test: line => line.open},
+    partial: {label: ec.l10n.localize("Partly received"), test: line => line.open && line.receivedQuantity.compare(0) > 0},
+    late: {label: ec.l10n.localize("Late"), test: line => line.late},
     held: {label: "Held", test: line => line.heldQuantity != null && line.heldQuantity.compare(0) > 0},
-    completed: {label: "Completed", closed: true, test: line => !line.open},
-    all: {label: "All", closed: true, test: () => true}
+    completed: {label: ec.l10n.localize("Completed"), closed: true, test: line => !line.open},
+    all: {label: ec.l10n.localize("All"), closed: true, test: () => true}
 }
 const stateColors = {late: "negative", held: "warning", partial: "primary", expected: "grey-8", completed: "positive"}
 const receiptColors = {
@@ -60,7 +60,7 @@ function namesOf(entity, field, nameField, values) {
 // ===== scope =====
 function listScope() {
     const userScope = purchasing.required()
-    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", "Receiving is not available")
+    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("Receiving is not available"))
     return userScope
 }
 const internalIds = () => rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(row => row.partyId)
@@ -68,7 +68,7 @@ const internalIds = () => rows("mantle.party.PartyRole", {roleTypeId: "OrgIntern
 function buyersOf(userScope, organizationPartyId) {
     const all = userScope.ownerIds || internalIds()
     if (blank(organizationPartyId)) return all
-    if (!purchasing.owns(userScope, organizationPartyId)) denied("RECORD_UNAVAILABLE", "The organization is not available")
+    if (!purchasing.owns(userScope, organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("The organization is not available"))
     return [String(organizationPartyId)]
 }
 // The suppliers the user may not work with (owned by another organization, or by none), left out of every list in the query.
@@ -217,7 +217,7 @@ function shapeLines(lines) {
                 late: "Late",
                 held: "Held",
                 completed: "Completed",
-                partial: "Partly received",
+                partial: ec.l10n.localize("Partly received"),
                 expected: "Expected"
             }[state],
             stateColor: stateColors[state],
@@ -533,7 +533,7 @@ function inspectionDetail(p) {
         items: Array.from(found.items || []).map(item =>
             Object.assign({}, item, {
                 readingStateText: item.missing
-                    ? "Reading needed"
+                    ? ec.l10n.localize("Reading needed")
                     : item.failCount
                       ? item.failCount + " failed"
                       : item.readingCount

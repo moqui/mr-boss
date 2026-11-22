@@ -95,10 +95,10 @@ function hrEditorOf(change) {
 // request#Provisioning: a hire HR asked an account for.
 function requestProvisioning(p) {
     const change = changeOf(p.employmentChangeId)
-    if (!change || change.changeKindEnumId !== "EckHire") return refused("NOT_A_HIRE", "Not a hire")
-    if (change.accessRequested !== "Y") return refused("NOT_REQUESTED", "The hire asked for no account")
+    if (!change || change.changeKindEnumId !== "EckHire") return refused("NOT_A_HIRE", ec.l10n.localize("Not a hire"))
+    if (change.accessRequested !== "Y") return refused("NOT_REQUESTED", ec.l10n.localize("The hire asked for no account"))
     // as a hire not found, so a caller learns nothing of another employer's hires
-    if (!hrEditorOf(change)) return refused("NOT_A_HIRE", "Not a hire")
+    if (!hrEditorOf(change)) return refused("NOT_A_HIRE", ec.l10n.localize("Not a hire"))
     const proposed = proposal(p.bundleGroupIdList)
     if (proposed.refusal) {
         noteFailure(change.employmentChangeId, proposed.refusal)
@@ -116,7 +116,7 @@ function requestProvisioning(p) {
 // request#AccessEnd: a separation applied (any other change is no access end, answered quietly).
 function requestAccessEnd(p) {
     const change = changeOf(p.employmentChangeId)
-    if (!change || change.changeKindEnumId !== "EckSeparation") return refused("NOT_A_SEPARATION", "Not a separation")
+    if (!change || change.changeKindEnumId !== "EckSeparation") return refused("NOT_A_SEPARATION", ec.l10n.localize("Not a separation"))
     const out = request("mantle.party.IdentityServices.request#AccessEnd", {
         employmentChangeId: change.employmentChangeId,
         operationKey: text(p.operationKey) || null,
@@ -130,7 +130,7 @@ function requestAccessEnd(p) {
 const operations = {requestProvisioning, requestAccessEnd}
 ;({
     execute: (op, parameters) => {
-        if (!Object.hasOwn(operations, op)) throw new Error("Unknown provisioning operation " + op)
+        if (!Object.hasOwn(operations, op)) throw new Error(ec.resource.expand("Unknown provisioning operation ${name}", "", {name: op}))
         return operations[op](parameters || {})
     },
     defaultProposal

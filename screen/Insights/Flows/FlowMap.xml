@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.insights.FlowMapServices.copy#Map" out-map="copied"
                     in-map="{sourceDefinitionId:sourceDefinitionId, sourceVersion:sourceVersion, organizationPartyId:copyOrganizationPartyId,
                         title:copyTitle, userGroupId:(copyUserGroupId || null)}"/>
-            <script>ec.message.addMessage(copied.applied ? 'Copied: rename its steps and link your procedures' : copied.reason,
+            <script>ec.message.addMessage(copied.applied ? ec.l10n.localize('Copied: rename its steps and link your procedures') : copied.reason,
                 copied.applied ? 'success' : 'danger')</script>
             <set field="definitionId" from="copied.applied ? copied.definitionId : sourceDefinitionId"/>
         </actions>
@@ -47,7 +47,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="setDefault" method="post">
         <actions>
             <service-call name="ironstone.insights.FlowMapServices.store#DefaultMap" in-map="{definitionId:definitionId}" out-map="stored"/>
-            <script>ec.message.addMessage(stored.applied ? 'Business flows now opens on this map for you' : stored.reason,
+            <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Business flows now opens on this map for you') : stored.reason,
                 stored.applied ? 'success' : 'danger')</script>
         </actions>
         <default-response url="."><parameter name="definitionId"/></default-response>

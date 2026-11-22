@@ -46,13 +46,13 @@ along with this software (see the LICENSE.md file). If not, see
                 }
                 const line = (cells) => cells.map(cell).join(',')
                 const costs = exported.costs
-                const lines = [line(['Maintenance costs', costs.asOfText]),
-                    line(['Options', Object.entries(options).filter(([, value]) => value != null && value !== '').map(([key, value]) => key + '=' + value).join('; ') || 'none'])]
-                lines.push(line(['Currency', 'Parts', 'Labor', 'Outside service', 'Total', 'Ordered, not accepted']))
+                const lines = [line([ec.l10n.localize('Maintenance costs'), costs.asOfText]),
+                    line([ec.l10n.localize('Options'), Object.entries(options).filter(([, value]) => value != null && value !== '').map(([key, value]) => key + '=' + value).join('; ') || 'none'])]
+                lines.push(line([ec.l10n.localize('Currency'), ec.l10n.localize('Parts'), ec.l10n.localize('Labor'), ec.l10n.localize('Outside service'), ec.l10n.localize('Total'), ec.l10n.localize('Ordered, not accepted')]))
                 for (const row of costs.totalList) lines.push(line([row.currencyUomId, row.parts, row.labor, row.outside, row.total, row.pending]))
-                lines.push(line(['Hours not approved', costs.unapprovedHoursText]), line(['Hours with no costing rate', costs.unpricedHoursText]), '')
-                lines.push(line(['Work order', 'Name', 'Component', 'Source', 'Source id', 'Step', 'Date', 'What', 'Quantity or hours', 'Costing rate',
-                    'Amount', 'Currency', 'Not counted', 'State', 'Cost centre', 'Project']))
+                lines.push(line([ec.l10n.localize('Hours not approved'), costs.unapprovedHoursText]), line([ec.l10n.localize('Hours with no costing rate'), costs.unpricedHoursText]), '')
+                lines.push(line([ec.l10n.localize('Work order'), ec.l10n.localize('Name'), ec.l10n.localize('Component'), ec.l10n.localize('Source'), ec.l10n.localize('Source id'), ec.l10n.localize('Step'), ec.l10n.localize('Date'), ec.l10n.localize('What'), ec.l10n.localize('Quantity or hours'), ec.l10n.localize('Costing rate'),
+                    ec.l10n.localize('Amount'), ec.l10n.localize('Currency'), ec.l10n.localize('Not counted'), 'State', ec.l10n.localize('Cost centre'), ec.l10n.localize('Project')]))
                 for (const row of costs.sourceList)
                     lines.push(line([row.workEffortId, row.workEffortName, row.component, row.sourceTypeText, row.sourceId, row.stepName, row.dateText,
                         row.description, row.quantityText, row.rateText || '', row.amount == null ? '' : String(row.amount), row.currencyUomId || '',
@@ -66,7 +66,7 @@ along with this software (see the LICENSE.md file). If not, see
         custom group given Maintenance in Admin, which the BOSS_MAINTENANCE deny rows do not reach, opens only what its
         permissions give -->
     <always-actions>
-        <script>if(!(maintenance.capabilities.costView))throw new Error('PERMISSION_DENIED: Maintenance costs are the cost reader\'s')</script>
+        <script>if(!(maintenance.capabilities.costView))throw new Error(ec.l10n.localize('PERMISSION_DENIED: Maintenance costs are the cost reader\'s'))</script>
         <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:facilityId || null, assetId:assetId || null,
                 teamPartyId:teamPartyId || null, projectWorkEffortId:projectWorkEffortId || null, maintenanceKindEnumId:maintenanceKindEnumId || null,
                 component:component || null, currencyUomId:currencyUomId || null, fromDate:fromDate || null, thruDate:thruDate || null}"/>
@@ -74,17 +74,17 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <!-- read through AdminCalls (a service-call with ignore-error clears the message), so a refusal shows its own reason -->
         <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.work.MaintenanceReportServices.get#MaintenanceCosts',
-                options, 'The costs are not available to you.')"/>
+                options, ec.l10n.localize('The costs are not available to you.'))"/>
         <set field="found" from="called.out"/>
         <set field="reportError" from="called.failure"/>
         <set field="costs" from="found?.costs || null"/>
         <set field="totalRows" from="costs?.totalList || []"/>
         <set field="projectRows" from="costs?.projectList || []"/>
         <set field="sourceRows" from="costs?.sourceList || []"/>
-        <set field="apartText" from="[costs &amp;&amp; costs.unapprovedHoursText != '0' ? costs.unapprovedHoursText + ' h not approved yet' : null,
-                costs &amp;&amp; costs.unpricedHoursText != '0' ? costs.unpricedHoursText + ' h approved with no costing rate' : null,
-                costs?.unpricedParts ? costs.unpricedParts + ' part movements with no cost' : null].filter(Boolean).join(' · ')"/>
-        <set field="componentOptions" from="[{value:'parts', label:'Parts'}, {value:'labor', label:'Labor'}, {value:'outside', label:'Outside service'}]"/>
+        <set field="apartText" from="[costs &amp;&amp; costs.unapprovedHoursText != '0' ? ec.resource.expand('${hours} h not approved yet', '', {hours: costs.unapprovedHoursText}) : null,
+                costs &amp;&amp; costs.unpricedHoursText != '0' ? ec.resource.expand('${hours} h approved with no costing rate', '', {hours: costs.unpricedHoursText}) : null,
+                costs?.unpricedParts ? ec.resource.expand('${count} part movements with no cost', '', {count: costs.unpricedParts}) : null].filter(Boolean).join(' · ')"/>
+        <set field="componentOptions" from="[{value:'parts', label:ec.l10n.localize('Parts')}, {value:'labor', label:ec.l10n.localize('Labor')}, {value:'outside', label:ec.l10n.localize('Outside service')}]"/>
         <set field="currencyOptions" from="Array.from(new Set((costs?.currencies || []).concat(currencyUomId ? [currencyUomId] : []))).map(value =&gt; ({value, label:value}))"/>
         <set field="exportParameters" from="Object.fromEntries(Object.entries(options).filter(([, value]) =&gt; value != null &amp;&amp; value !== ''))"/>
         <set field="printParameters" from="Object.assign({renderMode:'html-print', lastStandalone:'true'}, exportParameters)"/>
@@ -97,15 +97,15 @@ along with this software (see the LICENSE.md file). If not, see
             const table = (heads, rows) => '<table class="m-print"><thead><tr>' + heads.map((head) => '<th>' + enc(head) + '</th>').join('')
                 + '</tr></thead><tbody>' + rows.map((cells) => '<tr>' + cells.map((value) => '<td>' + enc(value) + '</td>').join('') + '</tr>').join('')
                 + '</tbody></table>'
-            const optionText = Object.entries(exportParameters).map(([key, value]) => key + ' ' + value).join(' · ') || 'Every work order you read'
+            const optionText = Object.entries(exportParameters).map(([key, value]) => key + ' ' + value).join(' · ') || ec.l10n.localize('Every work order you read')
             printHtml = '<style>table.m-print{border-collapse:collapse;width:100%;margin-bottom:12px}table.m-print th,table.m-print td{border-bottom:1px solid #ccc;padding:3px 6px;text-align:left;font-size:12px}</style>'
-                + '<h2>' + enc('Maintenance costs') + '</h2><p>' + enc('As of ' + (costs?.asOfText || '') + ' · ' + optionText) + '</p>'
-            if (!costs) { printHtml += '<p>' + enc(reportError || 'The costs are not available to you.') + '</p>'; return }
-            printHtml += table(['Currency', 'Parts', 'Labor', 'Outside service', 'Total', 'Ordered, not accepted'],
+                + '<h2>' + enc(ec.l10n.localize('Maintenance costs')) + '</h2><p>' + enc(ec.resource.expand('As of ${asOf} · ${options}', '', {asOf: costs?.asOfText || '', options: optionText})) + '</p>'
+            if (!costs) { printHtml += '<p>' + enc(reportError || ec.l10n.localize('The costs are not available to you.')) + '</p>'; return }
+            printHtml += table([ec.l10n.localize('Currency'), ec.l10n.localize('Parts'), ec.l10n.localize('Labor'), ec.l10n.localize('Outside service'), ec.l10n.localize('Total'), ec.l10n.localize('Ordered, not accepted')],
                     totalRows.map((row) => [row.currencyUomId, row.partsText, row.laborText, row.outsideText, row.totalText, row.pendingText]))
-                + (apartText ? '<p>' + enc('Apart: ' + apartText) + '</p>' : '')
-                + (projectRows.length ? table(['Project', 'Cost'], projectRows.map((row) => [row.projectName + ' (' + row.projectWorkEffortId + ')', row.totalText])) : '')
-                + table(['Work order', 'Source', 'Step', 'Date', 'What', 'Quantity or hours', 'Costing rate', 'Amount', 'Not counted', 'State'],
+                + (apartText ? '<p>' + enc(ec.resource.expand('Apart: ${apartText}', '', {apartText: apartText})) + '</p>' : '')
+                + (projectRows.length ? table([ec.l10n.localize('Project'), ec.l10n.localize('Cost')], projectRows.map((row) => [row.projectName + ' (' + row.projectWorkEffortId + ')', row.totalText])) : '')
+                + table([ec.l10n.localize('Work order'), ec.l10n.localize('Source'), ec.l10n.localize('Step'), ec.l10n.localize('Date'), ec.l10n.localize('What'), ec.l10n.localize('Quantity or hours'), ec.l10n.localize('Costing rate'), ec.l10n.localize('Amount'), ec.l10n.localize('Not counted'), 'State'],
                     sourceRows.map((row) => [row.workEffortId + ' ' + row.workEffortName, row.sourceTypeText + ' ' + row.sourceId, row.stepName, row.dateText,
                         row.description, row.quantityText, row.rateText || '', row.amountText, row.stateText, row.postingText]))
         ]]></script>

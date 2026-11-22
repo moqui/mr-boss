@@ -25,19 +25,19 @@ const openStatuses = ["ReqDraft", "ReqSubmitted", "ReqReviewed", "ReqInProgress"
 const readLimit = 500
 const dayMs = 24 * 60 * 60 * 1000
 const rfqViews = {
-    open: {label: "Open", statuses: openStatuses},
+    open: {label: ec.l10n.localize("Open"), statuses: openStatuses},
     draft: {label: "Drafts", statuses: ["ReqDraft"]},
-    due: {label: "Responses due", statuses: ["ReqSubmitted", "ReqReviewed"], due: true},
-    changed: {label: "Changed since sent", statuses: openStatuses, changed: true},
-    closed: {label: "Closed", statuses: ["ReqCompleted", "ReqCancelled"]},
-    all: {label: "All"}
+    due: {label: ec.l10n.localize("Responses due"), statuses: ["ReqSubmitted", "ReqReviewed"], due: true},
+    changed: {label: ec.l10n.localize("Changed since sent"), statuses: openStatuses, changed: true},
+    closed: {label: ec.l10n.localize("Closed"), statuses: ["ReqCompleted", "ReqCancelled"]},
+    all: {label: ec.l10n.localize("All")}
 }
 const quoteViews = {
-    requested: {label: "Awaiting the supplier", statuses: ["OrderRequested"]},
-    proposed: {label: "Quoted", statuses: ["OrderProposed"]},
-    expiring: {label: "Expiring", statuses: ["OrderProposed"], expiring: true},
-    expired: {label: "Expired", statuses: ["OrderProposed"], expired: true},
-    all: {label: "All", statuses: quoteStatuses.concat(["OrderRejected"])}
+    requested: {label: ec.l10n.localize("Awaiting the supplier"), statuses: ["OrderRequested"]},
+    proposed: {label: ec.l10n.localize("Quoted"), statuses: ["OrderProposed"]},
+    expiring: {label: ec.l10n.localize("Expiring"), statuses: ["OrderProposed"], expiring: true},
+    expired: {label: ec.l10n.localize("Expired"), statuses: ["OrderProposed"], expired: true},
+    all: {label: ec.l10n.localize("All"), statuses: quoteStatuses.concat(["OrderRejected"])}
 }
 const requestColors = {
     ReqDraft: "grey-8",
@@ -50,10 +50,10 @@ const requestColors = {
 const quoteColors = {OrderRequested: "warning", OrderProposed: "primary", OrderRejected: "grey-8", OrderCancelled: "grey-8"}
 // P12: a quote cancelled when its RFQ closed was not awarded (close#QuoteRequest, Cancel Quote)
 const quoteStateText = {
-    OrderRequested: "Awaiting the supplier",
-    OrderProposed: "Quoted",
-    OrderRejected: "Declined",
-    OrderCancelled: "Not awarded"
+    OrderRequested: ec.l10n.localize("Awaiting the supplier"),
+    OrderProposed: ec.l10n.localize("Quoted"),
+    OrderRejected: ec.l10n.localize("Declined"),
+    OrderCancelled: ec.l10n.localize("Not awarded")
 }
 const blank = value => value == null || String(value).trim() === ""
 const dec = value => toDecimal(value == null || value === "" ? 0 : value)
@@ -75,7 +75,7 @@ const productText = productId => {
     return product ? [product.pseudoId || productId, product.productName].filter(Boolean).join(" · ") : productId
 }
 function requireLists(userScope) {
-    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", "RFQs and quotes are not available")
+    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("RFQs and quotes are not available"))
 }
 
 // ===== RFQs =====
@@ -83,7 +83,7 @@ function requireLists(userScope) {
 function rfqsInScope(userScope, p = {}) {
     let buyers = buyerIdsOf(userScope)
     if (!blank(p.organizationPartyId)) {
-        if (!purchasing.owns(userScope, p.organizationPartyId)) denied("RECORD_UNAVAILABLE", "The organization is not available")
+        if (!purchasing.owns(userScope, p.organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("The organization is not available"))
         buyers = [String(p.organizationPartyId)]
     }
     const factory = ec.entity.conditionFactory
@@ -134,8 +134,8 @@ function invitationRows(requestId, revision, can) {
             statusId: invitation.order.statusId,
             statusText: quoteStateText[invitation.order.statusId] || statusText(invitation.order.statusId),
             statusColor: quoteColors[invitation.order.statusId] || "grey-8",
-            sentText: sentAt ? dateText(sentAt) : "Not sent",
-            sendState: !live ? "" : !sentAt ? "Not sent" : sentAt < revision ? "Changed since sent" : "Sent",
+            sentText: sentAt ? dateText(sentAt) : ec.l10n.localize("Not sent"),
+            sendState: !live ? "" : !sentAt ? ec.l10n.localize("Not sent") : sentAt < revision ? ec.l10n.localize("Changed since sent") : ec.l10n.localize("Sent"),
             needsSend: live && (sentAt ?? -1) < revision,
             proposed: invitation.order.statusId === "OrderProposed",
             receivedText: part.otherPartyOrderDate ? dateText(part.otherPartyOrderDate) : "",
@@ -146,7 +146,7 @@ function invitationRows(requestId, revision, can) {
                 invitation.order.statusId === "OrderProposed"
                     ? showAmounts
                         ? money(invitation.order.grandTotal, invitation.order.currencyUomId)
-                        : "Withheld"
+                        : ec.l10n.localize("Withheld")
                     : ""
         }
     })
@@ -195,12 +195,12 @@ function findRfqs(p) {
             respondedText: live.length ? live.filter(invitation => invitation.proposed).length + " of " + live.length : "",
             sendText: changed
                 ? invitations.some(invitation => invitation.sentText !== "Not sent")
-                    ? "Changed since sent"
+                    ? ec.l10n.localize("Changed since sent")
                     : "Not sent"
                 : ""
         })
     }
-    if (truncated) ec.message.addMessage("Only the newest " + readLimit + " RFQs were read; narrow the filters", "warning")
+    if (truncated) ec.message.addMessage(ec.resource.expand("Only the newest ${count} RFQs were read; narrow the filters", "", {count: readLimit}), "warning")
     return Object.assign({viewLabel: definition.label, view}, lib.pageList(rowsOut, p, "rfqRows"))
 }
 
@@ -339,7 +339,7 @@ function findQuotes(p) {
     const definition = quoteViews[view]
     let buyers = buyerIdsOf(userScope)
     if (!blank(p.organizationPartyId)) {
-        if (!purchasing.owns(userScope, p.organizationPartyId)) denied("RECORD_UNAVAILABLE", "The organization is not available")
+        if (!purchasing.owns(userScope, p.organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("The organization is not available"))
         buyers = [String(p.organizationPartyId)]
     }
     const factory = ec.entity.conditionFactory
@@ -399,10 +399,10 @@ function findQuotes(p) {
                 rfqId: rfqIdOf(row.orderId) || "",
                 channelText: enumText(row.salesChannelEnumId),
                 amountText:
-                    row.statusId !== "OrderProposed" ? "" : showAmounts ? money(row.grandTotal, row.currencyUomId) : "Withheld"
+                    row.statusId !== "OrderProposed" ? "" : showAmounts ? money(row.grandTotal, row.currencyUomId) : ec.l10n.localize("Withheld")
             }
         })
-    if (truncated) ec.message.addMessage("Only the newest " + readLimit + " quotes were read; narrow the filters", "warning")
+    if (truncated) ec.message.addMessage(ec.resource.expand("Only the newest ${count} quotes were read; narrow the filters", "", {count: readLimit}), "warning")
     return Object.assign({viewLabel: definition.label, view}, lib.pageList(rowsOut, p, "quoteRows"))
 }
 // get#SupplierQuote: QuoteDetail's read of a quote the user may work with: its header and terms, lines with each one's price
@@ -473,10 +473,10 @@ function quoteDetail(p) {
                 unitAmount: showAmounts ? item.unitAmount : null,
                 priceText: showAmounts
                     ? dec(item.unitAmount).isZero()
-                        ? "Not quoted"
+                        ? ec.l10n.localize("Not quoted")
                         : money(item.unitAmount, currencyUomId)
-                    : "Withheld",
-                amountText: showAmounts ? money(amount, currencyUomId) : "Withheld",
+                    : ec.l10n.localize("Withheld"),
+                amountText: showAmounts ? money(amount, currencyUomId) : ec.l10n.localize("Withheld"),
                 rfqLineText: link ? link.requestId + ":" + link.requestItemSeqId : "",
                 historyRows: history,
                 historyText: history
@@ -552,7 +552,7 @@ function quoteDetail(p) {
             salesChannelEnumId: order.salesChannelEnumId || null,
             currencyUomId: order.currencyUomId,
             revisionText: String(order.orderRevision ?? 1),
-            totalText: showAmounts ? money(order.grandTotal, currencyUomId) : "Withheld",
+            totalText: showAmounts ? money(order.grandTotal, currencyUomId) : ec.l10n.localize("Withheld"),
             rfqId,
             canEdit: !!can.buy && live,
             canAnswer: !!can.buy && order.statusId === "OrderRequested",

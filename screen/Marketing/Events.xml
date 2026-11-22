@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="Events" default-menu-index="7" menu-image="sym_o_event" menu-image-type="icon">
     <always-actions>
         <!-- a door tablet (marketing.device) reaches CheckIn alone, by its route group; CheckIn's services check it -->
-        <script>if(!marketing.device &amp;&amp; !marketing.capabilities.eventRead)throw new Error('PERMISSION_DENIED: Events are for Marketing readers')</script>
+        <script>if(!marketing.device &amp;&amp; !marketing.capabilities.eventRead)throw new Error(ec.l10n.localize('PERMISSION_DENIED: Events are for Marketing readers'))</script>
         <!-- EventDetail's Marketing links (Commons' EventDetail shows eventAppLinks, mount data and never a right): Registration setup
             for a registration event of the user's organizations; each screen checks again -->
         <set field="eventAppLinks" from="[]"/>
@@ -35,13 +35,13 @@ along with this software (see the LICENSE.md file). If not, see
             <script><![CDATA[
                 ec.message.clearErrors()
                 if (eventCheck?.recordId && marketing.capabilities.eventSetupRead)
-                    eventAppLinks = [{label: 'Registration setup', icon: 'sym_o_how_to_reg',
+                    eventAppLinks = [{label: ec.l10n.localize('Registration setup'), icon: 'sym_o_how_to_reg',
                         url: marketing.webBase + '/Events/RegistrationSetup?workEffortId=' + encodeURIComponent(eventCheck.recordId)},
                         // P17: the event's registrations, the events managers'
-                        {label: 'Registrations', icon: 'sym_o_groups',
+                        {label: ec.l10n.localize('Registrations'), icon: 'sym_o_groups',
                         url: marketing.webBase + '/Events/Registrations?workEffortId=' + encodeURIComponent(eventCheck.recordId)},
                         // P18: its check-in, the events managers' (an offer chosen there)
-                        {label: 'Check in', icon: 'sym_o_qr_code_scanner',
+                        {label: ec.l10n.localize('Check in'), icon: 'sym_o_qr_code_scanner',
                         url: marketing.webBase + '/Events/CheckIn?workEffortId=' + encodeURIComponent(eventCheck.recordId)}]
             ]]></script>
         </if>

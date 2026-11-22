@@ -72,7 +72,7 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="panelRecordType">
             <service-call name="ironstone.marketing.ContextServices.check#Record" out-map="panelRecord" ignore-error="true"
                     in-map="{appRoot:'Marketing', recordType:panelRecordType, recordId:ec.context.recordId || ''}"/>
-            <script>ec.message.clearErrors(); if (!panelRecord?.recordId) throw new Error('RECORD_PANEL_UNAVAILABLE: This record is not available')</script>
+            <script>ec.message.clearErrors(); if (!panelRecord?.recordId) throw new Error(ec.l10n.localize('RECORD_PANEL_UNAVAILABLE: This record is not available'))</script>
         </if>
         <set field="sharedLinks" from="marketing.sharedLinks"/>
     </always-actions>

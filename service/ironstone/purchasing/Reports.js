@@ -24,12 +24,12 @@ const SCORECARD = "mantle.party.supplier.SupplierScorecard",
     INVOICE = "mantle.account.invoice.Invoice"
 const dayMs = 86400000
 const readCap = 5000
-const withheld = "Withheld"
+const withheld = ec.l10n.localize("Withheld")
 const quoteStatuses = ["OrderRequested", "OrderProposed"]
 const deadOrderStatuses = ["OrderCancelled", "OrderRejected"]
 const metricNames = {
-    SsmOnTime: "On-time delivery",
-    SsmQuality: "Quality acceptance",
+    SsmOnTime: ec.l10n.localize("On-time delivery"),
+    SsmQuality: ec.l10n.localize("Quality acceptance"),
     SsmPriceVariance: "Price variance",
     SsmResponse: "RFQ response"
 }
@@ -77,7 +77,7 @@ function productNames(ids) {
 function scopeOf(p) {
     const userScope = purchasing.required()
     const can = userScope.capabilities
-    if (!can.listRead) denied("PERMISSION_DENIED", "Purchasing reports are not available")
+    if (!can.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("Purchasing reports are not available"))
     let organizationPartyIds
     if (blank(p.organizationPartyId)) organizationPartyIds = purchasing.buyerIds(userScope)
     else {
@@ -248,8 +248,8 @@ const scorecardColumns = [
     {field: "resultText", title: "Result"},
     {field: "score", title: "Score", number: true},
     {field: "eligibleText", title: "Eligible receipts"},
-    {field: "onTimeText", title: "On-time delivery"},
-    {field: "qualityText", title: "Quality acceptance"},
+    {field: "onTimeText", title: ec.l10n.localize("On-time delivery")},
+    {field: "qualityText", title: ec.l10n.localize("Quality acceptance")},
     {field: "priceText", title: "Price variance"},
     {field: "responseText", title: "RFQ response"},
     {field: "effectText", title: "Response"},
@@ -655,7 +655,7 @@ function spend(p, only = null) {
     if (!wanted("paid")) {
         // not asked for
     } else if (scope.financeRead) {
-        if (groupBy === "product" || !blank(p.productId)) omitted.push("Payments are not by product: paid is left out.")
+        if (groupBy === "product" || !blank(p.productId)) omitted.push(ec.l10n.localize("Payments are not by product: paid is left out."))
         else {
             let applicationQuery = find("mantle.account.payment.PaymentApplication")
                 .condition("appliedDate", "greater-equals", new Date(period.from))
@@ -684,8 +684,8 @@ function spend(p, only = null) {
                 )
             }
         }
-    } else omitted.push("Payments are withheld: they need finance read.")
-    omitted.push("Landed costs are not in these amounts until Accounting allocates them.")
+    } else omitted.push(ec.l10n.localize("Payments are withheld: they need finance read."))
+    omitted.push(ec.l10n.localize("Landed costs are not in these amounts until Accounting allocates them."))
     const supplierNames = lib.partyNames(supplierIds)
     const products = productNames(productIds)
     const measureShown = {
@@ -704,7 +704,7 @@ function spend(p, only = null) {
                     groupBy === "supplier"
                         ? supplierNames[group.groupKey] || group.groupKey
                         : groupBy === "product"
-                          ? products[group.groupKey] || group.groupKey || "Not a product line"
+                          ? products[group.groupKey] || group.groupKey || ec.l10n.localize("Not a product line")
                           : group.groupKey,
                 currencyUomId: group.currencyUomId
             }
@@ -756,7 +756,7 @@ function spend(p, only = null) {
             landedCostsUrl: scope.can.landedCost ? "/qapps/Accounting/Payables/LandedCosts" : null
         }
     )
-    return exported(p, answer, "Purchase spend", "Purchase-spend", spendColumns, spendRows)
+    return exported(p, answer, ec.l10n.localize("Purchase spend"), "Purchase-spend", spendColumns, spendRows)
 }
 // Home's SpendSummary: committed and billed of the last three months by month and currency.
 function spendSummary(p) {
@@ -907,7 +907,7 @@ function commitments(p) {
             decisionText: enumText(row.decisionEnumId)
         }
     })
-    if (!scope.budgetRead) omitted.push("Commitment amounts are withheld: they need financial read.")
+    if (!scope.budgetRead) omitted.push(ec.l10n.localize("Commitment amounts are withheld: they need financial read."))
     const totalRows = Object.values(totals).map(total => ({
         currencyUomId: total.currencyUomId,
         reservedText: scope.budgetRead ? money(total.reserved, total.currencyUomId) : withheld,
@@ -932,7 +932,7 @@ function commitments(p) {
         paged,
         {totalRows, budgetRead: scope.budgetRead}
     )
-    return exported(p, answer, "Purchase commitments", "Purchase-commitments", commitmentColumns, commitmentRows)
+    return exported(p, answer, ec.l10n.localize("Purchase commitments"), "Purchase-commitments", commitmentColumns, commitmentRows)
 }
 
 // ===== procurement tracker =====
@@ -983,7 +983,7 @@ function tracker(p) {
         const placed = orderLines(scope, p, period, {withCancelled: true})
         orderIds = unique(placed.lines.map(line => line.item.orderId))
         if (requestIds.length > 200 || orderIds.length > 200)
-            omitted.push("Only 200 requests and 200 orders of the period are traced.")
+            omitted.push(ec.l10n.localize("Only 200 requests and 200 orders of the period are traced."))
         requestIds = requestIds.slice(0, 200)
         orderIds = orderIds.slice(0, 200)
     }
@@ -1036,7 +1036,7 @@ function tracker(p) {
                 awardText: awarded.length
                     ? "Awarded: " + awarded.map(order => order.orderId).join(", ")
                     : quoteOrders.length
-                      ? "Not awarded yet"
+                      ? ec.l10n.localize("Not awarded yet")
                       : ""
             }
             const directLinks = rows("mantle.request.RequestItemOrder", {requestId, requestItemSeqId: item.requestItemSeqId})
@@ -1076,8 +1076,8 @@ function tracker(p) {
                 })
             )
         }
-    if (!scope.financeRead) omitted.push("Payments are withheld: they need finance read.")
-    if (!scope.billRead) omitted.push("Bill amounts are withheld.")
+    if (!scope.financeRead) omitted.push(ec.l10n.localize("Payments are withheld: they need finance read."))
+    if (!scope.billRead) omitted.push(ec.l10n.localize("Bill amounts are withheld."))
     const paged = page(trackerRows, p, "trackerRows")
     const answer = Object.assign(
         frame(
@@ -1099,7 +1099,7 @@ function emptyOrderTrace(supplierPartyId) {
     return {
         orderId: null,
         supplierPartyId: supplierPartyId || null,
-        orderText: "Not ordered yet",
+        orderText: ec.l10n.localize("Not ordered yet"),
         orderUrl: null,
         supplierName: supplierPartyId ? lib.partyNames([supplierPartyId])[supplierPartyId] || supplierPartyId : "",
         orderedText: "",
@@ -1149,7 +1149,7 @@ function orderLineTrace(scope, orderId, orderItemSeqId) {
                           bill.statusId === "InvoicePmtSent" || unpaid.compare(0) <= 0
                               ? "Paid"
                               : dec(bill.appliedPaymentsTotal).compare(0) > 0
-                                ? "Partly paid"
+                                ? ec.l10n.localize("Partly paid")
                                 : "Not paid"
                       return (
                           bill.invoiceId +
@@ -1177,7 +1177,7 @@ function orderLineTrace(scope, orderId, orderItemSeqId) {
               receipts.length +
               (receipts.length === 1 ? " receipt" : " receipts") +
               (received.compare(ordered) < 0 ? ", partly received" : "")
-            : "Nothing received",
+            : ec.l10n.localize("Nothing received"),
         inspectionText: Object.entries(inspectionStates)
             .map(([label, count]) => count + " " + label)
             .join(", "),
@@ -1194,7 +1194,7 @@ function orderLineTrace(scope, orderId, orderItemSeqId) {
         matchText: bills.length
             ? matches.length
                 ? matches.map(match => enumText(match.resultEnumId)).join(", ")
-                : "Not matched"
+                : ec.l10n.localize("Not matched")
             : "",
         paymentText
     }
@@ -1241,9 +1241,9 @@ const historyColumns = [
     {field: "quantity", title: "Quantity", number: true},
     {field: "uomText", title: "Unit"},
     {field: "currencyUomId", title: "Currency"},
-    {field: "quotedPrice", title: "Quoted unit price", number: true},
-    {field: "orderedPrice", title: "Ordered unit price", number: true},
-    {field: "invoicedPrice", title: "Billed unit price", number: true},
+    {field: "quotedPrice", title: ec.l10n.localize("Quoted unit price"), number: true},
+    {field: "orderedPrice", title: ec.l10n.localize("Ordered unit price"), number: true},
+    {field: "invoicedPrice", title: ec.l10n.localize("Billed unit price"), number: true},
     {field: "leadDays", title: "Lead days", number: true}
 ]
 // get#PurchaseHistory: the product's buying history in the period (a year by default), the quoted, ordered and billed unit
@@ -1264,7 +1264,7 @@ function history(p) {
         .condition("entryDate", "less-than", new Date(period.thru))
     if (!blank(p.supplierPartyId)) quoteQuery = quoteQuery.condition("vendorPartyId", String(p.supplierPartyId))
     const quoteParts = Array.from(quoteQuery.limit(1001).list())
-    if (quoteParts.length > 1000) omitted.push("Only 1000 quotes of the period are read.")
+    if (quoteParts.length > 1000) omitted.push(ec.l10n.localize("Only 1000 quotes of the period are read."))
     quoteParts.length = Math.min(quoteParts.length, 1000)
     const quoteLines = []
     for (const ids of chunks(unique(quoteParts.map(part => part.orderId)))) {
@@ -1380,11 +1380,14 @@ function history(p) {
             invoicedText:
                 invoiced == null ? (scope.priceRead ? "Not billed" : withheld) : priceText(invoiced, part.currencyUomId),
             leadDays,
-            leadText: leadDays == null ? "Not received" : leadDays + (leadDays === 1 ? " day" : " days")
+            leadText:
+                leadDays == null
+                    ? ec.l10n.localize("Not received")
+                    : ec.resource.expand(leadDays === 1 ? "${days} day" : "${days} days", "", {days: leadDays})
         })
     }
     historyRows.sort((a, b) => (b.sortDate || 0) - (a.sortDate || 0))
-    if (!scope.priceRead) omitted.push("Prices are withheld: they are supplier prices.")
+    if (!scope.priceRead) omitted.push(ec.l10n.localize("Prices are withheld: they are supplier prices."))
     omitted.push("Prices are in each document's currency and unit; nothing is converted.")
     const paged = page(historyRows, p, "historyRows")
     const answer = Object.assign(
@@ -1416,8 +1419,8 @@ const statementColumns = [
 // (PERMISSION_DENIED) and needs a supplier in scope.
 function statement(p) {
     const scope = scopeOf(p)
-    if (!scope.financeRead) denied("PERMISSION_DENIED", "The supplier statement needs finance read")
-    if (blank(p.supplierPartyId)) denied("SUPPLIER_REQUIRED", "Choose a supplier")
+    if (!scope.financeRead) denied("PERMISSION_DENIED", ec.l10n.localize("The supplier statement needs finance read"))
+    if (blank(p.supplierPartyId)) denied("SUPPLIER_REQUIRED", ec.l10n.localize("Choose a supplier"))
     const period = periodOf(p, 90)
     const supplierPartyId = String(p.supplierPartyId)
     const omitted = []
@@ -1451,7 +1454,7 @@ function statement(p) {
     )
     if (bills.length > readCap || payments.length > readCap)
         omitted.push("Only " + readCap + " bills and payments are read; the balances are incomplete.")
-    omitted.push("Bills not yet received for review (Incoming) are left out.")
+    omitted.push(ec.l10n.localize("Bills not yet received for review (Incoming) are left out."))
     const credit = bill => ["InvoiceCreditMemo", "InvoiceReturn"].includes(bill.invoiceTypeEnumId)
     const entries = bills
         .slice(0, readCap)
@@ -1599,9 +1602,9 @@ function compareCount(userScope) {
 // by due date. A source that fails is logged and left out.
 const workSources = [
     ["Approvals.js", "Decide"],
-    ["Requests.js", "Source the request"],
-    ["Sourcing.js", "Chase the quotes"],
-    ["Revisions.js", "Chase the acknowledgement"]
+    ["Requests.js", ec.l10n.localize("Source the request")],
+    ["Sourcing.js", ec.l10n.localize("Chase the quotes")],
+    ["Revisions.js", ec.l10n.localize("Chase the acknowledgement")]
 ]
 function buyerWork(limit) {
     const until = new Date(now() + 7 * dayMs)

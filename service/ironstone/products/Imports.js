@@ -41,7 +41,7 @@ function scopeFor(parameters) {
                     .slice(0, 24)
         if (ec.entity.find("mantle.product.ProductCatalogOperation").condition("operationKey", key).disableAuthz().one())
             return {sent: false}
-        const title = imported.errorCount ? "Catalog import needs attention" : "Catalog import completed",
+        const title = imported.errorCount ? ec.l10n.localize("Catalog import needs attention") : ec.l10n.localize("Catalog import completed"),
             nm = ec
                 .makeNotificationMessage()
                 .topic("CatalogImportResult")

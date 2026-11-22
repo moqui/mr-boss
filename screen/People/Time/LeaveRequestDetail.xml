@@ -58,11 +58,11 @@ along with this software (see the LICENSE.md file). If not, see
                 LrsCancelRequested: 'warning', LrsCancelled: 'grey-8'}
             headerCaption = leave ? [leave.organizationName, leave.leaveTypeText, leave.chargedText].join(' · ') : ''
             statementRows = leave ? [
-                {term: 'Balance now', value: statement.balance + ' ' + unitWord},
-                {term: 'Reserved by other requests waiting', value: statement.pending + ' ' + unitWord},
-                {term: statement.taken ? 'This leave (taken)' : statement.reserved ? 'This request (reserved)' : 'This request',
-                    value: leave.chargedAmount + ' ' + unitWord},
-                {term: 'Left after it', value: statement.remainder + ' ' + unitWord}
+                {term: ec.l10n.localize('Balance now'), value: ec.resource.expand('${amount} ${unit}', '', {amount: statement.balance, unit: unitWord})},
+                {term: ec.l10n.localize('Reserved by other requests waiting'), value: ec.resource.expand('${amount} ${unit}', '', {amount: statement.pending, unit: unitWord})},
+                {term: statement.taken ? ec.l10n.localize('This leave (taken)') : statement.reserved ? ec.l10n.localize('This request (reserved)') : ec.l10n.localize('This request'),
+                    value: ec.resource.expand('${amount} ${unit}', '', {amount: leave.chargedAmount, unit: unitWord})},
+                {term: ec.l10n.localize('Left after it'), value: ec.resource.expand('${amount} ${unit}', '', {amount: statement.remainder, unit: unitWord})}
             ] : []
             decideValues = leave ? {leaveRequestId: leave.leaveRequestId, sourceRevision: approval?.sourceRevision || null} : {}
             revisionValues = leave ? {leaveRequestId: leave.leaveRequestId, expectedRevision: leave.revision} : {}

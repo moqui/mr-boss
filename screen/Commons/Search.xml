@@ -62,8 +62,8 @@ along with this software (see the LICENSE.md file). If not, see
             }
             hasPrevious = pageIndexNum > 0
             hasNext = (pageIndexNum + 1) * pageSize < total
-            modeOptions = [{key: 'lexical', text: 'Words'}].concat(capabilities.includes('hybrid') ? [{key: 'hybrid', text: 'Words and meaning'}] : [])
-                    .concat(capabilities.includes('semantic') ? [{key: 'semantic', text: 'Meaning'}] : [])
+            modeOptions = [{key: 'lexical', text: ec.l10n.localize('Words')}].concat(capabilities.includes('hybrid') ? [{key: 'hybrid', text: ec.l10n.localize('Words and meaning')}] : [])
+                    .concat(capabilities.includes('semantic') ? [{key: 'semantic', text: ec.l10n.localize('Meaning')}] : [])
 
             // each type's details: the attributes its results show, in order
             const details = {MantleParty: ['partyTypeEnumId'], MantleProduct: ['productTypeEnumId', 'amountFixed'],

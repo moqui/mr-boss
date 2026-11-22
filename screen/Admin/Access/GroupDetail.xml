@@ -53,7 +53,7 @@ along with this software (see the LICENSE.md file). If not, see
                             reason:(reason || null)}"/>
             </if>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Member added' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Member added') : stored.reason, stored.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="userGroupId"/></default-response>
@@ -69,7 +69,7 @@ along with this software (see the LICENSE.md file). If not, see
                             thruDate:(thruDate || null), reason:(reason || null)}"/>
             </if>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(ended.applied ? 'Membership ended' : ended.reason, ended.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(ended.applied ? ec.l10n.localize('Membership ended') : ended.reason, ended.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="userGroupId"/></default-response>
@@ -80,11 +80,11 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('ironstone.admin.ContextServices.check#Record', {appRoot:appRoot, recordType:'group', recordId:userGroupId}, 'Group ' + userGroupId + ' is not available.')"/>
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('ironstone.admin.ContextServices.check#Record', {appRoot:appRoot, recordType:'group', recordId:userGroupId}, ec.resource.expand('Group ${id} is not available.', '', {id: userGroupId}))"/>
         <set field="record" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <if condition="!failure">
-            <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.AccessServices.get#Group', {userGroupId:userGroupId, includeOptions:true}, 'Group ' + userGroupId + ' is not available.')"/>
+            <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.AccessServices.get#Group', {userGroupId:userGroupId, includeOptions:true}, ec.resource.expand('Group ${id} is not available.', '', {id: userGroupId}))"/>
             <set field="found" from="called.out"/>
             <set field="failure" from="called.failure"/>
         </if>

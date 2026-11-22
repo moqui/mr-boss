@@ -121,7 +121,7 @@ function selfServiceOnly(grants = rootGrants()) {
     return groupIds.length > 0 && screenGrants(selfServiceLocation, screenAuthz(groupIds)).allowed.length > 0
 }
 function required(userScope = scope()) {
-    if (!userScope.read) denied("PEOPLE_UNAVAILABLE", "People is not available")
+    if (!userScope.read) denied("PEOPLE_UNAVAILABLE", ec.l10n.localize("People is not available"))
     return userScope
 }
 // The reason code of a refusal, also from a probe's message ("Error: CODE: message"), which lib.reasonCode does not read.
@@ -291,7 +291,7 @@ const linkPaths = [
     "MyPayslip"
 ]
 function sharedContext(p) {
-    if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", "People context is not available")
+    if (p.appRoot && p.appRoot !== "People") denied("PEOPLE_CONTEXT", ec.l10n.localize("People context is not available"))
     const grants = rootGrants()
     // P8: a self-service employee without People: no capability but their self-service, their own employments and its link
     if (selfServiceOnly(grants)) {
@@ -385,7 +385,7 @@ const recordKinds = {
 }
 function recordOf(userScope, kind, recordId) {
     const definition = Object.hasOwn(recordKinds, kind) ? recordKinds[kind] : null
-    const unavailable = () => denied("RECORD_UNAVAILABLE", (definition?.name || "Record") + " " + recordId + " is not available")
+    const unavailable = () => denied("RECORD_UNAVAILABLE", ec.resource.expand("${name} ${id} is not available", "", {name: definition?.name || "Record", id: recordId}))
     if (!recordId || !definition) unavailable()
     let found
     try {
@@ -403,7 +403,7 @@ function checkRecord(p) {
     const userScope = required()
     if (p.capability) {
         if (!Object.hasOwn(userScope.capabilities, p.capability)) throw new Error("Unknown People capability " + p.capability)
-        if (!userScope.capabilities[p.capability]) denied("PERMISSION_DENIED", "People " + p.capability + " is required")
+        if (!userScope.capabilities[p.capability]) denied("PERMISSION_DENIED", ec.resource.expand("People ${capability} is required", "", {capability: p.capability}))
     }
     return recordOf(userScope, p.recordType, p.recordId)
 }
@@ -1568,8 +1568,8 @@ const searchFinds = [
                 )
                 .slice(0, limit)
                 .map(row => ({
-                    title: "My leave " + row.datesText + (row.partText ? " (" + row.partText.toLowerCase() + ")" : ""),
-                    subtitle: ["Leave request", row.leaveTypeText, row.statusText].join(" · "),
+                    title: ec.resource.expand(row.partText ? "My leave ${dates} (${part})" : "My leave ${dates}", "", {dates: row.datesText, part: row.partText ? row.partText.toLowerCase() : ""}),
+                    subtitle: [ec.l10n.localize("Leave request"), row.leaveTypeText, row.statusText].join(" · "),
                     icon: "sym_o_beach_access",
                     recordEntity: LEAVE_REQUEST,
                     recordId: row.leaveRequestId,
@@ -1684,9 +1684,9 @@ const employee360Path = app => "/qapps/" + (app === "Commons" ? "Commons/People/
 // shows "Not available"); another app root is refused (PEOPLE_CONTEXT), and People's mount needs the People root (PEOPLE_UNAVAILABLE).
 function employee360(p) {
     const app = Object.hasOwn(employee360Apps, p.appRoot || "") ? employee360Apps[p.appRoot] : null
-    if (!app) denied("PEOPLE_CONTEXT", "This person's record is not available here")
+    if (!app) denied("PEOPLE_CONTEXT", ec.l10n.localize("This person's record is not available here"))
     const userScope = p.appRoot === "People" ? required() : null
-    if (!userScope && !ec.user.userId) denied("PEOPLE_UNAVAILABLE", "People is not available")
+    if (!userScope && !ec.user.userId) denied("PEOPLE_UNAVAILABLE", ec.l10n.localize("People is not available"))
     // checkOnly: a person or employment the user may not read answers no region, as a missing one, rather than a refusal
     // logged as a failed service on every "Not available" view
     const found = call("mantle.humanres.PeopleServices.get#Employee360", {
@@ -1753,7 +1753,7 @@ function employee360Link(p) {
     const peopleUser = rootGrants().read && (kinds.includes("staff") || kinds.includes("team"))
     return {
         url: employee360Path(peopleUser ? "People" : "Commons") + "?partyId=" + encodeURIComponent(p.partyId),
-        label: peopleUser || !kinds.includes("self") ? "Employee record" : "My employee record"
+        label: peopleUser || !kinds.includes("self") ? ec.l10n.localize("Employee record") : ec.l10n.localize("My employee record")
     }
 }
 // The People link of an employment (the employment content host's record, for the Chatter and RecordFiles panels and the
@@ -1851,7 +1851,7 @@ function lookup(p) {
                         entity: LEAVE_REQUEST,
                         visible: true,
                         title: card.title,
-                        typeLabel: "Leave request",
+                        typeLabel: ec.l10n.localize("Leave request"),
                         url: card.url,
                         icon: "sym_o_beach_access"
                     })
@@ -2061,7 +2061,7 @@ function today(p) {
                 items.push(
                     item({
                         kind: "leave",
-                        title: event.title + (startDay === today ? " today" : " tomorrow"),
+                        title: ec.resource.expand(startDay === today ? "${title} today" : "${title} tomorrow", "", {title: event.title}),
                         startDate: startDay,
                         allDay: !!event.allDay,
                         url: leaveRequestPath + "?leaveRequestId=" + encodeURIComponent(event.leaveRequestId),
@@ -2088,10 +2088,7 @@ function today(p) {
                 items.push(
                     item({
                         kind: "qualification",
-                        title:
-                            (expired
-                                ? "Your " + row.typeText.toLowerCase() + " expired "
-                                : "Your " + row.typeText.toLowerCase() + " expires ") + day,
+                        title: ec.resource.expand(expired ? "Your ${type} expired ${day}" : "Your ${type} expires ${day}", "", {type: row.typeText.toLowerCase(), day}),
                         dueDate: day || null,
                         url: qualificationsPath + "?state=attention",
                         record: {recordEntityName: QUALIFICATION, recordId: row.partyQualificationId, recordName: row.typeText}
@@ -2112,7 +2109,7 @@ function today(p) {
                 items.push(
                     item({
                         kind: "training",
-                        title: (row.isTrainer ? "You train " : "Training: ") + row.title + " " + row.startText,
+                        title: ec.resource.expand(row.isTrainer ? "You train ${title} ${when}" : "Training: ${title} ${when}", "", {title: row.title, when: row.startText}),
                         startDate: day || null,
                         url: trainingDetailPath + "?workEffortId=" + encodeURIComponent(row.workEffortId),
                         record: {
@@ -2138,12 +2135,12 @@ function today(p) {
                 if (!stepTodo.includes(row.todoText)) continue
                 const what =
                     row.todoText === "Your self assessment"
-                        ? "Your self assessment for " + row.cycleName
-                        : (row.todoText === "Assess" ? "Assess " : "Feedback on ") + row.personName + " · " + row.cycleName
+                        ? ec.resource.expand("Your self assessment for ${cycle}", "", {cycle: row.cycleName})
+                        : ec.resource.expand(row.todoText === "Assess" ? "Assess ${person} · ${cycle}" : "Feedback on ${person} · ${cycle}", "", {person: row.personName, cycle: row.cycleName})
                 items.push(
                     item({
                         kind: "review",
-                        title: what + (row.dueText ? ", due " + row.dueText : ""),
+                        title: row.dueText ? ec.resource.expand("${what}, due ${due}", "", {what, due: row.dueText}) : what,
                         dueDate: row.dueText || null,
                         url: reviewDetailPath + "?performanceReviewId=" + encodeURIComponent(row.performanceReviewId),
                         record: {recordEntityName: REVIEW, recordId: row.performanceReviewId, recordName: row.cycleName}
@@ -2162,22 +2159,22 @@ function today(p) {
             const found = lib.probe("mantle.humanres.PayrollRunServices.find#Runs", {show: "attention", pageSize: 10})
             for (const row of Array.from(found.runs || [])) {
                 const what = row.errorCount
-                    ? row.errorCount + (row.errorCount === 1 ? " employee in error" : " employees in error")
+                    ? ec.resource.expand(row.errorCount === 1 ? "${count} employee in error" : "${count} employees in error", "", {count: row.errorCount})
                     : row.state === "returned"
-                      ? "returned by the approver"
+                      ? ec.l10n.localize("returned by the approver")
                       : row.state === "stale"
-                        ? "its approval no longer holds"
-                        : row.pendingCount + " still to calculate"
+                        ? ec.l10n.localize("its approval no longer holds")
+                        : ec.resource.expand("${count} still to calculate", "", {count: row.pendingCount})
                 items.push(
                     item({
                         kind: "payroll",
-                        title: "Pay run " + row.groupName + ", " + row.periodText + ": " + what,
+                        title: ec.resource.expand("Pay run ${group}, ${period}: ${what}", "", {group: row.groupName, period: row.periodText, what}),
                         dueDate: row.payDateText || null,
                         url: "/qapps/People/Payroll/PayRunDetail?payrollRunId=" + encodeURIComponent(row.payrollRunId),
                         record: {
                             recordEntityName: "mantle.humanres.payroll.PayrollRun",
                             recordId: row.payrollRunId,
-                            recordName: "Pay run " + row.groupName + ", " + row.periodText
+                            recordName: ec.resource.expand("Pay run ${group}, ${period}", "", {group: row.groupName, period: row.periodText})
                         }
                     })
                 )
@@ -2303,7 +2300,7 @@ function keepsTimeHere() {
 // employee record (People's mount for a People user, else Commons'), and under People the approvals and Home. Another root is
 // refused (PEOPLE_CONTEXT). It grants nothing: get#SelfService checks the user.
 function selfServiceContext(p) {
-    if (!["People", "Commons"].includes(p.appRoot)) denied("PEOPLE_CONTEXT", "Self-service is not available here")
+    if (!["People", "Commons"].includes(p.appRoot)) denied("PEOPLE_CONTEXT", ec.l10n.localize("Self-service is not available here"))
     const partyId = ec.user.userAccount?.partyId || null
     const record = partyId ? employee360Link({partyId}) : {url: null}
     const grants = rootGrants()

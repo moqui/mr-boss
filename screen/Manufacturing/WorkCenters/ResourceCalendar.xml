@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
             const plantName = ec.context.get('manufacturing')?.plantName || ''
             ec.web.sendJsonResponse({calendarList: [], defaultCalendarId: null, defaults: out.defaults || {}, timeZone: out.timeZone,
                 todayText: out.todayText, nowText: out.nowText, me: out.me, roomOptions: [], failedSources: [],
-                resource: {title: plantName ? ec.l10n.localize('Work centers at') + ' ' + plantName : ec.l10n.localize('Work centers'),
+                resource: {title: plantName ? ec.resource.expand('Work centers at ${plantName}', '', {plantName: plantName}) : ec.l10n.localize('Work centers'),
                     readOnly: true}})
         ]]></script></actions>
         <default-response type="none"/>

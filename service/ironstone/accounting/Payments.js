@@ -18,15 +18,19 @@ const statusColors = {
 }
 const statusColor = statusId => statusColors[statusId] || "grey-7"
 const directionTexts = {incoming: "Incoming", outgoing: "Outgoing", transfer: "Transfer"}
-const sideTexts = {receivable: "Receivable", payable: "Payable", transfer: "Internal transfer"}
+const sideTexts = {
+    receivable: ec.l10n.localize("Receivable"),
+    payable: ec.l10n.localize("Payable"),
+    transfer: ec.l10n.localize("Internal transfer")
+}
 const queueTitles = {
-    incoming: "Incoming payments",
-    outgoing: "Outgoing payments",
-    toValidate: "Payments to validate",
-    unapplied: "Unapplied payments",
-    refunds: "Refunds",
-    transfers: "Internal transfers",
-    all: "All payments"
+    incoming: ec.l10n.localize("Incoming payments"),
+    outgoing: ec.l10n.localize("Outgoing payments"),
+    toValidate: ec.l10n.localize("Payments to validate"),
+    unapplied: ec.l10n.localize("Unapplied payments"),
+    refunds: ec.l10n.localize("Refunds"),
+    transfers: ec.l10n.localize("Internal transfers"),
+    all: ec.l10n.localize("All payments")
 }
 const filterNames = ["queue", "partyId", "paymentInstrumentEnumId", "statusId", "currencyUomId", "fromDay", "throughDay", "text"]
 const gatewayFilterNames = [
@@ -40,11 +44,11 @@ const gatewayFilterNames = [
     "text"
 ]
 const gatewayOutcomeText = {
-    accepted: "Accepted",
-    declined: "Declined",
-    failed: "Failed",
-    pending: "Pending at the gateway",
-    none: "No gateway response"
+    accepted: ec.l10n.localize("Accepted"),
+    declined: ec.l10n.localize("Declined"),
+    failed: ec.l10n.localize("Failed"),
+    pending: ec.l10n.localize("Pending at the gateway"),
+    none: ec.l10n.localize("No gateway response")
 }
 const gatewayOutcomeColors = {accepted: "positive", declined: "negative", failed: "negative"}
 const gatewayActionTexts = {
@@ -55,41 +59,41 @@ const gatewayActionTexts = {
     lookup: "Check with the gateway"
 }
 const gatewayReasonMessages = {
-    PERMISSION_DENIED: "Gateway actions require treasury access.",
-    GATEWAY_UNAVAILABLE: "This payment has no gateway.",
-    GATEWAY_ACTION_UNAVAILABLE: "No gateway action is available for this payment in its status."
+    PERMISSION_DENIED: ec.l10n.localize("Gateway actions require treasury access."),
+    GATEWAY_UNAVAILABLE: ec.l10n.localize("This payment has no gateway."),
+    GATEWAY_ACTION_UNAVAILABLE: ec.l10n.localize("No gateway action is available for this payment in its status.")
 }
 // The state actions of a payment, in the order of its flow; cancel and void end it.
 const stateTitles = {
-    validate: "Validate payment",
-    deliver: "Record delivery",
-    confirm: "Confirm settlement",
-    cancel: "Cancel payment",
-    void: "Void payment"
+    validate: ec.l10n.localize("Validate payment"),
+    deliver: ec.l10n.localize("Record delivery"),
+    confirm: ec.l10n.localize("Confirm settlement"),
+    cancel: ec.l10n.localize("Cancel payment"),
+    void: ec.l10n.localize("Void payment")
 }
 const endActions = ["cancel", "void"]
 // The gateway actions: what each asks of the gateway and what an accepted answer does.
 const gatewayActions = {
     authorize: {
-        title: "Authorize payment",
+        title: ec.l10n.localize("Authorize payment"),
         effect: "The gateway authorizes the payment amount; nothing posts until it is captured."
     },
     capture: {
-        title: "Capture payment",
+        title: ec.l10n.localize("Capture payment"),
         effect: "The gateway captures the authorized amount; an accepted capture delivers and posts the payment."
     },
     release: {
-        title: "Release authorization",
+        title: ec.l10n.localize("Release authorization"),
         effect: "The gateway releases the authorization; the payment returns to promised."
     },
     refund: {
-        title: "Refund through the gateway",
+        title: ec.l10n.localize("Refund through the gateway"),
         effect:
             "The gateway returns the amount to the payment's card or account; an accepted refund delivers a refund " +
             "payment applied to this one."
     }
 }
-const outputTypeTexts = {receipt: "Receipt", detail: "Payment detail", check: "Check"}
+const outputTypeTexts = {receipt: ec.l10n.localize("Receipt"), detail: ec.l10n.localize("Payment detail"), check: "Check"}
 const printCapabilities = {receipt: "canPrintReceipt", detail: "canPrintDetail", check: "canPrintCheck"}
 const capabilityOf = action => "can" + action[0].toUpperCase() + action.slice(1)
 // A user without the read permission or in another organization is refused; a record that does not exist or is not
@@ -100,7 +104,7 @@ const access = parameters =>
     lib.access(
         parameters,
         ["paymentRead", "reportRead", "arRead", "apRead", "admin", "systemAdmin"],
-        "Payment read authority is required"
+        ec.l10n.localize("Payment read authority is required")
     )
 const paymentParameters = (organizationPartyId, paymentId) => recordParameters(organizationPartyId, paymentId, {paymentId})
 
@@ -116,7 +120,7 @@ function paymentRow(value) {
 // The filters a list link carries, from the list's JSON (findJson): only the list's own fields.
 function findParameters(value) {
     if (!value) return {}
-    if (typeof value !== "string" || value.length > 8192) throw new Error("Payment filters are not available")
+    if (typeof value !== "string" || value.length > 8192) throw new Error(ec.l10n.localize("Payment filters are not available"))
     const decoded = JSON.parse(value)
     return Object.fromEntries(
         [...filterNames, "pageIndex", "pageSize"].filter(key => decoded[key] != null).map(key => [key, decoded[key]])
@@ -356,8 +360,12 @@ function detailContext(parameters) {
     const findJson = parameters.findJson || ""
     const invoicePath = payment.financeDirection === "payable" ? "Payables/BillDetail" : "Receivables/InvoiceDetail"
     const directionCaption = isTransfer
-        ? "Internal transfer"
-        : (payment.cashDirection === "outgoing" ? "Payment to " : "Receipt from ") + (payment.partyName || "")
+        ? ec.l10n.localize("Internal transfer")
+        : ec.resource.expand(
+              ec.l10n.localize(payment.cashDirection === "outgoing" ? "Payment to ${name}" : "Receipt from ${name}"),
+              "",
+              {name: payment.partyName || ""}
+          )
     const printRows = Object.entries(printCapabilities)
         .filter(([, capability]) => cap[capability] === true)
         .map(([outputType]) => ({
@@ -426,7 +434,7 @@ function detailContext(parameters) {
         canReadGateway: cap.canReadGateway === true,
         canGatewayLookup: cap.canGatewayLookup === true,
         gatewayReasonRows: result.gatewayActions?.reasonCode
-            ? [{message: gatewayReasonMessages[result.gatewayActions.reasonCode] || "Gateway actions are unavailable."}]
+            ? [{message: gatewayReasonMessages[result.gatewayActions.reasonCode] || ec.l10n.localize("Gateway actions are unavailable.")}]
             : [],
         gatewayRows: rows(result.gatewayRows).map(row => {
             const outcome =
@@ -448,11 +456,11 @@ function detailContext(parameters) {
         refundableText: refundable == null ? "" : money(refundable, currency),
         refundSummaryRows: result.refundSummary
             ? [
-                  ["amount", "Original payment"],
+                  ["amount", ec.l10n.localize("Original payment")],
                   ["completedRefundAmount", "Refunded"],
-                  ["pendingRefundAmount", "Refunds pending"],
-                  ["unappliedTotal", "Unapplied cash"],
-                  ["refundableAmount", "Available to refund"]
+                  ["pendingRefundAmount", ec.l10n.localize("Refunds pending")],
+                  ["unappliedTotal", ec.l10n.localize("Unapplied cash")],
+                  ["refundableAmount", ec.l10n.localize("Available to refund")]
               ].map(([field, label]) => ({
                   label,
                   amount: result.refundSummary[field],
@@ -482,7 +490,7 @@ function detailContext(parameters) {
         canReadLedger: cap.canReadLedger === true,
         ledgerRows: rows(result.ledgerRows).map(row =>
             Object.assign(row, {
-                postedText: row.isPosted === "Y" ? "Posted" : "Not posted",
+                postedText: row.isPosted === "Y" ? "Posted" : ec.l10n.localize("Not posted"),
                 transactionParameters: recordParameters(organizationPartyId, row.acctgTransId)
             })
         ),
@@ -542,11 +550,11 @@ function reviewPresentation(retained, kind = "state", organizationPartyId = null
     const action = kind === "unapply" ? "unapply" : retained.action || kind
     const title =
         kind === "state"
-            ? stateTitles[action] || "Change payment"
+            ? stateTitles[action] || ec.l10n.localize("Change payment")
             : kind === "unapply"
               ? "Release applications"
               : gateway
-                ? gatewayActions[action]?.title || "Gateway action"
+                ? gatewayActions[action]?.title || ec.l10n.localize("Gateway action")
                 : "Refund payment"
     const blockers = array(retained.blockers)
     const summaryAvailable = kind === "state" || kind === "unapply" ? summary.paymentId === retained.paymentId : true
@@ -570,7 +578,11 @@ function reviewPresentation(retained, kind = "state", organizationPartyId = null
         returnTab: gateway && action === "refund" ? "Refunds" : reviewTabs[kind],
         amountText,
         expiresDateText: retained.expiresDateText || policy.dateText(retained.expiresDate),
-        confirmation: title + " " + retained.paymentId + (amountText ? " for " + amountText : "") + "?",
+        confirmation: ec.resource.expand(
+            ec.l10n.localize(amountText ? "${title} ${paymentId} for ${amount}?" : "${title} ${paymentId}?"),
+            "",
+            {title, paymentId: retained.paymentId, amount: amountText}
+        ),
         paymentSummary: summary,
         summaryUnavailable: !summaryAvailable || amount == null || !currency,
         factRows: factRows([
@@ -587,13 +599,13 @@ function reviewPresentation(retained, kind = "state", organizationPartyId = null
             [
                 "Posting",
                 kind === "refund"
-                    ? "A delivered refund payment posts on its date and is applied to this payment."
+                    ? ec.l10n.localize("A delivered refund payment posts on its date and is applied to this payment.")
                     : gateway
                       ? action === "refund"
-                          ? "An accepted refund delivers and posts a refund payment applied to this payment."
+                          ? ec.l10n.localize("An accepted refund delivers and posts a refund payment applied to this payment.")
                           : action === "capture"
-                            ? "An accepted capture delivers and posts this payment."
-                            : "No posting: the payment's status changes only."
+                            ? ec.l10n.localize("An accepted capture delivers and posts this payment.")
+                            : ec.l10n.localize("No posting: the payment's status changes only.")
                       : retained.postingSummary?.effect
             ]
         ]),
@@ -611,8 +623,8 @@ function reviewPresentation(retained, kind = "state", organizationPartyId = null
                       refundSummary,
                       [
                           ["Refunded", "completedRefundAmount", refundAmount],
-                          ["Unapplied cash", "unappliedTotal", toDecimal(0).subtract(refundAmount)],
-                          ["Available to refund", "refundableAmount", toDecimal(0).subtract(refundAmount)]
+                          [ec.l10n.localize("Unapplied cash"), "unappliedTotal", toDecimal(0).subtract(refundAmount)],
+                          [ec.l10n.localize("Available to refund"), "refundableAmount", toDecimal(0).subtract(refundAmount)]
                       ],
                       currency
                   )
@@ -621,7 +633,7 @@ function reviewPresentation(retained, kind = "state", organizationPartyId = null
                         refundSummary,
                         [
                             ["Refunded", "completedRefundAmount", refundAmount],
-                            ["Available to refund", "refundableAmount", toDecimal(0).subtract(refundAmount)]
+                            [ec.l10n.localize("Available to refund"), "refundableAmount", toDecimal(0).subtract(refundAmount)]
                         ],
                         currency
                     )
@@ -629,7 +641,7 @@ function reviewPresentation(retained, kind = "state", organizationPartyId = null
         evidenceRows: rows(retained.evidenceRows),
         applicationEffects: rows(retained.applicationEffects).map(row =>
             Object.assign(row, {
-                fromPaymentId: row.paymentId || (kind === "refund" ? "New refund payment" : null),
+                fromPaymentId: row.paymentId || (kind === "refund" ? ec.l10n.localize("New refund payment") : null),
                 targetPaymentId: row.toPaymentId || null,
                 amountOriginallyApplied: row.amountOriginallyApplied ?? row.amountApplied,
                 currencyUomId: row.currencyUomId || currency
@@ -688,33 +700,35 @@ function reviewPresentation(retained, kind = "state", organizationPartyId = null
         resultsTitle: !hasResults
             ? ""
             : kind === "refund"
-              ? "Refund completed"
+              ? ec.l10n.localize("Refund completed")
               : gateway
-                ? "Gateway answer: " + (gatewayOutcomeText[result.outcome] || result.outcome)
+                ? ec.resource.expand(ec.l10n.localize("Gateway answer: ${outcome}"), "", {
+                      outcome: gatewayOutcomeText[result.outcome] || result.outcome || ""
+                  })
                 : kind === "unapply"
-                  ? "Applications released"
-                  : "Payment change completed",
+                  ? ec.l10n.localize("Applications released")
+                  : ec.l10n.localize("Payment change completed"),
         resultRows: !hasResults
             ? []
             : factRows(
                   kind === "refund"
                       ? [
                             ["Refund payment", result.refundPaymentId],
-                            ["Funding application", result.paymentApplicationId],
+                            [ec.l10n.localize("Funding application"), result.paymentApplicationId],
                             ["Outcome", result.reasonCode]
                         ]
                       : gateway
                         ? [
-                              ["Gateway response", result.paymentGatewayResponseId],
-                              ["Payment status", statusText(result.statusId)],
-                              ["Refund status", statusText(result.refundStatusId)]
+                              [ec.l10n.localize("Gateway response"), result.paymentGatewayResponseId],
+                              [ec.l10n.localize("Payment status"), statusText(result.statusId)],
+                              [ec.l10n.localize("Refund status"), statusText(result.refundStatusId)]
                           ]
                         : [
                               ["Payment", result.paymentId],
                               ["Status", statusText(result.statusId)],
-                              ["Recorded event", result.paymentLifecycleEventId],
+                              [ec.l10n.localize("Recorded event"), result.paymentLifecycleEventId],
                               ["Outcome", result.reasonCode],
-                              ["Issued document", result.outputId]
+                              [ec.l10n.localize("Issued document"), result.outputId]
                           ]
               ),
         applicationResultRows: rows(result.applicationResults).map(row =>
@@ -756,7 +770,7 @@ function reviewContext(parameters) {
     const scope = access(parameters)
     const paymentId = parameters.paymentId || parameters.recordId || ""
     const kind = parameters.previewKind || "state"
-    if (!reviewServices[kind]) throw new Error("Payment review is not available")
+    if (!reviewServices[kind]) throw new Error(ec.l10n.localize("Payment review is not available"))
     let retained = null
     if (parameters.previewId && scope.organizationPartyId) {
         try {
@@ -770,7 +784,7 @@ function reviewContext(parameters) {
         }
     }
     if (retained?.previewId && retained.paymentId !== paymentId)
-        throw new Error("PAYMENT_REVIEW_MISMATCH: This review belongs to another payment")
+        throw new Error(ec.l10n.localize("PAYMENT_REVIEW_MISMATCH: This review belongs to another payment"))
     const reviewFound = !!retained?.previewId
     return {
         paymentId,
@@ -825,7 +839,7 @@ function transferPresentation(retained, organizationPartyId) {
             ? factRows([
                   ["Amount", money(retained.principalAmount, currency)],
                   ["Fee", money(retained.feeAmount, currency)],
-                  ["Total out", money(retained.totalAmount, currency)],
+                  [ec.l10n.localize("Total out"), money(retained.totalAmount, currency)],
                   ["From", retained.maskedMethods?.from?.label],
                   ["To", retained.maskedMethods?.to?.label],
                   ["Accounting date", retained.accountingDateText],
@@ -959,7 +973,7 @@ function unapplyInput(parameters) {
 
 function gatewayActionInput(parameters) {
     if (!["authorize", "capture", "release", "refund"].includes(parameters.action))
-        throw new Error("Choose an available gateway action")
+        throw new Error(ec.l10n.localize("Choose an available gateway action"))
     const input = Object.fromEntries(
         ["organizationPartyId", "paymentId", "action", "reason"].map(field => [field, parameters[field]])
     )

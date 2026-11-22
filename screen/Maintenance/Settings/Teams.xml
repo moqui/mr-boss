@@ -48,7 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
         custom group given Maintenance in Admin, which the BOSS_MAINTENANCE deny rows do not reach, opens only what its
         permissions give -->
     <always-actions>
-        <script>if(!(maintenance.capabilities.settingsEdit || maintenance.capabilities.plan || maintenance.capabilities.supervise))throw new Error('PERMISSION_DENIED: Maintenance teams are read by planners and supervisors')</script>
+        <script>if(!(maintenance.capabilities.settingsEdit || maintenance.capabilities.plan || maintenance.capabilities.supervise))throw new Error(ec.l10n.localize('PERMISSION_DENIED: Maintenance teams are read by planners and supervisors'))</script>
     </always-actions>
     <actions>
         <set field="can" from="maintenance.capabilities"/>

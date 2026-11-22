@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.insights.FlowMapServices.get#StoryAccess" out-map="storyAccess"/>
         <script><![CDATA[
             if (!storyAccess || storyAccess.opens !== true)
-                throw new Error('PROCESS_STORY_UNAVAILABLE: Procedures are read in Knowledge, which is not available to you')
+                throw new Error(ec.l10n.localize('PROCESS_STORY_UNAVAILABLE: Procedures are read in Knowledge, which is not available to you'))
         ]]></script>
     </always-actions>
 

@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="state"/>
     <parameter name="pageIndex"/>
     <always-actions>
-        <script>if (!sales.capabilities.changes) throw new Error('PERMISSION_DENIED: Sales order changes are the change operator\'s, the approver\'s and the manager\'s')</script>
+        <script>if (!sales.capabilities.changes) throw new Error(ec.l10n.localize('PERMISSION_DENIED: Sales order changes are the change operator\'s, the approver\'s and the manager\'s'))</script>
     </always-actions>
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
     <!-- NewChange: the chosen order's proposal form on OrderChangeDetail (a transition with an action, so the form posts) -->

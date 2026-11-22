@@ -52,7 +52,7 @@ function organizationsOf(userScope, organizationPartyId) {
             !admin.administers(userScope, organizationPartyId) ||
             !one("mantle.party.PartyRole", {partyId: organizationPartyId, roleTypeId: "OrgInternal"})
         )
-            denied("RECORD_UNAVAILABLE", "Organization " + organizationPartyId + " is not available")
+            denied("RECORD_UNAVAILABLE", ec.resource.expand("Organization ${id} is not available.", "", {id: organizationPartyId}))
         return [organizationPartyId]
     }
     if (userScope.ownerIds) return userScope.ownerIds
@@ -87,7 +87,7 @@ function perOrganization(run, provider, checksOf) {
                     provider.title,
                     "unavailable",
                     "PROVIDER_FAILED",
-                    provider.title + " could not be checked",
+                    ec.resource.expand("${title} could not be checked", "", {title: provider.title}),
                     {subject, scope: {organizationPartyId}}
                 )
             )
@@ -116,13 +116,13 @@ const adapters = {
             const findings = Array.from(out.findings || [])
             if (out.setupStatus === "unconfigured")
                 return [
-                    check("accounting.setup", "Accounting setup", "warning", "SETUP_UNCONFIGURED", "Accounting is not set up")
+                    check("accounting.setup", ec.l10n.localize("Accounting setup"), "warning", "SETUP_UNCONFIGURED", ec.l10n.localize("Accounting is not set up"))
                 ]
             if (findings.length)
                 return findings.map(finding =>
                     check(
                         "accounting." + String(finding.code).toLowerCase(),
-                        accountingCodes[finding.code] || "Accounting setup",
+                        ec.l10n.localize(accountingCodes[finding.code] || "Accounting setup"),
                         "failed",
                         finding.code,
                         finding.message
@@ -132,13 +132,13 @@ const adapters = {
                 ? [
                       check(
                           "accounting.setup",
-                          "Accounting setup",
+                          ec.l10n.localize("Accounting setup"),
                           "warning",
                           "SETUP_NOT_ACTIVATED",
-                          "Accounting setup is not activated yet"
+                          ec.l10n.localize("Accounting setup is not activated yet")
                       )
                   ]
-                : [ready("accounting.setup", "Accounting setup", "Accounting setup is complete")]
+                : [ready("accounting.setup", ec.l10n.localize("Accounting setup"), ec.l10n.localize("Accounting setup is complete"))]
         })
     },
     // Products' catalog checks (CatalogChecks; impl-admin F16): the counts, not the products
@@ -149,15 +149,15 @@ const adapters = {
             const issues = Array.from(out.issueRows || [])
             const checked = Number(out.checkedCount || 0)
             if (out.valid || !issues.length)
-                return [ready("products.catalog", "Catalog quality", checked + " products checked, no issue")]
+                return [ready("products.catalog", ec.l10n.localize("Catalog quality"), ec.resource.expand("${count} products checked, no issue", "", {count: checked}))]
             const failing = issues.some(row => row.severity === "error")
             return [
                 check(
                     "products.catalog",
-                    "Catalog quality",
+                    ec.l10n.localize("Catalog quality"),
                     failing ? "failed" : "warning",
                     "CATALOG_ISSUES",
-                    issues.length + " catalog issues in " + checked + " products checked"
+                    ec.resource.expand("${issues} catalog issues in ${count} products checked", "", {issues: issues.length, count: checked})
                 )
             ]
         })
@@ -189,15 +189,15 @@ const adapters = {
                 }
                 if (findings) {
                     const open = findings.filter(row => !row.ready)
-                    if (!open.length) found.push(ready("commerce.store", "Store readiness", "The store is ready", extra))
+                    if (!open.length) found.push(ready("commerce.store", ec.l10n.localize("Store readiness"), ec.l10n.localize("The store is ready"), extra))
                     for (const row of open)
                         found.push(
                             check(
                                 "commerce.store." + row.key,
-                                row.label || "Store readiness",
+                                row.label || ec.l10n.localize("Store readiness"),
                                 row.severity === "warning" ? "warning" : "failed",
                                 "STORE_" + String(row.key).toUpperCase(),
-                                row.message || "Not ready",
+                                row.message || ec.l10n.localize("Not ready"),
                                 extra
                             )
                         )
@@ -210,13 +210,13 @@ const adapters = {
                         open.length
                             ? check(
                                   "commerce.store",
-                                  "Store readiness",
+                                  ec.l10n.localize("Store readiness"),
                                   "failed",
                                   "STORE_NOT_READY",
-                                  "Not ready: " + open.join(", "),
+                                  ec.resource.expand("Not ready: ${names}", "", {names: open.join(", ")}),
                                   extra
                               )
-                            : ready("commerce.store", "Store readiness", "The store is ready", extra)
+                            : ready("commerce.store", ec.l10n.localize("Store readiness"), ec.l10n.localize("The store is ready"), extra)
                     )
                 }
             } catch (error) {
@@ -229,7 +229,7 @@ const adapters = {
                         provider.title,
                         "unavailable",
                         "PROVIDER_FAILED",
-                        provider.title + " could not be checked",
+                        ec.resource.expand("${title} could not be checked", "", {title: provider.title}),
                         extra
                     )
                 )
@@ -247,28 +247,28 @@ const adapters = {
                 return [
                     check(
                         "constitution.organization",
-                        "Organization Constitution",
+                        ec.l10n.localize("Organization Constitution"),
                         "failed",
                         "CONSTITUTION_INVALID",
-                        "Its own Constitution is not valid",
+                        ec.l10n.localize("Its own Constitution is not valid"),
                         {fixRoute: "adminConstitution", fixParameters: {scope: organizationPartyId}}
                     )
                 ]
             return [
                 ready(
                     "constitution.organization",
-                    "Organization Constitution",
-                    out.customized ? "Its own Constitution applies" : "The instance Constitution applies"
+                    ec.l10n.localize("Organization Constitution"),
+                    out.customized ? ec.l10n.localize("Its own Constitution applies") : ec.l10n.localize("The instance Constitution applies")
                 )
             ]
         })
 }
 // check#OwnerReadiness: one of the adapters above, by its registration's key
 function ownerReadiness(p) {
-    if (!Object.hasOwn(adapters, p.providerKey)) throw new Error("Unknown owner readiness " + p.providerKey)
+    if (!Object.hasOwn(adapters, p.providerKey)) throw new Error(ec.resource.expand("Unknown owner readiness ${name}", "", {name: p.providerKey}))
     const userScope = admin.scope()
     const run = {organizationIds: organizationsOf(userScope, p.organizationPartyId), userScope}
-    return {checks: adapters[p.providerKey]({providerKey: p.providerKey, title: titles[p.providerKey]}, run)}
+    return {checks: adapters[p.providerKey]({providerKey: p.providerKey, title: ec.l10n.localize(titles[p.providerKey])}, run)}
 }
 
 // get#OpenPaths: for each path under /qapps (with or without a query), whether it opens to the viewer's own groups
@@ -280,7 +280,7 @@ function openPaths(p) {
 const operations = {ownerReadiness, openPaths}
 ;({
     execute: (op, parameters) => {
-        if (!operations[op]) throw new Error("Unknown Admin registry operation " + op)
+        if (!operations[op]) throw new Error(ec.resource.expand("Unknown Admin registry operation ${name}", "", {name: op}))
         return operations[op](parameters)
     }
 })

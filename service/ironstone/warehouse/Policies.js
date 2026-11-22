@@ -4,6 +4,8 @@
 // the organization one of theirs); Mantle's WarehousePolicyServices and AssetPoolServices check the organization and
 // the policy permissions again, and every change goes to them directly.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
+const labelOf = (table, key) => (table[key] != null ? L(table[key]) : key)
 const {find, one, rows, map, ms, denied, dateText, partyNames} = lib
 const W = "mantle.facility.WarehousePolicyServices.",
     AP = "mantle.product.AssetPoolServices."
@@ -124,9 +126,9 @@ function sourceText(row, names) {
         case "facility product":
             return "Product exception at " + facilityText(row.facilityId)
         case "location type":
-            return "The facility's first location of that type"
+            return L("The facility's first location of that type")
         default:
-            return row.source || "Built-in default"
+            return row.source || L("Built-in default")
     }
 }
 
@@ -155,7 +157,7 @@ function scopeOf(p) {
 function context(p) {
     const scope = scopeOf(p)
     if (!scope.organizationPartyId)
-        return {available: false, message: "You belong to no organization with a warehouse policy.", traceRows: []}
+        return {available: false, message: L("You belong to no organization with a warehouse policy."), traceRows: []}
     const names = {organization: organizationText(scope.organizationPartyId)}
     const base = {
         // with a facility, or a store and no facility (Mantle then takes the store's inventory facility), the
@@ -191,13 +193,13 @@ function context(p) {
             policyType: row.policyType,
             policyTypeText: familyNames[row.policyType],
             field: row.field,
-            fieldLabel: fieldLabels[row.field] || row.field,
+            fieldLabel: labelOf(fieldLabels, row.field),
             valueText: valueText(row.field, row.value),
             sourceText: sourceText(row, names),
             fromDateText: dateText(row.fromDate),
             changeReason: row.changeReason || ""
         })),
-        warningRows: Array.from(resolved.warnings || []).map(row => ({text: warningTexts[row.code] || row.code})),
+        warningRows: Array.from(resolved.warnings || []).map(row => ({text: labelOf(warningTexts, row.code)})),
         summary: {
             receiptSteps: valueText("receiptSteps", resolved.operationPolicy.receiptSteps),
             deliverySteps: valueText("deliverySteps", resolved.operationPolicy.deliverySteps),
@@ -226,7 +228,7 @@ function context(p) {
             thruDateText: dateText(row.thruDate) || "Open",
             summary: familyFields[type]
                 .filter(field => row[field] != null && row[field] !== "")
-                .map(field => fieldLabels[field] + ": " + valueText(field, row[field]))
+                .map(field => labelOf(fieldLabels, field) + ": " + valueText(field, row[field]))
                 .join("; "),
             changeReason: row.changeReason || ""
         }))
@@ -297,7 +299,7 @@ function exceptions(p) {
             Object.assign(settings, {
                 rowKey: (row.productId + "_" + row.facilityId).replace(/[^A-Za-z0-9_]/g, "_"),
                 productName: productText(row.productId),
-                facilityText: row.facilityId === "_NA_" ? "Every facility" : facilityText(row.facilityId),
+                facilityText: row.facilityId === "_NA_" ? L("Every facility") : facilityText(row.facilityId),
                 lotText: valueText("lotRequired", row.lotRequired),
                 serialText: valueText("serialRequired", row.serialRequired),
                 shelfLifeText: row.shelfLifeDays == null ? "Not set" : String(row.shelfLifeDays) + " days",
@@ -332,7 +334,7 @@ function reservationCheck(p) {
             productName: productText(row.productId),
             assetId: row.assetId,
             quantityText: String(row.quantity ?? ""),
-            reasonText: reasonTexts[row.reasonCode] || row.reasonCode,
+            reasonText: labelOf(reasonTexts, row.reasonCode),
             reasonCode: row.reasonCode
         }))
     }
@@ -401,7 +403,7 @@ function poolDetail(p) {
             productName: productText(row.productId),
             facilityName: facilityText(row.facilityId),
             quantityText: String(row.quantity ?? ""),
-            qualifiesText: row.qualifies ? "Qualifies" : "No longer qualifies"
+            qualifiesText: row.qualifies ? "Qualifies" : L("No longer qualifies")
         })),
         unqualifiedCount: preview.unqualifiedCount,
         truncated: !!preview.truncated,
@@ -413,7 +415,7 @@ function poolDetail(p) {
 function settingsIndex(p) {
     const policy = context(Object.assign({}, p, {policyTypes: "operation"}))
     if (!policy.available) return {indexRows: [], scopeText: "", message: policy.message}
-    const editText = policy.canManage ? "You can change it" : "Warehouse managers change it"
+    const editText = policy.canManage ? L("You can change it") : L("Warehouse managers change it")
     return {
         scopeText: policy.scopeText,
         indexRows: [
@@ -424,7 +426,7 @@ function settingsIndex(p) {
                 editText
             },
             {section: "Reservation policies", url: "../ReservationPolicies", summary: policy.summary.reservationOrder, editText},
-            {section: "Asset pools", url: "../AssetPools", summary: "Stock set aside for parties and stores", editText}
+            {section: "Asset pools", url: "../AssetPools", summary: L("Stock set aside for parties and stores"), editText}
         ]
     }
 }

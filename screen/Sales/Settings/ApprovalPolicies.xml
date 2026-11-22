@@ -44,7 +44,7 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."><parameter name="organizationPartyId"/><parameter name="includeEnded"/></error-response>
     </transition>
     <always-actions>
-        <script>if(!(sales.capabilities.configure))throw new Error('PERMISSION_DENIED: Sales settings are the Sales administrator\'s')</script>
+        <script>if(!(sales.capabilities.configure))throw new Error(ec.l10n.localize('PERMISSION_DENIED: Sales settings are the Sales administrator\'s'))</script>
     </always-actions>
     <actions>
         <set field="organizationPartyId" from="organizationPartyId || sales.defaultOrganizationPartyId || (sales.organizationPartyIds || [])[0] || null"/>

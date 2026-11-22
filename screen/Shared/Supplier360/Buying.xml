@@ -31,8 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
                         incotermEnumId:incotermEnumId, approvalStatusId:approvalStatusId,
                         purchaseBlockFromDate:purchaseBlockFromDate, purchaseBlockThruDate:purchaseBlockThruDate,
                         purchaseBlockReason:purchaseBlockReason, fromDate:effectiveFromDate || null, changeReason:changeReason}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage(stored?.changed ? 'Buying profile saved'
-                : 'Nothing changed', stored?.changed ? 'success' : 'info')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(stored?.changed ? ec.l10n.localize('Buying profile saved')
+                : ec.l10n.localize('Nothing changed'), stored?.changed ? 'success' : 'info')</script>
         </actions>
         <default-response url=".">
             <parameter name="vendorPartyId"/>

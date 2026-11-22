@@ -3,6 +3,7 @@
 // preference, the palette and record links, and the Home lookup. Mantle's stock services check their own permissions
 // again; nothing here grants what Mantle refuses.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
 const {find, one, rows, denied, call} = lib
 const access = lib.access
 
@@ -155,7 +156,7 @@ function scope() {
     }
 }
 function required(userScope = scope()) {
-    if (!userScope.read) denied("WAREHOUSE_UNAVAILABLE", "Warehouse is not available")
+    if (!userScope.read) denied("WAREHOUSE_UNAVAILABLE", L("Warehouse is not available"))
     return userScope
 }
 
@@ -192,7 +193,7 @@ function selectedFacility(userScope) {
 }
 
 function sharedContext(p) {
-    if (p.appRoot && p.appRoot !== "Warehouse") denied("WAREHOUSE_CONTEXT", "Warehouse context is not available")
+    if (p.appRoot && p.appRoot !== "Warehouse") denied("WAREHOUSE_CONTEXT", L("Warehouse context is not available"))
     const userScope = required()
     let facility = selectedFacility(userScope)
     if (p.facilityId) {

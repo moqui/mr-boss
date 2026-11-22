@@ -32,11 +32,17 @@ along with this software (see the LICENSE.md file). If not, see
             <script><![CDATA[
                 if (!ec.message.hasError()) {
                     const result = moved.result || {}
-                    const done = {RELEASED: result.staged ? 'released staged: its short lines stay blocked until covered' : 'released',
-                        REEXPLODED: 're-exploded from the method as of now; review it and release it again',
-                        UNRELEASED: 'back to a draft', STARTED: 'started', HELD: 'held', RESUMED: 'resumed', CANCELLED: 'cancelled',
-                        REQUESTED: 'sent to the supervisors for a staged release', APPROVED: 'approved for a staged release'}
-                    ec.message.addMessage('Work order ' + workEffortId + ' ' + (done[result.resultCode] || result.resultCode), 'success')
+                    const templates = {RELEASED: result.staged
+                            ? 'Work order ${workEffortId} released staged: its short lines stay blocked until covered'
+                            : 'Work order ${workEffortId} released',
+                        REEXPLODED: 'Work order ${workEffortId} re-exploded from the method as of now; review it and release it again',
+                        UNRELEASED: 'Work order ${workEffortId} back to a draft', STARTED: 'Work order ${workEffortId} started',
+                        HELD: 'Work order ${workEffortId} held', RESUMED: 'Work order ${workEffortId} resumed',
+                        CANCELLED: 'Work order ${workEffortId} cancelled',
+                        REQUESTED: 'Work order ${workEffortId} sent to the supervisors for a staged release',
+                        APPROVED: 'Work order ${workEffortId} approved for a staged release'}
+                    const template = templates[result.resultCode]
+                    ec.message.addMessage(template ? ec.resource.expand(template, '', {workEffortId: workEffortId}) : result.resultCode, 'success')
                 }
             ]]></script>
         </actions>

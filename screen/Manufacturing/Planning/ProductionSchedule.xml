@@ -66,8 +66,9 @@ along with this software (see the LICENSE.md file). If not, see
             for (const lane of lanes) {
                 const count = operations.filter((op) => op.facilityId === lane.facilityId).length
                 Object.assign(lane, {laneId: lane.facilityId, laneName: lane.facilityName,
-                    caption: [lane.parallelSlots + ' ' + (lane.parallelSlots === 1 ? t('slot') : t('slots')), lane.calendarConfigured ? '' : t('no work calendar'),
-                        count + ' ' + t('operations')].filter(Boolean).join(' · '),
+                    caption: [ec.resource.expand(lane.parallelSlots === 1 ? '${n} slot' : '${n} slots', '', {n: lane.parallelSlots}),
+                        lane.calendarConfigured ? '' : t('no work calendar'),
+                        ec.resource.expand('${n} operations', '', {n: count})].filter(Boolean).join(' · '),
                     shadeList: Array.from(lane.closedList || []).map((row) => ({kind: 'closed', fromText: row.fromText, thruText: row.thruText}))
                         .concat(Array.from(lane.holidayList || []).map((row) => ({kind: 'holiday', fromText: row.fromText, thruText: row.thruText, name: row.name})))
                         .concat(Array.from(lane.offlineList || []).map((row) => ({kind: 'offline', fromText: row.fromText, thruText: row.thruText,
@@ -75,7 +76,8 @@ along with this software (see the LICENSE.md file). If not, see
             }
             const barOf = (op) => Object.assign(op, {barId: op.workEffortId, laneId: op.facilityId, title: op.operationName,
                 label: op.operationName + ' · ' + op.runName, subtitle: op.runName + (op.productName ? ' · ' + op.productName + ' ' + op.quantityText : ''),
-                nowNote: op.hours ? op.hours + ' ' + t('standard hours') : '', caption: op.runName + (op.hours ? ' · ' + op.hours + ' ' + t('hours') : ''),
+                nowNote: op.hours ? ec.resource.expand('${hours} standard hours', '', {hours: op.hours}) : '',
+                caption: op.runName + (op.hours ? ' · ' + ec.resource.expand('${hours} hours', '', {hours: op.hours}) : ''),
                 ariaLabel: op.operationName + ', ' + op.runName + ', ' + op.startText + ' to ' + op.endText,
                 tip: op.operationName + ' · ' + op.runName + (op.productName ? ' · ' + op.productName + ' ' + op.quantityText : '') + ' · ' + op.startText + ' – ' + op.endText
                     + (op.hours ? ' · ' + op.hours + ' h' : '') + ' · ' + op.statusText + (op.lockedReason ? ' · ' + op.lockedReason : '') + (op.conflictText ? ' · ' + op.conflictText : ''),
@@ -97,7 +99,7 @@ along with this software (see the LICENSE.md file). If not, see
                 emptyText: t('No work center at this plant. A resource administrator adds one in Work centers.'),
                 notAvailableText: t('The plant is not one of yours.'), truncatedText: t('The first 300 operations are drawn; choose fewer days to see the others.'),
                 unscheduledTitle: t('Not scheduled'), scheduleLabel: t('Schedule'), moveTitle: t('Move operation'), applyLabel: t('Apply'),
-                removeLabel: t('Unschedule'), removeConfirm: t('Take {title} off the schedule?'), endTooltip: 'Empty: its hours over the work hours',
+                removeLabel: t('Unschedule'), removeConfirm: t('Take {title} off the schedule?'), endTooltip: t('Empty: its hours over the work hours'),
                 endComputedText: t('end from its hours'), overrideLabel: t('Override the conflicts (a supervisor exception; it changes no capacity)'),
                 requestNote: t('A supervisor may override the conflicts: ask with a reason.'), approveLabel: t('Approve override'), refuseLabel: t('Refuse'),
                 approveTitle: t('Approve the override'), refuseTitle: t('Refuse the override'), hint: t('Drag a bar to preview a move; the Move dialog applies it.'),

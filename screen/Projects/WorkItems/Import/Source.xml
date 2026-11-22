@@ -41,7 +41,7 @@ along with this software (see the LICENSE.md file). If not, see
             projectOptions = Array.from(projectsOut.projectList || [])
             source = {importId: hasFile ? importId : null, presetId: draft.chosenPresetId || '', characterSet: draft.characterSet || 'UTF-8',
                 rootWorkEffortId: draft.rootWorkEffortId || rootWorkEffortId || (projectOptions[0]?.key ?? '')}
-            presetLabel = {jira: 'Jira', redmine: 'Redmine', github: 'GitHub issues', generic: 'CSV'}[draft.presetId] || 'CSV'
+            presetLabel = {jira: 'Jira', redmine: 'Redmine', github: ec.l10n.localize('GitHub issues'), generic: 'CSV'}[draft.presetId] || 'CSV'
         ]]></script>
     </actions>
     <widgets>

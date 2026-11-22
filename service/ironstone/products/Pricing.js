@@ -28,7 +28,7 @@ function run(op, parameters) {
     }
     function options() {
         const a = access()
-        if (!a.canPriceRead && !a.canSupplierRead && !a.canSettings) throw new Error("Price authority is required")
+        if (!a.canPriceRead && !a.canSupplierRead && !a.canSettings) throw new Error(ec.l10n.localize("Price authority is required"))
         const visible = party =>
             (!party.privateOwnerUserId || party.privateOwnerUserId === ec.user.userId) &&
             (a.systemAdmin || a.ownerPartyIds.includes(party.ownerPartyId) || a.organizationPartyIds.includes(party.partyId))
@@ -77,10 +77,10 @@ function run(op, parameters) {
                     )
                     .map(uom => ({value: uom.uomId, label: uom.description + " (" + uom.uomId + ")"})),
                 bases: [
-                    {value: "typed", label: "Typed price"},
-                    {value: "fixed", label: "Fixed amount"},
-                    {value: "list", label: "Another list"},
-                    ...(a.canCostRead ? [{value: "standard", label: "Approved standard estimate"}] : [])
+                    {value: "typed", label: ec.l10n.localize("Typed price")},
+                    {value: "fixed", label: ec.l10n.localize("Fixed amount")},
+                    {value: "list", label: ec.l10n.localize("Another list")},
+                    ...(a.canCostRead ? [{value: "standard", label: ec.l10n.localize("Approved standard estimate")}] : [])
                 ],
                 purposes: lib.enumOptions("ProductPricePurpose"),
                 types: lib.enumOptions("ProductPriceType").filter(option => option.value !== "PptAverage"),
@@ -194,7 +194,7 @@ function run(op, parameters) {
         const a = access(),
             product = one(P + "Product", {productId: p.productId})
         if (!product || (!a.systemAdmin && !a.ownerPartyIds.includes(product.ownerPartyId)))
-            throw new Error("Product is not available")
+            throw new Error(ec.l10n.localize("Product is not available"))
         const direction = p.direction || "sales"
         if (!(direction === "purchase" ? a.canSupplierRead : a.canPriceRead))
             throw new Error("Price-read authority for this direction is required")

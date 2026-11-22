@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Content" default-menu-index="6" menu-image="sym_o_article" menu-image-type="icon">
     <always-actions>
-        <script>if(!marketing.capabilities.contentRead)throw new Error('PERMISSION_DENIED: Content is for Marketing readers')</script>
+        <script>if(!marketing.capabilities.contentRead)throw new Error(ec.l10n.localize('PERMISSION_DENIED: Content is for Marketing readers'))</script>
     </always-actions>
     <subscreens default-item="Content" always-use-full-path="true">
         <subscreens-item name="Content" location="component://mr-boss/screen/Marketing/Content/Content.xml" menu-title="Content" menu-index="1"/>

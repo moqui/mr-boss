@@ -35,8 +35,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.work.ProductionServices.reverse#SupportedAssembly" out-map="reversed"
                     in-map="{operationKey:operationKey, assetId:assetId, quantity:quantity || null, previewKey:previewKey,
                         reason:reason}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage('Kit ' + assetId + ': ' + reversed.result?.quantity
-                    + ' reversed; its components are back in stock and the reversing entries are dated now', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand('Kit ${assetId}: ${quantity} reversed; its components are back in stock and the reversing entries are dated now', '',
+                    {assetId: assetId, quantity: reversed.result?.quantity}), 'success')</script>
         </actions>
         <default-response url="."/>
         <error-response url="."/>

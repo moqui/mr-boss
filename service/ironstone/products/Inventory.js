@@ -9,21 +9,21 @@ function run(op, parameters) {
         W = F + "WarehousePolicyServices."
     const call = (name, p = {}) => local.call(name, p, {sys: true, strict: true})
     const fieldLabels = {
-        lotRequired: "Lot required",
-        serialRequired: "Serial required",
-        expiryBlock: "Block expired stock",
-        serialPattern: "Serial pattern",
-        lotPattern: "Lot pattern",
-        shelfLifeDays: "Shelf life in days",
-        nearExpiryDays: "Near-expiry warning days",
-        minimumRemainingShelfLifeDays: "Minimum remaining shelf life"
+        lotRequired: ec.l10n.localize("Lot required"),
+        serialRequired: ec.l10n.localize("Serial required"),
+        expiryBlock: ec.l10n.localize("Block expired stock"),
+        serialPattern: ec.l10n.localize("Serial pattern"),
+        lotPattern: ec.l10n.localize("Lot pattern"),
+        shelfLifeDays: ec.l10n.localize("Shelf life in days"),
+        nearExpiryDays: ec.l10n.localize("Near-expiry warning days"),
+        minimumRemainingShelfLifeDays: ec.l10n.localize("Minimum remaining shelf life")
     }
     // The product, the authorized facilities (those of internal organizations the user may read) and the one in focus.
     function context(p) {
         const shared = local.access(),
             capabilities = shared.capabilities,
             product = local.readableProduct(p.productId)
-        if (!product) throw new Error("Product is not available")
+        if (!product) throw new Error(ec.l10n.localize("Product is not available"))
         const internal = new Set(rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(role => role.partyId)),
             owners = capabilities.systemAdmin ? [...internal] : shared.ownerPartyIds.filter(id => internal.has(id))
         // Warehouse's mount: the user's Warehouse facilities (facilityIds of its get#SharedContext branch, null for every one);
@@ -46,11 +46,11 @@ function run(op, parameters) {
         const facility = p.facilityId
             ? facilities.find(row => row.facilityId === p.facilityId)
             : facilities.find(row => row.facilityTypeEnumId === "FcTpWarehouse") || facilities[0]
-        if (p.facilityId && !facility) throw new Error("Facility is not available")
+        if (p.facilityId && !facility) throw new Error(ec.l10n.localize("Facility is not available"))
         const organizationPartyId =
             facility?.ownerPartyId || p.organizationPartyId || shared.activeOrganizationPartyId || shared.organizationPartyIds[0]
         if (organizationPartyId && !capabilities.systemAdmin && !shared.ownerPartyIds.includes(organizationPartyId))
-            throw new Error("Stock organization is not available")
+            throw new Error(ec.l10n.localize("Stock organization is not available"))
         return {
             appRoot: shared.appRoot,
             facilities,
@@ -90,8 +90,8 @@ function run(op, parameters) {
             checkedAt = ms(ec.user.nowTimestamp),
             empty = message =>
                 Object.assign(focus, {stockRows: [], lotRows: [], totals: null, checkedAt, summaryMessage: message})
-        if (!focus.stockable) return empty("This product does not carry stock.")
-        if (!focus.facilities.length) return empty("No authorized stock facility is available.")
+        if (!focus.stockable) return empty(ec.l10n.localize("This product does not carry stock."))
+        if (!focus.facilities.length) return empty(ec.l10n.localize("No authorized stock facility is available."))
         const facilityIds = focus.facilities.map(row => row.facilityId),
             assets = rowsIn("mantle.product.asset.Asset", "facilityId", facilityIds).filter(
                 row => row.productId === focus.productId && focus.owners.includes(row.ownerPartyId)
@@ -204,7 +204,7 @@ function run(op, parameters) {
             checkedAt,
             summaryMessage:
                 focus.product.productTypeEnumId === "PtPickAssembly"
-                    ? "Kit availability includes assemblies possible from components."
+                    ? ec.l10n.localize("Kit availability includes assemblies possible from components.")
                     : focus.warehouseRoot
                       ? "Held is stock in any status but available (on hold, quarantine, morgue): it may still count in available to promise. In transit is what shipped transfers still carry here; incoming is what open purchase orders still bring."
                       : manufacturingRoot
@@ -220,7 +220,7 @@ function run(op, parameters) {
             return Object.assign(focus, {
                 projectionRows,
                 projectionAvailable: false,
-                projectionMessage: "Choose an authorized stock facility."
+                projectionMessage: ec.l10n.localize("Choose an authorized stock facility.")
             })
         if (!ec.search.isAvailable())
             return Object.assign(focus, {
@@ -253,7 +253,7 @@ function run(op, parameters) {
                     produce: info.estRunProduceRemaining,
                     incoming: info.prodEstQuantitySum,
                     projected: info.totalProjected,
-                    freshness: matches ? "Stock quantity agrees" : "Stock quantity differs"
+                    freshness: matches ? ec.l10n.localize("Stock quantity agrees") : ec.l10n.localize("Stock quantity differs")
                 })
             } catch (e) {
                 failed = true
@@ -269,9 +269,9 @@ function run(op, parameters) {
             projectionRows,
             projectionAvailable: projectionRows.length > 0,
             projectionMessage: !projectionRows.length
-                ? "No indexed projection is available for this product, facility and owner."
+                ? ec.l10n.localize("No indexed projection is available for this product, facility and owner.")
                 : failed || !fresh
-                  ? "Projection may be stale or incomplete. Current stock remains available on Summary."
+                  ? ec.l10n.localize("Projection may be stale or incomplete. Current stock remains available on Summary.")
                   : "Indexed sales demand, production consumption and supply. Stock quantity was checked against current records; projected dates are not promises."
         })
     }
@@ -285,7 +285,7 @@ function run(op, parameters) {
                 trackingSettings: {},
                 trackingHistory: [],
                 trackingSources: [],
-                policyMessage: "Choose a stockable product and authorized facility."
+                policyMessage: ec.l10n.localize("Choose a stockable product and authorized facility.")
             })
         const facility = call(F + "FacilityServices.get#ProductFacilityPolicy", {
                 productId: focus.productId,
@@ -369,7 +369,7 @@ function run(op, parameters) {
     }
     function storeFacility(p) {
         const focus = context(p)
-        if (!focus.canPlan) throw new Error("Warehouse stock-planner or manager authority is required")
+        if (!focus.canPlan) throw new Error(ec.l10n.localize("Warehouse stock-planner or manager authority is required"))
         return call(
             F + "FacilityServices.store#ProductFacilityPolicy",
             Object.assign({}, p, {
@@ -381,7 +381,7 @@ function run(op, parameters) {
     }
     function storeTracking(p) {
         const focus = context(p)
-        if (!focus.canPlan) throw new Error("Warehouse stock-planner or manager authority is required")
+        if (!focus.canPlan) throw new Error(ec.l10n.localize("Warehouse stock-planner or manager authority is required"))
         return call(
             W + "store#TrackingPolicy",
             Object.assign({}, p, {

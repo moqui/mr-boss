@@ -253,7 +253,7 @@ function scope() {
     }
 }
 function required(userScope = scope()) {
-    if (!userScope.read) denied("ADMIN_UNAVAILABLE", "Admin is not available")
+    if (!userScope.read) denied("ADMIN_UNAVAILABLE", ec.l10n.localize("Admin is not available"))
     return userScope
 }
 const administers = (userScope, partyId) => !userScope.ownerIds || (!!partyId && userScope.ownerIds.includes(partyId))
@@ -497,7 +497,7 @@ const mountRoutes = {
     ...settingsRoutes
 }
 function sharedContext(p) {
-    if (p.appRoot && p.appRoot !== "Admin") denied("ADMIN_CONTEXT", "Admin context is not available")
+    if (p.appRoot && p.appRoot !== "Admin") denied("ADMIN_CONTEXT", ec.l10n.localize("Admin context is not available"))
     const found = scope()
     // the settings index alone (impl-admin F46): no capability, the user's own organizations and the index's link
     if (settingsIndexOnly(found))
@@ -656,7 +656,7 @@ function recordOf(userScope, kind, recordId) {
 function checkRecord(p) {
     const userScope = required()
     if (p.capability) {
-        if (!Object.hasOwn(capabilityPermissions, p.capability)) throw new Error("Unknown Admin capability " + p.capability)
+        if (!Object.hasOwn(capabilityPermissions, p.capability)) throw new Error(ec.resource.expand("Unknown Admin capability ${name}", "", {name: p.capability}))
         if (!userScope.capabilities[p.capability])
             denied("PERMISSION_DENIED", capabilityPermissions[p.capability] + " is required")
     }
@@ -677,7 +677,7 @@ function checkRecord(p) {
 // it does not lend the caller access it could not be given (LOGIN_AS refused with the reason).
 function loginAsCheck(record) {
     if (!ec.user.hasPermission("ADMIN_LOGIN_AS")) denied("PERMISSION_DENIED", "ADMIN_LOGIN_AS is required")
-    if (record.recordId === ec.user.userId) denied("LOGIN_AS", "Choose another user to sign in as")
+    if (record.recordId === ec.user.userId) denied("LOGIN_AS", ec.l10n.localize("Choose another user to sign in as"))
     // a display account (shared devices, P18) stands for no person: the framework signs nothing in as it
     if (one("moqui.security.UserAccount", {userId: record.recordId})?.displayAccount === "Y")
         denied("LOGIN_AS", record.label + " is a display account: nothing signs in as it")
@@ -931,7 +931,7 @@ const choiceSources = {
 }
 function choices(p) {
     const userScope = required()
-    if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Admin choice " + p.choice)
+    if (!Object.hasOwn(choiceSources, p.choice)) throw new Error(ec.resource.expand("Unknown Admin choice ${name}", "", {name: p.choice}))
     return {options: choiceSources[p.choice](userScope, String(p.term || "").trim(), p.selected || null, p)}
 }
 
@@ -964,7 +964,7 @@ const operations = {sharedContext, checkRecord, search, choices, memberScope}
     destinationOpens,
     settingsIndexOnly,
     execute: (op, parameters) => {
-        if (!operations[op]) throw new Error("Unknown Admin operation " + op)
+        if (!operations[op]) throw new Error(ec.resource.expand("Unknown Admin operation ${name}", "", {name: op}))
         return operations[op](parameters)
     }
 })

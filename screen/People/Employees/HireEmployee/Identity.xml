@@ -32,14 +32,14 @@ along with this software (see the LICENSE.md file). If not, see
             <script><![CDATA[
                 if (ec.message.hasError()) return
                 const terms = offerFound?.offer?.hireTerms
-                if (!terms) { ec.message.addError('Only an accepted offer is hired from, by HR'); return }
+                if (!terms) { ec.message.addError(ec.l10n.localize('Only an accepted offer is hired from, by HR')); return }
                 const draft = {organizationPartyId: terms.organizationPartyId, partyId: terms.partyId, firstName: '', lastName: '',
                     preferredName: '', workEmail: '', workPhone: '', confirmNewPerson: '', fromDate: terms.fromDate, thruDate: terms.thruDate,
                     departmentPartyId: terms.departmentPartyId, emplPositionId: terms.emplPositionId, managerPartyId: terms.managerPartyId,
                     facilityId: terms.facilityId, reason: '', employmentOfferId: terms.employmentOfferId}
                 ec.service.sync().name('mantle.humanres.PeopleServices.store#EmploymentDraft').parameters({draftKind: 'hire',
                     employmentDraftId: hireDraftId, draft}).call()
-                if (!ec.message.hasError()) ec.message.addMessage('The hire starts from the accepted offer: check each step', 'success')
+                if (!ec.message.hasError()) ec.message.addMessage(ec.l10n.localize('The hire starts from the accepted offer: check each step'), 'success')
             ]]></script>
         </actions>
         <default-response url="."/>
@@ -64,9 +64,9 @@ along with this software (see the LICENSE.md file). If not, see
                 ec.service.sync().name('mantle.humanres.PeopleServices.store#EmploymentDraft').parameters({draftKind: 'hire',
                     employmentDraftId: hireDraftId, draft}).call()
                 if (ec.message.hasError()) return
-                if (!draft.organizationPartyId) ec.message.addValidationError(null, 'organizationPartyId', null, 'Choose the employer', null)
+                if (!draft.organizationPartyId) ec.message.addValidationError(null, 'organizationPartyId', null, ec.l10n.localize('Choose the employer'), null)
                 if (!draft.partyId && !(draft.firstName && draft.lastName))
-                    ec.message.addValidationError(null, 'partyId', null, 'Choose the person, or give a new person\'s first and last names', null)
+                    ec.message.addValidationError(null, 'partyId', null, ec.l10n.localize('Choose the person, or give a new person\'s first and last names'), null)
                 if (ec.message.hasError()) return
                 const previewed = ec.service.sync().name('mantle.humanres.PeopleServices.preview#Hire').parameters({
                     organizationPartyId: draft.organizationPartyId, partyId: draft.partyId, firstName: draft.firstName,
@@ -111,9 +111,12 @@ along with this software (see the LICENSE.md file). If not, see
             draftOffer = identity.employmentOfferId ? accepted.find(row => row.employmentOfferId === identity.employmentOfferId) || null : null
             acceptedRows = identity.employmentOfferId ? [] : employmentOfferId
                 ? accepted.filter(row => row.employmentOfferId === employmentOfferId) : accepted
-            draftOfferText = identity.employmentOfferId ? 'From the accepted offer to ' + (draftOffer?.applicantName || chosenName) +
-                (draftOffer ? ' (' + [draftOffer.positionName, draftOffer.fromDateText ? 'starts ' + draftOffer.fromDateText : ''].filter(Boolean).join(', ') + ')' : '')
-                + ': the hire consumes it once.' : ''
+            draftOfferText = identity.employmentOfferId ? ec.resource.expand(draftOffer
+                ? 'From the accepted offer to ${name} (${detail}): the hire consumes it once.'
+                : 'From the accepted offer to ${name}: the hire consumes it once.', '', {
+                name: draftOffer?.applicantName || chosenName,
+                detail: [draftOffer?.positionName, draftOffer?.fromDateText ? ec.resource.expand('starts ${date}', '', {date: draftOffer.fromDateText}) : ''].filter(Boolean).join(', ')
+            }) : ''
         ]]></script>
     </actions>
     <widgets>

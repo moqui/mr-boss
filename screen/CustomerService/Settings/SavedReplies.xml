@@ -82,8 +82,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <service-call name="mantle.request.SupportCaseServices.preview#SavedReply" out-map="previewed" transaction="force-new"
                         ignore-error="true" in-map="{requestId:previewRequestId, emailTextBlockId:emailTextBlockId}"/>
             </if>
-            <set field="previewProblem" from="!previewChecked?.recordId ? 'Case ' + previewRequestId + ' is not available'
-                    : (!previewed?.preview ? 'The reply cannot be previewed on case ' + previewRequestId : '')"/>
+            <set field="previewProblem" from="!previewChecked?.recordId ? ec.resource.expand('Case $' + '{requestId} is not available', '', {requestId: previewRequestId})
+                    : (!previewed?.preview ? ec.resource.expand('The reply cannot be previewed on case $' + '{requestId}', '', {requestId: previewRequestId}) : '')"/>
         </if>
         <script>ec.message.clearErrors()</script>
         <set field="can" from="customerService.capabilities"/>

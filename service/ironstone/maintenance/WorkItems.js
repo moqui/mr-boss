@@ -9,6 +9,7 @@ const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/Enti
 const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceAccess.js")
 const workProcesses = ec.resource.script("component://mr-mantle/service/mantle/work/WorkProcesses.js")
 const {find, one, denied} = lib
+const L = (words) => ec.l10n.localize(words)
 
 const WORK = "mantle.work.effort.WorkEffort"
 const ASSOC = "mantle.work.effort.WorkEffortAssoc"
@@ -18,9 +19,9 @@ const detailPath = "/qapps/Maintenance/WorkOrders/WorkOrderDetail?workEffortId="
 const statusText = statusId => (statusId ? one("moqui.basic.StatusItem", {statusId})?.description || statusId : "")
 
 function readerScope() {
-    if (!ec.user.userId) denied("MAINTENANCE_UNAVAILABLE", "Maintenance is not available")
+    if (!ec.user.userId) denied("MAINTENANCE_UNAVAILABLE", L("Maintenance is not available"))
     const userScope = maintenanceAccess.scope()
-    if (!userScope.capabilities.workRead) denied("MAINTENANCE_UNAVAILABLE", "Maintenance work is not available")
+    if (!userScope.capabilities.workRead) denied("MAINTENANCE_UNAVAILABLE", L("Maintenance work is not available"))
     return userScope
 }
 // The work orders the user reads that a task follows up (current links of its to a managed root), each with its link.

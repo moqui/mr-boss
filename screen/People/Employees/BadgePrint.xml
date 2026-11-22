@@ -53,7 +53,7 @@ along with this software (see the LICENSE.md file). If not, see
                     '<div style="font-size:14pt;font-weight:bold">' + enc(printed.personName) + '</div>' +
                     '<div>' + printed.barcodeSvg + '</div>' +
                     '<div style="font-size:10pt;letter-spacing:1px">' + enc(printed.numberText) + '</div>' +
-                    '<div style="font-size:7pt;color:#777">' + L('Issued') + ' ' + enc(printed.issuedDateText) + ' · ' +
+                    '<div style="font-size:7pt;color:#777">Issued ' + enc(printed.issuedDateText) + ' · ' +
                     L('Keep your PIN to yourself. If this badge is lost, ask HR to revoke it.') + '</div></div>'
                 : '<p>' + (reason ? enc(ec.l10n.localize(reason[1])) : L('This badge is not available')) + '</p>'
             ec.web.sendTextResponse('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + L('Clocking badge') +
@@ -81,14 +81,14 @@ along with this software (see the LICENSE.md file). If not, see
             }
             const badge = found?.badge || null
             stateText = !badge
-                ? 'This badge is not available'
+                ? ec.l10n.localize('This badge is not available')
                 : badge.printedDateText
-                  ? 'This badge was printed on ' + badge.printedDateText + ': its number is not shown again. If it is lost, issue a new one from Employee360.'
+                  ? ec.resource.expand('This badge was printed on ${date}: its number is not shown again. If it is lost, issue a new one from Employee360.', '', {date: badge.printedDateText})
                   : badge.state === 'revoked'
-                    ? 'This badge was revoked'
+                    ? ec.l10n.localize('This badge was revoked')
                     : badge.canPrint
-                      ? 'This badge is not printed yet: print it with Print badge in Employee360.'
-                      : 'This badge is not printed, and it is printed only by who issued it within 15 minutes: issue a new one from Employee360.'
+                      ? ec.l10n.localize('This badge is not printed yet: print it with Print badge in Employee360.')
+                      : ec.l10n.localize('This badge is not printed, and it is printed only by who issued it within 15 minutes: issue a new one from Employee360.')
         }
     ]]></script></actions>
     <widgets>

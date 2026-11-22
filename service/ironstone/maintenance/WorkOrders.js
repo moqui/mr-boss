@@ -7,6 +7,7 @@
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const maintenance = ec.resource.script("component://mr-boss/service/ironstone/maintenance/Maintenance.js")
 const {find, one, denied, ms} = lib
+const L = (words) => ec.l10n.localize(words)
 
 const statusColors = {
     WeInPlanning: "grey-8",
@@ -117,7 +118,7 @@ const assignmentNames = {workOrders: "Open work orders", custody: "Equipment hel
 // The user's own, or another's for a holder of ADMIN_IDENTITY_VIEW (to read) or ADMIN_IDENTITY_MANAGE (to move), as Projects'
 // participant reads them; the party of the identity.
 function participantParty(userId, permission) {
-    if (!ec.user.userId) denied("SIGN_IN", "Sign in to see assignments")
+    if (!ec.user.userId) denied("SIGN_IN", L("Sign in to see assignments"))
     if (text(userId) === ec.user.userId) return ec.user.userAccount?.partyId || null
     if (!ec.user.hasPermission(permission)) denied("PERMISSION_DENIED", permission + " is required")
     return one("moqui.security.UserAccount", {userId: text(userId)})?.partyId || null
@@ -194,17 +195,19 @@ function findAssignments(p) {
             .filter(kind => found[kind].length)
             .map(kind => {
                 const canMove = movers[kind].permissions.some(permission => ec.user.hasPermission(permission))
+                const name = L(assignmentNames[kind])
+                const count = found[kind].length
+                const who = L(movers[kind].who)
                 return {
                     resourceId: kind,
-                    resourceName:
-                        assignmentNames[kind] +
-                        " (" +
-                        found[kind].length +
-                        ")" +
-                        (canMove ? "" : ", moved in Maintenance by " + movers[kind].who),
+                    resourceName: canMove
+                        ? ec.resource.expand("${name} (${count})", "", {name, count})
+                        : ec.resource.expand("${name} (${count}), moved in Maintenance by ${who}", "", {name, count, who}),
                     resourceKind: "assignment",
                     transferable: canMove,
-                    note: found[kind].length + " open" + (canMove ? "" : "; " + movers[kind].who + " moves them in Maintenance")
+                    note: canMove
+                        ? ec.resource.expand("${count} open", "", {count})
+                        : ec.resource.expand("${count} open; ${who} moves them in Maintenance", "", {count, who})
                 }
             })
     }

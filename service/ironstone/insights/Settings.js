@@ -41,10 +41,10 @@ const enumOptions = enumTypeId =>
 // a policy's lag allowed, in words: whole days or hours where it is one
 function frequencyText(minutes) {
     const value = Number(minutes)
-    const counted = (count, unit) => count + " " + unit + (count === 1 ? "" : "s")
-    if (value % dayMinutes === 0) return counted(value / dayMinutes, "day")
-    if (value % 60 === 0) return counted(value / 60, "hour")
-    return counted(value, "minute")
+    const counted = (count, one, many) => ec.resource.expand(count === 1 ? one : many, "", {count})
+    if (value % dayMinutes === 0) return counted(value / dayMinutes, "${count} day", "${count} days")
+    if (value % 60 === 0) return counted(value / 60, "${count} hour", "${count} hours")
+    return counted(value, "${count} minute", "${count} minutes")
 }
 // The freshness policy's lag allowed, in minutes (its enumCode); a day when none is chosen or it does not read as a number.
 function policyOf(freshnessPolicyId) {
@@ -139,7 +139,7 @@ function sending() {
         ec.message.clearErrors()
         ec.message.popErrors()
     }
-    return "Checked by the instance's administrators"
+    return ec.l10n.localize("Checked by the instance's administrators")
 }
 // ScopeAndDelivery (design §11): the controls in effect for the organization, in words, with where each is set and its
 // owner's screen when the viewer's own groups open it. Read by every Insights reader; it changes nothing and names no
@@ -169,61 +169,65 @@ function controls(organizationPartyId, values, ceiling) {
             .join(", ")
     return [
         {
-            control: "Fiscal calendar",
-            value: "Accounting's fiscal periods of " + insights.partyName(organizationPartyId),
-            note: "Fiscal ranges follow the organization's calendar in Accounting; it is not set here.",
+            control: ec.l10n.localize("Fiscal calendar"),
+            value: ec.resource.expand("Accounting's fiscal periods of ${name}", "", {name: insights.partyName(organizationPartyId)}),
+            note: ec.l10n.localize("Fiscal ranges follow the organization's calendar in Accounting; it is not set here."),
             url: link("Accounting/Settings/Settings")
         },
         {
-            control: "Display time zone and week",
+            control: ec.l10n.localize("Display time zone and week"),
             value:
-                (values.displayTimeZone || "Each viewer's own time zone") +
+                (values.displayTimeZone || ec.l10n.localize("Each viewer's own time zone")) +
                 "; " +
                 (values.weekStart
-                    ? "weeks start on " +
-                      (one("moqui.basic.Enumeration", {enumId: values.weekStart})?.description || values.weekStart)
-                    : "the instance's week start"),
-            note: "Applied to the time grains of Analysis and Assist. Saved dashboards group by each viewer's own zone."
+                    ? ec.resource.expand("weeks start on ${day}", "", {
+                          day: one("moqui.basic.Enumeration", {enumId: values.weekStart})?.description || values.weekStart
+                      })
+                    : ec.l10n.localize("the instance's week start")),
+            note: ec.l10n.localize("Applied to the time grains of Analysis and Assist. Saved dashboards group by each viewer's own zone.")
         },
         {
-            control: "Delivery",
-            value: "To oneself, or to people and groups who may see exactly what the owner sees",
-            note:
-                "Each recipient gets a message of their own; one whose access differs is skipped. Scheduling for oneself: " +
-                (groups("INSIGHTS_SCHEDULE") || "no group") +
-                ". Delivering to others: " +
-                (groups("INSIGHTS_DISTRIBUTE") || "no group") +
-                "."
+            control: ec.l10n.localize("Delivery"),
+            value: ec.l10n.localize("To oneself, or to people and groups who may see exactly what the owner sees"),
+            note: ec.resource.expand(
+                "Each recipient gets a message of their own; one whose access differs is skipped. Scheduling for oneself: ${self}. Delivering to others: ${others}.",
+                "",
+                {
+                    self: groups("INSIGHTS_SCHEDULE") || ec.l10n.localize("no group"),
+                    others: groups("INSIGHTS_DISTRIBUTE") || ec.l10n.localize("no group")
+                }
+            )
         },
         {
-            control: "Group recipients",
-            value: "At most " + cap + " for a schedule or an alert rule",
-            note:
-                "The instance allows up to " +
-                ceiling +
-                ". The cap in effect when a schedule or rule is saved is kept with it until it is saved again.",
+            control: ec.l10n.localize("Group recipients"),
+            value: ec.resource.expand("At most ${cap} for a schedule or an alert rule", "", {cap}),
+            note: ec.resource.expand(
+                "The instance allows up to ${ceiling}. The cap in effect when a schedule or rule is saved is kept with it until it is saved again.",
+                "",
+                {ceiling}
+            ),
             url: lib.access.has("ADMIN_SETTINGS_VIEW") ? link("Admin/Settings/InstanceSettings") : null
         },
         {
-            control: "Report mail",
+            control: ec.l10n.localize("Report mail"),
             value: sending(),
-            note: "Outgoing mail and the report template are the instance's, set up in Admin.",
+            note: ec.l10n.localize("Outgoing mail and the report template are the instance's, set up in Admin."),
             url: link("Admin/Operations/Health")
         },
         {
-            control: "Exports",
-            value: "At most 10,000 rows for a dataset export; every export is audited",
-            note: "The limit is the instance's, not an organization's choice."
+            control: ec.l10n.localize("Exports"),
+            value: ec.l10n.localize("At most 10,000 rows for a dataset export; every export is audited"),
+            note: ec.l10n.localize("The limit is the instance's, not an organization's choice.")
         },
         {
-            control: "Reports kept",
-            value: "None: a delivered report is rendered when it is sent and when its recipient opens it",
-            note: "Delivery outcomes are kept as the instance's retention sets."
+            control: ec.l10n.localize("Reports kept"),
+            value: ec.l10n.localize("None: a delivered report is rendered when it is sent and when its recipient opens it"),
+            note: ec.l10n.localize("Delivery outcomes are kept as the instance's retention sets.")
         },
         {
-            control: "Freshness",
-            value: "A source is stale " + frequencyText(policy.maxLagMinutes) + " after its last rebuild",
-            note: "Data readiness shows each source's lag.",
+            control: ec.l10n.localize("Freshness"),
+            value: ec.resource.expand("A source is stale ${age} after its last rebuild", "", {age: frequencyText(policy.maxLagMinutes)}),
+            note: ec.l10n.localize("Data readiness shows each source's lag."),
             url: "/qapps/Insights/Settings/DataReadiness"
         }
     ].map(row => Object.assign({url: null}, row))
@@ -260,7 +264,7 @@ function sourceOwners() {
                 source: String(row.title || datasetId).replace(/ index$/, ""),
                 domainOwner: registered?.domainOwner || "",
                 className:
-                    registered && registered.disabled !== "Y" ? classNames[registered.classEnumId] || "" : "Not classified",
+                    registered && registered.disabled !== "Y" ? classNames[registered.classEnumId] || "" : ec.l10n.localize("Not classified"),
                 state,
                 stateColor: state === "Admitted" ? "positive" : state === "Needs review" ? "warning" : "grey-7",
                 stewardName: stewardName(admission?.stewardUserId),
@@ -274,7 +278,7 @@ function sourceOwners() {
 // source owners.
 function getSettings(p) {
     const userScope = insights.required()
-    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", "Insights settings need Insights read")
+    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", ec.l10n.localize("Insights settings need Insights read"))
     const context = insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null})
     const organizationPartyId = context.organizationPartyId || null
     const canView = !!userScope.capabilities.settingsView
@@ -339,7 +343,7 @@ function checked(p, organizationPartyId, current, ceiling) {
     if (blank(p.groupRecipientCap)) values.groupRecipientCap = null
     else {
         const cap = Number(text(p.groupRecipientCap))
-        if (!Number.isInteger(cap) || cap < 1) denied("VALUE_INVALID", "The recipient cap is a whole number of 1 or more")
+        if (!Number.isInteger(cap) || cap < 1) denied("VALUE_INVALID", ec.l10n.localize("The recipient cap is a whole number of 1 or more"))
         if (cap > ceiling)
             denied(
                 "RECIPIENT_CAP_CEILING",
@@ -357,9 +361,9 @@ function storeSettings(p) {
     const userScope = insights.required()
     return attempt(() => {
         if (!userScope.capabilities.settingsEdit)
-            denied("INSIGHTS_SETTINGS_REQUIRED", "Changing Insights settings needs INSIGHTS_SETTINGS_EDIT")
+            denied("INSIGHTS_SETTINGS_REQUIRED", ec.l10n.localize("Changing Insights settings needs INSIGHTS_SETTINGS_EDIT"))
         const organizationPartyId = text(p.organizationPartyId)
-        if (!organizationPartyId) denied("ORGANIZATION_REQUIRED", "Choose the organization these settings are for")
+        if (!organizationPartyId) denied("ORGANIZATION_REQUIRED", ec.l10n.localize("Choose the organization these settings are for"))
         insights.context({appRoot: "Insights", organizationPartyId})
         const revision = revisionOf(organizationPartyId)
         if (blank(p.expectedRevision) || text(p.expectedRevision) !== revision)
@@ -390,16 +394,16 @@ function storeSettings(p) {
             revision: revisionOf(organizationPartyId),
             settings: insights.organizationSettings(organizationPartyId).values
         }
-    }, "The settings could not be saved")
+    }, ec.l10n.localize("The settings could not be saved"))
 }
 
 // ===== find#SourceReadiness =====
 const stateNames = {
-    ready: "Ready",
-    stale: "Stale",
-    warning: "Needs review",
-    failed: "Failed",
-    unavailable: "Unavailable"
+    ready: ec.l10n.localize("Ready"),
+    stale: ec.l10n.localize("Stale"),
+    warning: ec.l10n.localize("Needs review"),
+    failed: ec.l10n.localize("Failed"),
+    unavailable: ec.l10n.localize("Unavailable")
 }
 const stateColors = {ready: "positive", stale: "warning", warning: "warning", failed: "negative", unavailable: "grey-8"}
 const stateOrder = ["failed", "unavailable", "stale", "warning", "ready"]
@@ -411,7 +415,7 @@ const stateOrder = ["failed", "unavailable", "stale", "warning", "ready"]
 // domain owner, source and state.
 function sourceReadiness(p) {
     const userScope = insights.required()
-    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", "Data readiness needs Insights read")
+    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", ec.l10n.localize("Data readiness needs Insights read"))
     const context = insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null})
     // the policy of the organization in scope; with several in scope and none chosen, the strictest of theirs
     const scoped = context.organizationPartyId
@@ -444,7 +448,7 @@ function sourceReadiness(p) {
             stateName: stateNames[state],
             stateColor: stateColors[state],
             message: stale
-                ? "Last rebuilt " + check.lagText + " ago; " + frequencyText(policy.maxLagMinutes) + " is allowed"
+                ? ec.resource.expand("Last rebuilt ${lag} ago; ${allowed} is allowed", "", {lag: check.lagText, allowed: frequencyText(policy.maxLagMinutes)})
                 : check.message || "",
             watermarkText: check.watermarkText || "",
             lagText: check.lagText || "",
@@ -479,7 +483,7 @@ function sourceReadiness(p) {
         checkedText: found.checkedText || "",
         organizationPartyId: context.organizationPartyId || null,
         organizations: context.organizations,
-        freshnessText: "A source is stale " + frequencyText(policy.maxLagMinutes) + " after its last rebuild",
+        freshnessText: ec.resource.expand("A source is stale ${age} after its last rebuild", "", {age: frequencyText(policy.maxLagMinutes)}),
         ownerOptions: Array.from(new Set(all.map(row => row.domainOwner).filter(Boolean))).sort(),
         stateOptions: stateOrder.map(state => ({value: state, label: stateNames[state]}))
     }

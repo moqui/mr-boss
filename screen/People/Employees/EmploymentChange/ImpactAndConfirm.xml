@@ -34,8 +34,11 @@ along with this software (see the LICENSE.md file). If not, see
                 if (changeDraftId) ec.service.sync().name('mantle.humanres.PeopleServices.delete#EmploymentDraft').parameters({
                     employmentDraftId: changeDraftId}).call()
                 const what = changeKinds[changeKind] || 'Change'
-                ec.message.addMessage(changed.applied ? what + ' applied' : what + ' asked for' + (changed.waitingText ? ': ' +
-                    changed.waitingText.charAt(0).toLowerCase() + changed.waitingText.slice(1) : ''), 'success')
+                ec.message.addMessage(changed.applied
+                    ? ec.resource.expand('${what} applied', '', {what})
+                    : changed.waitingText
+                        ? ec.resource.expand('${what} asked for: ${waiting}', '', {what, waiting: changed.waitingText.charAt(0).toLowerCase() + changed.waitingText.slice(1)})
+                        : ec.resource.expand('${what} asked for', '', {what}), 'success')
                 changedPartyId = ec.entity.find('mantle.party.PartyRelationship').condition('partyRelationshipId',
                     partyRelationshipId).disableAuthz().one()?.fromPartyId || null
             ]]></script>
@@ -66,12 +69,12 @@ along with this software (see the LICENSE.md file). If not, see
                 changes: (now || '') !== (next || '')}))
             impactRows = Array.from(found.impact || [])
             routeRows = Array.from(found.route || [])
-            const severityTexts = {error: 'Cannot apply', warning: 'Check', info: 'Note'}
+            const severityTexts = {error: ec.l10n.localize('Cannot apply'), warning: ec.l10n.localize('Check'), info: ec.l10n.localize('Note')}
             findingRows = Array.from(found.findings || []).map(row => Object.assign({}, row, {severityText: severityTexts[row.severity] || ''}))
             severityColors = {error: 'negative', warning: 'warning', info: 'grey-8'}
             confirm = {expectedRevision: found.revision || '', partyRelationshipId, changeKind}
-            summaryText = (changeKinds[changeKind] || 'Change') + ' from ' + (found.effectiveDateText || '') +
-                (changeDraft.reason ? ' · ' + changeDraft.reason : '')
+            summaryText = ec.resource.expand(changeDraft.reason ? '${what} from ${date} · ${reason}' : '${what} from ${date}', '', {
+                what: changeKinds[changeKind] || 'Change', date: found.effectiveDateText || '', reason: changeDraft.reason || ''})
             canApply = !!found.canApply
             needsApproval = !!found.needsApproval
         ]]></script>

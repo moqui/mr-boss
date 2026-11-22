@@ -30,8 +30,8 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{operationKey:operationKey, workEffortId:workEffortId, lossTypeEnumId:lossTypeEnumId,
                         productionRunLineId:productionRunLineId || null, assetId:assetId || null, quantity:quantity,
                         reasonCode:reasonCode || null, reason:reason || null, comments:comments || null}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage(recorded.result?.pendingApproval ? 'The loss waits for a supervisor\'s approval'
-                    : 'Loss ' + recorded.result?.productionLossId + ' recorded', recorded.result?.pendingApproval ? 'warning' : 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(recorded.result?.pendingApproval ? ec.l10n.localize("The loss waits for a supervisor's approval")
+                    : ec.resource.expand('Loss ${productionLossId} recorded', '', {productionLossId: recorded.result?.productionLossId}), recorded.result?.pendingApproval ? 'warning' : 'success')</script>
         </actions>
         <default-response url="."/>
         <error-response url="."/>
@@ -44,7 +44,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{operationKey:operationKey, workEffortId:workEffortId, productionLossId:productionLossId,
                         decision:decision || 'approve',
                         reason:reason || null}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage(decided.result?.resultCode == 'REFUSED' ? 'Loss refused' : 'Loss approved', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(decided.result?.resultCode == 'REFUSED' ? ec.l10n.localize('Loss refused') : ec.l10n.localize('Loss approved'), 'success')</script>
         </actions>
         <default-response url="."/>
         <error-response url="."/>

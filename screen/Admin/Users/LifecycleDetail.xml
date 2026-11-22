@@ -37,7 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.party.IdentityServices.retry#LifecycleStep" out-map="retried"
                     in-map="{operationId:operationId, stepSeqId:stepSeqId, expectedRevision:(expectedRevision || null), reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(retried.applied ? 'Step done' : retried.reason, retried.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(retried.applied ? ec.l10n.localize('Step done') : retried.reason, retried.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="operationId"/></default-response>
@@ -48,7 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.admin.LifecycleServices.transfer#OwnedResource" out-map="moved"
                     in-map="{operationId:operationId, stepSeqId:stepSeqId, toUserId:toUserId, reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(moved.applied ? 'Ownership transferred' : moved.reason, moved.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(moved.applied ? ec.l10n.localize('Ownership transferred') : moved.reason, moved.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="operationId"/></default-response>
@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#Lifecycle', {operationId:operationId}, 'Lifecycle operation ' + operationId + ' is not available.')"/>
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#Lifecycle', {operationId:operationId}, ec.resource.expand('Lifecycle operation ${id} is not available.', '', {id: operationId}))"/>
         <set field="found" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <set field="operation" from="found?.operation || null"/>
@@ -67,12 +67,12 @@ along with this software (see the LICENSE.md file). If not, see
             targetUserId = operation?.userId || ''
             summary = operation ? Object.assign({}, operation, {
                 requestedText: operation.requestedByName + ' · ' + when(operation.requestedDate),
-                effectiveText: operation.effectiveDate ? when(operation.effectiveDate) : 'At once',
-                reasonText: operation.reason || 'No reason given'}) : {}
+                effectiveText: operation.effectiveDate ? when(operation.effectiveDate) : ec.l10n.localize('At once'),
+                reasonText: operation.reason || ec.l10n.localize('No reason given')}) : {}
             steps = Array.from(found?.stepList || []).map(row => Object.assign({}, row, {
                 stepText: row.title + (row.resourceName ? ': ' + row.resourceName : ''),
                 ownerText: row.participant ? row.ownerApp : 'Account',
-                outcomeText: [row.reason, row.toUserName ? 'New owner ' + row.toUserName : ''].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · '),
+                outcomeText: [row.reason, row.toUserName ? ec.resource.expand('New owner ${name}', '', {name: row.toUserName}) : ''].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · '),
                 whenText: when(row.completedDate || row.lastAttemptDate)}))
             stateTone = operation?.statusId === 'UlopAttention' ? 'text-warning' : 'text-primary'
         ]]></script>
@@ -83,7 +83,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box type="warning">
                     <box-header title="Lifecycle operation not available"/>
                     <box-body>
-                        <label type="p" text="${failure || ('Lifecycle operation ' + operationId + ' is not available.')}"/>
+                        <label type="p" text="${failure || ec.resource.expand('Lifecycle operation $' + '{id} is not available.', '', {id: operationId})}"/>
                         <link url="../LifecycleOperations" text="Back to lifecycle operations" link-type="anchor"/>
                     </box-body>
                 </container-box>

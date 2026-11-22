@@ -44,7 +44,7 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it) -->
         <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.DataTransferServices.find#ImportRuns',
                 {targetId:(targetId || null), scopeKey:(organizationPartyId || null), state:(state || null), fromDate:(fromDate || null),
-                    thruDate:(thruDate || null), pageIndex:Math.max(Number(pageIndex) || 0, 0)}, 'they could not be read')"/>
+                    thruDate:(thruDate || null), pageIndex:Math.max(Number(pageIndex) || 0, 0)}, ec.l10n.localize('they could not be read'))"/>
         <set field="found" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <set field="findValues" from="{targetId:targetId, organizationPartyId:organizationPartyId, state:state, fromDate:fromDate, thruDate:thruDate}"/>

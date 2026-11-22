@@ -46,10 +46,14 @@ along with this software (see the LICENSE.md file). If not, see
                     moved = ec.service.sync().name('mantle.work.ProductionServices.transition#ProductionOrder').parameters({
                         operationKey: 'board-' + workEffortId + '-' + (revision ?? '') + '-' + (statusId ?? ''),
                         workEffortId: workEffortId, toStatusId: statusId, expectedRevision: revision}).call()?.result
-                const done = {RELEASED: 'released', REEXPLODED: 're-exploded for review', UNRELEASED: 'back to a draft',
-                    STARTED: 'started', RESUMED: 'resumed', HELD: 'held', CANCELLED: 'cancelled'}
+                const templates = {RELEASED: 'Work order ${workEffortId} released',
+                    REEXPLODED: 'Work order ${workEffortId} re-exploded for review',
+                    UNRELEASED: 'Work order ${workEffortId} back to a draft', STARTED: 'Work order ${workEffortId} started',
+                    RESUMED: 'Work order ${workEffortId} resumed', HELD: 'Work order ${workEffortId} held',
+                    CANCELLED: 'Work order ${workEffortId} cancelled'}
+                const template = templates[moved.resultCode]
                 ec.web.sendJsonResponse(ec.message.hasError() || !moved ? {} : {messageInfos: [{type: 'success',
-                    message: 'Work order ' + workEffortId + ' ' + (done[moved.resultCode] || moved.resultCode)}]})
+                    message: template ? ec.resource.expand(template, '', {workEffortId: workEffortId}) : moved.resultCode}]})
             ]]></script>
         </actions>
         <default-response type="none"/>
@@ -63,12 +67,13 @@ along with this software (see the LICENSE.md file). If not, see
                     out-map="bulkOut"/>
             <script><![CDATA[
                 if (!ec.message.hasError()) {
-                    const verb = {release: 'Released', hold: 'Held', cancel: 'Cancelled'}[bulk] || 'Done'
-                    if (bulkOut.successCount) ec.message.addMessage(verb + ': ' + bulkOut.results.filter((row) => row.ok)
-                            .map((row) => row.workEffortId).join(', '), 'success')
+                    const verbs = {release: 'Released: ${ids}', hold: 'Held: ${ids}', cancel: 'Cancelled: ${ids}'}
+                    const ids = bulkOut.results.filter((row) => row.ok).map((row) => row.workEffortId).join(', ')
+                    if (bulkOut.successCount) ec.message.addMessage(ec.resource.expand(verbs[bulk] || 'Done: ${ids}', '', {ids: ids}), 'success')
                     for (const row of bulkOut.results.filter((row) => !row.ok))
-                        ec.message.addMessage((row.outcome === 'blocked' ? 'Blocked ' : 'Not done ') + row.workEffortId + ': '
-                                + String(row.message || '').replace(/^([A-Z_]+: )/, ''), 'warning')
+                        ec.message.addMessage(ec.resource.expand(row.outcome === 'blocked'
+                                ? 'Blocked ${workEffortId}: ${message}' : 'Not done ${workEffortId}: ${message}', '',
+                            {workEffortId: row.workEffortId, message: String(row.message || '').replace(/^([A-Z_]+: )/, '')}), 'warning')
                 }
             ]]></script>
         </actions>

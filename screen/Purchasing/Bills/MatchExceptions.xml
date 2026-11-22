@@ -66,7 +66,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="linkLegacyBills">
         <actions>
             <script>if (!purchasing.allOrganizations &amp;&amp; !purchasing.organizationPartyIds.includes(organizationPartyId))
-                throw new Error('RECORD_UNAVAILABLE: The organization is not available')</script>
+                throw new Error(ec.l10n.localize('RECORD_UNAVAILABLE: The organization is not available'))</script>
             <service-call name="mantle.account.InvoiceMatchServices.apply#LegacyMatches" out-map="linked"
                     in-map="{organizationPartyId:organizationPartyId, supplierPartyId:vendorPartyId || null,
                         fromDate:fromDate || null, thruDate:thruDate || null, afterInvoiceId:afterInvoiceId || null}"/>

@@ -47,14 +47,14 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <section name="RmaMissing" condition="!returnFound || !printBody">
             <widgets>
-                <label text="${returnFound ? (printError || 'Return ' + returnId + ' is not authorized yet.') : 'Return ' + returnId + ' is not available.'}" type="p"/>
+                <label text="${returnFound ? (printError || ec.resource.expand('Return $' + '{returnId} is not authorized yet.', '', {returnId: returnId})) : ec.resource.expand('Return $' + '{returnId} is not available.', '', {returnId: returnId})}" type="p"/>
             </widgets>
         </section>
         <section name="Rma" condition="returnFound &amp;&amp; printBody">
             <widgets>
                 <render-mode>
                     <text type="html,html-print,qvt"><![CDATA[<div class="m-print-document">${printBody}</div>]]></text>
-                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: "Return authorization " + returnId + ": print it from the browser"})}]]></text>
+                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: ec.resource.expand('Return authorization $' + '{returnId}: print it from the browser', '', {returnId: returnId})})}]]></text>
                 </render-mode>
             </widgets>
         </section>

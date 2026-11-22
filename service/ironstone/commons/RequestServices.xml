@@ -525,7 +525,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.commons.RequestServices.get#RequestAccess" in-map="{requestId:requestId, need:'view'}" out-map="access"/>
             <if condition="ec.message.hasError()"><return/></if>
-            <if condition="!access.isAssignee"><return error="true" message="Only the request's assignee may reassign it"/></if>
+            <if condition="!access.isAssignee"><return error="true" message="${ec.l10n.localize('Only the request\'s assignee may reassign it')}"/></if>
             <if condition="['ReqCompleted', 'ReqCancelled'].includes(access.request.statusId)"><return error="true" message="This request is closed"/></if>
             <entity-find-one entity-name="mantle.party.PartyDetail" value-field="assignee"><field-map field-name="partyId" from="assignToPartyId"/></entity-find-one>
             <if condition="assignee == null || assignee.disabled == 'Y' || (assignee.privateOwnerUserId &amp;&amp; assignee.privateOwnerUserId != ec.user.userId)">
@@ -569,7 +569,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.commons.RequestServices.get#RequestAccess" in-map="{requestId:requestId, need:'view'}" out-map="access"/>
             <if condition="ec.message.hasError()"><return/></if>
-            <if condition="!(access.isParty || access.isRaiser)"><return error="true" message="Only the request's people may add a task to it"/></if>
+            <if condition="!(access.isParty || access.isRaiser)"><return error="true" message="${ec.l10n.localize('Only the request\'s people may add a task to it')}"/></if>
             <if condition="['ReqCompleted', 'ReqCancelled'].includes(access.request.statusId)"><return error="true" message="This request is closed"/></if>
             <service-call name="ironstone.commons.QuickCreateServices.create#Task" out-map="created" in-map="{workEffortName:workEffortName.trim(),
                     estimatedCompletionDate:(dueDate ? String(dueDate).trim() : null), recordEntity:'mantle.request.Request', recordId:requestId}"/>

@@ -25,7 +25,7 @@ function organizationIds(userScope) {
 }
 function replenishmentScope() {
     const userScope = purchasing().required()
-    if (!userScope.capabilities.replenishment) denied("PERMISSION_DENIED", "Replenishment is not available")
+    if (!userScope.capabilities.replenishment) denied("PERMISSION_DENIED", ec.l10n.localize("Replenishment is not available"))
     return userScope
 }
 // The facilities a plan may be for: the warehouses and plants of the user's organizations that are not under another of the
@@ -84,7 +84,7 @@ function productChoices(userScope, term, selected) {
 }
 // The plan's methods, with All (Purchasing's list shows buy suggestions unless another method or all is chosen).
 function methodChoices(term) {
-    const options = [{value: "_ALL_", label: "All methods"}].concat(
+    const options = [{value: "_ALL_", label: ec.l10n.localize("All methods")}].concat(
         rows("moqui.basic.Enumeration", {enumTypeId: "PlanningSuggestionMethod"})
             .sort((a, b) => Number(a.sequenceNum || 0) - Number(b.sequenceNum || 0))
             .map(row => ({value: row.enumId, label: row.description || row.enumId}))
@@ -141,7 +141,7 @@ function findRules(p) {
     if (!blank(p.facilityId)) query = query.condition("facilityId", p.facilityId)
     if (!blank(p.productId)) query = query.condition("productId", p.productId)
     if (!blank(p.supplierPartyId)) {
-        if (!purchasing().supplierOf(userScope, p.supplierPartyId)) denied("RECORD_UNAVAILABLE", "Supplier is not available")
+        if (!purchasing().supplierOf(userScope, p.supplierPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("Supplier is not available"))
         const productIds = Array.from(
             find("mantle.product.ProductPrice", {vendorPartyId: p.supplierPartyId, pricePurposeEnumId: "PppPurchase"})
                 .selectField("productId")

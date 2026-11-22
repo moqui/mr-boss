@@ -61,7 +61,7 @@ along with this software (see the LICENSE.md file). If not, see
                 ownerApp:ownerApp, providerKey:providerKey}"/>
         <set field="filtered" from="!!(organizationPartyId || healthGroupEnumId || state || ownerApp || providerKey)"/>
         <!-- an organization outside the user's scope is refused before any provider is asked (a refusal shown as its reason) -->
-        <set field="scopeRefusal" from="organizationPartyId ? ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('ironstone.admin.ContextServices.check#Record', {appRoot:appRoot, recordType:'organization', recordId:organizationPartyId}, 'The checks are not available to you.').failure : null"/>
+        <set field="scopeRefusal" from="organizationPartyId ? ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('ironstone.admin.ContextServices.check#Record', {appRoot:appRoot, recordType:'organization', recordId:organizationPartyId}, ec.l10n.localize('The checks are not available to you.')).failure : null"/>
         <set field="health" from="scopeRefusal ? {checks: [], failure: scopeRefusal, failedText: '', checkedText: '', ownerOptions: [], groupOptions: []}
                 : ec.resource.script('component://tools/template/AdminReadiness.js').health(findValues, organizationPartyId ? {organizationPartyId: organizationPartyId} : null)"/>
         <set field="checks" from="ec.resource.script('component://mr-boss/template/AdminRegistry.js').openFixes(health.checks)"/>

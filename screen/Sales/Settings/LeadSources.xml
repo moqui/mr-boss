@@ -69,7 +69,7 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."><parameter name="organizationPartyId"/></error-response>
     </transition>
     <always-actions>
-        <script>if(!(sales.capabilities.configure))throw new Error('PERMISSION_DENIED: Sales lead sources are the Sales administrator\'s')</script>
+        <script>if(!(sales.capabilities.configure))throw new Error(ec.l10n.localize('PERMISSION_DENIED: Sales lead sources are the Sales administrator\'s'))</script>
     </always-actions>
     <actions>
         <set field="can" from="sales.capabilities"/>

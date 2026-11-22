@@ -115,8 +115,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box type="warning">
                     <box-header title="Not available"/>
                     <box-body>
-                        <label type="p" text="${!can.caseEdit ? 'Splitting a case is for those who work cases.' : splitError
-                                ? splitError : 'Case ' + requestId + ' is not available to you.'}"/>
+                        <label type="p" text="${!can.caseEdit ? ec.l10n.localize('Splitting a case is for those who work cases.') : splitError
+                                ? splitError : ec.resource.expand('Case $' + '{requestId} is not available to you.', '', {requestId: requestId})}"/>
                         <link url="../CaseDetail" text="Back to case ${requestId}" link-type="anchor" parameter-map="{requestId:requestId}"/>
                     </box-body>
                 </container-box>
@@ -165,8 +165,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="2. The new case"/>
                     <box-body>
                         <label type="p" style="text-caption m-muted"
-                                text="${splitPreview.startFrom == 'message' ? 'Its clock starts ' + splitPreview.startText + ', when the earliest message chosen came in.'
-                                    : 'No message is chosen: its clock starts when it is made' + (can.caseManage ? ', or at the start you give below with its reason.' : '.')}"/>
+                                text="${splitPreview.startFrom == 'message' ? ec.resource.expand('Its clock starts $' + '{when}, when the earliest message chosen came in.', '', {when: splitPreview.startText})
+                                    : ec.l10n.localize(can.caseManage ? 'No message is chosen: its clock starts when it is made, or at the start you give below with its reason.' : 'No message is chosen: its clock starts when it is made.')}"/>
                         <label type="p" style="text-caption m-muted" condition="splitPreview.chosenCount"
                                 text="${splitPreview.chosenCount} item(s) chosen."/>
                         <form-single name="SplitNewCase" transition="splitCase" map="splitNew" focus-field="requestName">

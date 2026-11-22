@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="Approvals" default-menu-index="8" menu-image="sym_o_approval" menu-image-type="icon"
         default-menu-include="ec.user.hasPermission('SALES_APPROVE')">
     <always-actions>
-        <script>if(!(sales.capabilities.approve))throw new Error('PERMISSION_DENIED: Sales approvals are the sales approver\'s')</script>
+        <script>if(!(sales.capabilities.approve))throw new Error(ec.l10n.localize('PERMISSION_DENIED: Sales approvals are the sales approver\'s'))</script>
         <set field="notificationTopics" from="['SalesQuoteApproval', 'OrderChangeApproval']"/>
         <set field="notificationsTitle" value="Approvals"/>
     </always-actions>

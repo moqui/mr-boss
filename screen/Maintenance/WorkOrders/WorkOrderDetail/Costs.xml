@@ -28,7 +28,7 @@ along with this software (see the LICENSE.md file). If not, see
         custom group given Maintenance in Admin, which the BOSS_MAINTENANCE deny rows do not reach, opens only what its
         permissions give -->
     <always-actions>
-        <script>if(!(maintenance.capabilities.costView))throw new Error('PERMISSION_DENIED: Maintenance costs are the cost reader\'s')</script>
+        <script>if(!(maintenance.capabilities.costView))throw new Error(ec.l10n.localize('PERMISSION_DENIED: Maintenance costs are the cost reader\'s'))</script>
     </always-actions>
     <actions>
         <set field="costs" from="null"/>
@@ -42,12 +42,10 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="sourceRows" from="costs?.sourceList || []"/>
         <set field="projectRows" from="costs?.projectList || []"/>
         <set field="estimate" from="costs?.estimate || null"/>
-        <set field="apartText" from="[costs &amp;&amp; costs.unapprovedHoursText != '0' ? costs.unapprovedHoursText + ' h not approved yet' : null,
-                costs &amp;&amp; costs.unpricedHoursText != '0' ? costs.unpricedHoursText + ' h approved with no costing rate' : null,
-                costs?.unpricedParts ? costs.unpricedParts + ' part movements with no cost' : null].filter(Boolean).join(' · ')"/>
-        <set field="estimateText" from="!estimate ? '' : estimate.known ? estimate.amountText + ' (parts ' + estimate.partsText + ', labor '
-                + estimate.laborText + (estimate.hoursText ? ' for ' + estimate.hoursText + ' h' : '') + ')'
-                : 'Not priced: ' + estimate.unknownList.join('; ')"/>
+        <set field="apartText" from="[costs &amp;&amp; costs.unapprovedHoursText != '0' ? ec.resource.expand('${hours} h not approved yet', '', {hours: costs.unapprovedHoursText}) : null,
+                costs &amp;&amp; costs.unpricedHoursText != '0' ? ec.resource.expand('${hours} h approved with no costing rate', '', {hours: costs.unpricedHoursText}) : null,
+                costs?.unpricedParts ? ec.resource.expand('${count} part movements with no cost', '', {count: costs.unpricedParts}) : null].filter(Boolean).join(' · ')"/>
+        <set field="estimateText" from="!estimate ? '' : estimate.known ? (estimate.hoursText ? ec.resource.expand('${amount} (parts ${parts}, labor ${labor} for ${hours} h)', '', {amount: estimate.amountText, parts: estimate.partsText, labor: estimate.laborText, hours: estimate.hoursText}) : ec.resource.expand('${amount} (parts ${parts}, labor ${labor})', '', {amount: estimate.amountText, parts: estimate.partsText, labor: estimate.laborText})) : ec.resource.expand('Not priced: ${unknown}', '', {unknown: estimate.unknownList.join('; ')})"/>
     </actions>
     <widgets>
         <section name="CostsFound" condition="costs">

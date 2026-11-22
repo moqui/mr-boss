@@ -23,14 +23,14 @@ function partyName(partyId) {
 }
 function settingsScope(write = false) {
     const userScope = purchasing.required()
-    if (!userScope.capabilities.settings) denied("PERMISSION_DENIED", "Purchasing settings are not available")
-    if (write && !userScope.capabilities.policyEdit) denied("PERMISSION_DENIED", "PURCHASE_POLICY_EDIT is required")
+    if (!userScope.capabilities.settings) denied("PERMISSION_DENIED", ec.l10n.localize("Purchasing settings are not available"))
+    if (write && !userScope.capabilities.policyEdit) denied("PERMISSION_DENIED", ec.l10n.localize("PURCHASE_POLICY_EDIT is required"))
     return userScope
 }
 function organizationOf(userScope, organizationPartyId) {
     const ids = userScope.ownerIds || rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(row => row.partyId)
     if (!blank(organizationPartyId)) {
-        if (!ids.includes(organizationPartyId)) denied("RECORD_UNAVAILABLE", "Organization is not available")
+        if (!ids.includes(organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("Organization is not available"))
         return organizationPartyId
     }
     return userScope.activeOrganizationPartyId || userScope.organizationPartyIds[0] || ids[0] || null
@@ -65,35 +65,34 @@ function dependencies(organizationPartyId, at) {
     const add = (area, setting, valueText, owner, url) => rowsOut.push({area, setting, valueText, owner, url: url || null})
     const matchUrl = accounting ? "/qapps/Accounting/Settings/MatchPolicies" : null
     if (match) {
-        add("Bill matching", "Bill basis", enumText(match.billBasisEnumId) || "Received", "Accounting", matchUrl)
-        add("Bill matching", "Receipt required", yesNo(match.receiptRequired || "Y"), "Accounting", matchUrl)
+        add(ec.l10n.localize("Bill matching"), ec.l10n.localize("Bill basis"), enumText(match.billBasisEnumId) || ec.l10n.localize("Received"), ec.l10n.localize("Accounting"), matchUrl)
+        add(ec.l10n.localize("Bill matching"), ec.l10n.localize("Receipt required"), yesNo(match.receiptRequired || "Y"), ec.l10n.localize("Accounting"), matchUrl)
         add(
-            "Bill matching",
-            "Tolerance",
-            "Quantity " +
-                (number(match.quantityTolerancePercent) || "0") +
-                "%, price " +
-                (number(match.priceTolerancePercent) || "0") +
-                "%",
-            "Accounting",
+            ec.l10n.localize("Bill matching"),
+            ec.l10n.localize("Tolerance"),
+            ec.resource.expand("Quantity ${quantity}%, price ${price}%", "", {
+                quantity: number(match.quantityTolerancePercent) || "0",
+                price: number(match.priceTolerancePercent) || "0"
+            }),
+            ec.l10n.localize("Accounting"),
             matchUrl
         )
-        add("Bill matching", "Variance", enumText(match.varianceActionEnumId) || "Hold", "Accounting", matchUrl)
-        add("Bill matching", "Self-billing default", yesNo(match.selfBillingDefault || "N"), "Accounting", matchUrl)
-    } else add("Bill matching", "Match policy", "Accounting's defaults (no policy set)", "Accounting", matchUrl)
+        add(ec.l10n.localize("Bill matching"), ec.l10n.localize("Variance"), enumText(match.varianceActionEnumId) || ec.l10n.localize("Hold"), ec.l10n.localize("Accounting"), matchUrl)
+        add(ec.l10n.localize("Bill matching"), ec.l10n.localize("Self-billing default"), yesNo(match.selfBillingDefault || "N"), ec.l10n.localize("Accounting"), matchUrl)
+    } else add(ec.l10n.localize("Bill matching"), ec.l10n.localize("Match policy"), ec.l10n.localize("Accounting's defaults (no policy set)"), ec.l10n.localize("Accounting"), matchUrl)
     const budgets = rows("mantle.other.budget.BudgetControlPolicy", {organizationPartyId}).filter(
         row => current(row, at) && (!row.stageEnumId || row.stageEnumId === "BcsOrder")
     )
     add(
-        "Budget control",
-        "At purchase order",
+        ec.l10n.localize("Budget control"),
+        ec.l10n.localize("At purchase order"),
         budgets.length
             ? Array.from(new Set(budgets.map(row => enumText(row.actionEnumId)))).join(", ") +
                   " (" +
                   budgets.length +
                   " policies)"
-            : "Not controlled",
-        "Accounting",
+            : ec.l10n.localize("Not controlled"),
+        ec.l10n.localize("Accounting"),
         accounting ? "/qapps/Accounting/Settings" : null
     )
     const receiving = inEffect(
@@ -102,10 +101,10 @@ function dependencies(organizationPartyId, at) {
         at
     )
     add(
-        "Receiving",
-        "Receipt steps",
-        receiving?.receiptSteps != null ? number(receiving.receiptSteps) : "Warehouse's default",
-        "Warehouse",
+        ec.l10n.localize("Receiving"),
+        ec.l10n.localize("Receipt steps"),
+        receiving?.receiptSteps != null ? number(receiving.receiptSteps) : ec.l10n.localize("Warehouse's default"),
+        ec.l10n.localize("Warehouse"),
         warehouse ? "/qapps/Warehouse/Settings" : null
     )
     return rowsOut
@@ -119,66 +118,73 @@ function settings(p) {
     const effective = policy.effective(organizationPartyId, at)
     const settingsRows = [
         {
-            area: "Buying policy",
-            description: "Buying defaults and purchase controls, among them the approval gate",
-            effectiveText: effective.row ? "Since " + lib.dateText(effective.row.fromDate) : "Built-in defaults",
-            owner: "Purchasing",
+            area: ec.l10n.localize("Buying policy"),
+            description: ec.l10n.localize("Buying defaults and purchase controls, among them the approval gate"),
+            effectiveText: effective.row
+                ? ec.resource.expand("Since ${date}", "", {date: lib.dateText(effective.row.fromDate)})
+                : ec.l10n.localize("Built-in defaults"),
+            owner: ec.l10n.localize("Purchasing"),
             url: "/qapps/Purchasing/Settings/PurchasePolicy"
         },
         {
-            area: "Approval policies",
-            description: "Who approves purchase orders and suppliers, in which steps, by amount",
-            effectiveText:
-                String(
+            area: ec.l10n.localize("Approval policies"),
+            description: ec.l10n.localize("Who approves purchase orders and suppliers, in which steps, by amount"),
+            effectiveText: ec.resource.expand("${count} steps in effect", "", {
+                count: String(
                     rows("mantle.order.purchase.PurchaseApprovalPolicy", {organizationPartyId}).filter(row => current(row, at))
                         .length
-                ) + " steps in effect",
-            owner: "Purchasing",
+                )
+            }),
+            owner: ec.l10n.localize("Purchasing"),
             url: "/qapps/Purchasing/Settings/ApprovalPolicies"
         },
         // P15: the supplier scorecard basis, measures and response rules
         {
-            area: "Scorecard policies",
+            area: ec.l10n.localize("Scorecard policies"),
             description:
-                "How suppliers are evaluated: the period, minimum sample, measures and the response to a low score or a risk",
-            effectiveText:
-                String(
+                ec.l10n.localize("How suppliers are evaluated: the period, minimum sample, measures and the response to a low score or a risk"),
+            effectiveText: ec.resource.expand("${count} response rules in effect", "", {
+                count: String(
                     rows("mantle.party.supplier.SupplierScorecardAction", {organizationPartyId}).filter(row => current(row, at))
                         .length
-                ) + " response rules in effect",
-            owner: "Purchasing",
+                )
+            }),
+            owner: ec.l10n.localize("Purchasing"),
             url: "/qapps/Purchasing/Settings/ScorecardPolicies"
         },
         {
-            area: "Request purposes",
-            description: "The purposes a purchase request is filed under, with who handles them",
-            effectiveText: String(find("mantle.request.RequestCategory").count()) + " purposes",
-            owner: "Purchasing",
+            area: ec.l10n.localize("Request purposes"),
+            description: ec.l10n.localize("The purposes a purchase request is filed under, with who handles them"),
+            effectiveText: ec.resource.expand("${count} purposes", "", {
+                count: String(find("mantle.request.RequestCategory").count())
+            }),
+            owner: ec.l10n.localize("Purchasing"),
             url: null
         },
         {
-            area: "Supplier categories",
-            description: "The categories buyers group suppliers by",
-            effectiveText:
-                String(find("mantle.party.PartyClassification", {classificationTypeEnumId: "PcltSupplierCategory"}).count()) +
-                " categories",
-            owner: "Purchasing",
+            area: ec.l10n.localize("Supplier categories"),
+            description: ec.l10n.localize("The categories buyers group suppliers by"),
+            effectiveText: ec.resource.expand("${count} categories", "", {
+                count: String(find("mantle.party.PartyClassification", {classificationTypeEnumId: "PcltSupplierCategory"}).count())
+            }),
+            owner: ec.l10n.localize("Purchasing"),
             url: null
         },
         // P5: the receipt inspection templates, at Receiving/InspectionTemplates (design §1), Warehouse's shared screen
         {
-            area: "Inspection templates",
-            description: "The checks a purchase receipt is inspected against before its stock is released",
-            effectiveText:
-                String(
+            area: ec.l10n.localize("Inspection templates"),
+            description: ec.l10n.localize("The checks a purchase receipt is inspected against before its stock is released"),
+            effectiveText: ec.resource.expand("${count} published", "", {
+                count: String(
                     find("mantle.product.quality.InspectionTemplate", {
                         inspectionContextEnumId: "QicReceipt",
                         statusId: "QtPublished"
                     })
                         .condition("organizationPartyId", organizationPartyId)
                         .count()
-                ) + " published",
-            owner: "Warehouse",
+                )
+            }),
+            owner: ec.l10n.localize("Warehouse"),
             url: "/qapps/Purchasing/Receiving/InspectionTemplates"
         }
     ]
@@ -218,16 +224,16 @@ function settings(p) {
 function storeRequestPurpose(p) {
     settingsScope(true)
     const description = String(p.description || "").trim()
-    if (!description) denied("PURPOSE_INVALID", "Give the purpose a name")
+    if (!description) denied("PURPOSE_INVALID", ec.l10n.localize("Give the purpose a name"))
     if (!blank(p.parentCategoryId)) {
         if (
             !one("mantle.request.RequestCategory", {requestCategoryId: p.parentCategoryId}) ||
             p.parentCategoryId === p.requestCategoryId
         )
-            denied("PURPOSE_INVALID", "Choose another purpose as the parent")
+            denied("PURPOSE_INVALID", ec.l10n.localize("Choose another purpose as the parent"))
     }
     if (!blank(p.responsiblePartyId) && !one("mantle.party.Party", {partyId: p.responsiblePartyId}))
-        denied("PURPOSE_INVALID", "Choose an existing responsible party")
+        denied("PURPOSE_INVALID", ec.l10n.localize("Choose an existing responsible party"))
     const values = {
         description,
         parentCategoryId: blank(p.parentCategoryId) ? null : p.parentCategoryId,
@@ -245,14 +251,14 @@ function storeRequestPurpose(p) {
 function storeSupplierCategory(p) {
     settingsScope(true)
     const description = String(p.description || "").trim()
-    if (!description) denied("CATEGORY_INVALID", "Give the category a name")
+    if (!description) denied("CATEGORY_INVALID", ec.l10n.localize("Give the category a name"))
     const ofType = id =>
         one("mantle.party.PartyClassification", {partyClassificationId: id})?.classificationTypeEnumId === "PcltSupplierCategory"
     if (
         !blank(p.parentClassificationId) &&
         (!ofType(p.parentClassificationId) || p.parentClassificationId === p.partyClassificationId)
     )
-        denied("CATEGORY_INVALID", "Choose another supplier category as the parent")
+        denied("CATEGORY_INVALID", ec.l10n.localize("Choose another supplier category as the parent"))
     const values = {
         description,
         parentClassificationId: blank(p.parentClassificationId) ? null : p.parentClassificationId,

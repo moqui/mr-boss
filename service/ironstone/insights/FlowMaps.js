@@ -42,13 +42,13 @@ const truthy = value => value === true || value === "true" || value === "Y"
 // ===== access =====
 function viewer() {
     const userScope = insights.required()
-    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", "Business flows need Insights read")
+    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", ec.l10n.localize("Business flows need Insights read"))
     return userScope
 }
 function editor() {
     const userScope = viewer()
     if (!userScope.capabilities.flowEdit)
-        denied("FLOW_EDIT_REQUIRED", "Copying and changing flow maps needs the flow editor's permission")
+        denied("FLOW_EDIT_REQUIRED", ec.l10n.localize("Copying and changing flow maps needs the flow editor's permission"))
     return userScope
 }
 // A write's answer: applied with what it returns, or the refusal as a code and a reason to show. A refusal without a code (an
@@ -127,7 +127,7 @@ function checkBody(body, reg) {
     const problems = []
     const problem = (code, message, stepId, field) =>
         problems.push({reasonCode: code, message, stepId: stepId || null, field: field || null})
-    if (!body || typeof body !== "object" || body.kind !== KIND) problem("MAP_KIND_INVALID", "This is not a flow map")
+    if (!body || typeof body !== "object" || body.kind !== KIND) problem("MAP_KIND_INVALID", ec.l10n.localize("This is not a flow map"))
     const laneInput = Array.isArray(body?.lanes) ? body.lanes : []
     const stepInput = Array.isArray(body?.steps) ? body.steps : []
     if (laneInput.length > limits.lanes) problem("MAP_TOO_LARGE", "A map has at most " + limits.lanes + " lanes")
@@ -147,12 +147,12 @@ function checkBody(body, reg) {
         if (!idPattern.test(laneId)) return problem("LANE_ID_INVALID", "Lane " + (index + 1) + " has no usable id")
         if (laneIds.has(laneId)) return problem("LANE_ID_DUPLICATE", "Lane " + laneId + " is in the map twice")
         laneIds.add(laneId)
-        const title = textOf(lane.title, limits.title, "A lane's name", null, "title")
+        const title = textOf(lane.title, limits.title, ec.l10n.localize("A lane's name"), null, "title")
         if (!title) problem("LANE_TITLE_REQUIRED", "Lane " + laneId + " needs a name")
         lanes.push({
             laneId,
             title: title || laneId,
-            description: textOf(lane.description, limits.description, "A lane's description", null, "description"),
+            description: textOf(lane.description, limits.description, ec.l10n.localize("A lane's description"), null, "description"),
             sequenceNum: order(lane.sequenceNum, index + 1)
         })
     })
@@ -169,13 +169,13 @@ function checkBody(body, reg) {
         if (!laneOrder.has(laneId))
             return problem("STEP_LANE_UNKNOWN", "Step " + stepId + " is in no lane of the map", stepId, "laneId")
         stepIds.add(stepId)
-        const title = textOf(step.title, limits.title, "A step's name", stepId, "title")
+        const title = textOf(step.title, limits.title, ec.l10n.localize("A step's name"), stepId, "title")
         if (!title) problem("STEP_TITLE_REQUIRED", "Step " + stepId + " needs a name", stepId, "title")
         const row = {
             stepId,
             laneId,
             title: title || stepId,
-            description: textOf(step.description, limits.description, "A step's description", stepId, "description"),
+            description: textOf(step.description, limits.description, ec.l10n.localize("A step's description"), stepId, "description"),
             sequenceNum: order(step.sequenceNum, index + 1),
             targetRegistrationId: null,
             targetParameters: {},
@@ -309,7 +309,7 @@ const sourceVersionOf = definition =>
 // one, to everyone; an organization's map only to one who sees its organization. Anything else is one refusal, so an id
 // learns nothing.
 function readMap(userScope, definitionId) {
-    const unavailable = () => denied("MAP_UNAVAILABLE", "This flow map is not available")
+    const unavailable = () => denied("MAP_UNAVAILABLE", ec.l10n.localize("This flow map is not available"))
     if (blank(definitionId)) unavailable()
     let definition = null
     try {
@@ -370,7 +370,7 @@ function mapFacts(userScope, definition) {
             title: shown(definition.title || definition.id, limits.title),
             description: shown(body.description, limits.description),
             template,
-            kindText: template ? "Suite template" : "Organization map",
+            kindText: template ? ec.l10n.localize("Suite template") : ec.l10n.localize("Organization map"),
             organizationPartyId: template ? null : body.organizationPartyId || null,
             organizationName: template ? "Every organization" : organizationName(body.organizationPartyId),
             version: template ? sourceVersionOf(definition) : Number(definition.version || 0),
@@ -423,8 +423,8 @@ function findMaps(p) {
         organizationPartyId: chosen,
         groups: userScope.capabilities.flowEdit ? insights.execute("shareGroups", {}).groups : [],
         kindOptions: [
-            {value: "copy", label: "Organization maps"},
-            {value: "template", label: "Suite templates"}
+            {value: "copy", label: ec.l10n.localize("Organization maps")},
+            {value: "template", label: ec.l10n.localize("Suite templates")}
         ]
     }
 }

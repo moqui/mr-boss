@@ -69,10 +69,10 @@ along with this software (see the LICENSE.md file). If not, see
                 facilityId: now.facilityId || ''
             }, changeDraft)
             organizationPartyId = employment?.organizationPartyId || null
-            effectiveTitle = {transfer: 'From', manager: 'From', leave: 'Leave starts', return: 'Back at work on',
-                separation: 'Ends on'}[changeKind] || 'From'
-            currentText = [now.departmentName, now.positionName, now.managerName ? 'manager ' + now.managerName : '',
-                now.facilityName].filter(Boolean).join(' · ') || 'No department, position or manager'
+            effectiveTitle = {transfer: ec.l10n.localize('From'), manager: ec.l10n.localize('From'), leave: ec.l10n.localize('Leave starts'), return: ec.l10n.localize('Back at work on'),
+                separation: ec.l10n.localize('Ends on')}[changeKind] || ec.l10n.localize('From')
+            currentText = [now.departmentName, now.positionName, now.managerName ? ec.resource.expand('manager ${name}', '', {name: now.managerName}) : '',
+                now.facilityName].filter(Boolean).join(' · ') || ec.l10n.localize('No department, position or manager')
             reasonRequired = changeKind == 'transfer' || changeKind == 'separation'
         ]]></script>
     </actions>

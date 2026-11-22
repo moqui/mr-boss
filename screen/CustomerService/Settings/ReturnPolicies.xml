@@ -188,7 +188,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <section name="ReturnPolicyPreviewResult" condition="preview">
                     <widgets>
                         <label type="strong" text="${preview.outcomeText}"/>
-                        <label type="p" style="text-caption m-muted" text="${['authorization valid until ' + preview.expireText,
+                        <label type="p" style="text-caption m-muted" text="${[ec.resource.expand('authorization valid until $' + '{when}', '', {when: preview.expireText}),
                                 preview.feeText, preview.approvalText].join(' · ')}"/>
                         <form-list name="ReturnPolicyPreviewLines" list="preview.lineRows" skip-form="true" paginate="false">
                             <field name="productText"><default-field title="Product"><display/></default-field></field>

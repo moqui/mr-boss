@@ -59,7 +59,7 @@ along with this software (see the LICENSE.md file). If not, see
                         changeReason:changeReason}"
                     out-map="imported"/>
             <set field="productBomId" from="imported?.productBom?.productBomId"/>
-            <script>if(imported?.skipped)ec.message.addError('A pick kit keeps its Kit components; nothing was imported')</script>
+            <script>if(imported?.skipped)ec.message.addError(ec.l10n.localize('A pick kit keeps its Kit components; nothing was imported'))</script>
         </actions>
         <default-response url="../BillOfMaterialsDetail">
             <parameter name="productBomId"/>
@@ -76,10 +76,11 @@ along with this software (see the LICENSE.md file). If not, see
             <script><![CDATA[
             for (const version of imported.versionRows || []) {
                 const name = version.productId + ' ' + version.methodCode
-                if (version.status === 'failed') ec.message.addError(name + ' not imported: ' + version.messages.join('; '))
-                else if (version.status === 'skipped') ec.message.addMessage(name + ' left out: ' + version.messages.join('; '))
-                else if (version.status === 'ready') ec.message.addMessage(name + ' is ready: ' + version.lineCount + ' lines')
-                else ec.message.addMessage(name + ' imported as draft lines: ' + version.lineCount + ' lines')
+                const detail = version.messages.join('; ')
+                if (version.status === 'failed') ec.message.addError(ec.resource.expand('${name} not imported: ${detail}', '', {name: name, detail: detail}))
+                else if (version.status === 'skipped') ec.message.addMessage(ec.resource.expand('${name} left out: ${detail}', '', {name: name, detail: detail}))
+                else if (version.status === 'ready') ec.message.addMessage(ec.resource.expand('${name} is ready: ${count} lines', '', {name: name, count: version.lineCount}))
+                else ec.message.addMessage(ec.resource.expand('${name} imported as draft lines: ${count} lines', '', {name: name, count: version.lineCount}))
             }
             ]]></script>
         </actions>

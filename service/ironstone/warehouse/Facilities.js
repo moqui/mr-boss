@@ -4,6 +4,7 @@
 // mantle.facility.FacilityServices and store#ProductFacilityPolicy, which check FACILITY_EDIT or the planning
 // permissions again. Restricted values (an asset's book) are read only for a user with financial read.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
 const {find, one, rows, ms, dateText} = lib
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 // the organizations Mantle's facility and stock guards let the user change (FACILITY_ALL_ORGANIZATIONS for every one)
@@ -483,7 +484,7 @@ function equipment(p) {
         .filter(row => !blank(row[1]))
         .map(row => ({label: row[0], value: String(row[1])}))
     const availability = left
-        ? {availabilityText: "Left the facility", availabilityColor: "grey-8"}
+        ? {availabilityText: L("Left the facility"), availabilityColor: "grey-8"}
         : outOfService
           ? {availabilityText: "Out of service", availabilityColor: "negative"}
           : current

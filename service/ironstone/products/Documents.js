@@ -133,8 +133,8 @@ function run(op, parameters) {
                       color: "warning"
                   }
                 : doc.thruDate && lib.ms(doc.thruDate) <= lib.ms(ec.user.nowTimestamp)
-                  ? {text: "Ended", color: "grey"}
-                  : {text: doc.managed ? "Managed file" : "Drive reference", color: "info"}
+                  ? {text: ec.l10n.localize("Ended"), color: "grey"}
+                  : {text: doc.managed ? ec.l10n.localize("Managed file") : ec.l10n.localize("Drive reference"), color: "info"}
             out.versionOptions = out.versionRows.map(r => ({
                 value: r.versionName,
                 label: r.versionName + " · " + (r.dateText || "")
@@ -151,10 +151,10 @@ function run(op, parameters) {
         if (op === "store") {
             check(p, true)
             const out = call(S + "store#CatalogContent", p)
-            if (out.conflict) ec.message.addMessage("This document changed. Your submission is retained as a separate draft.")
+            if (out.conflict) ec.message.addMessage(ec.l10n.localize("This document changed. Your submission is retained as a separate draft."))
             return out
         }
-        throw new Error("Unknown catalog document operation")
+        throw new Error(ec.l10n.localize("Unknown catalog document operation"))
     }
     return execute(op, parameters)
 }

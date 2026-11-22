@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.insights.AssistServices.add#AssistPanel" out-map="added"
                     in-map="{answerText:answerText, title:panelTitle, visualization:(visualization || null), dashboardId:(dashboardId || null)}"/>
-            <script>ec.message.addMessage(added.applied ? (added.dashboardId ? 'Added to your dashboard' : 'Saved to your library panels')
+            <script>ec.message.addMessage(added.applied ? (added.dashboardId ? ec.l10n.localize('Added to your dashboard') : ec.l10n.localize('Saved to your library panels'))
                 : added.reason, added.applied ? 'success' : 'danger')</script>
             <set field="definitionId" from="added.dashboardId || added.definitionId"/>
         </actions>

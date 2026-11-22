@@ -105,7 +105,7 @@ function returnContext(parameters) {
             originalPath: invoiceRoute(row.originalInvoiceId),
             originalParameters: lib.recordParameters(organizationPartyId, row.originalInvoiceId, {invoiceId: row.originalInvoiceId}),
             creditStatus: lib.statusText(invoices[row.invoiceId]?.statusId),
-            kindText: row.receiptless === "Y" ? "Without receipt" : "Received"
+            kindText: row.receiptless === "Y" ? ec.l10n.localize("Without receipt") : "Received"
         })
     )
     // every refund and credit of the return: those paying its credit memos, and those its items name

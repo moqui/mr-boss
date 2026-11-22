@@ -264,7 +264,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <container style="m-record-title">
                                 <label text="Case template" type="span" style="text-caption m-muted"/>
                                 <label text="${tpl.description}" type="h5"/>
-                                <label text="${tpl.queues.length ? 'Used by ' + tpl.queues.map((queue) =&gt; queue.queueName).join(', ') : 'No queue uses it yet'}${tpl.publishedFromText ? ' · published ' + tpl.publishedFromText : ''}"
+                                <label text="${tpl.queues.length ? ec.resource.expand('Used by $' + '{names}', '', {names: tpl.queues.map((queue) =&gt; queue.queueName).join(', ')}) : ec.l10n.localize('No queue uses it yet')}${tpl.publishedFromText ? ' · ' + ec.resource.expand('published $' + '{when}', '', {when: tpl.publishedFromText}) : ''}"
                                         type="div" style="text-caption m-muted"/>
                             </container>
                             <container style="m-record-status">
@@ -452,7 +452,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                     </field>
                                                     <field name="submitButton">
                                                         <default-field title="${draft ? 'Delete' : 'End'}">
-                                                            <submit type="danger" confirmation="${draft ? 'Delete the draft field ' + title + '?' : 'End the field ' + title + '? Cases made before keep its value.'}"/>
+                                                            <submit type="danger" confirmation="${draft ? ec.resource.expand('Delete the draft field $' + '{title}?', '', {title: title}) : ec.resource.expand('End the field $' + '{title}? Cases made before keep its value.', '', {title: title})}"/>
                                                         </default-field>
                                                     </field>
                                                 </form-single>

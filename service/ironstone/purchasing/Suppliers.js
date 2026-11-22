@@ -28,14 +28,14 @@ const enumText = enumId => (enumId ? one("moqui.basic.Enumeration", {enumId})?.d
 function organizationOf(userScope, organizationPartyId) {
     const ids = userScope.ownerIds || rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(row => row.partyId)
     if (!blank(organizationPartyId)) {
-        if (!ids.includes(organizationPartyId)) denied("RECORD_UNAVAILABLE", "Organization is not available")
+        if (!ids.includes(organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("Organization is not available"))
         return organizationPartyId
     }
     return userScope.activeOrganizationPartyId || userScope.organizationPartyIds[0] || ids[0] || null
 }
 function listScope() {
     const userScope = purchasing.required()
-    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", "The supplier list is not available")
+    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("The supplier list is not available"))
     return userScope
 }
 // The organization's profiles of the suppliers in effect now, by supplier.
@@ -308,7 +308,7 @@ function supplierContext(p) {
             partyId: vendorPartyId,
             pseudoId: party.pseudoId || vendorPartyId,
             supplierName: partyName(vendorPartyId),
-            ownerText: party.ownerPartyId === "_NA_" ? "Shared with every organization" : "",
+            ownerText: party.ownerPartyId === "_NA_" ? ec.l10n.localize("Shared with every organization") : "",
             canEditContact: !!contacts.access?.canEdit
         },
         contactRows: contacts.contactMechList || [],
@@ -350,7 +350,7 @@ function supplierContext(p) {
 // out of scope or refused by Mantle is named in the results and the others are changed.
 function bulkChange(p) {
     const userScope = listScope()
-    if (!userScope.capabilities.profileEdit) denied("PERMISSION_DENIED", "SUPPLIER_PROFILE_EDIT is required")
+    if (!userScope.capabilities.profileEdit) denied("PERMISSION_DENIED", ec.l10n.localize("SUPPLIER_PROFILE_EDIT is required"))
     const organizationPartyId = organizationOf(userScope, p.organizationPartyId)
     const change = p.change
     if (!["buyer", "category"].includes(change)) throw new Error("Unknown supplier change " + change)
@@ -361,11 +361,11 @@ function bulkChange(p) {
                 .filter(Boolean)
         )
     )
-    if (!ids.length) denied("SUPPLIER_INVALID", "Choose at least one supplier")
+    if (!ids.length) denied("SUPPLIER_INVALID", ec.l10n.localize("Choose at least one supplier"))
     const results = []
     for (const partyId of ids) {
         try {
-            if (!purchasing.supplierOf(userScope, partyId)) denied("RECORD_UNAVAILABLE", "Supplier is not available")
+            if (!purchasing.supplierOf(userScope, partyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("Supplier is not available"))
             const service =
                 change === "buyer"
                     ? "mantle.party.SupplierServices.store#SupplierBuyer"

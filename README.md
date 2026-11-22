@@ -105,7 +105,7 @@ the commerce forum can read its site. Use `./moq load seed seed-initial install`
 - **[mr-pass](https://github.com/moqui/mr-pass)**, IronStone PASS, is the public side: the Shop that Commerce runs,
   the Forum, and the customer and supplier pages of Sales, Marketing, Customer Service, Accounting and Purchasing.
   PASS runs without BOSS.
-- **[mr-l10n](https://github.com/moqui/mr-l10n)** has Spanish and Simplified Chinese for nine of the apps so far.
+- **[mr-l10n](https://github.com/moqui/mr-l10n)** has Spanish and Simplified Chinese for the apps.
 - **[mr-home](https://github.com/moqui/mr-home)**, IronStone HOME, is a household suite planned on BOSS.
 
 ## Developing

@@ -25,7 +25,7 @@ const sourceLabels = {
 
 // The Budgets screens open for finance readers and administrators.
 function access(p) {
-    return lib.access(p, ["reportRead", "admin"], "Budget read authority is required")
+    return lib.access(p, ["reportRead", "admin"], ec.l10n.localize("Budget read authority is required"))
 }
 function organizations(scope) {
     const ids = scope.organizationPartyId ? [scope.organizationPartyId] : scope.allowedOrganizationPartyIds
@@ -409,9 +409,9 @@ function policies(p) {
         const scheduled = policy.ms(row.fromDate) > policy.ms(now)
         const ended = row.thruDate != null && policy.ms(row.thruDate) <= policy.ms(now)
         return Object.assign(lib.plain(row), {
-            budgetText: row.budgetId ? budgetsById[row.budgetId]?.description || row.budgetId : "Every budget",
-            accountText: row.glAccountId ? texts[row.glAccountId] || row.glAccountId : "Every account",
-            stageText: row.stageEnumId ? enums[row.stageEnumId] || row.stageEnumId : "Every stage",
+            budgetText: row.budgetId ? budgetsById[row.budgetId]?.description || row.budgetId : ec.l10n.localize("Every budget"),
+            accountText: row.glAccountId ? texts[row.glAccountId] || row.glAccountId : ec.l10n.localize("Every account"),
+            stageText: row.stageEnumId ? enums[row.stageEnumId] || row.stageEnumId : ec.l10n.localize("Every stage"),
             actionText: enums[row.actionEnumId] || row.actionEnumId,
             actionColor: actionColors[row.actionEnumId] || "grey",
             thresholdText: row.thresholdPercent == null ? "100%" : ec.l10n.format(row.thresholdPercent, "#,##0.##") + "%",

@@ -9,6 +9,7 @@
 //
 // A registration is data, never authority: the site page services check the user's permissions and scope themselves (a page's
 // app is its mount's), and a capability only shows or hides an action. An app with no registration sees "not available".
+const L = text => ec.l10n.localize(text)
 const apps = {
     Commerce: {
         contextService: "ironstone.commerce.ContextServices.get#SharedContext",
@@ -18,8 +19,8 @@ const apps = {
         detailLink: "Website/PageDetail",
         storePages: true,
         words: {
-            routeTip: "The address under the shop's pages/, such as returns or help/shipping",
-            empty: "No pages match. A page is on a site one of your stores sells on.",
+            routeTip: L("The address under the shop's pages/, such as returns or help/shipping"),
+            empty: L("No pages match. A page is on a site one of your stores sells on."),
             unavailable: "it does not exist, or it is not on a site of one of your stores."
         }
     },
@@ -39,8 +40,8 @@ const apps = {
             targetKind: "page"
         },
         words: {
-            routeTip: "The address under the Marketing mount's pages/, such as spring-sale",
-            empty: "No landing pages match. A landing page is on a site whose Marketing mount serves one of your organizations.",
+            routeTip: L("The address under the Marketing mount's pages/, such as spring-sale"),
+            empty: L("No landing pages match. A landing page is on a site whose Marketing mount serves one of your organizations."),
             unavailable: "it does not exist, or it is not on a Marketing mount of one of your organizations."
         }
     }
@@ -54,7 +55,7 @@ function context(appRoot) {
         app: null,
         pageApp: null,
         storePages: false,
-        words: {routeTip: "", empty: "The pages are not available in this app.", unavailable: "the pages are not available in this app."},
+        words: {routeTip: "", empty: L("The pages are not available in this app."), unavailable: "the pages are not available in this app."},
         choicesService: null,
         can: {themeEdit: false, publish: false},
         sharedLinks: {},

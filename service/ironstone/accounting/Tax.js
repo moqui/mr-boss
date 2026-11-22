@@ -12,7 +12,7 @@ const masked = value => (value ? "•••-••-" + String(value).replace(/\D
 
 // The tax screens are for tax users and finance administrators.
 function access(p) {
-    return lib.access(p, ["taxEdit", "admin"], "Tax authority is required")
+    return lib.access(p, ["taxEdit", "admin"], ec.l10n.localize("Tax authority is required"))
 }
 function searched(query, fields, text) {
     if (!text) return query
@@ -141,7 +141,7 @@ function rates(p) {
             .join(", ")
         return Object.assign(lib.plain(row), datedState(row, now), {
             authorityName: names[row.taxAuthorityId] || row.taxAuthorityId,
-            scopeText: scopeText || "All sales",
+            scopeText: scopeText || ec.l10n.localize("All sales"),
             percentText: row.taxPercentage == null ? "" : ec.l10n.format(row.taxPercentage, "#,##0.####") + "%",
             shippingText: row.taxShipping === "Y" ? "Taxed" : "Not taxed",
             canChange:
@@ -175,7 +175,7 @@ function statementRows(found) {
             periodName: periods[row.timePeriodId]?.periodName || row.timePeriodId,
             partyName: names[row.partyId] || row.partyId,
             authorityName: authorityNamesById[row.taxAuthorityId] || row.taxAuthorityId || "",
-            exportedText: row.exportedDate ? "Exported" : "Not exported",
+            exportedText: row.exportedDate ? ec.l10n.localize("Exported") : ec.l10n.localize("Not exported"),
             exportedColor: row.exportedDate ? "positive" : "grey",
             title: kindOf(row) + " · " + (periods[row.timePeriodId]?.periodName || row.timePeriodId)
         })
@@ -211,7 +211,7 @@ function statementDetail(p) {
     const header = statementRows([statement])[0]
     const currencyUomId = policy.preference(timePeriod.partyId).baseCurrencyUomId
     header.currencyUomId = currencyUomId
-    header.reportedLabel = statement.formId === vendorForm ? "Payments reported" : "Taxable sales"
+    header.reportedLabel = statement.formId === vendorForm ? ec.l10n.localize("Payments reported") : ec.l10n.localize("Taxable sales")
     header.captionText = [header.authorityName, header.partyName, header.createdDateText ? "made " + header.createdDateText : ""]
         .filter(Boolean)
         .join(" · ")

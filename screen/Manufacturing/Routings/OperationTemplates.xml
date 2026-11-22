@@ -272,7 +272,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </container-dialog>
                             <button-menu text="More" icon="more_horiz" condition="canEdit">
                                 <container-dialog id="EditTemplateDialog" button-text="Edit template" icon="sym_o_edit"
-                                        title="${ec.l10n.localize('Edit')} ${selectedTemplate.workEffortName}" width="800">
+                                        title="${ec.resource.expand('Edit $' + '{name}', '', {name: selectedTemplate.workEffortName})}" width="800">
                                     <form-single name="EditTemplate" transition="storeTemplate" extends="NewTemplate" map="selectedTemplate">
                                         <field name="workEffortId">
                                             <default-field>

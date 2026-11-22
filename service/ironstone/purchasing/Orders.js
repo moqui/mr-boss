@@ -18,18 +18,18 @@ const openStatuses = ["OrderApproved", "OrderSent", "OrderProcessing", "OrderHol
 const closedStatuses = ["OrderCompleted", "OrderCancelled", "OrderRejected"]
 // the list's views (design §6 PurchaseOrders), received not billed with bills (P6) and drop-ship with drop-ship (P7)
 const views = {
-    draft: {label: "Draft", statuses: ["OrderOpen"]},
-    approval: {label: "Awaiting approval", statuses: ["OrderPlaced"]},
-    unsent: {label: "Approved, not sent", statuses: ["OrderApproved"]},
-    open: {label: "Open", statuses: openStatuses},
+    draft: {label: ec.l10n.localize("Draft"), statuses: ["OrderOpen"]},
+    approval: {label: ec.l10n.localize("Awaiting approval"), statuses: ["OrderPlaced"]},
+    unsent: {label: ec.l10n.localize("Approved, not sent"), statuses: ["OrderApproved"]},
+    open: {label: ec.l10n.localize("Open"), statuses: openStatuses},
     // P5: the open orders with a stock line past its due date and something still to come (Receipts.js lateOrderIds)
-    late: {label: "Late", statuses: openStatuses, late: true},
-    held: {label: "On hold", statuses: ["OrderHold"]},
-    closed: {label: "Closed", statuses: closedStatuses},
+    late: {label: ec.l10n.localize("Late"), statuses: openStatuses, late: true},
+    held: {label: ec.l10n.localize("On hold"), statuses: ["OrderHold"]},
+    closed: {label: ec.l10n.localize("Closed"), statuses: closedStatuses},
     // P6: an order with an accepted receipt no bill covers yet (the receipt names no bill)
-    unbilled: {label: "Received, not billed", statuses: openStatuses.concat(["OrderCompleted"]), unbilledReceipts: true},
+    unbilled: {label: ec.l10n.localize("Received, not billed"), statuses: openStatuses.concat(["OrderCompleted"]), unbilledReceipts: true},
     // P7: the drop-ship orders whose supplier's delivery is still to be confirmed (open, with a line linked to a customer line)
-    dropship: {label: "Drop-ship, delivery pending", statuses: ["OrderPlaced"].concat(openStatuses), dropShip: true}
+    dropship: {label: ec.l10n.localize("Drop-ship, delivery pending"), statuses: ["OrderPlaced"].concat(openStatuses), dropShip: true}
 }
 const statusColors = {
     OrderOpen: "grey-8",
@@ -91,10 +91,10 @@ function purchaseFind(buyers) {
 // text, newest first, each with its supplier, due date, total, ordered and received quantities, billed and balance.
 function findOrders(p) {
     const userScope = purchasing.required()
-    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", "Purchase orders are not available")
+    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("Purchase orders are not available"))
     let buyers = buyerIdsOf(userScope)
     if (!blank(p.organizationPartyId)) {
-        if (!purchasing.owns(userScope, p.organizationPartyId)) denied("RECORD_UNAVAILABLE", "The organization is not available")
+        if (!purchasing.owns(userScope, p.organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("The organization is not available"))
         buyers = [String(p.organizationPartyId)]
     }
     const factory = ec.entity.conditionFactory
@@ -198,9 +198,9 @@ function findOrders(p) {
             dueText: due[row.orderId] ? lib.dateText(due[row.orderId]) : "",
             orderedText: quantityText(ordered[row.orderId] || 0),
             receivedText: quantityText(received[row.orderId] || 0),
-            totalText: showAmounts ? money(row.grandTotal, currency) : "Withheld",
-            billedText: showAmounts ? money(billedAmount, currency) : "Withheld",
-            balanceText: showAmounts ? money(dec(row.grandTotal).subtract(billedAmount), currency) : "Withheld"
+            totalText: showAmounts ? money(row.grandTotal, currency) : ec.l10n.localize("Withheld"),
+            billedText: showAmounts ? money(billedAmount, currency) : ec.l10n.localize("Withheld"),
+            balanceText: showAmounts ? money(dec(row.grandTotal).subtract(billedAmount), currency) : ec.l10n.localize("Withheld")
         }
     })
     const result = Object.assign({}, paged, {orderRows, viewLabel: view ? view.label : "All"})
@@ -248,9 +248,9 @@ function auditRows(orderId, showAmounts) {
         whatText:
             (row.changedEntityName === ITEM ? "Line " + row.pkSecondaryValue + " " : "") + fieldLabels[row.changedFieldName],
         fromText:
-            row.changedFieldName === "unitAmount" && !showAmounts ? "Withheld" : valueOf(row.changedFieldName, row.oldValueText),
+            row.changedFieldName === "unitAmount" && !showAmounts ? ec.l10n.localize("Withheld") : valueOf(row.changedFieldName, row.oldValueText),
         toText:
-            row.changedFieldName === "unitAmount" && !showAmounts ? "Withheld" : valueOf(row.changedFieldName, row.newValueText),
+            row.changedFieldName === "unitAmount" && !showAmounts ? ec.l10n.localize("Withheld") : valueOf(row.changedFieldName, row.newValueText),
         byText: users[row.changedByUserId] || ""
     }))
 }
@@ -310,8 +310,8 @@ function detail(p) {
             billedText: quantityText(billedQuantity),
             openText: quantityText(open.compare(0) > 0 ? open : 0),
             unitAmount: showAmounts ? item.unitAmount : null,
-            priceText: showAmounts ? money(item.unitAmount, currency) : "Withheld",
-            amountText: showAmounts ? money(dec(item.quantity).multiply(dec(item.unitAmount)), currency) : "Withheld",
+            priceText: showAmounts ? money(item.unitAmount, currency) : ec.l10n.localize("Withheld"),
+            amountText: showAmounts ? money(dec(item.quantity).multiply(dec(item.unitAmount)), currency) : ec.l10n.localize("Withheld"),
             requiredText: item.requiredByDate ? lib.dateText(item.requiredByDate) : "",
             requiredByDate: item.requiredByDate || null,
             costCenterId: item.costCenterId || "",
@@ -432,7 +432,7 @@ function detail(p) {
             entryText: lib.dateText(order.entryDate),
             placedText: lib.dateText(order.placedDate),
             approvedText: lib.dateText(order.approvedDate),
-            totalText: showAmounts ? money(order.grandTotal, currency) : "Withheld",
+            totalText: showAmounts ? money(order.grandTotal, currency) : ec.l10n.localize("Withheld"),
             held: openHolds.length > 0,
             holdText: openHolds.map(row => row.typeText + (row.comment ? ": " + row.comment : "")).join("; "),
             purchaseHoldId: purchaseHold?.orderHoldReasonId || null,
@@ -479,10 +479,10 @@ function approvalPreview(orderId, can) {
 function bulk(p) {
     const userScope = purchasing.required()
     const action = String(p.action || "")
-    if (!["approve", "close"].includes(action)) denied("ACTION_INVALID", "Choose approve or close")
+    if (!["approve", "close"].includes(action)) denied("ACTION_INVALID", ec.l10n.localize("Choose approve or close"))
     const orderIds = [...new Set(Array.from(p.orderIds || []).map(String))].filter(Boolean)
-    if (!orderIds.length || orderIds.length > 100) denied("SELECTION_INVALID", "Select between one and 100 purchase orders")
-    if (action === "close" && blank(p.reason)) denied("REASON_REQUIRED", "Give a reason for closing the remainders")
+    if (!orderIds.length || orderIds.length > 100) denied("SELECTION_INVALID", ec.l10n.localize("Select between one and 100 purchase orders"))
+    if (action === "close" && blank(p.reason)) denied("REASON_REQUIRED", ec.l10n.localize("Give a reason for closing the remainders"))
     const results = []
     for (const orderId of orderIds) {
         ec.message.pushErrors()

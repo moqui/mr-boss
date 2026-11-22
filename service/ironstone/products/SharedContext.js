@@ -70,7 +70,7 @@ const warehouseTabs = ["Summary", "Identifiers", "Dimensions", "Stock", "Repleni
 function warehouseContext() {
     const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
     const userScope = warehouse.scope()
-    if (!userScope.read) throw new Error("Shared catalog context is not available")
+    if (!userScope.read) throw new Error(ec.l10n.localize("Shared catalog context is not available"))
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         read = !!a.capabilities?.read,
         capabilities = {
@@ -125,7 +125,7 @@ const manufacturingPaths = {
 function manufacturingContext() {
     const manufacturing = ec.resource.script("component://mr-boss/service/ironstone/manufacturing/Manufacturing.js")
     const userScope = manufacturing.scope()
-    if (!userScope.read) throw new Error("Shared catalog context is not available")
+    if (!userScope.read) throw new Error(ec.l10n.localize("Shared catalog context is not available"))
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         source = a.capabilities || {},
         read = !!source.methodRead
@@ -185,7 +185,7 @@ function purchasingContext() {
     // InventoryAvailability, its Stock tab and, for a stock-policy holder, the reorder policy)
     const replenishment = !!userScope.capabilities.replenishment
     if (!userScope.read || !(userScope.capabilities.listRead || replenishment))
-        throw new Error("Shared catalog context is not available")
+        throw new Error(ec.l10n.localize("Shared catalog context is not available"))
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         source = a.capabilities || {},
         catalogRead = !!source.read && !!userScope.capabilities.listRead,
@@ -273,7 +273,7 @@ function customerServiceFacilities(organizationPartyIds) {
 function customerServiceContext() {
     const service = ec.resource.script("component://mr-boss/service/ironstone/customerservice/CustomerService.js")
     const userScope = service.scope()
-    if (!userScope.read) throw new Error("Shared catalog context is not available")
+    if (!userScope.read) throw new Error(ec.l10n.localize("Shared catalog context is not available"))
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         source = a.capabilities || {},
         read = !!source.read
@@ -323,7 +323,7 @@ const salesPaths = {
 }
 function salesContext() {
     const userScope = ec.resource.script("component://mr-mantle/service/mantle/sales/SalesAccess.js").scope()
-    if (!userScope.capabilities.anyRead) throw new Error("Shared catalog context is not available")
+    if (!userScope.capabilities.anyRead) throw new Error(ec.l10n.localize("Shared catalog context is not available"))
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         source = a.capabilities || {},
         read = !!source.read
@@ -407,7 +407,7 @@ function commerceFacilities(storeIds) {
 function commerceContext() {
     const commerce = ec.resource.script("component://mr-boss/service/ironstone/commerce/Commerce.js")
     const userScope = commerce.scope()
-    if (!userScope.read) throw new Error("Shared catalog context is not available")
+    if (!userScope.read) throw new Error(ec.l10n.localize("Shared catalog context is not available"))
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         source = a.capabilities || {},
         read = !!source.read
@@ -463,7 +463,7 @@ function maintenanceFacilities(organizationPartyIds) {
 function maintenanceContext() {
     const found = call("ironstone.maintenance.ContextServices.get#SharedContext", {appRoot: "Maintenance"})
     const maintenance = found.capabilities || {}
-    if (!maintenance.read) throw new Error("Shared catalog context is not available")
+    if (!maintenance.read) throw new Error(ec.l10n.localize("Shared catalog context is not available"))
     const read = !!maintenance.resourceRead
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         source = a.capabilities || {}
@@ -504,7 +504,7 @@ function context(p) {
     if (appRoot === "Warehouse") return warehouseContext()
     if (appRoot === "Manufacturing") return manufacturingContext()
     if (appRoot === "Purchasing") return purchasingContext()
-    if (appRoot !== "Products") throw new Error("Shared catalog context is not available")
+    if (appRoot !== "Products") throw new Error(ec.l10n.localize("Shared catalog context is not available"))
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         read = !!a.capabilities?.read,
         sharedLinks = Object.fromEntries(paths.map(path => [path, "//" + appRoot + "/" + path]))
@@ -539,7 +539,7 @@ function context(p) {
     // Customer Service's customer-serving facilities (its StockAtDate and facility choices, impl-customer-service P3)
     customerServiceFacilities,
     execute: (op, p) => {
-        if (op !== "context") throw new Error("Unknown shared context action")
+        if (op !== "context") throw new Error(ec.l10n.localize("Unknown shared context action"))
         return context(p)
     }
 })

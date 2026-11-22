@@ -206,7 +206,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box type="warning">
                             <box-header title="Not available"/>
                             <box-body>
-                                <label text="${notAvailable || 'This check-in is not available.'}" type="p"/>
+                                <label text="${notAvailable || ec.l10n.localize('This check-in is not available.')}" type="p"/>
                                 <link url="${eventsPath}" text="Back to events" link-type="anchor" condition="eventsPath"/>
                             </box-body>
                         </container-box>

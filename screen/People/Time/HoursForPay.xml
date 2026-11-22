@@ -44,10 +44,11 @@ along with this software (see the LICENSE.md file). If not, see
                     const blocked = preparedRows.filter(row => row.outcome === 'blocked' || row.outcome === 'refused')
                     const made = preparedRows.reduce((sum, row) => sum + (blocked.includes(row) ? 0 : Number(row.createdCount || 0)), 0)
                     const voided = preparedRows.reduce((sum, row) => sum + (blocked.includes(row) ? 0 : Number(row.voidedCount || 0)), 0)
-                    const text = made + ' input' + (made == 1 ? '' : 's') + (voided ? ', ' + voided + ' voided and made again' : '')
-                    if (preview == 'Y') ec.message.addMessage('Preview, nothing prepared: ' + text + ' would be made', 'info')
-                    else ec.message.addMessage('Prepared: ' + text, 'success')
-                    if (blocked.length) ec.message.addMessage('Not prepared: ' + blocked.map(row => row.personName + ' (' + row.message + ')').join('; '), 'warning')
+                    const template = preview == 'Y'
+                        ? (voided ? "Preview, nothing prepared: ${made} input${made == 1 ? '' : 's'}, ${voided} voided and made again would be made" : "Preview, nothing prepared: ${made} input${made == 1 ? '' : 's'} would be made")
+                        : (voided ? "Prepared: ${made} input${made == 1 ? '' : 's'}, ${voided} voided and made again" : "Prepared: ${made} input${made == 1 ? '' : 's'}")
+                    ec.message.addMessage(ec.resource.expand(template, '', {made, voided}), preview == 'Y' ? 'info' : 'success')
+                    if (blocked.length) ec.message.addMessage(ec.resource.expand('Not prepared: ${names}', '', {names: blocked.map(row => row.personName + ' (' + row.message + ')').join('; ')}), 'warning')
                 }
             ]]></script>
         </actions>

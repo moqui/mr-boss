@@ -14,16 +14,16 @@ const {find, one, rows, denied} = lib
 
 const AGREEMENT = "mantle.party.agreement.Agreement"
 const choiceLimit = 30
-const withheld = "Withheld"
+const withheld = ec.l10n.localize("Withheld")
 const closedStatuses = ["AgmStExpired", "AgmStClosed", "AgmStCancelled"]
 const expiringDays = 30
 const views = {
-    active: {label: "Active", statuses: ["AgmStActive"], templates: false},
-    expiring: {label: "Expiring in 30 days", statuses: ["AgmStActive"], templates: false, expiring: true},
-    exhausted: {label: "Exhausted", statuses: ["AgmStActive"], templates: false, exhausted: true},
-    approval: {label: "Draft and awaiting approval", statuses: ["AgmStDraft", "AgmStActive"], templates: false, pending: true},
-    templates: {label: "Templates", statuses: null, templates: true},
-    closed: {label: "Expired, closed and cancelled", statuses: closedStatuses, templates: false}
+    active: {label: ec.l10n.localize("Active"), statuses: ["AgmStActive"], templates: false},
+    expiring: {label: ec.l10n.localize("Expiring in 30 days"), statuses: ["AgmStActive"], templates: false, expiring: true},
+    exhausted: {label: ec.l10n.localize("Exhausted"), statuses: ["AgmStActive"], templates: false, exhausted: true},
+    approval: {label: ec.l10n.localize("Draft and awaiting approval"), statuses: ["AgmStDraft", "AgmStActive"], templates: false, pending: true},
+    templates: {label: ec.l10n.localize("Templates"), statuses: null, templates: true},
+    closed: {label: ec.l10n.localize("Expired, closed and cancelled"), statuses: closedStatuses, templates: false}
 }
 const statusColors = {
     AgmStDraft: "grey-8",
@@ -43,12 +43,12 @@ const internalIds = () => rows("mantle.party.PartyRole", {roleTypeId: "OrgIntern
 const statusText = statusId => (statusId ? one("moqui.basic.StatusItem", {statusId})?.description || statusId : "")
 function buyersFor(userScope, organizationPartyId) {
     if (blank(organizationPartyId)) return userScope.ownerIds || internalIds()
-    if (!purchasing.owns(userScope, organizationPartyId)) denied("RECORD_UNAVAILABLE", "The organization is not available")
+    if (!purchasing.owns(userScope, organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("The organization is not available"))
     return [String(organizationPartyId)]
 }
 function listScope() {
     const userScope = purchasing.required()
-    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", "Agreements are not available")
+    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("Agreements are not available"))
     return userScope
 }
 const validityText = agreement =>
@@ -95,7 +95,7 @@ function rowOf(agreement, can, names) {
             : !showAmounts
               ? withheld
               : totals.limit == null
-                ? "No value cap"
+                ? ec.l10n.localize("No value cap")
                 : money(totals.limit, currency),
         releasedText: template ? "" : showAmounts ? money(totals.released, currency) : withheld,
         remainingText: template || totals.remaining == null ? "" : showAmounts ? money(totals.remaining, currency) : withheld,
@@ -342,7 +342,7 @@ function agreementDetail(p) {
                 : !showAmounts
                   ? withheld
                   : totals.limit == null
-                    ? "No value cap"
+                    ? ec.l10n.localize("No value cap")
                     : money(totals.limit, currency),
             releasedText: pa.template ? "" : amount(money(totals.released, currency)),
             remainingText: pa.template || totals.remaining == null ? "" : amount(money(totals.remaining, currency)),

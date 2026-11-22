@@ -66,7 +66,7 @@ function bills(parameters) {
 // and when, and a release asked for; private suppliers of other users left out. A page at a time.
 function exceptions(parameters) {
     const scope = lib.access(parameters)
-    if (!readsPayables(scope)) throw new Error("PERMISSION_DENIED: Payables read authority is required")
+    if (!readsPayables(scope)) throw new Error(ec.l10n.localize("PERMISSION_DENIED: Payables read authority is required"))
     const organizationPartyId = policy.organization(parameters).organizationPartyId
     const cf = ec.entity.conditionFactory
     // a find runs once: one for the count, one for the page
@@ -164,8 +164,8 @@ function supplierContext(parameters) {
     )
     const profileRow = row =>
         Object.assign(policy.display(row), {
-            termText: row.settlementTermId ? terms[row.settlementTermId] || row.settlementTermId : "Organization's default",
-            selfBillingText: row.selfBillingIndicator === "Y" ? "Self-billed" : "Supplier bills"
+            termText: row.settlementTermId ? terms[row.settlementTermId] || row.settlementTermId : ec.l10n.localize("Organization's default"),
+            selfBillingText: row.selfBillingIndicator === "Y" ? ec.l10n.localize("Self-billed") : ec.l10n.localize("Supplier bills")
         })
     const supplierDetail = {
         supplierPartyId,

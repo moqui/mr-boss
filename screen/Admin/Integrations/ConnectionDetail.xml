@@ -48,7 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
                         fromDate:(fromDate || null), thruDate:(thruDate || null), isEnabled:(isEnabled || null), remove:(remove === 'Y'),
                         reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? (stored.reason || (stored.active ? 'The organization may use the gateway' : 'Saved: the organization may not use the gateway now')) : stored.reason,
+                <script>ec.message.addMessage(stored.applied ? (stored.reason || (stored.active ? ec.l10n.localize('The organization may use the gateway') : ec.l10n.localize('Saved: the organization may not use the gateway now'))) : stored.reason,
                     !stored.applied || stored.reason ? 'warning' : 'success')</script>
             </if>
         </actions>

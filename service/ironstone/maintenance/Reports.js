@@ -7,29 +7,31 @@
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mantle/work/MaintenanceAccess.js")
 const {denied} = lib
+const L = (words) => ec.l10n.localize(words)
 
 const entries = [
     {
         entryId: "Maintenance.WorkStatus",
-        title: "Work status",
-        description:
-            "Work orders opened, completed and cancelled in a period, and the backlog, overdue and unassigned at its end.",
+        title: L("Work status"),
+        description: L(
+            "Work orders opened, completed and cancelled in a period, and the backlog, overdue and unassigned at its end."
+        ),
         path: "Reports/WorkStatusReport",
         read: can => can.view,
         exports: true
     },
     {
         entryId: "Maintenance.PreventiveCompliance",
-        title: "PM compliance",
-        description: "Preventive obligations due in a period, each on time, late, outstanding, skipped or unknown.",
+        title: L("PM compliance"),
+        description: L("Preventive obligations due in a period, each on time, late, outstanding, skipped or unknown."),
         path: "Reports/PreventiveComplianceReport",
         read: can => can.view,
         exports: true
     },
     {
         entryId: "Maintenance.Cost",
-        title: "Maintenance costs",
-        description: "Parts, labor and outside service of the work orders, each source once, by currency; unpriced hours apart.",
+        title: L("Maintenance costs"),
+        description: L("Parts, labor and outside service of the work orders, each source once, by currency; unpriced hours apart."),
         path: "Reports/MaintenanceCostReport",
         read: can => can.view && can.costView,
         exports: true
@@ -37,10 +39,10 @@ const entries = [
 ]
 
 function catalogue(p) {
-    if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
-    if (!ec.user.userId) denied("PERMISSION_DENIED", "Sign in to read maintenance reports")
+    if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", L("Maintenance context is not available"))
+    if (!ec.user.userId) denied("PERMISSION_DENIED", L("Sign in to read maintenance reports"))
     const can = maintenanceAccess.capabilities()
-    if (!can.view) denied("PERMISSION_DENIED", "Maintenance view is required")
+    if (!can.view) denied("PERMISSION_DENIED", L("Maintenance view is required"))
     return {
         reports: entries
             .filter(entry => entry.read(can))

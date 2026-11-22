@@ -93,9 +93,9 @@ along with this software (see the LICENSE.md file). If not, see
             newTemplate = {organizationPartyId: single, selfAssessment: 'Y'}
             findValues = {show: showing}
             reviewsUrl = sharedLinks?.['Performance/Reviews'] || '/qapps/People/Performance/Reviews'
-            emptyText = canSetUp ? (templates.length ? 'No review cycle yet. New cycle sets one up for an employer or a unit.'
-                : 'No review cycle yet. Add a template under Templates first: the steps a review asks and its release.')
-                : 'No review cycle is open.'
+            emptyText = canSetUp ? (templates.length ? ec.l10n.localize('No review cycle yet. New cycle sets one up for an employer or a unit.')
+                : ec.l10n.localize('No review cycle yet. Add a template under Templates first: the steps a review asks and its release.'))
+                : ec.l10n.localize('No review cycle is open.')
         ]]></script>
         <!-- the people a cycle chosen with Preview reviews now, and who has no manager to review them -->
         <set field="previewing" from="previewCycleId ? cycles.find(row => row.reviewCycleId == previewCycleId &amp;&amp; row.canStart) || null : null"/>

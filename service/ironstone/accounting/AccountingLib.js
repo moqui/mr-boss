@@ -13,8 +13,8 @@ const statusText = statusId => (statusId ? policy.one("moqui.basic.StatusItem", 
 
 // The finance scope of an Accounting screen. Refuses another app root and, when capabilities are named, a user who has
 // none of them.
-function access(parameters, capabilities = [], message = "Accounting read authority is required") {
-    if (parameters.appRoot && parameters.appRoot !== "Accounting") throw new Error("Accounting context is not available")
+function access(parameters, capabilities = [], message = ec.l10n.localize("Accounting read authority is required")) {
+    if (parameters.appRoot && parameters.appRoot !== "Accounting") throw new Error(ec.l10n.localize("Accounting context is not available"))
     const scope = policy.scope(parameters)
     if (capabilities.length && !capabilities.some(name => scope.capabilities[name])) throw new Error(message)
     return scope
@@ -61,7 +61,7 @@ function tokens(value, label = "record", maximum = 10) {
     for (const value of selected) {
         const item = token(value, label)
         if (versions.has(item.id) && versions.get(item.id) !== item.version)
-            throw new Error("An item has different reviewed revisions. Choose it again")
+            throw new Error(ec.l10n.localize("An item has different reviewed revisions. Choose it again"))
         versions.set(item.id, item.version)
     }
     return {ids: Array.from(versions.keys()), versions: Object.fromEntries(versions)}

@@ -220,8 +220,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="3. The request and its policy"/>
                             <box-body>
                                 <label type="strong" text="${preview.outcomeText}"/>
-                                <label type="p" text="${[preview.policyName ? 'Policy ' + preview.policyName : 'No policy',
-                                        'authorization valid until ' + preview.expireText, preview.feeText, preview.approvalText]
+                                <label type="p" text="${[preview.policyName ? ec.resource.expand('Policy $' + '{name}', '', {name: preview.policyName}) : ec.l10n.localize('No policy'),
+                                        ec.resource.expand('authorization valid until $' + '{when}', '', {when: preview.expireText}), preview.feeText, preview.approvalText]
                                         .filter(Boolean).join(' · ')}" style="text-caption m-muted"/>
                                 <label type="p" text="${preview.instructions}" condition="preview.instructions"/>
                                 <form-list name="ReturnPreviewLines" list="previewRows" skip-form="true" paginate="false">

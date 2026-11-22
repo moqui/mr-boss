@@ -20,17 +20,17 @@ const stockTypes = ["PtAsset", "PtDigitalAsset", "PtAssetUse", "PtPickAssembly"]
 const billedOrderStatuses = ["OrderApproved", "OrderSent", "OrderProcessing", "OrderCompleted"]
 const views = {
     incoming: {label: "Incoming", statuses: ["InvoiceIncoming"]},
-    review: {label: "Awaiting approval", statuses: ["InvoiceReceived"]},
+    review: {label: ec.l10n.localize("Awaiting approval"), statuses: ["InvoiceReceived"]},
     held: {label: "Held", held: true},
-    unmatched: {label: "Not matched", unmatched: true},
-    approved: {label: "Approved, not paid", statuses: ["InvoiceApproved"], unpaid: true},
-    paid: {label: "Paid", statuses: ["InvoicePmtSent"]}
+    unmatched: {label: ec.l10n.localize("Not matched"), unmatched: true},
+    approved: {label: ec.l10n.localize("Approved, not paid"), statuses: ["InvoiceApproved"], unpaid: true},
+    paid: {label: ec.l10n.localize("Paid"), statuses: ["InvoicePmtSent"]}
 }
 const exceptionViews = {
-    held: "Held bills",
-    variance: "Match variances",
-    receivedNotBilled: "Received, not billed",
-    billedNotReceived: "Billed, not received"
+    held: ec.l10n.localize("Held bills"),
+    variance: ec.l10n.localize("Match variances"),
+    receivedNotBilled: ec.l10n.localize("Received, not billed"),
+    billedNotReceived: ec.l10n.localize("Billed, not received")
 }
 const statusColors = {
     InvoiceIncoming: "grey-8",
@@ -46,7 +46,7 @@ const likeText = text => "%" + String(text).replace(/[\\%_]/g, character => "\\"
 const quantityText = value => (value == null ? "" : ec.l10n.format(dec(value), "#,##0.###"))
 const money = (value, currencyUomId) =>
     value == null ? "" : ec.l10n.formatCurrency(lib.money(value, currencyUomId), currencyUomId)
-const withheld = "Withheld"
+const withheld = ec.l10n.localize("Withheld")
 // The amounts of a bill: to whoever sees the orders' amounts (a buyer, an approver, a supplier-price or finance reader) or
 // reads payables (the match operator); its payments to a finance reader only.
 const amountsVisible = can =>
@@ -100,7 +100,7 @@ const plain = message =>
 // The buying organizations a list shows: the user's, or the one asked for when it is theirs.
 function buyersFor(userScope, organizationPartyId) {
     if (blank(organizationPartyId)) return buyerIdsOf(userScope)
-    if (!purchasing.owns(userScope, organizationPartyId)) denied("RECORD_UNAVAILABLE", "The organization is not available")
+    if (!purchasing.owns(userScope, organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("The organization is not available"))
     return [String(organizationPartyId)]
 }
 // The supplier bills of the buyers: to a buying organization from a party that is not internal, not a credit of another
@@ -183,7 +183,7 @@ function billRows(records, can) {
             currencyUomId: row.currencyUomId,
             totalText: showAmounts ? money(row.invoiceTotal, row.currencyUomId) : withheld,
             unpaidText: showPayments ? money(row.unpaidTotal, row.currencyUomId) : withheld,
-            matchText: match ? results[match.resultEnumId] || match.resultEnumId : "Not matched",
+            matchText: match ? results[match.resultEnumId] || match.resultEnumId : ec.l10n.localize("Not matched"),
             matchColor: match ? resultColors[match.resultEnumId] || "grey-8" : "grey-8",
             matchStale: !!match?.staleDate,
             held: billHolds.length > 0,
@@ -198,7 +198,7 @@ function billRows(records, can) {
 // status and text (bill, supplier reference or description, ignoring case).
 function findBills(p) {
     const userScope = purchasing.required()
-    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", "Supplier bills are not available")
+    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("Supplier bills are not available"))
     const buyers = buyersFor(userScope, p.organizationPartyId)
     const view = Object.hasOwn(views, p.view || "") ? views[p.view] : null
     const factory = ec.entity.conditionFactory
@@ -327,7 +327,7 @@ function orderLines(userScope, buyers, p) {
 // quantity and billed quantity differ.
 function findExceptions(p) {
     const userScope = purchasing.required()
-    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", "Match exceptions are not available")
+    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("Match exceptions are not available"))
     const can = userScope.capabilities
     const buyers = buyersFor(userScope, p.organizationPartyId)
     const view = Object.hasOwn(exceptionViews, p.view || "") ? p.view : "held"
@@ -351,10 +351,10 @@ function findExceptions(p) {
             ageText: ageText(view === "receivedNotBilled" ? line.lastReceiptDate : line.entryDate),
             ownerText:
                 view === "receivedNotBilled"
-                    ? "Supplier: send the bill"
+                    ? ec.l10n.localize("Supplier: send the bill")
                     : line.service
-                      ? "Buyer: record the acceptance"
-                      : "Warehouse: receive or correct the receipt"
+                      ? ec.l10n.localize("Buyer: record the acceptance")
+                      : ec.l10n.localize("Warehouse: receive or correct the receipt")
         }))
         return Object.assign(out, lib.pageList(rowsOut, p, "lineRows"))
     }
@@ -436,7 +436,7 @@ function findExceptions(p) {
                 ? [lib.dateText(hold.placedDate), users[hold.placedByUserId] || hold.placedByUserId].filter(Boolean).join(" · ")
                 : "",
             ageText: ageText(hold?.placedDate || match?.appliedDate),
-            ownerText: hold ? "Finance releases the hold" : "Buyer: correct the source or the bill",
+            ownerText: hold ? ec.l10n.localize("Finance releases the hold") : ec.l10n.localize("Buyer: correct the source or the bill"),
             releaseRequestText: hold?.releaseRequestedDate
                 ? "Asked by " + (users[hold.releaseRequestedByUserId] || hold.releaseRequestedByUserId)
                 : "",
@@ -494,7 +494,7 @@ function billDetail(p) {
         receiptText: row.assetReceiptId
             ? row.assetReceiptId +
               (receiptDates[row.assetReceiptId] ? " · " + lib.dateText(receiptDates[row.assetReceiptId]) : "")
-            : "Ordered quantity",
+            : ec.l10n.localize("Ordered quantity"),
         quantityText: quantityText(row.quantity),
         amountText: showAmounts ? money(row.amount, currency) : withheld
     }))
@@ -531,7 +531,7 @@ function billDetail(p) {
           )
         : []
     const exceptionNames = enumNames(matchLines.map(line => line.exceptionEnumId))
-    const matchResult = match ? enumNames([match.resultEnumId])[match.resultEnumId] || match.resultEnumId : "Not matched"
+    const matchResult = match ? enumNames([match.resultEnumId])[match.resultEnumId] || match.resultEnumId : ec.l10n.localize("Not matched")
     // People P27 review (AC-23): a payroll payment applied to the bill (one paying a claim with net pay) is a reader of payroll's
     const payments = showPayments
         ? ec.resource
@@ -652,7 +652,7 @@ function supplierBills(p) {
     const userScope = purchasing.required()
     const record = purchasing.recordOf(userScope, "supplier", p.vendorPartyId)
     const can = userScope.capabilities
-    if (!can.listRead) denied("PERMISSION_DENIED", "Supplier bills are not available")
+    if (!can.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("Supplier bills are not available"))
     const buyers = buyersFor(userScope, p.organizationPartyId)
     const supplierPartyId = record.recordId
     const recent = Array.from(
@@ -679,7 +679,7 @@ function supplierBills(p) {
         unpaidText =
             Object.entries(unpaid)
                 .map(([currencyUomId, value]) => money(value, currencyUomId))
-                .join(" · ") || "Nothing unpaid"
+                .join(" · ") || ec.l10n.localize("Nothing unpaid")
     }
     return {
         supplierBills: {
@@ -699,9 +699,9 @@ function supplierBills(p) {
 // transaction, a result per bill; a refusal is named and the others go on.
 function reevaluate(p) {
     const userScope = purchasing.required()
-    if (!userScope.capabilities.match) denied("PERMISSION_DENIED", "INVOICE_MATCH is required")
+    if (!userScope.capabilities.match) denied("PERMISSION_DENIED", ec.l10n.localize("INVOICE_MATCH is required"))
     const invoiceIds = [...new Set(Array.from(p.invoiceIds || []).map(String))].filter(Boolean)
-    if (!invoiceIds.length || invoiceIds.length > 100) denied("SELECTION_INVALID", "Select between one and 100 bills")
+    if (!invoiceIds.length || invoiceIds.length > 100) denied("SELECTION_INVALID", ec.l10n.localize("Select between one and 100 bills"))
     const results = []
     for (const invoiceId of invoiceIds) {
         ec.message.pushErrors()

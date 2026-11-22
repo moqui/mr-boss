@@ -461,7 +461,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="ruleName"><default-field title="Rule"><display/></default-field></field>
                                     <field name="matches">
                                         <default-field title="Met">
-                                            <display text="${matches ? 'Yes' : 'No: ' + conditions.filter((row) =&gt; !row.holds).map((row) =&gt; row.text).join('; ')}"/>
+                                            <display text="${matches ? ec.l10n.localize('Yes') : ec.resource.expand('No: $' + '{reasons}', '', {reasons: conditions.filter((row) =&gt; !row.holds).map((row) =&gt; row.text).join('; ')})}"/>
                                         </default-field>
                                     </field>
                                     <columns type="mobile">

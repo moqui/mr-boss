@@ -63,7 +63,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.request.SupportCaseServices.transition#Case" out-map="moved"
                     in-map="{requestId:requestId, toStatusId:(toStatusId || statusId), resolutionEnumId:(resolutionEnumId || null),
                         reason:(reason || null)}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage('Case ' + requestId + ': ' + moved.statusLabel, 'success')</script>
+            <script><![CDATA[if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand('Case ${requestId}: ${status}', '', {requestId: requestId, status: moved.statusLabel}), 'success')]]></script>
         </actions>
         <default-response url="."/>
         <error-response url="."/>

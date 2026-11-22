@@ -30,7 +30,7 @@ along with this software (see the LICENSE.md file). If not, see
                         workEffortName:workEffortName, description:description || null, priority:priority || null,
                         estimatedStartDate:estimatedStartDate || null, estimatedCompletionDate:estimatedCompletionDate || null,
                         facilityId:facilityId || null}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage('Work order ' + workEffortId + ' saved', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand('Work order ${workEffortId} saved', '', {workEffortId: workEffortId}), 'success')</script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>
@@ -44,8 +44,8 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
                         assetId:assetId, fromDate:fromDate || null, thruDate:thruDate || null, end:end == 'true',
                         comments:comments || null}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage(end == 'true' ? 'Equipment ' + assetId + ' released from the work order'
-                    : 'Equipment ' + assetId + ' assigned', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand(end == 'true'
+                    ? 'Equipment ${assetId} released from the work order' : 'Equipment ${assetId} assigned', '', {assetId: assetId}), 'success')</script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>
@@ -58,7 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
                         partyId:partyId, roleTypeId:roleTypeId, remove:remove == 'true'}"/>
             <script><![CDATA[
                 if (!ec.message.hasError()) {
-                    ec.message.addMessage(remove == 'true' ? 'Removed from the work order' : 'Assigned to the work order', 'success')
+                    ec.message.addMessage(remove == 'true' ? ec.l10n.localize('Removed from the work order') : ec.l10n.localize('Assigned to the work order'), 'success')
                     for (const warning of stored.result?.warnings || []) ec.message.addMessage(warning, 'warning')
                 }
             ]]></script>

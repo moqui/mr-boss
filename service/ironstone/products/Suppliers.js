@@ -16,13 +16,13 @@ function run(op, parameters) {
             capabilities = context.capabilities,
             organizationPartyId = p.organizationPartyId || context.activeOrganizationPartyId || context.organizationPartyIds[0]
         if (!(write ? capabilities.supplierPriceEdit : capabilities.supplierPriceRead))
-            throw new Error("Supplier-price authority is required")
+            throw new Error(ec.l10n.localize("Supplier-price authority is required"))
         if (
             !organizationPartyId ||
             !one("mantle.party.PartyRole", {partyId: organizationPartyId, roleTypeId: "OrgInternal"}) ||
             (!capabilities.systemAdmin && !context.organizationPartyIds.includes(organizationPartyId))
         )
-            throw new Error("Choose an available internal buying organization")
+            throw new Error(ec.l10n.localize("Choose an available internal buying organization"))
         return Object.assign({}, context, {organizationPartyId})
     }
     function partyVisible(party, context) {
@@ -52,7 +52,7 @@ function run(op, parameters) {
     }
     function product(productId) {
         const record = local.readableProduct(productId)
-        if (!record) throw new Error("Product is not available")
+        if (!record) throw new Error(ec.l10n.localize("Product is not available"))
         return record
     }
     // An offer as the screens show it: names, its pack, state and whether it may be corrected.
@@ -88,7 +88,7 @@ function run(op, parameters) {
     function offers(p) {
         const context = scope(p),
             at = p.asOfDate == null ? ms(ec.user.nowTimestamp) : ms(p.asOfDate)
-        if (!Number.isFinite(at)) throw new Error("Choose a valid offer date")
+        if (!Number.isFinite(at)) throw new Error(ec.l10n.localize("Choose a valid offer date"))
         if (p.vendorPartyId) supplier(p.vendorPartyId, context)
         let productIds
         if (p.productId) {
@@ -189,7 +189,7 @@ function run(op, parameters) {
     function write(op, p) {
         const context = scope(p, true),
             old = p.productPriceId ? one(P + "ProductPrice", {productPriceId: p.productPriceId}) : null
-        if (p.productPriceId && !old) throw new Error("Supplier offer is not available")
+        if (p.productPriceId && !old) throw new Error(ec.l10n.localize("Supplier offer is not available"))
         const buyer = old?.customerPartyId || p.customerPartyId || context.organizationPartyId,
             vendor = old?.vendorPartyId || p.vendorPartyId
         if (
@@ -197,14 +197,14 @@ function run(op, parameters) {
             (p.customerPartyId && p.customerPartyId !== buyer) ||
             (p.vendorPartyId && old && p.vendorPartyId !== vendor)
         )
-            throw new Error("Offer is outside the fixed supplier and buyer scope")
+            throw new Error(ec.l10n.localize("Offer is outside the fixed supplier and buyer scope"))
         supplier(vendor, context)
         if (
             old &&
             ec.resource.script("component://mr-mantle/service/mantle/product/PricePolicy.js").execute("direction", old) !==
                 "purchase"
         )
-            throw new Error("Only supplier offers belong here")
+            throw new Error(ec.l10n.localize("Only supplier offers belong here"))
         return price(op, Object.assign({}, p, {customerPartyId: buyer, vendorPartyId: vendor}))
     }
     function detail(p) {

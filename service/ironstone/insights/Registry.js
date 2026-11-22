@@ -43,7 +43,7 @@ const list = text =>
 
 function viewer() {
     const userScope = insights.required()
-    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", "Reports and measures need Insights read")
+    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", ec.l10n.localize("Reports and measures need Insights read"))
     return userScope
 }
 // An owner's service as the viewer, in its own transaction and error frame, so its own checks apply and a failure is named,
@@ -190,7 +190,7 @@ function findReports(p) {
                 purpose: entry.purpose || "",
                 basis: entry.basis || "",
                 url: entry.routePath ? "/qapps/" + entry.routePath : null,
-                opensFrom: entry.routePath ? "" : "Opens from a record",
+                opensFrom: entry.routePath ? "" : ec.l10n.localize("Opens from a record"),
                 formats: entry.exportFormats || "",
                 metricIds: list(entry.metricIds),
                 hasOptions: !!entry.routePath && list(entry.parameterContract).length > 0,
@@ -221,7 +221,7 @@ function findReports(p) {
 // from 0) or at the end. Only an entry the caller reads is pinned; unpinning needs nothing. A stale expectedRevision is refused.
 function storeReportPins(p) {
     viewer()
-    if (blank(p.entryId)) denied("REPORT_REQUIRED", "Choose a report")
+    if (blank(p.entryId)) denied("REPORT_REQUIRED", ec.l10n.localize("Choose a report"))
     const preference = home()
     if (!blank(p.expectedRevision) && Number(p.expectedRevision) !== preference.revision)
         denied("PINS_CHANGED", "Your pins changed since you read them; reload and try again")
@@ -274,7 +274,7 @@ function reportOptions(p) {
                 type: "choice",
                 options: periodOptions(organizationPartyId),
                 value: null,
-                note: organizationPartyId ? "" : "Choose an organization for its fiscal periods"
+                note: organizationPartyId ? "" : ec.l10n.localize("Choose an organization for its fiscal periods")
             })
     }
     let ownerOptions = []
@@ -319,12 +319,12 @@ function reportLink(p) {
 function rulesOf(metric) {
     const rules = []
     if (metric.unitPolicy === "currency")
-        rules.push("Native currencies are kept apart; amounts in different currencies are never added together.")
+        rules.push(ec.l10n.localize("Native currencies are kept apart; amounts in different currencies are never added together."))
     if (metric.aggregation === "ratio")
-        rules.push("A rate is recomputed from its numerator and denominator, never averaged or summed.")
-    if (metric.aggregation === "snapshot") rules.push("A snapshot is never summed across dates.")
+        rules.push(ec.l10n.localize("A rate is recomputed from its numerator and denominator, never averaged or summed."))
+    if (metric.aggregation === "snapshot") rules.push(ec.l10n.localize("A snapshot is never summed across dates."))
     if (/RecurringTemplate/.test(metric.exclusions || ""))
-        rules.push("Recurring base orders are templates and are excluded; their renewals count when placed.")
+        rules.push(ec.l10n.localize("Recurring base orders are templates and are excluded; their renewals count when placed."))
     return rules
 }
 function describe(metric) {
@@ -384,14 +384,14 @@ function panelOf(definition, panelId) {
 // A comparison with a target (design §4 Target): a missing target, or a zero target (the comparison's denominator), is
 // unavailable, never infinity; the gap and the ratio in decimals.
 function comparison(value, target, targetActual) {
-    if (blank(value)) return {state: "unavailable", reason: "NO_VALUE", message: "No value to compare"}
-    if (!target || blank(target.targetKind)) return {state: "unavailable", reason: "NO_TARGET", message: "No target is set"}
+    if (blank(value)) return {state: "unavailable", reason: "NO_VALUE", message: ec.l10n.localize("No value to compare")}
+    if (!target || blank(target.targetKind)) return {state: "unavailable", reason: "NO_TARGET", message: ec.l10n.localize("No target is set")}
     const goal = target.targetKind === "constant" ? target.targetValue : targetActual
-    if (blank(goal)) return {state: "unavailable", reason: "NO_TARGET", message: "The target has no value for this period"}
+    if (blank(goal)) return {state: "unavailable", reason: "NO_TARGET", message: ec.l10n.localize("The target has no value for this period")}
     const actual = toDecimal(value)
     const wanted = toDecimal(goal)
     if (wanted.isZero())
-        return {state: "unavailable", reason: "TARGET_ZERO", message: "The target is zero, so there is no comparison"}
+        return {state: "unavailable", reason: "TARGET_ZERO", message: ec.l10n.localize("The target is zero, so there is no comparison")}
     const gap = actual.subtract(wanted)
     const better = target.betterDirection === "lower" ? gap.compare(0) <= 0 : gap.compare(0) >= 0
     return {
@@ -417,7 +417,7 @@ function metric(p) {
         const found = panelOf(definition, p.panelId)
         const business = found?.business || null
         if (!business?.metricId)
-            return {available: false, reason: "NO_METRIC", message: "This panel has no registered measure", metric: null}
+            return {available: false, reason: "NO_METRIC", message: ec.l10n.localize("This panel has no registered measure"), metric: null}
         metricId = business.metricId
         panel = {
             definitionId: definition.id,
@@ -427,7 +427,7 @@ function metric(p) {
             target: business.target || null
         }
     }
-    if (blank(metricId)) denied("METRIC_REQUIRED", "Choose a measure or a panel")
+    if (blank(metricId)) denied("METRIC_REQUIRED", ec.l10n.localize("Choose a measure or a panel"))
     const descriptor = describe(registration(metricId))
     const versionMessage = panel ? versionNote(panel.metricVersion, descriptor.version) : ""
     return {
@@ -454,7 +454,7 @@ function panelMeasures(p) {
         try {
             found = panelOf(definition, panelId)
         } catch (error) {
-            measures.push({panelId, panelTitle: panelId, available: false, message: "The panel is not available to you"})
+            measures.push({panelId, panelTitle: panelId, available: false, message: ec.l10n.localize("The panel is not available to you")})
             continue
         }
         const metricId = found?.business?.metricId
@@ -539,10 +539,10 @@ function panelCurrency(panel) {
 // theirs (the engine's save checks the owner and version again).
 function ownPanel(userScope, definitionId) {
     if (!userScope.capabilities.author && !userScope.capabilities.datasetEdit)
-        denied("INSIGHTS_AUTHOR_REQUIRED", "A panel's measure and target need Insights authoring")
-    if (blank(definitionId)) denied("PANEL_REQUIRED", "Choose a library panel")
+        denied("INSIGHTS_AUTHOR_REQUIRED", ec.l10n.localize("A panel's measure and target need Insights authoring"))
+    if (blank(definitionId)) denied("PANEL_REQUIRED", ec.l10n.localize("Choose a library panel"))
     const definition = engine(R + "get#Definition", {definitionId}).definition
-    if (definition.type !== "panel") denied("PANEL_REQUIRED", "Choose a library panel")
+    if (definition.type !== "panel") denied("PANEL_REQUIRED", ec.l10n.localize("Choose a library panel"))
     if (definition.readOnly || definition.ownerId !== ec.user.userId)
         denied("PANEL_NOT_OWNED", "Only the owner changes a panel; save a copy first")
     return definition
@@ -570,7 +570,7 @@ function storePanelMeasure(p) {
     const body = Object.assign({}, definition.body || {})
     if (blank(p.metricId)) {
         delete body.business
-        return savePanel(definition, body, p.expectedVersion, "Measure cleared")
+        return savePanel(definition, body, p.expectedVersion, ec.l10n.localize("Measure cleared"))
     }
     const registered = registration(p.metricId)
     const previous = body.business || {}
@@ -588,33 +588,33 @@ function storePanelTarget(p) {
     const definition = ownPanel(userScope, p.panelId)
     const body = Object.assign({}, definition.body || {})
     const business = Object.assign({}, body.business || {})
-    if (blank(business.metricId)) denied("PANEL_MEASURE_REQUIRED", "Choose the panel's measure before its target")
+    if (blank(business.metricId)) denied("PANEL_MEASURE_REQUIRED", ec.l10n.localize("Choose the panel's measure before its target"))
     const measure = registration(business.metricId)
     if (blank(p.targetKind)) {
         delete business.target
         body.business = business
-        return savePanel(definition, body, p.expectedVersion, "Target cleared")
+        return savePanel(definition, body, p.expectedVersion, ec.l10n.localize("Target cleared"))
     }
-    if (!["constant", "metric"].includes(p.targetKind)) denied("TARGET_KIND_INVALID", "A target is a measure or a value")
+    if (!["constant", "metric"].includes(p.targetKind)) denied("TARGET_KIND_INVALID", ec.l10n.localize("A target is a measure or a value"))
     const direction = blank(p.betterDirection) ? "higher" : p.betterDirection
-    if (!["higher", "lower"].includes(direction)) denied("TARGET_DIRECTION_INVALID", "Better is higher or lower")
+    if (!["higher", "lower"].includes(direction)) denied("TARGET_DIRECTION_INVALID", ec.l10n.localize("Better is higher or lower"))
     const period = blank(p.periodBinding) ? "panel" : p.periodBinding
     if (!["panel", "month", "quarter", "year"].includes(period))
-        denied("TARGET_PERIOD_INVALID", "The target's period is the panel's range, a month, a quarter or a year")
+        denied("TARGET_PERIOD_INVALID", ec.l10n.localize("The target's period is the panel's range, a month, a quarter or a year"))
     const panelCurrencyId = panelCurrency(body)
     const target = {targetKind: p.targetKind, periodBinding: period, betterDirection: direction}
     if (p.targetKind === "constant") {
-        if (!blank(p.targetMetricId)) denied("TARGET_INPUT_INVALID", "A value target takes a value, not a measure")
-        if (blank(p.targetValue)) denied("TARGET_VALUE_REQUIRED", "Enter the target value")
+        if (!blank(p.targetMetricId)) denied("TARGET_INPUT_INVALID", ec.l10n.localize("A value target takes a value, not a measure"))
+        if (blank(p.targetValue)) denied("TARGET_VALUE_REQUIRED", ec.l10n.localize("Enter the target value"))
         let value
         try {
             value = toDecimal(p.targetValue)
         } catch (_) {
-            denied("TARGET_VALUE_REQUIRED", "Enter the target value as a number")
+            denied("TARGET_VALUE_REQUIRED", ec.l10n.localize("Enter the target value as a number"))
         }
         const unit = blank(p.targetUnitId) ? null : String(p.targetUnitId)
         if (measure.unitPolicy === "currency") {
-            if (!currencyUom(unit)) denied("TARGET_UNIT_MISMATCH", "A money target names its currency")
+            if (!currencyUom(unit)) denied("TARGET_UNIT_MISMATCH", ec.l10n.localize("A money target names its currency"))
             if (panelCurrencyId !== unit)
                 denied(
                     "TARGET_CURRENCY_MIXED",
@@ -627,12 +627,12 @@ function storePanelTarget(p) {
         }
         Object.assign(target, {targetValue: String(value), targetUnitId: unit})
     } else {
-        if (!blank(p.targetValue)) denied("TARGET_INPUT_INVALID", "A measure target takes a measure, not a value")
-        if (blank(p.targetMetricId)) denied("TARGET_METRIC_REQUIRED", "Choose the target measure")
+        if (!blank(p.targetValue)) denied("TARGET_INPUT_INVALID", ec.l10n.localize("A measure target takes a measure, not a value"))
+        if (blank(p.targetMetricId)) denied("TARGET_METRIC_REQUIRED", ec.l10n.localize("Choose the target measure"))
         const other = registration(p.targetMetricId)
-        if (other.metricId === measure.metricId) denied("TARGET_METRIC_INVALID", "A measure is not its own target")
+        if (other.metricId === measure.metricId) denied("TARGET_METRIC_INVALID", ec.l10n.localize("A measure is not its own target"))
         if (other.unitPolicy !== measure.unitPolicy || other.aggregation !== measure.aggregation)
-            denied("TARGET_UNIT_MISMATCH", "A target measure shares the panel measure's unit and basis")
+            denied("TARGET_UNIT_MISMATCH", ec.l10n.localize("A target measure shares the panel measure's unit and basis"))
         if (measure.unitPolicy === "currency" && !panelCurrencyId)
             denied("TARGET_CURRENCY_MIXED", "The panel shows every currency apart; filter it to one currency first")
         Object.assign(target, {
@@ -647,7 +647,7 @@ function storePanelTarget(p) {
 }
 
 // ===== saved reports (design §6 SavedReports) =====
-const kindNames = {dashboard: "Dashboard", panel: "Library panel", search: "Saved search", report: "Report", find: "Saved find"}
+const kindNames = {dashboard: ec.l10n.localize("Dashboard"), panel: ec.l10n.localize("Library panel"), search: ec.l10n.localize("Saved search"), report: ec.l10n.localize("Report"), find: ec.l10n.localize("Saved find")}
 const savedTypes = ["dashboard", "panel", "search", "report"]
 function groupName(userGroupId) {
     const group = userGroupId ? one("moqui.security.UserGroup", {userGroupId}) : null
@@ -668,8 +668,8 @@ function definitionRoute(definition, capabilities) {
     if (definition.type === "panel")
         return capabilities.author || capabilities.datasetEdit
             ? {url: "/qapps/Insights/PanelDetail?definitionId=" + id}
-            : {unavailable: "Open it on a dashboard"}
-    return {unavailable: "Not opened in Insights"}
+            : {unavailable: ec.l10n.localize("Open it on a dashboard")}
+    return {unavailable: ec.l10n.localize("Not opened in Insights")}
 }
 // A saved find's list, by its form location (component://mr-boss/screen/<path>.xml.form_list$<form>): the screen path and the
 // form, and whether that list still exists (P12, design §13.2: a find saved on a list that was replaced is shown invalid, never
@@ -730,7 +730,7 @@ function moveLegacy(out, write, name) {
     }
 }
 function migrateLegacySavedFinds(p) {
-    if (!lib.access.systemAdmin()) denied("ADMIN_REQUIRED", "The legacy mapping is an instance administrator's upgrade step")
+    if (!lib.access.systemAdmin()) denied("ADMIN_REQUIRED", ec.l10n.localize("The legacy mapping is an instance administrator's upgrade step"))
     const apply = p.apply === true || p.apply === "true"
     const finds = []
     for (const row of Array.from(find("moqui.screen.form.FormListFind").condition("formLocation", "like", legacyScreen + "%").list())) {
@@ -816,7 +816,7 @@ function findSavedReports(p) {
             const route = definitionRoute(definition, can)
             out.push({
                 kind: definition.type,
-                kindName: flowMap ? "Flow map" : kindNames[definition.type],
+                kindName: flowMap ? ec.l10n.localize("Flow map") : kindNames[definition.type],
                 flowMap,
                 id: definition.id,
                 title: definition.title || definition.id,
@@ -871,14 +871,14 @@ function findSavedReports(p) {
                 if (!entry || !read.reads(entry) || !matches(entry.title)) continue
                 out.push({
                     kind: "pin",
-                    kindName: "Pinned report",
+                    kindName: ec.l10n.localize("Pinned report"),
                     id: entryId,
                     title: entry.title,
                     ownerText: ownerNames[entry.ownerApp] || entry.ownerApp,
                     sharing: "Private",
                     version: null,
                     url: entry.routePath ? "/qapps/" + entry.routePath : null,
-                    unavailable: entry.routePath ? "" : "Opens from a record",
+                    unavailable: entry.routePath ? "" : ec.l10n.localize("Opens from a record"),
                     canCopy: false
                 })
             }
@@ -887,12 +887,12 @@ function findSavedReports(p) {
     return {
         savedReports: out,
         kindOptions: [
-            {key: "dashboard", text: "Dashboards"},
-            {key: "panel", text: "Library panels"},
-            {key: "search", text: "Saved searches"},
-            {key: "report", text: "Playlists and reports"},
-            {key: "find", text: "Saved finds"},
-            {key: "pin", text: "Pinned reports"}
+            {key: "dashboard", text: ec.l10n.localize("Dashboards")},
+            {key: "panel", text: ec.l10n.localize("Library panels")},
+            {key: "search", text: ec.l10n.localize("Saved searches")},
+            {key: "report", text: ec.l10n.localize("Playlists and reports")},
+            {key: "find", text: ec.l10n.localize("Saved finds")},
+            {key: "pin", text: ec.l10n.localize("Pinned reports")}
         ]
     }
 }
@@ -901,16 +901,16 @@ function findSavedReports(p) {
 // read must be the source's current one. No cached result or wider grant goes with it.
 function copySavedReport(p) {
     const userScope = viewer()
-    if (!userScope.capabilities.author) denied("INSIGHTS_AUTHOR_REQUIRED", "Saving a copy needs Insights authoring")
-    if (blank(p.title)) denied("TITLE_REQUIRED", "Name the copy")
+    if (!userScope.capabilities.author) denied("INSIGHTS_AUTHOR_REQUIRED", ec.l10n.localize("Saving a copy needs Insights authoring"))
+    if (blank(p.title)) denied("TITLE_REQUIRED", ec.l10n.localize("Name the copy"))
     const group = blank(p.userGroupId) ? null : String(p.userGroupId)
     if (group && (group === "ALL_USERS" || !Array.from(ec.user.getUserGroupIdSet() || []).includes(group)))
         denied("SHARE_GROUP_UNAVAILABLE", "Share only with a group you belong to")
     const source = engine(R + "get#Definition", {definitionId: p.definitionId}).definition
     if (!savedTypes.includes(source.type))
-        denied("COPY_UNAVAILABLE", "Only dashboards, panels, searches and reports are copied here")
+        denied("COPY_UNAVAILABLE", ec.l10n.localize("Only dashboards, panels, searches and reports are copied here"))
     if (source.type === "report" && source.body?.kind === "flowmap")
-        denied("COPY_UNAVAILABLE", "A flow map is copied in Business flows")
+        denied("COPY_UNAVAILABLE", ec.l10n.localize("A flow map is copied in Business flows"))
     if (!blank(p.expectedVersion) && Number(p.expectedVersion) !== Number(source.version || 0))
         denied("DEFINITION_CHANGED", "It changed since you read it; reload and try again")
     const newId =
@@ -960,7 +960,7 @@ function searchRecords(p) {
                 shipped.push({
                     kind: definition.type,
                     flowMap,
-                    kindName: flowMap ? "Flow map" : "Dashboard",
+                    kindName: flowMap ? ec.l10n.localize("Flow map") : ec.l10n.localize("Dashboard"),
                     id: definition.id,
                     title: definition.title,
                     url: definitionRoute(definition, userScope.capabilities).url
@@ -1135,7 +1135,7 @@ function countOperationFailures(p) {
     viewer()
     const definition = engine(R + "get#Definition", {definitionId: "monitor-operations"}).definition
     const source = (definition.body?.panels?.failed?.queries || [])[0]
-    if (!source) throw new Error("Monitor's Business operations dashboard has no rollbacks panel")
+    if (!source) throw new Error(ec.l10n.localize("Monitor's Business operations dashboard has no rollbacks panel"))
     const metric = Array.from(source.aggregations || []).filter(item => (item.role || "metric") === "metric")
     const out = engine(R + "run#Query", {
         query: {
@@ -1148,7 +1148,7 @@ function countOperationFailures(p) {
     const failed = Array.from(out.notices || []).find(notice => notice.level === "error")
     if (failed) {
         if (/not authorized/.test(String(failed.message)))
-            denied("OPERATIONS_UNAVAILABLE", "Monitor's business operations are not available to you")
+            denied("OPERATIONS_UNAVAILABLE", ec.l10n.localize("Monitor's business operations are not available to you"))
         throw new Error("Monitor's business operations query failed: " + failed.message)
     }
     let count = 0
@@ -1175,7 +1175,7 @@ function pinnedReports(pins) {
             ownerName: ownerNames[entry.ownerApp] || entry.ownerApp,
             description: entry.description || "",
             url: entry.routePath ? "/qapps/" + entry.routePath : null,
-            opensFrom: entry.routePath ? "" : "Opens from a record"
+            opensFrom: entry.routePath ? "" : ec.l10n.localize("Opens from a record")
         })
     }
     return {reports, unavailableOwners: Array.from(read.unavailable).sort()}
@@ -1257,8 +1257,8 @@ function getHome(p) {
         ec.logger.warn("Insights Home dashboard " + dashboardId + " is not available: " + error.message)
         dashboard.message =
             dashboardId === suiteDashboardId
-                ? "The suite dashboard is not available to you"
-                : "Your chosen dashboard is not available to you; choose another with Arrange"
+                ? ec.l10n.localize("The suite dashboard is not available to you")
+                : ec.l10n.localize("Your chosen dashboard is not available to you; choose another with Arrange")
     }
     const chosen = preference.orderedPanelIds.filter(id => panelOptions.some(option => option.value === id))
     const panelIds = (chosen.length ? chosen : panelOptions.map(option => option.value)).slice(0, homePanelLimit)

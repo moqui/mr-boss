@@ -9,6 +9,7 @@
 // (impl-people P7); under Maintenance the equipment target (impl-maintenance P18); under Sales the opportunities target
 // (impl-sales P6); under Admin it is the target the request names, for a holder of ADMIN_TRANSFER_RUN (ADMIN_TRANSFER_VIEW
 // reads an import there). Any other root is refused.
+const L = text => ec.l10n.localize(text)
 const T = "org.moqui.admin.DataTransferServices."
 const text = value => String(value ?? "").trim()
 function call(name, parameters = {}) {
@@ -33,7 +34,7 @@ function mount(p) {
     if (appRoot === "Admin") {
         const admin = call("ironstone.admin.ContextServices.get#SharedContext", {appRoot})
         if (!admin.capabilities?.transferView && !admin.capabilities?.transferRun)
-            throw new Error("ADMIN_TRANSFER_VIEW is required")
+            throw new Error(L("ADMIN_TRANSFER_VIEW is required"))
         return {
             appRoot,
             targetId: text(p.targetId),
@@ -53,12 +54,12 @@ function mount(p) {
     if (appRoot === "People") {
         const people = call("ironstone.people.ContextServices.get#SharedContext", {appRoot})
         const caps = people.capabilities || {}
-        if (!caps.hrView) throw new Error("PEOPLE_HR_VIEW is required")
+        if (!caps.hrView) throw new Error(L("PEOPLE_HR_VIEW is required"))
         return {
             appRoot,
             targetId: "employees",
             canRun: !!caps.import && !!caps.hrEdit,
-            runRefusal: "Importing employees needs PEOPLE_IMPORT and PEOPLE_HR_EDIT",
+            runRefusal: L("Importing employees needs PEOPLE_IMPORT and PEOPLE_HR_EDIT"),
             downloadBase: "/apps/People/Employees/EmployeeImport/Index",
             selfLink: people.sharedLinks["Employees/EmployeeImport"],
             listLink: null,
@@ -72,12 +73,12 @@ function mount(p) {
     if (appRoot === "Maintenance") {
         const maintenance = call("ironstone.maintenance.ContextServices.get#SharedContext", {appRoot})
         const caps = maintenance.capabilities || {}
-        if (!caps.resourceRead) throw new Error("MAINTENANCE_RESOURCE_VIEW is required")
+        if (!caps.resourceRead) throw new Error(L("MAINTENANCE_RESOURCE_VIEW is required"))
         return {
             appRoot,
             targetId: "equipment",
             canRun: !!caps.import && !!caps.resourceEdit,
-            runRefusal: "Importing equipment needs MAINTENANCE_IMPORT and MAINTENANCE_RESOURCE_EDIT",
+            runRefusal: L("Importing equipment needs MAINTENANCE_IMPORT and MAINTENANCE_RESOURCE_EDIT"),
             downloadBase: "/apps/Maintenance/Equipment/EquipmentImport/Index",
             selfLink: maintenance.sharedLinks["Equipment/EquipmentImport"],
             listLink: null,
@@ -92,12 +93,12 @@ function mount(p) {
     if (appRoot === "Sales") {
         const sales = call("ironstone.sales.ContextServices.get#SharedContext", {appRoot})
         const caps = sales.capabilities || {}
-        if (!caps.teamRead) throw new Error("SALES_TEAM_VIEW is required")
+        if (!caps.teamRead) throw new Error(L("SALES_TEAM_VIEW is required"))
         return {
             appRoot,
             targetId: "opportunities",
             canRun: !!caps.import && !!caps.opportunityEdit && !!caps.teamManage,
-            runRefusal: "Importing leads and opportunities needs SALES_IMPORT, SALES_OPPORTUNITY_EDIT and SALES_TEAM_MANAGE",
+            runRefusal: L("Importing leads and opportunities needs SALES_IMPORT, SALES_OPPORTUNITY_EDIT and SALES_TEAM_MANAGE"),
             downloadBase: "/apps/Sales/Pipeline/OpportunityImport/Index",
             selfLink: sales.sharedLinks["Pipeline/OpportunityImport"],
             listLink: null,
@@ -108,12 +109,12 @@ function mount(p) {
     }
     // a catalog app's mount: the catalog target only, whatever the request names
     const catalog = call("ironstone.products.CatalogServices.get#SharedContext", {appRoot})
-    if (!catalog.capabilities?.read) throw new Error("Catalog read access is required")
+    if (!catalog.capabilities?.read) throw new Error(L("Catalog read access is required"))
     return {
         appRoot: catalog.appRoot,
         targetId: "catalog",
         canRun: true,
-        runRefusal: "Catalog import is not available",
+        runRefusal: L("Catalog import is not available"),
         downloadBase: catalog.printBase + "/ProductImport/Index",
         selfLink: catalog.sharedLinks["ProductImport"],
         listLink: null,
@@ -272,7 +273,7 @@ function context(p) {
 // mapping is read from the import, changed and saved at the revision the form read.
 function mapping(p) {
     const mounted = mount(p)
-    if (!mounted.targetId) throw new Error("Choose an import target")
+    if (!mounted.targetId) throw new Error(L("Choose an import target"))
     const targetId = mounted.targetId
     const current = call(T + "get#Transfer", {targetId, operationKey: p.operationKey})
     const own = (object, name) => Object.hasOwn(object || {}, name)
@@ -280,15 +281,15 @@ function mapping(p) {
     const parameters = {targetId, operationKey: p.operationKey, mappingRevision: p.mappingRevision}
     const field = text(p.targetField)
     if (p.mappingAction === "column") {
-        if (!Array.from(current.headers || []).includes(p.sourceColumn)) throw new Error("Choose a source column")
+        if (!Array.from(current.headers || []).includes(p.sourceColumn)) throw new Error(L("Choose a source column"))
         parameters.mapping = Object.assign({}, current.mapping, {[p.sourceColumn]: field || null})
     } else if (p.mappingAction === "default") {
-        if (!fields.includes(field)) throw new Error("Choose a field of this import")
+        if (!fields.includes(field)) throw new Error(L("Choose a field of this import"))
         parameters.defaults = Object.assign({}, current.defaults)
         if (p.removeValue) delete parameters.defaults[field]
         else parameters.defaults[field] = p.defaultValue
     } else if (p.mappingAction === "value") {
-        if (!fields.includes(field)) throw new Error("Choose a field of this import")
+        if (!fields.includes(field)) throw new Error(L("Choose a field of this import"))
         parameters.valueMappings = Object.fromEntries(
             Object.entries(current.valueMappings || {}).map(([name, values]) => [name, Object.assign({}, values)])
         )
@@ -307,9 +308,9 @@ function mapping(p) {
                   .filter(Boolean)
     } else if (p.mappingAction === "option") {
         const name = text(p.optionName)
-        if (!/^[A-Za-z][A-Za-z0-9]*$/.test(name)) throw new Error("Choose an option of this import")
+        if (!/^[A-Za-z][A-Za-z0-9]*$/.test(name)) throw new Error(L("Choose an option of this import"))
         parameters.batchOptions = Object.assign({}, current.batchOptions, {[name]: p.optionValue ?? ""})
-    } else throw new Error("Choose a mapping action")
+    } else throw new Error(L("Choose a mapping action"))
     return call(T + "configure#Import", parameters)
 }
 

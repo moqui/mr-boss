@@ -73,7 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const printed = ec.service.sync().name('ironstone.accounting.ReceivableServices.get#InvoiceBatchOutput')
                     .parameters({organizationPartyId, invoiceId: downloadInvoiceId, operationKey}).call()
                 if (ec.message.hasError() || !printed?.fileLocation) {
-                    const reason = String(ec.message.getErrorsString() || 'The invoice output is not available').trim()
+                    const reason = String(ec.message.getErrorsString() || ec.l10n.localize('The invoice output is not available')).trim()
                         .replace(/^(Error: )+/, '')
                     const missing = new Error(reason)
                     missing.moquiErrorKind = /DENIED|REQUIRED/.test(reason) ? 'Unauthorized' : 'NotFound'

@@ -6,6 +6,7 @@
 // mantle.facility.PutawayServices.resolve#Destination, and the putaway itself the guarded
 // mantle.shipment.WarehouseTaskServices.putaway#Stock, which the screens call after AccessServices.check#Record.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, denied} = lib
 
@@ -111,7 +112,7 @@ function withDestination(row, resolved) {
         suggestedLocationSeqId: resolved.locationSeqId || null,
         suggestionText: resolved.locationSeqId
             ? chosen?.locationText + " · " + (chosen?.sourceText || "")
-            : resolved.reasonText || "No location fits",
+            : resolved.reasonText || L("No location fits"),
         suggestionOk: !!resolved.locationSeqId,
         suggestionColor: resolved.locationSeqId ? "positive" : "warning",
         sequenceNum: chosen?.sequenceNum ?? null

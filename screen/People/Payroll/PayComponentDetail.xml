@@ -132,18 +132,18 @@ along with this software (see the LICENSE.md file). If not, see
             termRows = openTerm ? [
                 {term: 'Basis', value: openTerm.basisText},
                 {term: openTerm.basisEnumId === 'PcbAmount' ? 'Amount' : 'Formula', value: calculationOf(openTerm)},
-                {term: 'Declared inputs', value: openTerm.inputNamesText || 'None'},
-                {term: 'Components it reads', value: openTerm.dependencyText || 'None'},
-                {term: statistical ? 'Currency or unit' : 'Currency', value: openTerm.unitText},
+                {term: ec.l10n.localize('Declared inputs'), value: openTerm.inputNamesText || 'None'},
+                {term: ec.l10n.localize('Components it reads'), value: openTerm.dependencyText || 'None'},
+                {term: statistical ? ec.l10n.localize('Currency or unit') : 'Currency', value: openTerm.unitText},
                 {term: 'Rounding', value: openTerm.roundingText},
-                {term: 'On the payslip', value: openTerm.payslipVisible ? 'Shown' : 'Not shown'},
+                {term: ec.l10n.localize('On the payslip'), value: openTerm.payslipVisible ? 'Shown' : 'Not shown'},
                 // P25 review (the user's call of Nov 12, 2026): a fixed amount's proration in a part period
-                ...(openTerm.basisEnumId === 'PcbAmount' ? [{term: 'In a part period',
-                    value: openTerm.prorated ? 'Prorated by the period fraction' : 'Paid whole'}] : []),
-                {term: 'Expense account', value: statistical ? 'None: posts nothing' : (openTerm.expenseAccountText || 'Not mapped')},
-                {term: 'Liability account', value: statistical ? 'None: posts nothing' : (openTerm.liabilityAccountText || 'Not mapped')},
-                {term: 'Payee', value: statistical || component.componentKindEnumId == 'PckEarning' ? 'The person' :
-                    (openTerm.payeeName || (component.componentKindEnumId == 'PckContribution' ? 'None: a live run is not finalized without one' : 'None: kept on its liability account'))},
+                ...(openTerm.basisEnumId === 'PcbAmount' ? [{term: ec.l10n.localize('In a part period'),
+                    value: openTerm.prorated ? ec.l10n.localize('Prorated by the period fraction') : ec.l10n.localize('Paid whole')}] : []),
+                {term: ec.l10n.localize('Expense account'), value: statistical ? ec.l10n.localize('None: posts nothing') : (openTerm.expenseAccountText || ec.l10n.localize('Not mapped'))},
+                {term: ec.l10n.localize('Liability account'), value: statistical ? ec.l10n.localize('None: posts nothing') : (openTerm.liabilityAccountText || ec.l10n.localize('Not mapped'))},
+                {term: 'Payee', value: statistical || component.componentKindEnumId == 'PckEarning' ? ec.l10n.localize('The person') :
+                    (openTerm.payeeName || (component.componentKindEnumId == 'PckContribution' ? ec.l10n.localize('None: a live run is not finalized without one') : ec.l10n.localize('None: kept on its liability account')))},
                 {term: 'Dates', value: 'From ' + openTerm.fromDateText + (openTerm.thruDateText ? ' through ' + openTerm.thruDateText : '')},
                 {term: 'Published', value: openTerm.publishedDateText ? openTerm.publishedDateText + ' by ' + openTerm.publishedByName : 'Not yet'}
             ] : []

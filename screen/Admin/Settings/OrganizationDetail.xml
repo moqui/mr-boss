@@ -46,7 +46,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{organizationPartyId:organizationPartyId, expectedRevision:expectedRevision, organizationName:organizationName,
                         pseudoId:(pseudoId || null)}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Organization saved' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Organization saved') : stored.reason, stored.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.party.IdentityServices.store#OrganizationParent" out-map="stored"
                     in-map="{organizationPartyId:organizationPartyId, parentPartyId:(parentPartyId || null), fromDate:(fromDate || null)}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Parent changed' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Parent changed') : stored.reason, stored.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
@@ -93,7 +93,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{partyId:partyId, organizationPartyId:organizationPartyId, relationshipTypeEnumId:relationshipTypeEnumId,
                         fromDate:(fromDate || null), thruDate:(thruDate || null), reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Member added' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Member added') : stored.reason, stored.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
@@ -105,7 +105,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{partyRelationshipId:partyRelationshipId, expectedRevision:expectedRevision, thruDate:(thruDate || null),
                         reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Membership ended' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Membership ended') : stored.reason, stored.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
@@ -117,7 +117,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{organizationPartyId:organizationPartyId, partySettingTypeId:partySettingTypeId, settingValue:(settingValue ?? ''),
                         expectedRevision:(expectedRevision ?? '')}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Default saved' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Default saved') : stored.reason, stored.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
@@ -126,7 +126,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#InternalOrganization', {organizationPartyId:organizationPartyId}, 'Organization ' + organizationPartyId + ' is not available.')"/>
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#InternalOrganization', {organizationPartyId:organizationPartyId}, ec.resource.expand('Organization ${id} is not available.', '', {id: organizationPartyId}))"/>
         <set field="found" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <set field="organization" from="found?.organization || null"/>
@@ -161,24 +161,24 @@ along with this software (see the LICENSE.md file). If not, see
             addressText = address ? [address.address1, address.address2, [address.city, address.stateProvinceGeoId, address.postalCode].filter(Boolean).join(' '),
                 address.countryGeoId].filter(Boolean).join(', ') : ''
             phoneText = contacts?.telecomNumber ? [contacts.telecomNumber.countryCode, contacts.telecomNumber.areaCode, contacts.telecomNumber.contactNumber].filter(Boolean).join(' ') : ''
-            contactRows = [{purpose: 'Address', value: addressText || 'None'}, {purpose: 'Phone', value: phoneText || 'None'},
-                {purpose: 'Email', value: contacts?.emailAddress || 'None'}]
+            contactRows = [{purpose: ec.l10n.localize('Address'), value: addressText || ec.l10n.localize('None')}, {purpose: ec.l10n.localize('Phone'), value: phoneText || ec.l10n.localize('None')},
+                {purpose: ec.l10n.localize('Email'), value: contacts?.emailAddress || ec.l10n.localize('None')}]
             members = Array.from(found?.members || []).map(row => Object.assign({}, row, {
                 fromText: when(row.fromDate), thruText: when(row.thruDate),
-                stateText: row.active ? 'Current' : row.ended ? 'Ended' : 'Starts ' + when(row.fromDate)}))
+                stateText: row.active ? 'Current' : row.ended ? ec.l10n.localize('Ended') : ec.resource.expand('Starts ${when}', '', {when: when(row.fromDate)})}))
             currentMembers = members.filter(row => !row.ended)
             endedMemberCount = members.length - currentMembers.length
-            const sources = {organization: 'This organization', default: 'Default', none: 'Not set'}
+            const sources = {organization: ec.l10n.localize('This organization'), default: ec.l10n.localize('Default'), none: ec.l10n.localize('Not set')}
             defaults = Array.from(found?.defaults || []).map(row => Object.assign({}, row, {
                 valueText: row.settingValue ?? '', sourceText: sources[row.source] || row.source,
-                changedHere: row.editable ? 'Here' : 'Where it is used'}))
+                changedHere: row.editable ? ec.l10n.localize('Here') : ec.l10n.localize('Where it is used')}))
             constitutionKnown = constitution?.contentHash != null
-            constitutionText = !constitutionKnown ? 'Not readable here: the Constitution of this organization is not available to you.'
-                : constitution.customized ? 'This organization has its own Constitution, replacing the instance Constitution for its members.'
-                : 'This organization uses the instance Constitution.'
+            constitutionText = !constitutionKnown ? ec.l10n.localize('Not readable here: the Constitution of this organization is not available to you.')
+                : constitution.customized ? ec.l10n.localize('This organization has its own Constitution, replacing the instance Constitution for its members.')
+                : ec.l10n.localize('This organization uses the instance Constitution.')
             setupChecks = Array.from(readiness?.checks || []).map(row => Object.assign({}, row, {fixUrl: row.fixUrl || ''}))
             setupFailed = Array.from(readiness?.failedProviders || []).map(row => row.title || row.providerKey || row).join(', ')
-            headerText = [organization?.pseudoId, found?.parentName ? 'Belongs to ' + found.parentName : 'Top level'].filter(Boolean).join(' · ')
+            headerText = [organization?.pseudoId, found?.parentName ? ec.resource.expand('Belongs to ${name}', '', {name: found.parentName}) : ec.l10n.localize('Top level')].filter(Boolean).join(' · ')
         ]]></script>
     </actions>
     <widgets>
@@ -187,7 +187,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box type="warning">
                     <box-header title="Organization not available"/>
                     <box-body>
-                        <label type="p" text="${failure || ('Organization ' + organizationPartyId + ' is not available.')}"/>
+                        <label type="p" text="${failure || ec.resource.expand('Organization $' + '{id} is not available.', '', {id: organizationPartyId})}"/>
                         <link url="../Organizations" text="Back to organizations" link-type="anchor"/>
                     </box-body>
                 </container-box>

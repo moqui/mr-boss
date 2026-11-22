@@ -21,6 +21,7 @@ const settings = () => ec.resource.script("component://mr-mantle/service/mantle/
 // P8 review: People's restricted qualification kinds, left out of the qualification choice
 const development = () => ec.resource.script("component://mr-mantle/service/mantle/humanres/Development.js")
 const {find, one, denied} = lib
+const L = (words) => ec.l10n.localize(words)
 const access = lib.access
 
 const rootLocation = "component://mr-boss/screen/Maintenance.xml"
@@ -96,7 +97,7 @@ function scope() {
     return {read: grants.read, mantle: mantle || {organizationPartyIds: [], capabilities: {}}, capabilities}
 }
 function required(userScope = scope()) {
-    if (!userScope.read) denied("MAINTENANCE_UNAVAILABLE", "Maintenance is not available")
+    if (!userScope.read) denied("MAINTENANCE_UNAVAILABLE", L("Maintenance is not available"))
     return userScope
 }
 const likeText = text => "%" + String(text).replace(/[\\%_]/g, character => "\\" + character) + "%"
@@ -193,7 +194,7 @@ const linkPaths = [
     "Reports/WorkStatusReport"
 ]
 function sharedContext(p) {
-    if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", "Maintenance context is not available")
+    if (p.appRoot && p.appRoot !== "Maintenance") denied("MAINTENANCE_CONTEXT", L("Maintenance context is not available"))
     const userScope = required()
     const mantle = userScope.mantle
     return {

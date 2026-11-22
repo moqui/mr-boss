@@ -10,6 +10,7 @@
 // A registration is data, never authority: Mantle's StorePromotionServices check COMMERCE_VIEW, COMMERCE_PROMOTION_EDIT and the
 // store's scope themselves, and a capability only shows or hides an action. The app root is the mounting root's (its always-actions
 // set appRoot), never a request parameter. An app with no registration sees "not available".
+const L = text => ec.l10n.localize(text)
 const apps = {
     Commerce: {
         contextService: "ironstone.commerce.ContextServices.get#SharedContext",
@@ -40,7 +41,7 @@ const apps = {
 }
 const registration = appRoot => {
     const app = Object.hasOwn(apps, appRoot || "") ? apps[appRoot] : null
-    if (!app) throw new Error("PROMOTIONS_CONTEXT: The promotions are not available here")
+    if (!app) throw new Error(L("PROMOTIONS_CONTEXT: The promotions are not available here"))
     return app
 }
 // The mounting app's registration with its context read now, in the shape the screens read (sharedMountContext): its capabilities

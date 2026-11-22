@@ -11,6 +11,7 @@ const maintenanceAccess = ec.resource.script("component://mr-mantle/service/mant
 const resources = ec.resource.script("component://mr-mantle/service/mantle/product/MaintenanceResources.js")
 const outages = ec.resource.script("component://mr-mantle/service/mantle/work/ResourceOutages.js")
 const {find, one, call, ms} = lib
+const L = (words) => ec.l10n.localize(words)
 
 const ASSET = "mantle.product.asset.Asset"
 const FACILITY = "mantle.facility.Facility"
@@ -276,15 +277,15 @@ function bookOf(assetId) {
         stateText: asset.stateText,
         rows: factRows([
             ["Class", asset.classText],
-            ["In service", asset.acquiredDateText],
-            ["Method", asset.methodText],
-            ["Useful life ends", asset.expectedEndOfLifeText],
-            ["Acquire cost", asset.acquireCost != null ? ec.l10n.formatCurrency(asset.acquireCost, asset.currencyUomId) : ""],
+            [L("In service"), asset.acquiredDateText],
+            [L("Method"), asset.methodText],
+            [L("Useful life ends"), asset.expectedEndOfLifeText],
+            [L("Acquire cost"), asset.acquireCost != null ? ec.l10n.formatCurrency(asset.acquireCost, asset.currencyUomId) : ""],
             [
-                "Accumulated depreciation",
+                L("Accumulated depreciation"),
                 asset.accumulated != null ? ec.l10n.formatCurrency(asset.accumulated, asset.currencyUomId) : ""
             ],
-            ["Net book value", asset.netBook != null ? ec.l10n.formatCurrency(asset.netBook, asset.currencyUomId) : ""]
+            [L("Net book value"), asset.netBook != null ? ec.l10n.formatCurrency(asset.netBook, asset.currencyUomId) : ""]
         ])
     }
 }

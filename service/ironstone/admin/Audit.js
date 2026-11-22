@@ -104,11 +104,17 @@ function accessLine(hit, userNames) {
         lineId: text(hit.id),
         time,
         timeText: Number.isFinite(time) ? ec.l10n.format(new Date(time), "yyyy-MM-dd HH:mm:ss") : "",
-        sourceText: source ? source[1] : "",
+        sourceText: source ? ec.l10n.localize(source[1]) : "",
         actionText: lineText(body.body, 200),
         actorUserId: actorId || null,
         actorName: actorId ? userNames.get(actorId) || actorId : "",
-        subjectText: subject ? subject[1] + " " + lineText(attributes[subject[0]], 120) : "",
+        subjectText: subject
+            ? (["Definition", "Delivery", "Alert rule", "Dataset", "Incident", "Owner", "Recovery decision", "Recovery action", "Recovery policy", "Recovery adapter", "Runtime setting"].includes(subject[1])
+                  ? ec.l10n.localize(subject[1])
+                  : subject[1]) +
+              " " +
+              lineText(attributes[subject[0]], 120)
+            : "",
         subjectId: subject ? lineText(attributes[subject[0]], 120) : "",
         kindText: [attributes.kind, attributes.format, attributes.mode, attributes.channel]
             .map(value => lineText(value, 40))
@@ -129,7 +135,7 @@ function accessLog(p) {
     const size = forExport ? exportRows : pageSize
     const pageIndex = forExport ? 0 : Math.max(Number(p.pageIndex) || 0, 0)
     const sourceKey = text(p.source)
-    if (sourceKey && !Object.hasOwn(sources, sourceKey)) throw new Error("Unknown access log source")
+    if (sourceKey && !Object.hasOwn(sources, sourceKey)) throw new Error(ec.l10n.localize("Unknown access log source"))
     const filters = []
     if (sourceKey) filters.push(eq("scope_name", sources[sourceKey][0]))
     const actor = plainFilter(p.actorUserId, "The user", 40)
@@ -139,21 +145,22 @@ function accessLog(p) {
     const correlation = plainFilter(p.correlation, "The trace", 64)
     if (correlation) filters.push(eq("trace_id", correlation))
     const options = {
-        sourceOptions: Object.entries(sources).map(([value, [, label]]) => ({value, label})),
+        sourceOptions: Object.entries(sources).map(([value, [, label]]) => ({value, label: ec.l10n.localize(label)})),
         exportRows,
         scopeText: userScope.ownerIds
-            ? "What the people of the organizations you administer did"
-            : "Every line, the ones no person wrote too"
+            ? ec.l10n.localize("What the people of the organizations you administer did")
+            : ec.l10n.localize("Every line, the ones no person wrote too")
     }
     // past maxUsers accounts in scope the row filter matches nothing: said, so an empty list is not read as "nothing happened"
     if (lineScope(userScope).over)
         return Object.assign(options, pagingOf("accessList", 0, pageIndex, size, 0), {
             accessList: [],
             truncated: false,
-            unavailable:
-                "The organizations you administer have more than " +
-                maxUsers +
-                " user accounts, and the access log is not narrowed to that many: it is read by an administrator of every organization"
+            unavailable: ec.resource.expand(
+                "The organizations you administer have more than ${count} user accounts, and the access log is not narrowed to that many: it is read by an administrator of every organization",
+                "",
+                {count: maxUsers}
+            )
         })
     // the engine's own read of the one dataset, past its artifact after the check above (auditScope): its row filters decide
     let found = null
@@ -189,8 +196,8 @@ function accessLog(p) {
             accessList: [],
             truncated: false,
             unavailable: /not authorized|may not read/i.test(failure)
-                ? "The access log is not available to you"
-                : "The access log could not be read"
+                ? ec.l10n.localize("The access log is not available to you")
+                : ec.l10n.localize("The access log could not be read")
         })
     }
     const hits = Array.from(found.hits || [])
@@ -255,7 +262,7 @@ function accessLogRowFilter(p) {
     const nothing = {filter: {bool: {none: [{match_all: {}}]}}}
     if (!ec.user.userId) return nothing
     if (text(p.userId) && text(p.userId) !== ec.user.userId)
-        throw new Error("The access log row filter is computed for the signed-in user only")
+        throw new Error(ec.l10n.localize("The access log row filter is computed for the signed-in user only"))
     const lines = lineScope(adminLib().scope())
     if (lines.all) return {filter: {match_all: {}}}
     if (lines.over)
@@ -269,7 +276,7 @@ function accessLogRowFilter(p) {
 const operations = {accessLog, accessLogRowFilter}
 ;({
     execute: (op, parameters) => {
-        if (!Object.hasOwn(operations, op)) throw new Error("Unknown audit operation " + op)
+        if (!Object.hasOwn(operations, op)) throw new Error(ec.resource.expand("Unknown audit operation ${name}", "", {name: op}))
         return operations[op](parameters)
     }
 })

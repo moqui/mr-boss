@@ -132,8 +132,8 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box type="warning">
                     <box-header title="Not available"/>
                     <box-body>
-                        <label type="p" text="${!can.caseEdit ? 'You do not enter cases here: ask a service manager to add you to a team.'
-                                : 'Customer Service is not set up for your organizations yet: the service defaults, a queue and a case type come first.'}"/>
+                        <label type="p" text="${!can.caseEdit ? ec.l10n.localize('You do not enter cases here: ask a service manager to add you to a team.')
+                                : ec.l10n.localize('Customer Service is not set up for your organizations yet: the service defaults, a queue and a case type come first.')}"/>
                         <link url="${sharedLinks['Cases/Cases']}" text="Back to Cases" link-type="anchor"/>
                     </box-body>
                 </container-box>
@@ -229,7 +229,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <script>ec.message.clearErrors()</script>
                         <set field="suggestedArticles" from="Array.from(suggestOut?.articleList || []).map((row) =&gt; Object.assign({}, row,
                                 {url: '/qapps/CustomerService/Knowledge/Knowledge?wikiPageId=' + encodeURIComponent(row.wikiPageId),
-                                    note: [row.spaceName, row.internal ? 'internal' : '', row.published ? '' : 'draft',
+                                    note: [row.spaceName, row.internal ? ec.l10n.localize('internal') : '', row.published ? '' : ec.l10n.localize('draft'),
                                         row.localeLanguage ? String(row.localeLanguage).toUpperCase() : ''].filter(Boolean).join(' · ')}))"/>
                     </actions>
                     <widgets>

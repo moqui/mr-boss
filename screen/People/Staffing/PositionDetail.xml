@@ -102,10 +102,10 @@ along with this software (see the LICENSE.md file). If not, see
             captionText = position ? [position.classTitle, position.departmentName, position.organizationName].filter(Boolean).join(' · ') : ''
             const flagText = value => value === 'Y' ? 'Yes' : value === 'N' ? 'No' : ''
             termRows = position ? [['Employer', position.organizationName], ['Department', position.departmentName || 'None'],
-                ['Job class', position.classTitle], ['Pay grade', position.payGradeName || 'None'], ['From', position.fromDateText],
+                [ec.l10n.localize('Job class'), position.classTitle], ['Pay grade', position.payGradeName || 'None'], ['From', position.fromDateText],
                 ['Through', position.thruDateText || 'Open'], ['Hours a week', position.standardHoursPerWeek == null ? '' : String(position.standardHoursPerWeek)],
-                ['Full time', flagText(position.fullTimeFlag)], ['Temporary', flagText(position.temporaryFlag)],
-                ['Salaried', flagText(position.salaryFlag)], ['Paid overtime', flagText(position.overtimeFlag)]]
+                [ec.l10n.localize('Full time'), flagText(position.fullTimeFlag)], [ec.l10n.localize('Temporary'), flagText(position.temporaryFlag)],
+                [ec.l10n.localize('Salaried'), flagText(position.salaryFlag)], [ec.l10n.localize('Paid overtime'), flagText(position.overtimeFlag)]]
                 .filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
             editValues = position ? {emplPositionId: position.emplPositionId, expectedRevision: position.revision, description: position.description,
                 departmentPartyId: position.departmentPartyId, emplPositionClassId: position.emplPositionClassId, payGradeId: position.payGradeId,

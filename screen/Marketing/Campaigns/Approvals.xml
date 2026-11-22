@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="Approvals" default-menu-index="2" menu-image="sym_o_approval" menu-image-type="icon"
         default-menu-include="ec.user.hasPermission('MARKETING_APPROVE')">
     <always-actions>
-        <script>if(!marketing.capabilities.approvals)throw new Error('PERMISSION_DENIED: Marketing approvals are the approvers\'')</script>
+        <script>if(!marketing.capabilities.approvals)throw new Error(ec.l10n.localize('PERMISSION_DENIED: Marketing approvals are the approvers\''))</script>
         <set field="notificationTopics" from="['MarketingCampaignApproval', 'MarketingSendApproval', 'MarketingAutomationApproval', 'MarketingPageReview']"/>
         <set field="notificationsTitle" value="Approvals"/>
     </always-actions>

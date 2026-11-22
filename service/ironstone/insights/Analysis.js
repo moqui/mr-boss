@@ -23,7 +23,7 @@ const {visualizations} = generic
 function author() {
     const userScope = insights.required()
     if (!userScope.capabilities.author && !userScope.capabilities.datasetEdit)
-        denied("INSIGHTS_AUTHOR_REQUIRED", "An analysis needs Insights authoring")
+        denied("INSIGHTS_AUTHOR_REQUIRED", ec.l10n.localize("An analysis needs Insights authoring"))
     return userScope
 }
 // The admitted business datasets the author reads, and the chosen one's fields with what each declares (its unit field, a
@@ -33,7 +33,7 @@ function sources(datasetId) {
         .map(row => ({value: row.datasetId, label: row.title || row.datasetId, timeField: row.timeField}))
         .sort((a, b) => a.label.localeCompare(b.label))
     const chosen = datasetId ? datasets.find(row => row.value === datasetId) : null
-    if (datasetId && !chosen) denied("DATASET_UNAVAILABLE", "Choose an admitted dataset you may read")
+    if (datasetId && !chosen) denied("DATASET_UNAVAILABLE", ec.l10n.localize("Choose an admitted dataset you may read"))
     if (!chosen) return {datasets, dataset: null, fields: []}
     const found = insights.asViewer(ENGINE + "get#Dataset", {datasetId}).dataset || {}
     const body = insights.asViewer(ENGINE + "get#Definition", {definitionId: datasetId}).definition?.body || {}
@@ -73,7 +73,7 @@ function result(p) {
 function run(p) {
     const context = insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null})
     const found = sources(p.datasetId)
-    if (!found.dataset) denied("DATASET_UNAVAILABLE", "Choose an admitted dataset you may read")
+    if (!found.dataset) denied("DATASET_UNAVAILABLE", ec.l10n.localize("Choose an admitted dataset you may read"))
     const query = queryOf(p, found, context)
     // one organization asked for by name (Assist): the dataset narrowed to it on the field its row filter scopes by, under
     // the row filter, which still decides what the viewer reads
@@ -111,7 +111,7 @@ function store(p) {
     const visualization = p.visualization || "table"
     if (!visualizations.includes(visualization)) denied("VALUE_INVALID", "Choose how the analysis is shown")
     const found = sources(p.datasetId)
-    if (!found.dataset) denied("DATASET_UNAVAILABLE", "Choose an admitted dataset you may read")
+    if (!found.dataset) denied("DATASET_UNAVAILABLE", ec.l10n.localize("Choose an admitted dataset you may read"))
     const query = queryOf(p, found, insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null}))
     // refused now, as it would be on every render (an amount across currencies, a ratio averaged)
     const checked = result(p)

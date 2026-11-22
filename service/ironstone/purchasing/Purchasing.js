@@ -185,7 +185,7 @@ function scope() {
     }
 }
 function required(userScope = scope()) {
-    if (!userScope.read) denied("PURCHASING_UNAVAILABLE", "Purchasing is not available")
+    if (!userScope.read) denied("PURCHASING_UNAVAILABLE", ec.l10n.localize("Purchasing is not available"))
     return userScope
 }
 const owns = (userScope, partyId) => !userScope.ownerIds || (!!partyId && userScope.ownerIds.includes(partyId))
@@ -317,7 +317,7 @@ const linkPaths = [
     "Settings/ScorecardPolicies"
 ]
 function sharedContext(p) {
-    if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
+    if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", ec.l10n.localize("Purchasing context is not available"))
     const userScope = required()
     return {
         capabilities: userScope.capabilities,
@@ -458,7 +458,7 @@ const recordKinds = {
     },
     // P11: a supplier quote opens QuoteDetail and an RFQ QuoteRequestDetail under Sourcing
     quote: {
-        name: "Supplier quote",
+        name: ec.l10n.localize("Supplier quote"),
         icon: "sym_o_request_quote",
         destination: "Sourcing/QuoteDetail?orderId=",
         read: id => readOrder(id, true)
@@ -516,7 +516,7 @@ const recordKinds = {
         read: id => receipts().readInspection(id)
     },
     // P6: a supplier bill opens the shared InvoiceDetail under Bills
-    bill: {name: "Supplier bill", icon: "sym_o_receipt", destination: "Bills/InvoiceDetail?invoiceId=", read: readBill}
+    bill: {name: ec.l10n.localize("Supplier bill"), icon: "sym_o_receipt", destination: "Bills/InvoiceDetail?invoiceId=", read: readBill}
 }
 
 // A record the user may work with: every buyer it names is one of their organizations and every supplier it names is in

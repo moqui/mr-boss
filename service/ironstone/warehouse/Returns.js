@@ -9,6 +9,7 @@
 // (receive#ReturnItems with an operation key, issue#SupplierReturnStock, ship#SupplierReturn), which the screens call after
 // AccessServices.check#Record. Amounts only with financial read; Warehouse never settles.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, rows, denied, dateText} = lib
 const cf = () => ec.entity.conditionFactory
@@ -189,7 +190,7 @@ function returns(p) {
             : ""
         return {
             returnId: header.returnId,
-            directionText: supplier ? "To supplier" : "From customer",
+            directionText: supplier ? "To supplier" : L("From customer"),
             supplierReturn: supplier,
             partyId,
             partyName: names[partyId] || partyId || "",
@@ -446,7 +447,7 @@ function returnDetail(p) {
               )
         return {
             shipmentId: row.shipmentId,
-            kindText: row.shipmentTypeEnumId === "ShpTpPurchaseReturn" ? "Supplier return shipment" : "Return receipt",
+            kindText: row.shipmentTypeEnumId === "ShpTpPurchaseReturn" ? "Supplier return shipment" : L("Return receipt"),
             linkPath:
                 row.shipmentTypeEnumId === "ShpTpPurchaseReturn" ? "Returns/SupplierReturnShipment" : "Returns/ReturnReceipt",
             statusText: shipmentStatuses.get(row.statusId) || row.statusId,
@@ -470,11 +471,22 @@ function returnDetail(p) {
     const canAddItems = open && (supplier ? !!can.qualityDispose : !!can.receive)
     const openShipment = shipments.find(row => !["ShipDelivered", "ShipCancelled", "ShipShipped"].includes(row.statusId))
     const settlement = supplier ? null : settlementOf(header.returnId)
+    const orgName = settlement
+        ? lib.partyNames([settlement.organizationPartyId])[settlement.organizationPartyId]
+        : ""
     const receiveBlocked =
         settlement && !settlement.settlementRequired
-            ? (lib.partyNames([settlement.organizationPartyId])[settlement.organizationPartyId] || "This organization") +
-              " does not settle returns separately: its returns are received when the shipment is delivered, so Warehouse" +
-              " does not receive this one"
+            ? orgName
+                ? ec.resource.expand(
+                      L(
+                          "${org} does not settle returns separately: its returns are received when the shipment is delivered, so Warehouse does not receive this one"
+                      ),
+                      "",
+                      {org: orgName}
+                  )
+                : L(
+                      "This organization does not settle returns separately: its returns are received when the shipment is delivered, so Warehouse does not receive this one"
+                  )
             : ""
     return {
         returnFound: true,
@@ -499,7 +511,7 @@ function returnDetail(p) {
             settlementText:
                 billings.length || itemRows.some(row => row.settledQuantity)
                     ? "Settled " + quantityText(sumOf(itemRows, "settledQuantity")) + " by Accounting"
-                    : "Not settled: Accounting settles after inspection",
+                    : L("Not settled: Accounting settles after inspection"),
             openShipmentId: openShipment?.shipmentId || null,
             openShipmentPath: openShipment ? (supplier ? "Returns/SupplierReturnShipment" : "Returns/ReturnReceipt") : null,
             receiveBlockedText: receiveBlocked,
@@ -611,11 +623,22 @@ function returnShipment(p) {
     // a customer return is received here only when its organization settles returns separately (D11); otherwise Mantle
     // receives it when the shipment is delivered, and Warehouse has no receipt for it (§5) (P14 review B2)
     const settlement = !supplier && returnIds.length ? settlementOf(returnIds[0]) : null
+    const orgName = settlement
+        ? lib.partyNames([settlement.organizationPartyId])[settlement.organizationPartyId]
+        : ""
     const receiveBlockedText =
         settlement && !settlement.settlementRequired
-            ? (lib.partyNames([settlement.organizationPartyId])[settlement.organizationPartyId] || "This organization") +
-              " does not settle returns separately: its returns are received when the shipment is delivered, so there is no" +
-              " Receive here"
+            ? orgName
+                ? ec.resource.expand(
+                      L(
+                          "${org} does not settle returns separately: its returns are received when the shipment is delivered, so there is no Receive here"
+                      ),
+                      "",
+                      {org: orgName}
+                  )
+                : L(
+                      "This organization does not settle returns separately: its returns are received when the shipment is delivered, so there is no Receive here"
+                  )
             : ""
     // a supplier return item that names no stock: the product's stock at the facility the return ships from (P14 review B4)
     const returnHeaders = new Map(
@@ -762,7 +785,7 @@ function returnShipment(p) {
         returnShipment: {
             shipmentId: shipment.shipmentId,
             supplierReturn: supplier,
-            kindText: supplier ? "Supplier return" : "Return receipt",
+            kindText: supplier ? "Supplier return" : L("Return receipt"),
             partyName: supplier
                 ? names[shipment.toPartyId] || shipment.toPartyId
                 : names[shipment.fromPartyId] || shipment.fromPartyId,

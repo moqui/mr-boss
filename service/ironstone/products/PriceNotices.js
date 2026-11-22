@@ -76,18 +76,18 @@ function recipients(r) {
 function sendOne(p) {
     const r = one(E, {productPriceId: p.productPriceId})
     if (!r) return {sent: false}
-    if (!["ProductPriceChanged", "ProductPriceExpiring"].includes(p.topic)) throw new Error("Unknown price notice")
+    if (!["ProductPriceChanged", "ProductPriceExpiring"].includes(p.topic)) throw new Error(ec.l10n.localize("Unknown price notice"))
     if (p.topic === "ProductPriceExpiring") {
         if (ec.user.userId && !ec.user.isInGroup("ADMIN"))
-            throw new Error("Only the scheduler or a system administrator sends expiration notices")
+            throw new Error(ec.l10n.localize("Only the scheduler or a system administrator sends expiration notices"))
     } else if (ec.user.userId) {
         const a = call(C + "get#CatalogAccess"),
             d = direction(r)
         if (!a.capabilities?.systemAdmin && !(d === "purchase" ? a.capabilities?.supplierPriceEdit : a.capabilities?.priceEdit))
-            throw new Error("Price edit authority is required")
+            throw new Error(ec.l10n.localize("Price edit authority is required"))
         ec.resource.script("component://mr-mantle/service/mantle/product/PricePolicy.js").execute("access", r)
-    } else if (!auditActor(r)) throw new Error("A price change must have an audited author")
-    if (!recipients(r).includes(p.recipientUserId)) throw new Error("Price notice recipient is not authorized")
+    } else if (!auditActor(r)) throw new Error(ec.l10n.localize("A price change must have an audited author"))
+    if (!recipients(r).includes(p.recipientUserId)) throw new Error(ec.l10n.localize("Price notice recipient is not authorized"))
     const product = one(P + "Product", {productId: r.productId}),
         marker = ec.user
             .singleUseCodeHash(
@@ -163,15 +163,15 @@ function changed(p) {
         const a = call(C + "get#CatalogAccess"),
             d = direction(r)
         if (!a.capabilities?.systemAdmin && !(d === "purchase" ? a.capabilities?.supplierPriceEdit : a.capabilities?.priceEdit))
-            throw new Error("Price edit authority is required")
+            throw new Error(ec.l10n.localize("Price edit authority is required"))
         ec.resource.script("component://mr-mantle/service/mantle/product/PricePolicy.js").execute("access", r)
-    } else if (!auditActor(r)) throw new Error("A price change must have an audited author")
+    } else if (!auditActor(r)) throw new Error(ec.l10n.localize("A price change must have an audited author"))
     const sent = send(r, "ProductPriceChanged")
     return {sentCount: sent.length, sentToUserIds: sent}
 }
 function expiring(p) {
     if (ec.user.userId && !ec.user.isInGroup("ADMIN"))
-        throw new Error("Only the scheduler or a system administrator sends expiration notices")
+        throw new Error(ec.l10n.localize("Only the scheduler or a system administrator sends expiration notices"))
     const at = ms(ec.user.nowTimestamp),
         end = at + Math.max(1, Math.min(90, Number(p.days || 30))) * 86400000
     let sentCount = 0

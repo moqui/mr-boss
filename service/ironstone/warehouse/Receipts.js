@@ -5,6 +5,8 @@
 // Warehouse facilities in the query (a receipt by its route segment's destination, F55); the postings are Mantle's guarded
 // WarehouseTaskServices entry points, which the screens call after AccessServices.check#Record. No cost is read here.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
+const labelOf = (table, key) => (table[key] != null ? L(table[key]) : key)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, rows, denied, dateText} = lib
 const cf = () => ec.entity.conditionFactory
@@ -102,7 +104,7 @@ function receiptRow(shipment, progress, names, statuses, facilityNames, today) {
     const open = openStatuses.includes(shipment.statusId)
     return {
         shipmentId: shipment.shipmentId,
-        kindText: kindTexts[shipment.shipmentTypeEnumId] || shipment.shipmentTypeEnumId,
+        kindText: labelOf(kindTexts, shipment.shipmentTypeEnumId),
         supplierPartyId: shipment.fromPartyId,
         supplierName: names[shipment.fromPartyId] || shipment.fromPartyId || "",
         facilityId: shipment.destinationFacilityId,
@@ -351,7 +353,7 @@ function stepTextOf(facility) {
                     : steps === 2
                       ? "Received to receiving" +
                         (policy.receivingLocationSeqId ? " (" + policy.receivingLocationSeqId + ")" : "")
-                      : "Received to each product's location"
+                      : L("Received to each product's location")
         }
     } catch (error) {
         ec.logger.warn("Receipt step of facility " + facility.facilityId + ": " + error.message)
@@ -378,7 +380,7 @@ function receiptDetail(p) {
             receipt: {
                 shipmentId: shipment.shipmentId,
                 shipmentTypeEnumId: shipment.shipmentTypeEnumId,
-                kindText: kindTexts[shipment.shipmentTypeEnumId],
+                kindText: labelOf(kindTexts, shipment.shipmentTypeEnumId),
                 supplierPartyId: shipment.fromPartyId,
                 supplierName: names[shipment.fromPartyId] || shipment.fromPartyId || "",
                 organizationName: names[shipment.toPartyId] || shipment.toPartyId || "",

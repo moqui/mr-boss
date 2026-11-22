@@ -112,7 +112,7 @@ along with this software (see the LICENSE.md file). If not, see
                     // a refusal with a reason code is the user's to read; anything else is logged, not shown
                     const coded = /^(?:Error: )?[A-Z][A-Z0-9_]+: ([^\n]*)/.exec(matchError)
                     if (!coded) ec.logger.error("Bill " + invoiceId + " match evaluation failed: " + matchError)
-                    matchError = coded ? coded[1] : "Matching is not available"
+                    matchError = coded ? coded[1] : ec.l10n.localize("Matching is not available")
                 }
             ]]></script>
         </if>

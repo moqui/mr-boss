@@ -45,7 +45,7 @@ along with this software (see the LICENSE.md file). If not, see
             if (!recordFound) return
             reg = found.registration
             actionList = Array.from(found.actions || [])
-            captionText = [reg.offerTitle, reg.occurrenceText, reg.ticketName, reg.buyerName ? 'bought by ' + reg.buyerName : null].filter(Boolean).join(' · ')
+            captionText = [reg.offerTitle, reg.occurrenceText, reg.ticketName, reg.buyerName ? ec.resource.expand('bought by ${name}', '', {name: reg.buyerName}) : null].filter(Boolean).join(' · ')
             changeValues = {registrationId, expectedRevision: reg.revision}
             // the refund the accepted terms give a cancellation now (follow-up 1); staff may name another with the reason
             termsRefundText = found.termsRefundPercent != null ? found.termsRefundPercent + '%' : ''
@@ -55,19 +55,19 @@ along with this software (see the LICENSE.md file). If not, see
             listPath = sharedLinks['Events/Registrations']
             responsePath = sharedLinks['Surveys/ResponseDetail']
             facts = [
-                {label: 'Buyer', value: reg.buyerName},
-                {label: 'Source', value: reg.sourceText},
-                {label: 'Registered', value: reg.createdText},
-                {label: 'Confirmed', value: reg.confirmedText},
-                {label: 'Held until', value: reg.holdEndsText},
-                {label: 'Payment', value: reg.paymentText},
-                {label: 'Order', value: reg.orderId},
-                {label: 'Refund', value: reg.refundText ? reg.refundText + (reg.refundPercent != null ? ' (' + reg.refundPercent + '%)' : '') : ''},
-                {label: 'Entry code', value: reg.credentialText},
-                {label: 'Cancelled', value: reg.cancelledText ? reg.cancelledText + (reg.cancelReason ? ': ' + reg.cancelReason : '') : ''},
-                {label: 'Terms accepted', value: reg.termsRevision != null ? 'Revision ' + reg.termsRevision : ''},
-                {label: 'Checked in', value: attended?.attendance ? [attended.attendance.checkInText, attended.attendance.methodText,
-                    attended.attendance.byText ? 'by ' + attended.attendance.byText : null, attended.attendance.reason || null].filter(Boolean).join(' · ') : ''}
+                {label: ec.l10n.localize('Buyer'), value: reg.buyerName},
+                {label: ec.l10n.localize('Source'), value: reg.sourceText},
+                {label: ec.l10n.localize('Registered'), value: reg.createdText},
+                {label: ec.l10n.localize('Confirmed'), value: reg.confirmedText},
+                {label: ec.l10n.localize('Held until'), value: reg.holdEndsText},
+                {label: ec.l10n.localize('Payment'), value: reg.paymentText},
+                {label: ec.l10n.localize('Order'), value: reg.orderId},
+                {label: ec.l10n.localize('Refund'), value: reg.refundText ? reg.refundText + (reg.refundPercent != null ? ' (' + reg.refundPercent + '%)' : '') : ''},
+                {label: ec.l10n.localize('Entry code'), value: reg.credentialText},
+                {label: ec.l10n.localize('Cancelled'), value: reg.cancelledText ? reg.cancelledText + (reg.cancelReason ? ': ' + reg.cancelReason : '') : ''},
+                {label: ec.l10n.localize('Terms accepted'), value: reg.termsRevision != null ? ec.resource.expand('Revision ${revision}', '', {revision: reg.termsRevision}) : ''},
+                {label: ec.l10n.localize('Checked in'), value: attended?.attendance ? [attended.attendance.checkInText, attended.attendance.methodText,
+                    attended.attendance.byText ? ec.resource.expand('by ${name}', '', {name: attended.attendance.byText}) : null, attended.attendance.reason || null].filter(Boolean).join(' · ') : ''}
             ].filter(fact => fact.value)
         ]]></script>
     </actions>

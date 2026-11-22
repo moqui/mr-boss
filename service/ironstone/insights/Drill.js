@@ -30,7 +30,7 @@ const restrictedField = name => /cost|margin/i.test(String(name || ""))
 
 function drill(p) {
     const userScope = insights.required()
-    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", "A drill needs Insights read")
+    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", ec.l10n.localize("A drill needs Insights read"))
     const found = insights.context({appRoot: "Insights", organizationPartyId: p.organizationPartyId || null})
     const readsCosts = ec.user.hasPermission("PRODUCT_COST_VIEW")
     // the definition as the viewer, for the scope its variables are fixed to: one they may not read answers as one that does

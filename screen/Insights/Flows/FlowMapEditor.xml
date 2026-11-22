@@ -34,7 +34,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.insights.FlowMapServices.store#Map" out-map="saved"
                     in-map="{definitionId:definitionId, expectedVersion:expectedVersion, title:(mapTitle || ''), description:(mapDescription || ''),
                         userGroupId:(mapUserGroupId || null), versionNote:'Name and sharing'}"/>
-            <script>ec.message.addMessage(saved.applied ? 'Map saved' : saved.reason, saved.applied ? 'success' : 'danger')</script>
+            <script>ec.message.addMessage(saved.applied ? ec.l10n.localize('Map saved') : saved.reason, saved.applied ? 'success' : 'danger')</script>
         </actions>
         <default-response url="."/>
     </transition>
@@ -43,7 +43,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.insights.FlowMapServices.store#MapLane" out-map="saved"
                     in-map="{definitionId:definitionId, expectedVersion:expectedVersion, laneId:(editLaneId || null), title:laneTitle,
                         description:laneDescription, move:(move || null), remove:(remove === 'true')}"/>
-            <script>ec.message.addMessage(saved.applied ? 'Lanes saved' : saved.reason, saved.applied ? 'success' : 'danger')</script>
+            <script>ec.message.addMessage(saved.applied ? ec.l10n.localize('Lanes saved') : saved.reason, saved.applied ? 'success' : 'danger')</script>
         </actions>
         <default-response url="."/>
     </transition>
@@ -57,7 +57,7 @@ along with this software (see the LICENSE.md file). If not, see
                         targetParametersText:(targetParametersText || null), countProviderKey:(countProviderKey || null),
                         countMetricId:(countMetricId || null), catalogEntryId:(catalogEntryId || null), wikiPageId:(wikiPageId || null),
                         nextStepIds:nextIds.join(','), move:(move || null), remove:(remove === 'true')}"/>
-            <script>ec.message.addMessage(saved.applied ? 'Steps saved' : saved.reason, saved.applied ? 'success' : 'danger')</script>
+            <script>ec.message.addMessage(saved.applied ? ec.l10n.localize('Steps saved') : saved.reason, saved.applied ? 'success' : 'danger')</script>
             <!-- a refused change opens the step's dialog again; a saved one closes it -->
             <set field="editStepId" from="saved.applied || move || remove === 'true' ? null : (storeStepId || null)"/>
             <set field="_openDialog" from="editStepId ? 'EditStep' : null"/>
@@ -68,7 +68,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.insights.FlowMapServices.restore#Map" out-map="saved"
                     in-map="{definitionId:definitionId, version:restoreVersionNumber, expectedVersion:expectedVersion}"/>
-            <script>ec.message.addMessage(saved.applied ? 'Version restored as the current one' : saved.reason, saved.applied ? 'success' : 'danger')</script>
+            <script>ec.message.addMessage(saved.applied ? ec.l10n.localize('Version restored as the current one') : saved.reason, saved.applied ? 'success' : 'danger')</script>
         </actions>
         <default-response url="."/>
     </transition>
@@ -76,7 +76,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.insights.FlowMapServices.delete#Map" out-map="deleted"
                     in-map="{definitionId:definitionId, expectedVersion:expectedVersion}"/>
-            <script>ec.message.addMessage(deleted.applied ? 'Map removed' : deleted.reason, deleted.applied ? 'success' : 'danger')</script>
+            <script>ec.message.addMessage(deleted.applied ? ec.l10n.localize('Map removed') : deleted.reason, deleted.applied ? 'success' : 'danger')</script>
         </actions>
         <conditional-response url="../FlowMaps" condition="deleted?.applied"/>
         <default-response url="."/>

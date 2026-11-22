@@ -5,6 +5,8 @@
 // passes the user's facilities to Mantle's mantle.product.InventoryCountServices, which checks its permissions and
 // withholds a blind count's expected quantities itself; nothing here adds what Mantle leaves out.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
+const labelOf = (table, key) => (table[key] != null ? L(table[key]) : key)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, denied, call} = lib
 
@@ -85,10 +87,10 @@ function countList(p) {
                             : row.itemType === "product"
                               ? row.productName || row.productId
                               : "Location " + row.locationSeqId,
-                    kindText: kindTexts[row.kind] || row.kind,
+                    kindText: labelOf(kindTexts, row.kind),
                     dueText: row.nextDate + (row.overdue ? " (overdue)" : ""),
                     dueColor: row.overdue ? "negative" : "warning",
-                    lastText: row.lastCountDay || (row.itemType === "count" ? "" : "Never counted"),
+                    lastText: row.lastCountDay || (row.itemType === "count" ? "" : L("Never counted")),
                     rowKey: [row.facilityId, row.itemType, row.locationSeqId || row.productId || row.physicalInventoryId].join(
                         ":"
                     )
@@ -136,7 +138,7 @@ function scopeText(scope) {
             scope.scopeAbcClassEnumId ? "class " + scope.scopeAbcClassEnumId.replace(/^Abc/, "") : null
         ]
             .filter(Boolean)
-            .join(", ") || "Selected stock or the whole facility"
+            .join(", ") || L("Selected stock or the whole facility")
     )
 }
 
@@ -146,7 +148,7 @@ function countDetail(p) {
     const userScope = scopeOf()
     const can = userScope.capabilities
     warehouse.execute("checkRecord", {recordType: "count", recordId: p.physicalInventoryId})
-    if (!countCapable(can)) denied("PERMISSION_DENIED", "Counting needs the count, count review or adjust permission")
+    if (!countCapable(can)) denied("PERMISSION_DENIED", L("Counting needs the count, count review or adjust permission"))
     const found = call(C + "get#Count", {
         physicalInventoryId: p.physicalInventoryId,
         facilityIds: warehouse.facilityIds(userScope),
@@ -340,7 +342,7 @@ function schedules(p) {
         })
     } catch (error) {
         ec.logger.warn("Count schedules: " + error.message)
-        return {available: false, schedules: [], canManage: false, message: "The count schedule is not available to you."}
+        return {available: false, schedules: [], canManage: false, message: L("The count schedule is not available to you.")}
     }
 }
 

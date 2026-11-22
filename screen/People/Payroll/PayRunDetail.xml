@@ -55,8 +55,8 @@ along with this software (see the LICENSE.md file). If not, see
             <script><![CDATA[
                 if (!ec.message.hasError() && prepared) {
                     const blocked = Array.from(prepared.rows || []).filter(row => row.outcome === 'blocked' || row.outcome === 'refused')
-                    ec.message.addMessage((preview == 'Y' ? 'Preview, nothing prepared: ' : 'Prepared: ') + (prepared.createdCount || 0) + ' inputs', preview == 'Y' ? 'info' : 'success')
-                    if (blocked.length) ec.message.addMessage('Not prepared: ' + blocked.map(row => row.personName + ' (' + row.message + ')').join('; '), 'warning')
+                    ec.message.addMessage(ec.resource.expand(preview == 'Y' ? 'Preview, nothing prepared: ${count} inputs' : 'Prepared: ${count} inputs', '', {count: prepared.createdCount || 0}), preview == 'Y' ? 'info' : 'success')
+                    if (blocked.length) ec.message.addMessage(ec.resource.expand('Not prepared: ${names}', '', {names: blocked.map(row => row.personName + ' (' + row.message + ')').join('; ')}), 'warning')
                 }
             ]]></script>
         </actions>

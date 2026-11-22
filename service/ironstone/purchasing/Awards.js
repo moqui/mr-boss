@@ -41,17 +41,17 @@ function quoteAwards(p) {
     const notes = rows("mantle.order.OrderNote", {orderId: order.orderId}).sort((a, b) => lib.ms(b.noteDate) - lib.ms(a.noteDate))
     if (deadStatuses.includes(order.statusId)) {
         const note = notes.find(row => /^(Not awarded|Declined)/.test(String(row.noteText || "")))
+        const label = order.statusId === "OrderCancelled" ? ec.l10n.localize("Not awarded") : ec.l10n.localize("Declined by the supplier")
+        const noteText = note ? String(note.noteText).replace(/^(Not awarded|Declined): /, "") : ""
         return {
             awardState: order.statusId === "OrderCancelled" ? "notAwarded" : "declined",
-            awardText:
-                (order.statusId === "OrderCancelled" ? "Not awarded" : "Declined by the supplier") +
-                (note ? " · " + String(note.noteText).replace(/^(Not awarded|Declined): /, "") : ""),
+            awardText: noteText ? ec.resource.expand("${label} · ${note}", "", {label, note: noteText}) : label,
             awardRows: [],
             purchaseOrderUrl: null
         }
     }
     if (quoteStatuses.includes(order.statusId))
-        return {awardState: "open", awardText: "No part of this quote is awarded.", awardRows: [], purchaseOrderUrl: null}
+        return {awardState: "open", awardText: ec.l10n.localize("No part of this quote is awarded."), awardRows: [], purchaseOrderUrl: null}
     const links = rows(ITEM_ORDER, {orderId: order.orderId})
     const requestTypes = {}
     const typeOf = requestId => (requestTypes[requestId] ??= one(REQUEST, {requestId})?.requestTypeEnumId || null)
@@ -78,7 +78,7 @@ function quoteAwards(p) {
                 awardedText: quantityText(awarded) + (rfqItem?.quantityUomId ? " " + uomText(rfqItem.quantityUomId) : ""),
                 orderedText:
                     quantityText(dec(item.quantity).subtract(dec(item.quantityCancelled))) + " " + uomText(item.quantityUomId),
-                priceText: showAmounts ? money(item.unitAmount, order.currencyUomId) : "Withheld",
+                priceText: showAmounts ? money(item.unitAmount, order.currencyUomId) : ec.l10n.localize("Withheld"),
                 sourceText: requestLink ? "Purchase request " + requestLink.requestId + ":" + requestLink.requestItemSeqId : "",
                 requirementText: requirement ? requirement.requirementId + " · " + statusText(requirement.statusId) : "",
                 remainingText:
@@ -105,7 +105,7 @@ function awardResult(p) {
     const showAmounts = amountsVisible(userScope.capabilities)
     const groupRows = Array.from(result.groupRows || []).map(row =>
         Object.assign({}, row, {
-            amountText: showAmounts ? row.amountText || "" : "Withheld",
+            amountText: showAmounts ? row.amountText || "" : ec.l10n.localize("Withheld"),
             purchaseOrderUrl: ["PLACED", "EXISTING"].includes(row.resultStatus)
                 ? purchasing.recordUrl("order", row.orderId)
                 : null,

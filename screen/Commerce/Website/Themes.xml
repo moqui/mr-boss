@@ -43,12 +43,12 @@ along with this software (see the LICENSE.md file). If not, see
                 // the package is staged under the runtime's temporary files for the import to read, then removed
                 staged = null
                 if (packageFile && Number(packageFile.size) > 0) {
-                    if (!/\.(tar\.gz|tgz)$/i.test(String(packageFile.name || ''))) ec.message.addError('Upload the theme as a .tar.gz package')
+                    if (!/\.(tar\.gz|tgz)$/i.test(String(packageFile.name || ''))) ec.message.addError(ec.l10n.localize('Upload the theme as a .tar.gz package'))
                     else {
                         staged = 'runtime://tmp/theme-upload/' + ec.user.randomString(24) + '.tar.gz'
                         packageFile.write(staged)
                     }
-                } else ec.message.addError('Choose the theme package to import')
+                } else ec.message.addError(ec.l10n.localize('Choose the theme package to import'))
             ]]></script>
             <if condition="!ec.message.hasError()">
                 <service-call name="mantle.public.ThemeServices.import#Theme" out-map="imported"

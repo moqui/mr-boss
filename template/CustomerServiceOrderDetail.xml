@@ -37,9 +37,12 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.order.OrderConfirmationServices.resend#OrderConfirmation" out-map="resent"
                     in-map="{orderId:orderId, toAddress:toAddress, emailAccountId:(emailAccountId || null), note:(note || null),
                         operationKey:operationKey}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage('The confirmation of order ' + orderId + ' as placed is '
-                    + (resent.status === 'sent' ? 'sent' : resent.status === 'failed' ? 'not sent' : 'on its way') + ' to '
-                    + resent.recipient, resent.status === 'failed' ? 'warning' : 'success')</script>
+            <script><![CDATA[if (!ec.message.hasError()) ec.message.addMessage(resent.status === 'sent'
+                    ? ec.resource.expand('The confirmation of order ${orderId} as placed is sent to ${recipient}', '', {orderId: orderId, recipient: resent.recipient})
+                    : resent.status === 'failed'
+                        ? ec.resource.expand('The confirmation of order ${orderId} as placed is not sent to ${recipient}', '', {orderId: orderId, recipient: resent.recipient})
+                        : ec.resource.expand('The confirmation of order ${orderId} as placed is on its way to ${recipient}', '', {orderId: orderId, recipient: resent.recipient}),
+                    resent.status === 'failed' ? 'warning' : 'success')]]></script>
         </actions>
         <default-response url="."><parameter name="orderId"/></default-response>
         <error-response url="."/>
@@ -109,8 +112,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         <link url="${so.customerUrl}" url-type="plain" text="${so.customerName}" link-type="anchor"
                                                 condition="so.customerUrl"/>
                                     </container>
-                                    <label text="${[so.orderName, so.organizationName, so.placedText ? 'placed ' + so.placedText
-                                            : 'entered ' + so.entryText, so.customerReference ? 'reference ' + so.customerReference
+                                    <label text="${[so.orderName, so.organizationName, so.placedText ? ec.resource.expand('placed $' + '{when}', '', {when: so.placedText})
+                                            : ec.resource.expand('entered $' + '{when}', '', {when: so.entryText}), so.customerReference ? ec.resource.expand('reference $' + '{ref}', '', {ref: so.customerReference})
                                             : ''].filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
                                 </container>
                                 <container style="col-12 col-md-auto m-record-status">
@@ -150,8 +153,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         </field>
                                     </form-single>
                                     <label type="p" style="text-caption m-muted" text="${serviceOrder.confirmation.stored
-                                            ? 'The confirmation stored ' + serviceOrder.confirmation.storedText + ' is sent again, not a new print.'
-                                            : 'The order as placed is printed once, stored and sent; later sends attach the same file.'}"/>
+                                            ? ec.resource.expand('The confirmation stored $' + '{stored} is sent again, not a new print.', '', {stored: serviceOrder.confirmation.storedText})
+                                            : ec.l10n.localize('The order as placed is printed once, stored and sent; later sends attach the same file.')}"/>
                                     <label type="p" style="text-warning" condition="!serviceOrder.senderOptions.length"
                                             text="You have no mail account to send from: ask your administrator for the service mailbox."/>
                                 </container-dialog>
@@ -306,8 +309,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     <box-header title="Confirmation"/>
                                     <box-body-nopad>
                                         <label type="p" style="m-muted q-pa-sm q-mb-none" text="${serviceOrder.confirmation.stored
-                                                ? serviceOrder.confirmation.description + ', stored ' + serviceOrder.confirmation.storedText
-                                                : 'Not stored yet: the first resend prints the order as placed and keeps it.'}"/>
+                                                ? ec.resource.expand('$' + '{description}, stored $' + '{stored}', '', {description: serviceOrder.confirmation.description, stored: serviceOrder.confirmation.storedText})
+                                                : ec.l10n.localize('Not stored yet: the first resend prints the order as placed and keeps it.')}"/>
                                         <form-list name="ServiceOrderConfirmationSends" list="serviceOrder.confirmation.sends"
                                                 skip-form="true" paginate="false">
                                             <field name="recipient"><default-field title="To"><display/></default-field></field>

@@ -27,9 +27,9 @@ along with this software (see the LICENSE.md file). If not, see
                 out-map="agenda"
                 transaction="force-new"
                 ignore-error="true"/>
-        <set field="kindNames" from="{workHours: 'Work hours', holiday: 'Holiday', operation: 'Operation'}"/>
+        <set field="kindNames" from="{workHours: ec.l10n.localize('Work hours'), holiday: ec.l10n.localize('Holiday'), operation: 'Operation'}"/>
         <set field="agendaRows" from="Array.from(agenda?.eventList || []).map((event) =&gt; ({when: String(event.start).substring(0, 16),
-                kind: kindNames[event.kind] || 'Item', title: event.title, url: event.url || ''}))
+                kind: kindNames[event.kind] || ec.l10n.localize('Item'), title: event.title, url: event.url || ''}))
                 .sort((a, b) =&gt; a.when.localeCompare(b.when))"/>
     </actions>
     <widgets>

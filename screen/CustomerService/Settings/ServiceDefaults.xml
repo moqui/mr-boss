@@ -123,8 +123,8 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="DefaultSettings" condition="cfg">
             <widgets>
                 <label text="Service defaults" type="h5"/>
-                <label type="p" style="text-caption m-muted" text="${policy ? 'In effect since ' + policy.fromText + '.' :
-                        'Not set: no request of the organization is a case until these are saved.'}"/>
+                <label type="p" style="text-caption m-muted" text="${policy ? ec.resource.expand('In effect since $' + '{from}.', '', {from: policy.fromText}) :
+                        ec.l10n.localize('Not set: no request of the organization is a case until these are saved.')}"/>
                 <section name="OrganizationPicker" condition="cfgOrganizations.length &gt; 1">
                     <widgets>
                         <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:cfgOrganizationPartyId}">
@@ -212,10 +212,9 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                     </box-toolbar>
                     <box-body>
-                        <label type="p" style="text-caption m-muted" text="${feedbackPolicy ? 'In effect since ' + feedbackPolicy.fromText + ': ' +
-                                feedbackPolicy.formText + ', ' + feedbackPolicy.typesText + ', ' + feedbackPolicy.queuesText + '.' :
-                                feedbackFormOptions.length ? 'Not set: resolved cases are not asked for feedback.' :
-                                'Not set: publish a feedback form first (Settings, Feedback forms).'}"/>
+                        <label type="p" style="text-caption m-muted" text="${feedbackPolicy ? ec.resource.expand('In effect since $' + '{from}.', '', {from: feedbackPolicy.fromText}) + ' ' + feedbackPolicy.formText + ', ' + feedbackPolicy.typesText + ', ' + feedbackPolicy.queuesText + '.' :
+                                feedbackFormOptions.length ? ec.l10n.localize('Not set: resolved cases are not asked for feedback.') :
+                                ec.l10n.localize('Not set: publish a feedback form first (Settings, Feedback forms).')}"/>
                         <form-single name="FeedbackDeliveryPolicy" transition="saveFeedbackPolicy" map="feedbackValues">
                             <field name="organizationPartyId"><default-field><hidden/></default-field></field>
                             <field name="formId">
@@ -291,8 +290,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Support app"/>
                             <box-body>
-                                <label type="p" text="${supportMount.sites.length ? 'Customers reach the Support app at ' + supportMount.sites.map(site => site.url || site.siteId).join(', ') + '.' : 'No published site has the Support app for this organization yet (PASS site mounts).'}"/>
-                                <label type="p" text="${supportMount.setting ? 'In effect since ' + supportMount.setting.fromText + '.' : 'Not set: customers file into the default queue, and the help reads every customer and public knowledge source.'}"/>
+                                <label type="p" text="${supportMount.sites.length ? ec.resource.expand('Customers reach the Support app at $' + '{urls}.', '', {urls: supportMount.sites.map(site => site.url || site.siteId).join(', ')}) : ec.l10n.localize('No published site has the Support app for this organization yet (PASS site mounts).')}"/>
+                                <label type="p" text="${supportMount.setting ? ec.resource.expand('In effect since $' + '{from}.', '', {from: supportMount.setting.fromText}) : ec.l10n.localize('Not set: customers file into the default queue, and the help reads every customer and public knowledge source.')}"/>
                                 <form-single name="SupportMount" transition="saveSupportMount" map="supportMountValues">
                                     <field name="organizationPartyId"><default-field><hidden/></default-field></field>
                                     <field name="supportQueueIds">

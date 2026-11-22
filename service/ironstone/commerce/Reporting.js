@@ -55,12 +55,12 @@ const storeName = productStoreId => one("mantle.product.store.ProductStore", {pr
 function scopeOf(p, options = {}) {
     const userScope = commerce.required()
     const can = userScope.capabilities
-    if (options.reports && !can.reports) denied("PERMISSION_DENIED", "Commerce reports are not available to you")
+    if (options.reports && !can.reports) denied("PERMISSION_DENIED", L("Commerce reports are not available to you"))
     const omitted = []
     let stores
     if (!blank(p.productStoreId)) {
         const store = commerce.storeIn(userScope, String(p.productStoreId))
-        if (!store) denied("RECORD_UNAVAILABLE", "Store " + p.productStoreId + " is not available")
+        if (!store) denied("RECORD_UNAVAILABLE", ec.resource.expand("Store ${productStoreId} is not available", "", {productStoreId: p.productStoreId}))
         stores = [store]
     } else {
         stores = Array.from(
@@ -73,7 +73,7 @@ function scopeOf(p, options = {}) {
         )
         if (stores.length > storeLimit) {
             stores = stores.slice(0, storeLimit)
-            omitted.push(L("More than") + " " + storeLimit + " " + L("stores: choose one to read the others."))
+            omitted.push(ec.resource.expand("More than ${count} stores: choose one to read the others.", "", {count: storeLimit}))
         }
     }
     return {userScope, can, stores, storeIds: stores.map(store => store.productStoreId), omitted}
@@ -87,7 +87,7 @@ function periodsOf(p, count) {
         at = /^\d{4}-\d{2}-\d{2}/.test(text)
             ? Number(ms(ec.l10n.parseTimestamp(text.slice(0, 10), "yyyy-MM-dd"))) + 12 * 3600000
             : Number(ms(p.periodDate))
-        if (!Number.isFinite(at)) denied("PERIOD_INVALID", "Choose a valid date")
+        if (!Number.isFinite(at)) denied("PERIOD_INVALID", L("Choose a valid date"))
         if (at > now()) at = now()
     }
     const periods = []
@@ -107,7 +107,7 @@ function currenciesOf(scope, p, from, thru) {
     if (!scope.storeIds.length) return []
     if (!blank(p.currencyUomId)) {
         const currencyUomId = String(p.currencyUomId)
-        if (!one("moqui.basic.Uom", {uomId: currencyUomId})) denied("VALUE_INVALID", "Choose a valid currency")
+        if (!one("moqui.basic.Uom", {uomId: currencyUomId})) denied("VALUE_INVALID", L("Choose a valid currency"))
         return [currencyUomId]
     }
     const found = scope.stores.map(store => store.defaultCurrencyUomId)
@@ -132,12 +132,14 @@ function frame(scope, periodInfo, filters, omitted) {
     return {
         asOf: new Date(now()),
         asOfText: stampText(now()),
-        periodText: newest.text + " " + L("against") + " " + intervals[periodInfo.interval].previous,
+        periodText: ec.resource.expand("${range} against ${previous}", "", {range: newest.text, previous: L(intervals[periodInfo.interval].previous)}),
         timeZoneText: String(ec.user.timeZone?.getID?.() || ec.user.timeZone || ""),
         filtersText: [
-            L("Stores") +
-                ": " +
-                (scope.stores.length ? scope.stores.map(store => store.storeName || store.productStoreId).join(", ") : L("none")),
+            scope.stores.length
+                ? ec.resource.expand("Stores: ${names}", "", {
+                      names: scope.stores.map(store => store.storeName || store.productStoreId).join(", ")
+                  })
+                : L("No stores"),
             ...filters.filter(Boolean)
         ].join(" · "),
         omittedText: unique(omitted).join(" "),
@@ -298,7 +300,7 @@ function onlineSales(p) {
     const answer = Object.assign(
         frame(scope, periodInfo, [!blank(p.currencyUomId) ? L("Currency") + ": " + p.currencyUomId : null], omitted),
         {
-            intervalLabel: periodInfo.label,
+            intervalLabel: L(periodInfo.label),
             periodCount: count,
             periodsText: shown[shown.length - 1].text.split(" – ")[0] + " – " + shown[0].text.split(" – ").pop(),
             currencies,
@@ -380,18 +382,11 @@ function homePeriod(p) {
             ordersDelta: orderChange == null ? "" : (orderChange >= 0 ? "+" : "") + percentText(orderChange),
             netText: money(line.invoicedNet, currencyUomId),
             netDelta: netChange == null ? "" : (netChange >= 0 ? "+" : "") + percentText(netChange),
-            previousText:
-                L("Before") +
-                " (" +
-                periodInfo.periods[1].text +
-                "): " +
-                previous.orderCount +
-                " " +
-                L("orders") +
-                ", " +
-                money(previous.invoicedNet, currencyUomId) +
-                " " +
-                L("net sales"),
+            previousText: ec.resource.expand("Before (${period}): ${orders} orders, ${amount} net sales", "", {
+                period: periodInfo.periods[1].text,
+                orders: previous.orderCount,
+                amount: money(previous.invoicedNet, currencyUomId)
+            }),
             topProductText: top ? top.productName : L("None yet"),
             topProductDetail: top ? top.salesText : ""
         }
@@ -419,13 +414,13 @@ function homePeriod(p) {
               visitCount: visitsNow.visitCount,
               visitsText: String(visitsNow.visitCount),
               visitsDelta: visitChange == null ? "" : (visitChange >= 0 ? "+" : "") + percentText(visitChange),
-              previousText: L("Before") + " (" + periodInfo.periods[1].text + "): " + (visitsBefore?.visitCount ?? 0)
+              previousText: ec.resource.expand("Before (${period}): ${count}", "", {period: periodInfo.periods[1].text, count: visitsBefore?.visitCount ?? 0})
           }
         : null
     return {
         periodText: current.text,
         previousText: periodInfo.periods[1].text,
-        intervalLabel: periodInfo.label,
+        intervalLabel: L(periodInfo.label),
         currencies,
         cards,
         visits,
@@ -513,8 +508,10 @@ function promotionUse(p) {
     const keep = row => blank(p.currencyUomId) || row.currencyUomId === String(p.currencyUomId)
     const left = row =>
         [
-            row.promotionUsesLeft == null ? null : L("promotion") + " " + row.promotionUsesLeft,
-            row.codeUsesLeft == null ? null : L("code") + " " + row.codeUsesLeft
+            row.promotionUsesLeft == null
+                ? null
+                : ec.resource.expand("${count} promotion uses left", "", {count: row.promotionUsesLeft}),
+            row.codeUsesLeft == null ? null : ec.resource.expand("${count} code uses left", "", {count: row.codeUsesLeft})
         ]
             .filter(Boolean)
             .join(", ") || L("No limit")
@@ -556,7 +553,7 @@ function csvOf(title, answer, tables) {
         [L("Period"), answer.periodText + " (" + answer.timeZoneText + ")"],
         [L("Filters"), answer.filtersText],
         [L("As of"), answer.asOfText],
-        [L("Left out"), answer.omittedText || L("Nothing")]
+        [L("Left out"), answer.omittedText || L("Nothing left out")]
     ].map(cells => cells.map(cell => csvCell(cell, false)).join(","))
     for (const {columns, list} of tables) {
         lines.push("")
@@ -617,7 +614,7 @@ function catalogue() {
             description: L(entry.description),
             path: entry.path,
             url: "/qapps/Commerce/" + entry.path,
-            parameters: entry.parameters,
+            parameters: L(entry.parameters),
             exports: true,
             exportText: L("CSV")
         }))
@@ -651,7 +648,7 @@ const feedColumns = [
 ]
 function channelHealth(p) {
     const scope = scopeOf(p, {reports: true})
-    if (!scope.can.channelOperate) denied("PERMISSION_DENIED", "Channel health is the channel operator's report")
+    if (!scope.can.channelOperate) denied("PERMISSION_DENIED", L("Channel health is the channel operator's report"))
     const {periodInfo, current} = singlePeriod(p)
     const found = scope.storeIds.length
         ? call("mantle.product.StoreChannelServices.get#ChannelHealth", {

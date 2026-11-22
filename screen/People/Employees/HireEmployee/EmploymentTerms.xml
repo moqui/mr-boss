@@ -34,7 +34,7 @@ along with this software (see the LICENSE.md file). If not, see
                     managerPartyId: text(managerPartyId) || null,
                     facilityId: text(facilityId) || null
                 })
-                if (!draft.organizationPartyId) { ec.message.addError('Start with the person'); return }
+                if (!draft.organizationPartyId) { ec.message.addError(ec.l10n.localize('Start with the person')); return }
                 ec.service.sync().name('mantle.humanres.PeopleServices.store#EmploymentDraft').parameters({draftKind: 'hire',
                     employmentDraftId: hireDraftId, draft}).call()
                 if (ec.message.hasError()) return

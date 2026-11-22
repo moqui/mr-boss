@@ -199,7 +199,7 @@ function promotionStoreIds(mantle, term, limit) {
     }))
 }
 function required(userScope = scope()) {
-    if (!userScope.read) denied("MARKETING_UNAVAILABLE", "Marketing is not available")
+    if (!userScope.read) denied("MARKETING_UNAVAILABLE", ec.l10n.localize("Marketing is not available"))
     return userScope
 }
 const likeText = text => "%" + String(text).replace(/[\\%_]/g, character => "\\" + character) + "%"
@@ -342,7 +342,7 @@ const linkPaths = [
 const sendPaths = ["Sends/SendDetail", "Sends/CampaignDelivery"]
 function sharedContext(p) {
     const appRoot = p.appRoot || "Marketing"
-    if (!Object.hasOwn(mountRoots, appRoot)) denied("MARKETING_CONTEXT", "Marketing context is not available")
+    if (!Object.hasOwn(mountRoots, appRoot)) denied("MARKETING_CONTEXT", ec.l10n.localize("Marketing context is not available"))
     const userScope = required()
     const mantle = userScope.mantle
     const ids = organizationIds(userScope)

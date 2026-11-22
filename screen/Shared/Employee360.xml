@@ -285,7 +285,7 @@ along with this software (see the LICENSE.md file). If not, see
             reviewStateColors = {PrvInProgress: 'primary', PrvApproval: 'warning', PrvFinalized: 'primary', PrvReleased: 'positive',
                 PrvAcknowledged: 'positive', PrvExcluded: 'grey-8'}
             reviewDetailUrl = sharedLinks?.['Performance/ReviewDetail'] || null
-            resumeTypeOptions = [{key: 'RltExperience', text: 'Experience'}, {key: 'RltEducation', text: 'Education'}, {key: 'RltOther', text: 'Other'}]
+            resumeTypeOptions = [{key: 'RltExperience', text: 'Experience'}, {key: 'RltEducation', text: 'Education'}, {key: 'RltOther', text: ec.l10n.localize('Other')}]
             qualificationsUrl = sharedLinks?.['Development/Qualifications'] || null
             skillsMatrixUrl = sharedLinks?.['Development/SkillsMatrix'] || null
             // P23: the opened employment's compensation, a payroll reader's (absent from the context's answer otherwise)
@@ -296,15 +296,15 @@ along with this software (see the LICENSE.md file). If not, see
             payBenefitRows = Array.from(compensation?.benefits || [])
             payChangeRows = Array.from(compensation?.payChanges || [])
             compensationFacts = compensation ? [
-                ['Salary', compensation.currentSalary?.salaryText || 'None in effect'],
+                [ec.l10n.localize('Salary'), compensation.currentSalary?.salaryText || ec.l10n.localize('None in effect')],
                 ['Pay grade', compensation.currentSalary?.payGradeName],
                 ['Pay rate', Array.from(compensation.rates || []).map(row => row.rateText).join(', ')],
                 ['Pay assignment', compensation.primary ? compensation.primary.structureName + ' · ' + compensation.primary.groupName +
-                    ' (' + compensation.primary.stateText + ')' : 'None'],
+                    ' (' + compensation.primary.stateText + ')' : ec.l10n.localize('None')],
                 ['Benefits', payBenefitRows.filter(row => row.state != 'ended').map(row => row.benefitText).join(', ')],
                 ['Tax profile', compensation.profile ? (compensation.profile.hasProfile ? compensation.profile.localizationName + ', from ' +
                     compensation.profile.fromDateText : 'None for ' + compensation.profile.localizationName) : ''],
-                ['Readiness', compensation.readiness?.message]
+                [ec.l10n.localize('Readiness'), compensation.readiness?.message]
             ].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
             payChangeValues = compensation ? {partyId, partyRelationshipId: compensation.partyRelationshipId,
                 expectedRevision: compensation.payRevision, salaryCurrencyUomId: compensation.currentSalary?.currencyUomId || null,
@@ -317,7 +317,7 @@ along with this software (see the LICENSE.md file). If not, see
             kioskBadge = badgeFound?.badge || null
             badgeStateColors = {active: 'positive', issued: 'primary', pinNeeded: 'primary', locked: 'warning', disabled: 'negative', unprinted: 'grey-8', revoked: 'grey-8'}
             badgeFacts = kioskBadge ? [['Issued', kioskBadge.issuedDateText], ['Printed', kioskBadge.printedDateText],
-                ['PIN set', kioskBadge.pinSetText], ['Last used', kioskBadge.lastUsedText]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
+                [ec.l10n.localize('PIN set'), kioskBadge.pinSetText], [ec.l10n.localize('Last used'), kioskBadge.lastUsedText]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
             badgePrintable = !!kioskBadge?.canPrint
             badgeValues = {partyId, partyRelationshipId: record.partyRelationshipId || null, kioskBadgeId: kioskBadge?.kioskBadgeId || null}
             ratesUrl = sharedLinks?.['Payroll/Rates'] || null
@@ -334,12 +334,12 @@ along with this software (see the LICENSE.md file). If not, see
             canEditHr = editable.includes('firstName')
             personalValues = Object.assign({}, personal, personal.homeAddressFields || {}, {partyId, partyRelationshipId:
                 record.partyRelationshipId || null, expectedRevision: personal.revision || null})
-            genderText = {F: 'Female', M: 'Male'}[personal.gender] || ''
-            workRows = [['Work email', overview.workEmail], ['Work phone', overview.workPhone], ['Work address', overview.workAddress]]
+            genderText = {F: ec.l10n.localize('Female'), M: ec.l10n.localize('Male')}[personal.gender] || ''
+            workRows = [['Work email', overview.workEmail], ['Work phone', overview.workPhone], [ec.l10n.localize('Work address'), overview.workAddress]]
                 .filter(([, value]) => value).map(([label, value]) => ({label, value}))
-            personalRows = [['Preferred name', personal.preferredName], ['Home phone', personal.homePhone],
-                ['Mobile phone', personal.mobilePhone], ['Home address', personal.homeAddress], ['Birth date', personal.birthDate],
-                ['Gender', genderText]].filter(([, value]) => value).map(([label, value]) => ({label, value}))
+            personalRows = [['Preferred name', personal.preferredName], [ec.l10n.localize('Home phone'), personal.homePhone],
+                [ec.l10n.localize('Mobile phone'), personal.mobilePhone], [ec.l10n.localize('Home address'), personal.homeAddress], [ec.l10n.localize('Birth date'), personal.birthDate],
+                [ec.l10n.localize('Gender'), genderText]].filter(([, value]) => value).map(([label, value]) => ({label, value}))
             // Insights: the return to the report (its drill's own parameters), and the person's record in People or Commons for a
             // user whose own grants open it
             insightsReturn = appRoot === 'Insights' ? ec.resource.script('component://mr-boss/service/ironstone/insights/Records.js').returnOf(ec.context) : {}

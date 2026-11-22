@@ -101,7 +101,7 @@ along with this software (see the LICENSE.md file). If not, see
         <script><![CDATA[
             const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
             const stateColors = {active: 'positive', pending: 'warning', codeExpired: 'grey-7', stopped: 'negative', revoked: 'grey-7'}
-            const stateNames = {active: 'Active', pending: 'Waiting for its code', codeExpired: 'Code not entered', stopped: 'Stopped', revoked: 'Revoked'}
+            const stateNames = {active: ec.l10n.localize('Active'), pending: ec.l10n.localize('Waiting for its code'), codeExpired: ec.l10n.localize('Code not entered'), stopped: ec.l10n.localize('Stopped'), revoked: ec.l10n.localize('Revoked')}
             canManage = !!admin?.capabilities?.accessManage
             devices = Array.from(found?.deviceList || []).map(row => Object.assign({}, row, {
                 routeText: [row.routeGroupDescription, row.parameterValue].filter(Boolean).join(' · '),

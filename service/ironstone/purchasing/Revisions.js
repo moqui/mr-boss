@@ -21,10 +21,10 @@ const sentStatuses = ["OrderSent", "OrderProcessing"]
 const acknowledgeStatuses = ["OrderApproved", "OrderSent", "OrderProcessing", "OrderHold"]
 const revisableStatuses = ["OrderPlaced", "OrderProcessing", "OrderApproved", "OrderSent", "OrderHold"]
 const views = {
-    unacknowledged: "Unacknowledged",
-    changed: "Changed promise",
-    overdue: "Overdue",
-    all: "All sent"
+    unacknowledged: ec.l10n.localize("Unacknowledged"),
+    changed: ec.l10n.localize("Changed promise"),
+    overdue: ec.l10n.localize("Overdue"),
+    all: ec.l10n.localize("All sent")
 }
 const outcomeColors = {PakAccepted: "positive", PakChanged: "warning", PakRejected: "negative"}
 const blank = value => value == null || String(value).trim() === ""
@@ -123,7 +123,7 @@ function orderRevisions(p) {
             requiredText: lib.dateText(item.requiredByDate),
             promisedText: lib.dateText(item.promisedDate),
             promisedQuantityText: item.promisedQuantity == null ? "" : quantityText(item.promisedQuantity),
-            promiseState: late ? "Later than required" : item.promisedDate ? "On time" : "",
+            promiseState: late ? ec.l10n.localize("Later than required") : item.promisedDate ? ec.l10n.localize("On time") : "",
             promiseColor: late ? "warning" : "positive"
         }
     })
@@ -146,15 +146,18 @@ function orderRevisions(p) {
         .filter(row => row.newValueText != null)
         .map(row => ({
             changedText: lib.dateText(row.changedDate),
-            whatText:
-                (row.changedEntityName === ITEM ? "Line " + row.pkSecondaryValue + " " : "") +
-                {
-                    otherPartyOrderId: "Supplier reference",
-                    acknowledgedRevision: "Acknowledged revision",
-                    acknowledgementEnumId: "Response",
-                    promisedDate: "Promised date",
-                    promisedQuantity: "Promised quantity"
-                }[row.changedFieldName],
+            whatText: (() => {
+                const what = {
+                    otherPartyOrderId: ec.l10n.localize("Supplier reference"),
+                    acknowledgedRevision: ec.l10n.localize("Acknowledged revision"),
+                    acknowledgementEnumId: ec.l10n.localize("Response"),
+                    promisedDate: ec.l10n.localize("Promised date"),
+                    promisedQuantity: ec.l10n.localize("Promised quantity")
+                }[row.changedFieldName]
+                return row.changedEntityName === ITEM
+                    ? ec.resource.expand("Line ${seq} ${what}", "", {seq: row.pkSecondaryValue, what})
+                    : what
+            })(),
             toText:
                 row.changedFieldName === "acknowledgementEnumId"
                     ? enumText(row.newValueText)
@@ -195,10 +198,16 @@ function orderRevisions(p) {
                 acknowledged,
                 acknowledgedRevision: part.acknowledgedRevision ?? null,
                 stateText: acknowledged
-                    ? "Revision " + revision + " acknowledged: " + enumText(part.acknowledgementEnumId)
+                    ? ec.resource.expand("Revision ${revision} acknowledged: ${outcome}", "", {
+                          revision,
+                          outcome: enumText(part.acknowledgementEnumId)
+                      })
                     : part.acknowledgedRevision != null
-                      ? "Revision " + part.acknowledgedRevision + " was acknowledged; revision " + revision + " is not yet"
-                      : "Not acknowledged yet",
+                      ? ec.resource.expand("Revision ${acknowledged} was acknowledged; revision ${revision} is not yet", "", {
+                            acknowledged: part.acknowledgedRevision,
+                            revision
+                        })
+                      : ec.l10n.localize("Not acknowledged yet"),
                 outcomeColor: acknowledged ? outcomeColors[part.acknowledgementEnumId] || "grey-8" : "grey-8",
                 supplierReference: part.otherPartyOrderId || "",
                 supplierDateText: lib.dateText(part.otherPartyOrderDate),
@@ -225,11 +234,11 @@ function orderRevisions(p) {
 // the response, the latest promise beside the earliest requested date, and the last reminder.
 function findAcknowledgements(p) {
     const userScope = purchasing.required()
-    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", "Acknowledgements are not available")
+    if (!userScope.capabilities.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("Acknowledgements are not available"))
     const view = Object.hasOwn(views, p.view || "") ? p.view : "unacknowledged"
     let buyers = buyerIdsOf(userScope)
     if (!blank(p.organizationPartyId)) {
-        if (!purchasing.owns(userScope, p.organizationPartyId)) denied("RECORD_UNAVAILABLE", "The organization is not available")
+        if (!purchasing.owns(userScope, p.organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("The organization is not available"))
         buyers = [String(p.organizationPartyId)]
     }
     const internal = rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(row => row.partyId)
@@ -303,7 +312,7 @@ function findAcknowledgements(p) {
             supplierReference: row.otherPartyOrderId || "",
             requiredText: earliestRequired ? lib.dateText(earliestRequired) : "",
             promisedText: latestPromise ? lib.dateText(latestPromise) : "",
-            lateReason: acknowledged && latePromise ? row.acknowledgementNote || "Later than required" : "",
+            lateReason: acknowledged && latePromise ? row.acknowledgementNote || ec.l10n.localize("Later than required") : "",
             remindedText: lastReminder ? lib.dateText(lastReminder) : "",
             overdue,
             acknowledged,

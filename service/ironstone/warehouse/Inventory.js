@@ -4,6 +4,14 @@
 // Warehouse facilities (Warehouse.js scope); every write checks the record and capability there, then calls the Mantle
 // service, which checks its permission and organization again. Cost is answered only with financial read.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
+const labelOf = (table, key) => {
+    const label = table[key]
+    if (label == null) return key
+    // Catalog Container is a shipping container (集装箱). A warehouse container stays the English label.
+    if (key === "containerId") return label
+    return L(label)
+}
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, denied, call, dateText, calendarDateText} = lib
 
@@ -340,7 +348,7 @@ function assetAudit(p) {
     return {
         auditRows: rows.map(row => ({
             auditHistorySeqId: row.auditHistorySeqId,
-            fieldText: fieldLabels[row.changedFieldName] || row.changedFieldName,
+            fieldText: labelOf(fieldLabels, row.changedFieldName),
             oldValueText: valueText(row.changedFieldName, row.oldValueText),
             newValueText: valueText(row.changedFieldName, row.newValueText),
             userText: users.get(row.changedByUserId) || row.changedByUserId || "",
@@ -522,7 +530,7 @@ function lotDetail(p) {
 }
 function createLot(p) {
     const userScope = warehouse.required(warehouse.scope())
-    if (!userScope.capabilities.receive) denied("PERMISSION_DENIED", "STOCK_RECEIVE is required")
+    if (!userScope.capabilities.receive) denied("PERMISSION_DENIED", L("STOCK_RECEIVE is required"))
     return call("mantle.product.AssetRecordServices.create#Lot", {
         lotNumber: p.lotNumber,
         mfgPartyId: p.mfgPartyId || null,
@@ -640,7 +648,7 @@ function replenishment(p) {
             reorderMethodText: methods.get(row.reorderMethodEnumId) || "",
             daysToShip: number(row.daysToShip),
             quantityOnHand: quantity,
-            levelText: minimum == null ? "No minimum" : quantity < minimum ? "Below minimum" : "At or above minimum",
+            levelText: minimum == null ? L("No minimum") : quantity < minimum ? L("Below minimum") : L("At or above minimum"),
             levelColor: minimum == null ? "grey" : quantity < minimum ? "warning" : "positive"
         }
     })

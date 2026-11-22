@@ -83,8 +83,10 @@ along with this software (see the LICENSE.md file). If not, see
                         ec.message.popErrors()
                     }
                 }
-                ec.message.addMessage(approved + (approved === 1 ? ' correction approved' : ' corrections approved') +
-                    (refused.length ? '; not approved: ' + refused.join('; ') : ''), refused.length ? 'warning' : 'success')
+                const template = refused.length
+                    ? (approved === 1 ? '${count} correction approved; not approved: ${names}' : '${count} corrections approved; not approved: ${names}')
+                    : (approved === 1 ? '${count} correction approved' : '${count} corrections approved')
+                ec.message.addMessage(ec.resource.expand(template, '', {count: approved, names: refused.join('; ')}), refused.length ? 'warning' : 'success')
             ]]></script>
         </actions>
         <default-response url="."/>

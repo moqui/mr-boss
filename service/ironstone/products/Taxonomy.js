@@ -44,12 +44,12 @@ function storeIdsFor(p) {
 }
 function record(kind, id, need = "read", quiet = false) {
     const out = call(C + "get#CatalogRecord", {recordEntityName: E[kind], recordId: id, need, checkOnly: true})
-    if (!out.record && !quiet) throw new Error("Catalog record is not available for this action")
+    if (!out.record && !quiet) throw new Error(ec.l10n.localize("Catalog record is not available for this action"))
     return out.record
 }
 function product(id, need = "read", quiet = false) {
     const out = call(C + "get#CatalogRecord", {recordId: id, need, checkOnly: true})
-    if (!out.record && !quiet) throw new Error("Product is not available for this action")
+    if (!out.record && !quiet) throw new Error(ec.l10n.localize("Product is not available for this action"))
     return out.record
 }
 function owner(id, a) {
@@ -58,9 +58,9 @@ function owner(id, a) {
         !id ||
         (id === "_NA_" ? !a.capabilities.systemAdmin : !a.capabilities.systemAdmin && !a.organizationPartyIds.includes(id))
     )
-        throw new Error("Catalog editor authority over the owner is required")
+        throw new Error(ec.l10n.localize("Catalog editor authority over the owner is required"))
     if (id !== "_NA_" && !one("mantle.party.PartyRole", {partyId: id, roleTypeId: "OrgInternal"}))
-        throw new Error("Choose an internal owner")
+        throw new Error(ec.l10n.localize("Choose an internal owner"))
 }
 function graphLock() {
     find("moqui.basic.EnumerationType", {enumTypeId: "ProductCategoryType"}).forUpdate(true).one()
@@ -72,7 +72,7 @@ function storeMaster(p) {
     const kind = p.kind,
         key = K[kind],
         entity = E[kind]
-    if (!key) throw new Error("Unknown catalog master type")
+    if (!key) throw new Error(ec.l10n.localize("Unknown catalog master type"))
     if (kind === "category") graphLock()
     if (kind === "feature") {
         featureLock()
@@ -87,16 +87,16 @@ function storeMaster(p) {
         a = access()
     if (old && p.expectedLastUpdatedStamp && ms(old.lastUpdatedStamp) !== ms(p.expectedLastUpdatedStamp))
         throw new Error("Catalog master changed; reload before saving")
-    if (p.createOnly && old) throw new Error("Catalog ID is already in use")
+    if (p.createOnly && old) throw new Error(ec.l10n.localize("Catalog ID is already in use"))
     const ownerId = old ? old.ownerPartyId || "_NA_" : p.ownerPartyId || a.activeOrganizationPartyId || a.organizationPartyIds[0]
     owner(ownerId, a)
     if (old) {
         record(kind, p[key], "catalogEdit")
         if (p.ownerPartyId && p.ownerPartyId !== (old.ownerPartyId || (kind === "group" ? "_NA_" : null)))
-            throw new Error("Owner changes require a separate migration")
+            throw new Error(ec.l10n.localize("Owner changes require a separate migration"))
     }
     if (p[key] && !/^[A-Za-z0-9_.-]{1,40}$/.test(p[key]))
-        throw new Error("Catalog ID must contain 1–40 letters, numbers, dots, dashes or underscores")
+        throw new Error(ec.l10n.localize("Catalog ID must contain 1–40 letters, numbers, dots, dashes or underscores"))
     const names = {
         category: "categoryName,description,pseudoId,productCategoryTypeEnumId",
         feature:
@@ -105,17 +105,17 @@ function storeMaster(p) {
     }[kind]
     const values = Object.assign({}, old || {}, pick(p, names), {[key]: p[key], ownerPartyId: ownerId})
     if (!String(values[kind === "category" ? "categoryName" : "description"] || "").trim())
-        throw new Error("Name or description is required")
+        throw new Error(ec.l10n.localize("Name or description is required"))
     const typeField = kind === "category" ? "productCategoryTypeEnumId" : "productFeatureTypeEnumId"
     if (
         kind !== "group" &&
         one("moqui.basic.Enumeration", {enumId: values[typeField]})?.enumTypeId !==
             (kind === "category" ? "ProductCategoryType" : "ProductFeatureType")
     )
-        throw new Error("Choose a valid catalog type")
+        throw new Error(ec.l10n.localize("Choose a valid catalog type"))
     if (kind === "feature") {
         if (values.numberUomId && one("moqui.basic.Uom", {uomId: values.numberUomId})?.uomTypeEnumId === "UT_CURRENCY_MEASURE")
-            throw new Error("Feature measurement units cannot be currencies")
+            throw new Error(ec.l10n.localize("Feature measurement units cannot be currencies"))
         if (
             old &&
             ["productFeatureTypeEnumId", "abbrev", "idCode", "numberSpecified", "numberUomId"].some(
@@ -181,13 +181,13 @@ function storeRollup(p) {
     graphLock()
     const from = p.fromDate || ec.user.nowTimestamp,
         thru = p.thruDate || null
-    if (ms(thru) != null && ms(thru) <= ms(from)) throw new Error("Category edge end must follow its start")
+    if (ms(thru) != null && ms(thru) <= ms(from)) throw new Error(ec.l10n.localize("Category edge end must follow its start"))
     for (const row of rows(R, {productCategoryId: p.productCategoryId, parentProductCategoryId: p.parentProductCategoryId})) {
         if (
             ms(row.fromDate) !== ms(from) &&
             Math.max(ms(row.fromDate), ms(from)) < Math.min(ms(row.thruDate) ?? Infinity, ms(thru) ?? Infinity)
         )
-            throw new Error("This parent edge already overlaps that interval")
+            throw new Error(ec.l10n.localize("This parent edge already overlaps that interval"))
     }
     assertAcyclic(p.productCategoryId, p.parentProductCategoryId, ms(from), ms(thru) ?? Infinity, {
         productCategoryId: p.productCategoryId,
@@ -365,7 +365,7 @@ function ancestors(p) {
             const head = parts.slice(0, count),
                 last = head[head.length - 1],
                 row = g.byId[last[0]]
-            if (!row) throw new Error("Category ancestor is not available")
+            if (!row) throw new Error(ec.l10n.localize("Category ancestor is not available"))
             if (
                 count > 1 &&
                 !g.edges.some(
@@ -414,7 +414,7 @@ function move(p) {
         )
             throw new Error("Category occurrence changed; reload before moving it")
     }
-    if (old && !current(old, ms(p.asOfDate) ?? now())) throw new Error("Only an effective parent edge can be moved")
+    if (old && !current(old, ms(p.asOfDate) ?? now())) throw new Error(ec.l10n.localize("Only an effective parent edge can be moved"))
     const ordering = Object.keys(p).includes("previousSiblingId")
     let sequence = Number(old?.sequenceNum || 0)
     if (oldParent !== newParent || ordering) {
@@ -483,7 +483,7 @@ function move(p) {
         return {productCategoryId: p.productCategoryId}
     }
     const effective = p.effectiveDate || ec.user.nowTimestamp
-    if (old && ms(effective) < ms(old.fromDate)) throw new Error("Move date precedes the selected edge")
+    if (old && ms(effective) < ms(old.fromDate)) throw new Error(ec.l10n.localize("Move date precedes the selected edge"))
     if (newParent)
         storeRollup({
             productCategoryId: p.productCategoryId,
@@ -640,7 +640,7 @@ function storeRow(p) {
         keys = "productCategoryId,productFeatureGroupId,fromDate"
         values = pick(p, keys + ",thruDate,applTypeEnumId")
         if (!["PfatStandard", "PfatSelectable", "PfatDistinguishing"].includes(values.applTypeEnumId))
-            throw new Error("Choose a feature application type")
+            throw new Error(ec.l10n.localize("Choose a feature application type"))
     } else if (p.rowKind === "identifier") {
         record("category", p.productCategoryId, "catalogEdit")
         entity = "mantle.product.category.ProductCategoryIdent"
@@ -650,7 +650,7 @@ function storeRow(p) {
             p.productCategoryIdentId &&
             one(entity, {productCategoryIdentId: p.productCategoryIdentId})?.productCategoryId !== p.productCategoryId
         )
-            throw new Error("Identifier is not on this category")
+            throw new Error(ec.l10n.localize("Identifier is not on this category"))
         if (values.productStoreId) {
             const a = access(),
                 store = one("mantle.product.store.ProductStore", {productStoreId: values.productStoreId})
@@ -660,14 +660,14 @@ function storeRow(p) {
                 (!a.capabilities.systemAdmin && !a.ownerPartyIds.includes(store.organizationPartyId)) ||
                 (storeIds && !storeIds.includes(store.productStoreId))
             )
-                throw new Error("Store is not available")
+                throw new Error(ec.l10n.localize("Store is not available"))
         }
         if (values.identTypeEnumId !== "PcitUrlSlug" || !String(values.idValue || "").trim())
-            throw new Error("Choose a URL slug and enter its value")
+            throw new Error(ec.l10n.localize("Choose a URL slug and enter its value"))
         graphLock()
         if (rows(entity, {idValue: values.idValue}).some(row => row.productCategoryIdentId !== p.productCategoryIdentId))
-            throw new Error("Category identifier is already assigned")
-    } else throw new Error("Unknown taxonomy row type")
+            throw new Error(ec.l10n.localize("Category identifier is already assigned"))
+    } else throw new Error(ec.l10n.localize("Unknown taxonomy row type"))
     if (keys.includes("fromDate")) {
         values.fromDate = p.fromDate || ec.user.nowTimestamp
         if (p.operation === "expire") {
@@ -676,14 +676,14 @@ function storeRow(p) {
             values = Object.assign(pick(values, keys), {thruDate: ec.user.nowTimestamp})
         } else {
             if (ms(values.thruDate) != null && ms(values.thruDate) <= ms(values.fromDate))
-                throw new Error("End must follow start")
+                throw new Error(ec.l10n.localize("End must follow start"))
             for (const other of rows(entity, pick(values, keys.replace(",fromDate", ""))))
                 if (
                     ms(other.fromDate) !== ms(values.fromDate) &&
                     Math.max(ms(other.fromDate), ms(values.fromDate)) <
                         Math.min(ms(other.thruDate) ?? Infinity, ms(values.thruDate) ?? Infinity)
                 )
-                    throw new Error("This relationship already overlaps that interval")
+                    throw new Error(ec.l10n.localize("This relationship already overlaps that interval"))
         }
     }
     return call((p.rowKind === "identifier" && !p.productCategoryIdentId ? "create#" : "store#") + entity, values, true)
@@ -710,7 +710,7 @@ function expireRollup(p) {
 function deleteMaster(p) {
     const kind = p.kind,
         key = K[kind]
-    if (!key) throw new Error("Unknown catalog master type")
+    if (!key) throw new Error(ec.l10n.localize("Unknown catalog master type"))
     record(kind, p[key], "catalogEdit")
     if (kind === "category") graphLock()
     else featureLock()
@@ -791,7 +791,7 @@ function preview(p) {
     result.issues = Array.from(result.issues || []).map(issue =>
         record("feature", issue.productFeatureId, "read", true) && record("feature", issue.toProductFeatureId, "read", true)
             ? issue
-            : {message: "A required or conflicting feature is unavailable", rule: "Restricted interaction"}
+            : {message: ec.l10n.localize("A required or conflicting feature is unavailable"), rule: ec.l10n.localize("Restricted interaction")}
     )
     return result
 }

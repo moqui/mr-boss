@@ -31,7 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.insights.DeliveryServices.store#Digest" out-map="stored"
                     in-map="{definitionId:digestDefinitionId, title:title, dashboardIds:dashboardIds, period:period, commentary:commentary,
                         userGroupId:userGroupId, expectedVersion:expectedVersion}"/>
-            <script>ec.message.addMessage(stored.applied ? 'Digest saved' : stored.reason, stored.applied ? 'success' : 'danger')</script>
+            <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Digest saved') : stored.reason, stored.applied ? 'success' : 'danger')</script>
             <set field="definitionId" from="stored.applied ? stored.definitionId : digestDefinitionId"/>
         </actions>
         <default-response url="."><parameter name="definitionId"/></default-response>
@@ -39,7 +39,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="showOnHome" method="post">
         <actions>
             <service-call name="ironstone.insights.DeliveryServices.store#DefaultDigest" in-map="{definitionId:homeDefinitionId}" out-map="stored"/>
-            <script>ec.message.addMessage(stored.applied ? (stored.definitionId ? 'Home now previews this digest' : 'Home previews no digest')
+            <script>ec.message.addMessage(stored.applied ? (stored.definitionId ? ec.l10n.localize('Home now previews this digest') : ec.l10n.localize('Home previews no digest'))
                 : stored.reason, stored.applied ? 'success' : 'danger')</script>
         </actions>
         <default-response url="."/>

@@ -50,7 +50,7 @@ function readAsUser(name, parameters) {
 }
 function salesScope() {
     const userScope = salesAccess.scope()
-    if (!ec.user.userId || !userScope.capabilities.anyRead) denied("SALES_UNAVAILABLE", "Sales is not available")
+    if (!ec.user.userId || !userScope.capabilities.anyRead) denied("SALES_UNAVAILABLE", L("Sales is not available"))
     return userScope
 }
 const firstLine = value =>
@@ -137,7 +137,7 @@ function leadFromMessage(p) {
     salesAccess.requireCapability(userScope, "opportunityEdit")
     const organizationPartyId = text(p.organizationPartyId) || salesAccess.defaultOrganization(userScope)
     if (!organizationPartyId)
-        denied("ORGANIZATION_DENIED", "You sell for more than one organization: make the lead with New lead in Sales' Leads")
+        denied("ORGANIZATION_DENIED", L("You sell for more than one organization: make the lead with New lead in Sales' Leads"))
     const source = messageSource(p)
     const made = asUser("mantle.sales.OpportunityServices.store#LeadIntake", {
         organizationPartyId,
@@ -405,7 +405,7 @@ function quoteRequestFromMessage(p) {
     salesAccess.requireCapability(userScope, "quoteEdit")
     const organizationPartyId = text(p.organizationPartyId) || salesAccess.defaultOrganization(userScope)
     if (!organizationPartyId)
-        denied("ORGANIZATION_DENIED", "You sell for more than one organization: make the request with New request in Sales' RFQs")
+        denied("ORGANIZATION_DENIED", L("You sell for more than one organization: make the request with New request in Sales' RFQs"))
     if (blank(p.emailMessageId) && blank(p.communicationEventId) && blank(p.chatRoomId))
         denied("RECORD_UNAVAILABLE", "Which message?")
     const made = asUser("mantle.order.SalesQuoteServices.create#QuoteRequest", {

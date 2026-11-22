@@ -105,16 +105,16 @@ along with this software (see the LICENSE.md file). If not, see
             groupFacts = group ? [
                 {term: 'Employer', value: group.organizationName},
                 {term: 'Currency', value: group.currencyUomId},
-                {term: 'Frequency', value: group.frequencyText + ', from ' + group.firstPeriodFromDateText},
-                {term: 'Periods a year', value: String(group.periodsPerYear ?? '')},
+                {term: ec.l10n.localize('Frequency'), value: ec.resource.expand('${frequency}, from ${date}', '', {frequency: group.frequencyText, date: group.firstPeriodFromDateText})},
+                {term: ec.l10n.localize('Periods a year'), value: String(group.periodsPerYear ?? '')},
                 {term: 'Pay date', value: group.payDateText},
                 {term: 'Proration', value: group.prorationText},
-                {term: 'Hours from', value: group.timeBasisText},
-                {term: 'Workweek time zone', value: group.workweekTimeZone || 'Not set'},
+                {term: ec.l10n.localize('Hours from'), value: group.timeBasisText},
+                {term: ec.l10n.localize('Workweek time zone'), value: group.workweekTimeZone || 'Not set'},
                 {term: 'Localization', value: group.localizationName || 'None'},
-                {term: 'Localization payee', value: group.localizationPayeeName || 'Not set'},
-                {term: 'Calculated', value: group.externalProcessing ? 'By an external processor: its results are imported in Payroll exchange' : 'Here'},
-                {term: 'Live pay', value: group.liveEnabled ? 'Yes: finalizing a run makes its pay obligations' : 'No: its runs are previews'},
+                {term: ec.l10n.localize('Localization payee'), value: group.localizationPayeeName || 'Not set'},
+                {term: ec.l10n.localize('Calculated'), value: group.externalProcessing ? ec.l10n.localize('By an external processor: its results are imported in Payroll exchange') : ec.l10n.localize('Here')},
+                {term: ec.l10n.localize('Live pay'), value: group.liveEnabled ? ec.l10n.localize('Yes: finalizing a run makes its pay obligations') : ec.l10n.localize('No: its runs are previews')},
                 {term: 'Readiness', value: group.readiness.message}
             ] : []
         ]]></script>

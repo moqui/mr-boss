@@ -20,7 +20,7 @@ function run(op, parameters) {
                 componentRows: [],
                 costHistoryRows: [],
                 findings: [],
-                costMessage: access.read ? "" : "Standard-cost read authority is required.",
+                costMessage: access.read ? "" : ec.l10n.localize("Standard-cost read authority is required."),
                 costDraft: {quantity: 1, quantityUomId: "OTH_ea", priceUomId: ec.user.userAccount?.currencyUomId || null},
                 componentDraft: {quantity: 1, rateAmount: 0, quantityUomId: "OTH_ea", componentTypeEnumId: "PccMaterial"}
             }
@@ -29,7 +29,7 @@ function run(op, parameters) {
         if (p.productStandardCostId) {
             selected = call(S + "get#ProductStandardCost", p)
             if (p.productId && p.productId !== selected.standardCost.productId)
-                throw new Error("Estimate does not belong to this product")
+                throw new Error(ec.l10n.localize("Estimate does not belong to this product"))
         }
         const scope = policy.scope(Object.assign({}, p, selected?.standardCost || {}))
         out.organizationPartyId = scope.organizationPartyId

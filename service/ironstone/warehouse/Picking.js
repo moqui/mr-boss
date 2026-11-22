@@ -6,6 +6,7 @@
 // record#ShortPick, reverse#Pick, finish#Pick, move#Stock, create#OutgoingShipment; ShipmentWorkServices' wave and load
 // edits), which the screens call after AccessServices.check#Record. Order amounts are read only with financial read.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, rows, denied, dateText} = lib
 const cf = () => ec.entity.conditionFactory
@@ -260,7 +261,7 @@ function pickContext(p) {
     const out = {lines: [], putBackRows: [], currentLine: null, found: false, canPick: !!userScope.capabilities.pick}
     if (!p.workEffortId && !p.shipmentId) return out
     // the Picking area's groups only, also through Handheld/Pick, which is open to every Warehouse user (P11 review A2)
-    if (!pickingOpen(userScope)) denied("PERMISSION_DENIED", "Picking needs the pick, pick supervisor or move permission")
+    if (!pickingOpen(userScope)) denied("PERMISSION_DENIED", L("Picking needs the pick, pick supervisor or move permission"))
     let shipments
     let facilityId
     if (p.workEffortId) {
@@ -322,7 +323,7 @@ function pickContext(p) {
                 orderId: source.orderId || "",
                 locationSeqId: first?.locationSeqId || null,
                 locationText: heldRows.map(row => (row.locationSeqId || "no location") + " (" + quantityText(row.quantity) + ")")
-                    .join(", ") || "Not reserved",
+                    .join(", ") || L("Not reserved"),
                 assetId: first?.assetId || null,
                 lotId: first?.lotId || null,
                 bin: source.binLocationNumber != null ? number(source.binLocationNumber) : shipmentBin.bin,
@@ -335,7 +336,7 @@ function pickContext(p) {
                 putBack: number(source.putBackQuantity),
                 pickable: pickable.includes(shipment.statusId),
                 sequence: number(locations.get(first?.locationSeqId)?.sequenceNum),
-                statusText: toPick === 0 ? "Picked" : short >= toPick ? "Short" : short > 0 ? "Part short" : "To pick"
+                statusText: toPick === 0 ? L("Picked") : short >= toPick ? "Short" : short > 0 ? L("Part short") : L("To pick")
             }
             out.lines.push(line)
             if (line.putBack > 0) out.putBackRows.push(line)
@@ -360,7 +361,7 @@ const needLimit = 200
 function pickFaceNeeds(p) {
     const userScope = warehouse.required(warehouse.scope())
     // the Picking area's groups only, also through Handheld/PickFace (P11 review A2)
-    if (!pickingOpen(userScope)) denied("PERMISSION_DENIED", "Pick-face moves need the pick, pick supervisor or move permission")
+    if (!pickingOpen(userScope)) denied("PERMISSION_DENIED", L("Pick-face moves need the pick, pick supervisor or move permission"))
     const facility = facilityOf(userScope, p.facilityId)
     const out = {needRows: [], faceRows: [], sourceRows: [], faceError: null, facilityId: facility?.facilityId || null,
         canMove: !!userScope.capabilities.move}

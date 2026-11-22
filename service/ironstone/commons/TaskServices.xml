@@ -1238,7 +1238,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.commons.TaskServices.get#TaskAccess" in-map="{workEffortId:workEffortId, need:'view', app:app}" out-map="access"/>
             <if condition="ec.message.hasError()"><return/></if>
-            <if condition="!access.isOwner &amp;&amp; !access.canManage"><return error="true" message="Only the task's owner may delete it; cancel it instead"/></if>
+            <if condition="!access.isOwner &amp;&amp; !access.canManage"><return error="true" message="${ec.l10n.localize('Only the task\'s owner may delete it; cancel it instead')}"/></if>
             <script><![CDATA[
                 const refuse = (why) => ec.message.addError(ec.resource.expand('Task ${workEffortId} has ${why}, so it is not deleted: cancel it instead', '',
                         {workEffortId: workEffortId, why: ec.l10n.localize(why)}))

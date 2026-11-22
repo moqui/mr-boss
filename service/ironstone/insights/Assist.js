@@ -62,7 +62,7 @@ const text = value => String(value ?? "").trim()
 
 function reader() {
     const userScope = insights.required()
-    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", "Insights read is required")
+    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", ec.l10n.localize("Insights read is required"))
     return userScope
 }
 // Whether the surface reads costs for this viewer: Assist as the user with PRODUCT_COST_VIEW, an MCP client never.
@@ -72,13 +72,13 @@ const readsCosts = surface => surface === "assist" && lib.access.has("PRODUCT_CO
 function classed(datasetId, surface) {
     const registered = datasetId ? one(CLASS, {datasetId}) : null
     if (!registered || registered.disabled === "Y" || ![OPERATIONS, COST].includes(registered.classEnumId))
-        denied("DATASET_UNAVAILABLE", "Choose an admitted dataset you may read")
+        denied("DATASET_UNAVAILABLE", ec.l10n.localize("Choose an admitted dataset you may read"))
     if (registered.classEnumId === COST && !readsCosts(surface))
         denied(
             "DATASET_RESTRICTED",
             surface === "mcp"
-                ? "This dataset holds costs and margins, which are not read over MCP"
-                : "This dataset holds costs and margins; reading it needs PRODUCT_COST_VIEW"
+                ? ec.l10n.localize("This dataset holds costs and margins, which are not read over MCP")
+                : ec.l10n.localize("This dataset holds costs and margins; reading it needs PRODUCT_COST_VIEW")
         )
     return registered
 }
@@ -200,7 +200,7 @@ function savedPanel(definitionId, panelId) {
         body = entry && typeof entry.panelRef === "string" ? readDefinition(entry.panelRef)?.body : entry
     }
     if (!body || typeof body !== "object" || Array.isArray(body))
-        denied("PANEL_UNAVAILABLE", "This panel is not available to you")
+        denied("PANEL_UNAVAILABLE", ec.l10n.localize("This panel is not available to you"))
     return {body, dashboard}
 }
 // What a saved panel reads, checked before it is run (the P10 review, R1). A panel's result is the frames of every one of its
@@ -214,7 +214,7 @@ function checkPanel(saved, surface) {
     const datasetIds = new Set()
     const walk = (query, depth) => {
         if (!query || typeof query !== "object" || Array.isArray(query) || depth > 8)
-            denied("PANEL_UNAVAILABLE", "This panel's query cannot be read here")
+            denied("PANEL_UNAVAILABLE", ec.l10n.localize("This panel's query cannot be read here"))
         const composed = Array.isArray(query.queries)
         if (query.datasetId != null || !composed) {
             if (typeof query.datasetId !== "string" || !query.datasetId) classed(null, surface)
@@ -252,7 +252,7 @@ function panel(p, surface) {
             thru: text(p.thru) || null,
             organizationPartyId: text(p.organizationPartyId) || null
         })
-        if (!answer.available) return refused("PANEL_UNAVAILABLE", answer.reason || "This panel is not available to you")
+        if (!answer.available) return refused("PANEL_UNAVAILABLE", answer.reason || ec.l10n.localize("This panel is not available to you"))
         classed(answer.datasetId, surface)
     } catch (error) {
         const code = reasonCode(error)
@@ -311,15 +311,15 @@ function panelChoices(answerText) {
         .split(/\r?\n/)
         .map(line => line.trim().replace(/^`+|`+$/g, ""))
         .filter(line => /^Panel:\s*\{/.test(line))
-    if (!lines.length) denied("PANEL_REQUIRED", "This answer names no query to save. Ask Assist for a number first.")
+    if (!lines.length) denied("PANEL_REQUIRED", ec.l10n.localize("This answer names no query to save. Ask Assist for a number first."))
     let parsed
     try {
         parsed = JSON.parse(lines[lines.length - 1].replace(/^Panel:\s*/, ""))
     } catch (error) {
-        denied("PANEL_REQUIRED", "The answer's Panel line could not be read")
+        denied("PANEL_REQUIRED", ec.l10n.localize("The answer's Panel line could not be read"))
     }
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
-        denied("PANEL_REQUIRED", "The answer's Panel line could not be read")
+        denied("PANEL_REQUIRED", ec.l10n.localize("The answer's Panel line could not be read"))
     const choices = {}
     for (const name of choiceNames) {
         if (!Object.hasOwn(parsed, name) || parsed[name] == null || typeof parsed[name] === "object") continue
@@ -367,7 +367,7 @@ function addPanel(p) {
         return {
             applied: false,
             reasonCode: code || "PANEL_FAILED",
-            reason: code ? String(error.message).replace(/^.*?[A-Z][A-Z0-9_]+: /, "") : "The panel could not be saved"
+            reason: code ? String(error.message).replace(/^.*?[A-Z][A-Z0-9_]+: /, "") : ec.l10n.localize("The panel could not be saved")
         }
     }
 }

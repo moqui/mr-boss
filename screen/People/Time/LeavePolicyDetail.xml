@@ -65,11 +65,11 @@ along with this software (see the LICENSE.md file). If not, see
                         leavePolicyAssignmentId:(leavePolicyAssignmentId || null), expectedRevision:(expectedRevision || null), end:(end == 'true')}"/>
             <script><![CDATA[
                 if (!ec.message.hasError() && assigned) {
-                    if (assigned.ended) ec.message.addMessage('Assignment ended', 'success')
+                    if (assigned.ended) ec.message.addMessage(ec.l10n.localize('Assignment ended'), 'success')
                     else {
-                        ec.message.addMessage('Assigned to ' + assigned.assignedCount + ' employee' + (assigned.assignedCount == 1 ? '' : 's'), 'success')
+                        ec.message.addMessage(ec.resource.expand("Assigned to ${count} employee${count == 1 ? '' : 's'}", '', {count: assigned.assignedCount}), 'success')
                         const refused = Array.from(assigned.rows || []).filter(row => row.outcome === 'refused')
-                        if (refused.length) ec.message.addMessage('Not assigned: ' + refused.map(row => row.personName + ' (' + row.message + ')').join('; '), 'warning')
+                        if (refused.length) ec.message.addMessage(ec.resource.expand('Not assigned: ${names}', '', {names: refused.map(row => row.personName + ' (' + row.message + ')').join('; ')}), 'warning')
                     }
                 }
             ]]></script>
@@ -96,8 +96,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.humanres.LeaveServices.run#Accrual" out-map="accrued" in-map="{leavePolicyId:leavePolicyId}"/>
             <script><![CDATA[
                 if (!ec.message.hasError() && accrued) {
-                    ec.message.addMessage(accrued.posted ? accrued.posted + ' entr' + (accrued.posted == 1 ? 'y' : 'ies') + ' posted' : 'Nothing was due', 'success')
-                    if (accrued.failed) ec.message.addMessage(accrued.failed + ' employee' + (accrued.failed == 1 ? '' : 's') + ' could not be accrued; the error log names them', 'warning')
+                    ec.message.addMessage(accrued.posted ? ec.resource.expand(accrued.posted == 1 ? '${count} entry posted' : '${count} entries posted', '', {count: accrued.posted}) : ec.l10n.localize('Nothing was due'), 'success')
+                    if (accrued.failed) ec.message.addMessage(ec.resource.expand("${count} employee${count == 1 ? '' : 's'} could not be accrued; the error log names them", '', {count: accrued.failed}), 'warning')
                 }
             ]]></script>
         </actions>
@@ -119,14 +119,14 @@ along with this software (see the LICENSE.md file). If not, see
             stateColors = {current: 'positive', future: 'primary', ended: 'grey-8', cancelled: 'grey-8'}
             unitWord = policy ? String(policy.unitText || '').toLowerCase() : ''
             termRows = policy ? [
-                {term: 'Leave type', value: policy.leaveTypeText},
-                {term: 'Unit', value: policy.unitText},
-                {term: 'Paid leave', value: policy.isPaid ? 'Yes' : 'No'},
-                {term: 'Needs an entitlement', value: policy.allocationRequired ? 'Yes: a request without one is blocked' : 'No'},
-                {term: 'Below zero', value: policy.negativeLimit ? 'Up to ' + policy.negativeLimit + ' ' + unitWord : 'Not allowed'},
-                {term: 'Evidence', value: policy.evidenceRequired ? 'Required with a request' : 'Not required'},
-                {term: 'Accrues', value: policy.frequencyText},
-                {term: 'Description', value: policy.description || ''}
+                {term: ec.l10n.localize('Leave type'), value: policy.leaveTypeText},
+                {term: ec.l10n.localize('Unit'), value: policy.unitText},
+                {term: ec.l10n.localize('Paid leave'), value: policy.isPaid ? ec.l10n.localize('Yes') : ec.l10n.localize('No')},
+                {term: ec.l10n.localize('Needs an entitlement'), value: policy.allocationRequired ? ec.l10n.localize('Yes: a request without one is blocked') : ec.l10n.localize('No')},
+                {term: ec.l10n.localize('Below zero'), value: policy.negativeLimit ? ec.resource.expand('Up to ${limit} ${unit}', '', {limit: policy.negativeLimit, unit: unitWord}) : ec.l10n.localize('Not allowed')},
+                {term: ec.l10n.localize('Evidence'), value: policy.evidenceRequired ? ec.l10n.localize('Required with a request') : ec.l10n.localize('Not required')},
+                {term: ec.l10n.localize('Accrues'), value: policy.frequencyText},
+                {term: ec.l10n.localize('Description'), value: policy.description || ''}
             ] : []
             editValues = policy ? {leavePolicyId: policy.leavePolicyId, expectedRevision: policy.revision, terms: 'true', policyName: policy.policyName,
                 description: policy.description, isPaid: policy.isPaid ? 'Y' : 'N', allocationRequired: policy.allocationRequired ? 'Y' : 'N',

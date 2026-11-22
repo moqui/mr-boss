@@ -66,7 +66,7 @@ along with this software (see the LICENSE.md file). If not, see
             goalsPageMaxIndex = found?.goalsPageMaxIndex || 0
             goalsPageRangeLow = found?.goalsPageRangeLow || 0
             goalsPageRangeHigh = found?.goalsPageRangeHigh || 0
-            showOptions = [{key: 'mine', text: 'Mine'}].concat(caps.team ? [{key: 'team', text: 'My team'}] : [])
+            showOptions = [{key: 'mine', text: 'Mine'}].concat(caps.team ? [{key: 'team', text: ec.l10n.localize('My team')}] : [])
                 .concat(caps.developView ? [{key: 'all', text: 'All'}] : [])
             outcomeOptions = Array.from(ec.entity.find('moqui.basic.Enumeration').condition('enumTypeId', 'GoalOutcome')
                 .orderBy('sequenceNum').disableAuthz().list()).map(row => ({key: row.enumId, text: row.description || row.enumId}))
@@ -76,11 +76,11 @@ along with this software (see the LICENSE.md file). If not, see
             choosesPerson = !partyId && !performanceReviewId && !!(caps.team || caps.developEdit)
             newGoal = {goalPartyId: partyId || null, goalReviewId: performanceReviewId || null}
             findValues = {show: showing, state: stateShowing, partyId: partyId || null, performanceReviewId: performanceReviewId || null}
-            scopeText = performanceReviewId ? 'The goals agreed in this review.' : partyId ? 'The goals of one person.' : ''
+            scopeText = performanceReviewId ? ec.l10n.localize('The goals agreed in this review.') : partyId ? ec.l10n.localize('The goals of one person.') : ''
             reviewUrl = performanceReviewId ? (sharedLinks?.['Performance/ReviewDetail'] || '/qapps/People/Performance/ReviewDetail') : null
-            emptyText = goalsError ? 'These goals are not available to you.'
-                : showing == 'team' ? 'Your team has no goal ' + (stateShowing == 'closed' ? 'closed yet.' : 'open.')
-                : 'No goal ' + (stateShowing == 'closed' ? 'closed yet.' : 'open. Add goal agrees one: what is measured, the target and when it is due.')
+            emptyText = goalsError ? ec.l10n.localize('These goals are not available to you.')
+                : showing == 'team' ? ec.l10n.localize(stateShowing == 'closed' ? 'Your team has no goal closed yet.' : 'Your team has no goal open.')
+                : ec.l10n.localize(stateShowing == 'closed' ? 'No goal closed yet.' : 'No goal open. Add goal agrees one: what is measured, the target and when it is due.')
         ]]></script>
     </actions>
     <widgets>

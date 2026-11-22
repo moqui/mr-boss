@@ -35,8 +35,8 @@ along with this software (see the LICENSE.md file). If not, see
                         quantity:quantity || null, routingOperationWorkEffortId:routingOperationWorkEffortId || null,
                         sourceFacilityId:sourceFacilityId || null, instructionText:instructionText || null,
                         remove:remove == 'true', clearEmpty:clearEmpty == 'true'}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage(remove == 'true' ? 'Material line removed'
-                    : productionRunLineId ? 'Material line saved' : 'Material line added', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(remove == 'true' ? ec.l10n.localize('Material line removed')
+                    : productionRunLineId ? ec.l10n.localize('Material line saved') : ec.l10n.localize('Material line added'), 'success')</script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>
@@ -51,8 +51,8 @@ along with this software (see the LICENSE.md file). If not, see
                         substituteProductId:substituteProductId || null, quantity:quantity || null,
                         conversionFactor:conversionFactor || null, reason:reason || null,
                         productionChangeId:productionChangeId || null, refusalReason:refusalReason || null}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage({REQUESTED: 'Substitute sent to the supervisors for approval',
-                    APPLIED: 'Substitute applied', REFUSED: 'Substitute refused'}[substituted.result?.resultCode] || 'Saved', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage({REQUESTED: ec.l10n.localize('Substitute sent to the supervisors for approval'),
+                    APPLIED: ec.l10n.localize('Substitute applied'), REFUSED: ec.l10n.localize('Substitute refused')}[substituted.result?.resultCode] || ec.l10n.localize('Saved'), 'success')</script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>

@@ -115,7 +115,7 @@ function scopeFor(parameters) {
                     copies: out.request.items[0]?.copies || 1
                 })
             }
-        } else throw new Error("Unknown catalog workspace")
+        } else throw new Error(ec.l10n.localize("Unknown catalog workspace"))
         return out
     }
     return {context}

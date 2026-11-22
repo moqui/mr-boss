@@ -8,21 +8,21 @@ const ledger = name => "mantle.ledger.LedgerReportServices." + name
 // The reports of the catalog, in the design's order: what each answers, its area, the capabilities that may run it, and
 // whether its quick options take a fiscal period.
 const catalogRows = [
-    ["TrialBalance", "Trial balance", "Ledger", "Each account's beginning balance, debits, credits and ending balance."],
-    ["GeneralLedger", "General ledger", "Ledger", "The posted lines of each account, with a running balance."],
-    ["PartnerLedger", "Partner ledger", "Ledger", "Each customer's or supplier's movements and balance on its account."],
-    ["BalanceSheet", "Balance sheet", "Statements", "Assets, liabilities and equity at the end of a period."],
-    ["IncomeStatement", "Income statement", "Statements", "Income and expense of a period, to net income."],
-    ["CashFlow", "Cash flow", "Statements", "Cash from operating, investing and financing activities."],
-    ["RetainedEarnings", "Retained earnings", "Statements", "Retained earnings at the start, net income, distributions."],
-    ["FinancialRatios", "Financial ratios", "Statements", "Liquidity, activity, leverage and profitability ratios."],
-    ["AccountBalance", "Account balances", "Statements", "Balances and income of each month of a fiscal year."],
-    ["PostedSummary", "Posted amounts", "Ledger", "Each account's posted debits, credits and balance between two days."],
-    ["Aging", "Aging", "Receivables and payables", "Receivables or payables open on a day, by days past due."],
-    ["InvoiceReconciliation", "Invoice reconciliation", "Close", "Invoices, payments and postings that disagree with the ledger."],
-    ["BudgetVariance", "Budget variance", "Budgets", "Each account's budget, commitments, actual and what remains."],
-    ["SalesAnalysis", "Sales analysis", "Sales", "Ordered, shipped, invoiced and returned, by product, customer or class."],
-    ["StockTransactions", "Stock transactions", "Inventory", "The receipts, issues and count variances of a period."]
+    ["TrialBalance", "Trial balance", "Ledger", ec.l10n.localize("Each account's beginning balance, debits, credits and ending balance.")],
+    ["GeneralLedger", "General ledger", "Ledger", ec.l10n.localize("The posted lines of each account, with a running balance.")],
+    ["PartnerLedger", "Partner ledger", "Ledger", ec.l10n.localize("Each customer's or supplier's movements and balance on its account.")],
+    ["BalanceSheet", "Balance sheet", "Statements", ec.l10n.localize("Assets, liabilities and equity at the end of a period.")],
+    ["IncomeStatement", "Income statement", "Statements", ec.l10n.localize("Income and expense of a period, to net income.")],
+    ["CashFlow", "Cash flow", "Statements", ec.l10n.localize("Cash from operating, investing and financing activities.")],
+    ["RetainedEarnings", "Retained earnings", "Statements", ec.l10n.localize("Retained earnings at the start, net income, distributions.")],
+    ["FinancialRatios", "Financial ratios", "Statements", ec.l10n.localize("Liquidity, activity, leverage and profitability ratios.")],
+    ["AccountBalance", "Account balances", "Statements", ec.l10n.localize("Balances and income of each month of a fiscal year.")],
+    ["PostedSummary", "Posted amounts", "Ledger", ec.l10n.localize("Each account's posted debits, credits and balance between two days.")],
+    ["Aging", "Aging", ec.l10n.localize("Receivables and payables"), ec.l10n.localize("Receivables or payables open on a day, by days past due.")],
+    ["InvoiceReconciliation", "Invoice reconciliation", "Close", ec.l10n.localize("Invoices, payments and postings that disagree with the ledger.")],
+    ["BudgetVariance", "Budget variance", "Budgets", ec.l10n.localize("Each account's budget, commitments, actual and what remains.")],
+    ["SalesAnalysis", "Sales analysis", "Sales", ec.l10n.localize("Ordered, shipped, invoiced and returned, by product, customer or class.")],
+    ["StockTransactions", "Stock transactions", "Inventory", ec.l10n.localize("The receipts, issues and count variances of a period.")]
 ]
 const ledgerReaders = ["reportRead", "admin"]
 const runners = {Aging: ["reportRead", "admin", "arRead", "apRead"]}
@@ -61,7 +61,7 @@ function catalog(parameters) {
 // The report a quick options form opens, refused unless it is in the user's catalog.
 function openReport(parameters) {
     const found = catalog(parameters).reports.find(row => row.reportId === parameters.reportId)
-    if (!found) throw new Error("REPORT_UNAVAILABLE: Choose a report from the list")
+    if (!found) throw new Error(ec.l10n.localize("REPORT_UNAVAILABLE: Choose a report from the list"))
     return {reportId: found.reportId}
 }
 
@@ -133,19 +133,19 @@ const statements = {
         const withIncome = Object.fromEntries(
             periods.filter(Boolean).map(id => [id, toDecimal(liabilities[id] ?? 0).add(toDecimal(netIncome[id] ?? 0))])
         )
-        out.push(total("Total assets", report.netAssetTotalMap?.totalBalance, periods))
-        out.push(total("Net income not yet closed", netIncome, periods))
-        out.push(total("Total liabilities, equity and net income", withIncome, periods))
+        out.push(total(ec.l10n.localize("Total assets"), report.netAssetTotalMap?.totalBalance, periods))
+        out.push(total(ec.l10n.localize("Net income not yet closed"), netIncome, periods))
+        out.push(total(ec.l10n.localize("Total liabilities, equity and net income"), withIncome, periods))
         return out
     },
     incomeStatement(report, periods) {
         const out = []
         for (const classId of ["REVENUE", "COST_OF_SALES"]) classRows(out, report.classInfoById[classId], "PostedNoClosing", periods)
-        out.push(total("Gross profit", report.grossProfitOnSalesMap, periods))
+        out.push(total(ec.l10n.localize("Gross profit"), report.grossProfitOnSalesMap, periods))
         classRows(out, report.classInfoById.EXPENSE, "PostedNoClosing", periods)
-        out.push(total("Net operating income", report.netOperatingIncomeMap, periods))
+        out.push(total(ec.l10n.localize("Net operating income"), report.netOperatingIncomeMap, periods))
         for (const classId of ["INCOME", "NON_OP_EXPENSE"]) classRows(out, report.classInfoById[classId], "PostedNoClosing", periods)
-        out.push(total("Net non-operating income", report.netNonOperatingIncomeMap, periods))
+        out.push(total(ec.l10n.localize("Net non-operating income"), report.netNonOperatingIncomeMap, periods))
         out.push(total("Net income", report.netIncomeMap, periods))
         return out
     },
@@ -161,13 +161,13 @@ const statements = {
         const operating = Object.fromEntries(
             ids.map(id => [id, toDecimal(report.netOperatingActivityMap?.[id] ?? 0).subtract(cashPosted(id))])
         )
-        out.push(total("Net cash from operating activities", operating, periods))
+        out.push(total(ec.l10n.localize("Net cash from operating activities"), operating, periods))
         classRows(out, report.classInfoById.LONG_TERM_ASSET, "Posted", periods, 1)
-        out.push(total("Net cash from investing activities", report.netInvestingActivityMap, periods))
+        out.push(total(ec.l10n.localize("Net cash from investing activities"), report.netInvestingActivityMap, periods))
         for (const classId of ["DISTRIBUTION", "EQUITY", "LONG_TERM_LIABILITY"])
             classRows(out, report.classInfoById[classId], "Posted", periods, 1)
-        out.push(total("Net cash from financing activities", report.netFinancingActivityMap, periods))
-        out.push(total("Net change in cash", Object.fromEntries(ids.map(id => [id, cashPosted(id).negate()])), periods))
+        out.push(total(ec.l10n.localize("Net cash from financing activities"), report.netFinancingActivityMap, periods))
+        out.push(total(ec.l10n.localize("Net change in cash"), Object.fromEntries(ids.map(id => [id, cashPosted(id).negate()])), periods))
         return out
     },
     retainedEarnings(report, periods) {
@@ -188,27 +188,27 @@ const statements = {
                 ])
         )
         return [
-            total("Retained earnings at the start", start, periods),
+            total(ec.l10n.localize("Retained earnings at the start"), start, periods),
             total("Net income", report.netIncomeMap, periods),
             total("Distributions", distributions.totalPostedByTimePeriod, periods),
-            total("Retained earnings at the end", end, periods)
+            total(ec.l10n.localize("Retained earnings at the end"), end, periods)
         ]
     },
     financialRatios(report, periods) {
         // ratio, formula, numerator map, denominator map, result map
         const ratios = [
-            ["Current ratio", "Current assets / current liabilities", "currentAssetsMap", "currentLiabilitiesMap", "currentLiquidityMap"],
-            ["Debt ratio", "Total liabilities / total assets", "totalLiabilitiesMap", "totalAssetsMap", "debtRatioMap"],
-            ["Debt to equity", "Long-term debt / equity", "longTermDebtMap", "equityMap", "debtToEquityMap"],
-            ["Equity multiplier", "Total assets / equity", "totalAssetsMap", "equityMap", "equityMultiplierMap"],
-            ["Inventory turnover", "Cost of goods sold / inventory", "cogsMap", "inventoryMap", "inventoryTurnoverMap"],
-            ["Total asset turnover", "Sales / total assets", "salesMap", "totalAssetsMap", "totalAssetsTurnoverMap"],
-            ["Fixed asset turnover", "Sales / net fixed assets", "salesMap", "netFixedAssetsMap", "fixedAssetTurnoverMap"],
-            ["Gross profit margin", "Gross profit / sales", "grossProfitMap", "salesMap", "grossProfitMarginMap"],
-            ["Net profit margin", "Net income / sales", "netIncomeMap", "salesMap", "netProfitMarginMap"],
-            ["Return on assets", "Net income / total assets", "netIncomeMap", "totalAssetsMap", "returnOnAssetsMap"],
-            ["Return on equity", "Net income / equity", "netIncomeMap", "equityMap", "returnOnEquityMap"],
-            ["Times interest earned", "Earnings before interest and tax / interest expense", "ebitMap", "interestExpenseMap",
+            [ec.l10n.localize("Current ratio"), ec.l10n.localize("Current assets / current liabilities"), "currentAssetsMap", "currentLiabilitiesMap", "currentLiquidityMap"],
+            [ec.l10n.localize("Debt ratio"), ec.l10n.localize("Total liabilities / total assets"), "totalLiabilitiesMap", "totalAssetsMap", "debtRatioMap"],
+            [ec.l10n.localize("Debt to equity"), ec.l10n.localize("Long-term debt / equity"), "longTermDebtMap", "equityMap", "debtToEquityMap"],
+            [ec.l10n.localize("Equity multiplier"), ec.l10n.localize("Total assets / equity"), "totalAssetsMap", "equityMap", "equityMultiplierMap"],
+            [ec.l10n.localize("Inventory turnover"), ec.l10n.localize("Cost of goods sold / inventory"), "cogsMap", "inventoryMap", "inventoryTurnoverMap"],
+            [ec.l10n.localize("Total asset turnover"), ec.l10n.localize("Sales / total assets"), "salesMap", "totalAssetsMap", "totalAssetsTurnoverMap"],
+            [ec.l10n.localize("Fixed asset turnover"), ec.l10n.localize("Sales / net fixed assets"), "salesMap", "netFixedAssetsMap", "fixedAssetTurnoverMap"],
+            [ec.l10n.localize("Gross profit margin"), ec.l10n.localize("Gross profit / sales"), "grossProfitMap", "salesMap", "grossProfitMarginMap"],
+            [ec.l10n.localize("Net profit margin"), ec.l10n.localize("Net income / sales"), "netIncomeMap", "salesMap", "netProfitMarginMap"],
+            [ec.l10n.localize("Return on assets"), ec.l10n.localize("Net income / total assets"), "netIncomeMap", "totalAssetsMap", "returnOnAssetsMap"],
+            [ec.l10n.localize("Return on equity"), ec.l10n.localize("Net income / equity"), "netIncomeMap", "equityMap", "returnOnEquityMap"],
+            [ec.l10n.localize("Times interest earned"), ec.l10n.localize("Earnings before interest and tax / interest expense"), "ebitMap", "interestExpenseMap",
                 "timesInterestEarnedMap"]
         ]
         const value = (map, id) => (id && report[map]?.[id] != null ? toDecimal(report[map][id]) : toDecimal(0))
@@ -257,7 +257,7 @@ function statement(parameters) {
     const shape = statements[parameters.statement]
     if (!shape) throw new Error("Unknown statement " + parameters.statement)
     const timePeriodId = parameters.timePeriodId || currentPeriod(organizationPartyId)
-    if (!timePeriodId) throw new Error("PERIOD_REQUIRED: Choose a fiscal period")
+    if (!timePeriodId) throw new Error(ec.l10n.localize("PERIOD_REQUIRED: Choose a fiscal period"))
     const periods = [timePeriodId, parameters.compareTimePeriodId || null]
     const report = policy.call(ledger(services[parameters.statement]), {
         organizationPartyId,
@@ -280,13 +280,13 @@ function statement(parameters) {
 // assets, liabilities and equity at its end and its revenue and expenses (get#PeriodSeriesSummary).
 function accountBalance(parameters, organizationPartyId) {
     const chosen = parameters.timePeriodId || currentPeriod(organizationPartyId)
-    if (!chosen) throw new Error("PERIOD_REQUIRED: Choose a fiscal period")
+    if (!chosen) throw new Error(ec.l10n.localize("PERIOD_REQUIRED: Choose a fiscal period"))
     let year = policy.one("mantle.party.time.TimePeriod", {timePeriodId: chosen})
     for (let depth = 0; year && year.timePeriodTypeId !== "FiscalYear" && year.parentPeriodId && depth < 5; depth++)
         year = policy.one("mantle.party.time.TimePeriod", {timePeriodId: year.parentPeriodId})
     // the organization's own year or that of an organization it rolls up to, whose periods it books in
     if (!year || !policy.organizationChain(organizationPartyId).includes(year.partyId))
-        throw new Error("PERIOD_UNAVAILABLE: Choose a fiscal period of this organization")
+        throw new Error(ec.l10n.localize("PERIOD_UNAVAILABLE: Choose a fiscal period of this organization"))
     let months = policy
         .rows("mantle.party.time.TimePeriod", {partyId: year.partyId, timePeriodTypeId: "FiscalMonth"})
         .filter(row => ms(row.fromDate) >= ms(year.fromDate) && ms(row.thruDate) <= ms(year.thruDate))

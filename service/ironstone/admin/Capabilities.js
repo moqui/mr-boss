@@ -29,7 +29,7 @@ function accessReview(p) {
     const groupIds = listOf(p.groups)
     if (groupIds.length > maxReviewGroups)
         return {
-            failure: "Review at most " + maxReviewGroups + " groups at a time",
+            failure: ec.resource.expand("Review at most ${count} groups at a time", "", {count: maxReviewGroups}),
             reviewRows: [],
             groupRows: [],
             asOfText: "",
@@ -55,7 +55,7 @@ function accessReview(p) {
 const operations = {accessReview}
 ;({
     execute: (op, parameters) => {
-        if (!operations[op]) throw new Error("Unknown capability operation " + op)
+        if (!operations[op]) throw new Error(ec.resource.expand("Unknown capability operation ${name}", "", {name: op}))
         return operations[op](parameters)
     }
 })

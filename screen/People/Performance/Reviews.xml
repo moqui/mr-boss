@@ -44,10 +44,10 @@ along with this software (see the LICENSE.md file). If not, see
             stateColors = {PrvInProgress: 'primary', PrvApproval: 'warning', PrvFinalized: 'primary', PrvReleased: 'positive',
                 PrvAcknowledged: 'positive', PrvExcluded: 'grey-8'}
             findValues = {show: showing, term: term || null, reviewCycleId: reviewCycleId || null}
-            emptyText = showing == 'todo' ? 'Nothing waits for you: no assessment, feedback, decision or release.'
-                : showing == 'mine' ? 'You have no review yet. One starts when your employer starts a review cycle.'
-                : showing == 'team' ? 'You review no one yet.'
-                : 'No review matches.'
+            emptyText = showing == 'todo' ? ec.l10n.localize('Nothing waits for you: no assessment, feedback, decision or release.')
+                : showing == 'mine' ? ec.l10n.localize('You have no review yet. One starts when your employer starts a review cycle.')
+                : showing == 'team' ? ec.l10n.localize('You review no one yet.')
+                : ec.l10n.localize('No review matches.')
         ]]></script>
     </actions>
     <widgets>

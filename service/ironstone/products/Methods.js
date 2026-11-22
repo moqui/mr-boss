@@ -17,11 +17,11 @@ function run(op, parameters) {
             detail = null
         if (p.productBomId) {
             detail = call(S + "get#BomDetail", {productBomId: p.productBomId, asOfDate: p.asOfDate})
-            if (productId && productId !== detail.productBom.productId) throw new Error("BOM does not belong to this product")
+            if (productId && productId !== detail.productBom.productId) throw new Error(ec.l10n.localize("BOM does not belong to this product"))
             productId = detail.productBom.productId
         }
         const product = local.readableProduct(productId)
-        if (!product) throw new Error("Product is not available")
+        if (!product) throw new Error(ec.l10n.localize("Product is not available"))
         const access = policy.capabilities(),
             found = {product, productId, access, detail, bomRows: [], kit: product.productTypeEnumId === "PtPickAssembly"}
         if (!access.read) return found
@@ -45,7 +45,7 @@ function run(op, parameters) {
     }
     function routingMethod(p) {
         const routing = lib.one("mantle.work.effort.WorkEffort", {workEffortId: p.workEffortId})
-        if (!routing || routing.purposeEnumId !== "WepRouting") throw new Error("Routing is not available")
+        if (!routing || routing.purposeEnumId !== "WepRouting") throw new Error(ec.l10n.localize("Routing is not available"))
         const access = policy.capabilities(),
             found = {
                 product: null,
@@ -86,9 +86,9 @@ function run(op, parameters) {
                     sequenceNum: 10
                 },
                 methodMessage: !access.read
-                    ? "Manufacturing method access is required."
+                    ? ec.l10n.localize("Manufacturing method access is required.")
                     : found.kit
-                      ? "Kits use dated Kit components. Their usage is shown read only."
+                      ? ec.l10n.localize("Kits use dated Kit components. Their usage is shown read only.")
                       : ""
             }
         if (!access.read) return out
@@ -225,8 +225,8 @@ function run(op, parameters) {
                       color: "warning"
                   }
                 : out.releaseHistory.length
-                  ? {text: "Released", color: "positive"}
-                  : {text: "Not released", color: "grey"}
+                  ? {text: ec.l10n.localize("Released"), color: "positive"}
+                  : {text: ec.l10n.localize("Not released"), color: "grey"}
         return out
     }
     function storeBom(p) {
@@ -243,14 +243,14 @@ function run(op, parameters) {
     }
     function storeItem(p) {
         const found = requireAccess(method(p), "edit")
-        if (!found.productBomId) throw new Error("Create or select a BOM first")
+        if (!found.productBomId) throw new Error(ec.l10n.localize("Create or select a BOM first"))
         if (
             p.bomItemId &&
             !rows("mantle.product.bom.ProductBomItem", {productBomId: found.productBomId}).some(
                 row => row.bomItemId === p.bomItemId
             )
         )
-            throw new Error("BOM item is not in this product method")
+            throw new Error(ec.l10n.localize("BOM item is not in this product method"))
         const out = call(
             S + "store#BomItem",
             Object.assign({}, p, {productBomId: found.productBomId, productId: p.componentProductId})
@@ -281,7 +281,7 @@ function run(op, parameters) {
         if (!c.productBomId && name !== S + "get#BomWhereUsed")
             return Object.assign(c, {
                 findings: [],
-                reportMessage: "Create and release a method before running this report.",
+                reportMessage: ec.l10n.localize("Create and release a method before running this report."),
                 explosionRows: [],
                 comparisonRows: [],
                 whereUsedRows: []
@@ -293,7 +293,7 @@ function run(op, parameters) {
                 const left = c.releaseHistory.find(r => r.methodReleaseDecisionId === c.leftReleaseId),
                     right = c.releaseHistory.find(r => r.methodReleaseDecisionId === c.rightReleaseId)
                 if ((p.leftReleaseId && !left) || (p.rightReleaseId && !right))
-                    throw new Error("Choose approvals from this method")
+                    throw new Error(ec.l10n.localize("Choose approvals from this method"))
                 args.leftDate = p.manualLeftDate || (p.leftReleaseId ? left?.fromDate : p.leftDate || left?.fromDate)
                 args.rightDate = p.manualRightDate || (p.rightReleaseId ? right?.fromDate : p.rightDate || right?.fromDate)
             }
@@ -315,7 +315,7 @@ function run(op, parameters) {
             return Object.assign(c, {
                 complete: false,
                 findings: [{recordId: c.productBomId, message: String(e.message || e)}],
-                reportMessage: "This report is incomplete. Review its findings.",
+                reportMessage: ec.l10n.localize("This report is incomplete. Review its findings."),
                 explosionRows: [],
                 comparisonRows: [],
                 whereUsedRows: []
@@ -331,7 +331,7 @@ function run(op, parameters) {
                 ? call(R + "get#RoutingDetail", {workEffortId: c.workEffortId, asOfDate: p.asOfDate})
                 : {routing: {}, operationRows: [], releasedOperationRows: [], releaseHistory: [], expectedRevision: null}
         if (out.routing.ownerPartyId && out.routing.ownerPartyId !== c.organizationPartyId)
-            throw new Error("Routing belongs to another method organization")
+            throw new Error(ec.l10n.localize("Routing belongs to another method organization"))
         const edited =
             [...out.operationRows, ...out.releasedOperationRows].find(o => o.workEffortId === p.selectedOperationId) || {}
         const result = Object.assign(c, out, {
@@ -369,14 +369,14 @@ function run(op, parameters) {
             released = out.releasedOperationRows.length
         result.routingFactsText = c.workEffortId
             ? "Routing " + c.workEffortId + " · " + released + " released " + (released === 1 ? "operation" : "operations")
-            : "This method has no routing yet."
+            : ec.l10n.localize("This method has no routing yet.")
         result.routingState = !c.workEffortId
             ? {text: "No routing", color: "grey"}
             : drafts
               ? {text: drafts + " draft " + (drafts === 1 ? "change" : "changes"), color: "warning"}
               : out.releaseHistory?.length || released
-                ? {text: "Released", color: "positive"}
-                : {text: "Not released", color: "grey"}
+                ? {text: ec.l10n.localize("Released"), color: "positive"}
+                : {text: ec.l10n.localize("Not released"), color: "grey"}
         const operations = [...result.operationRows, ...result.releasedOperationRows],
             equipmentIds = [...new Set(operations.flatMap(row => (row.resources || []).map(resource => resource.assetProductId)).filter(Boolean))],
             equipmentNames = new Map(rowsIn("mantle.product.Product", "productId", local.visibleProductIds(equipmentIds))

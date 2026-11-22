@@ -79,8 +79,9 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.request.SupportCaseServices.review#HeldRequest" out-map="reviewed"
                     in-map="{requestId:requestId, decision:decision, customerPartyId:(customerPartyId || null), reason:(reason || null)}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage(reviewed.isCase ? 'Request ' + requestId + ' is now a case'
-                    : 'Dismissed request ' + requestId, 'success')</script>
+            <script><![CDATA[if (!ec.message.hasError()) ec.message.addMessage(reviewed.isCase
+                    ? ec.resource.expand('Request ${requestId} is now a case', '', {requestId: requestId})
+                    : ec.resource.expand('Dismissed request ${requestId}', '', {requestId: requestId}), 'success')]]></script>
         </actions>
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
         <error-response url="."/>
@@ -351,7 +352,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <default-field title="">
                                     <link url="issueToken" text="${active ? 'New link' : 'Turn on'}" icon="sym_o_link" condition="routing.canEdit"
                                             parameter-map="{requestCategoryId:requestCategoryId, organizationPartyId:orgId}"
-                                            confirmation="${active ? 'Make a new link for ' + queueText + '? The current link stops working.' : 'Turn on the public form of ' + queueText + '?'}"/>
+                                            confirmation="${active ? ec.resource.expand('Make a new link for $' + '{queue}? The current link stops working.', '', {queue: queueText}) : ec.resource.expand('Turn on the public form of $' + '{queue}?', '', {queue: queueText})}"/>
                                     <link url="removeToken" text="Turn off" icon="sym_o_link_off" btn-type="danger" condition="routing.canEdit &amp;&amp; active"
                                             parameter-map="{requestCategoryId:requestCategoryId, organizationPartyId:orgId}"
                                             confirmation="Turn off the public form of ${queueText}? Its link stops working."/>

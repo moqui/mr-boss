@@ -30,7 +30,7 @@ along with this software (see the LICENSE.md file). If not, see
             <script><![CDATA[
                 const draft = hireDraft
                 if (!draft.organizationPartyId || !(draft.partyId || (draft.firstName && draft.lastName))) {
-                    ec.message.addError('Start with the person')
+                    ec.message.addError(ec.l10n.localize('Start with the person'))
                     return
                 }
                 hired = ec.service.sync().name('mantle.humanres.PeopleServices.hire#Employee').parameters({
@@ -48,7 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
                 hiredPartyId = hired.partyId
                 hiredEmploymentId = hired.partyRelationshipId
                 const person = ec.entity.find('mantle.party.Person').condition('partyId', hired.partyId).disableAuthz().one()
-                ec.message.addMessage([person?.firstName, person?.lastName].filter(Boolean).join(' ') + ' is hired', 'success')
+                ec.message.addMessage(ec.resource.expand('${name} is hired', '', {name: [person?.firstName, person?.lastName].filter(Boolean).join(' ')}), 'success')
             ]]></script>
         </actions>
         <default-response url="//People/Employees/Employee360">
@@ -77,7 +77,7 @@ along with this software (see the LICENSE.md file). If not, see
             reviewTitle = reviewFound ? (person.personName + (person.preferredName ? ' (' + person.preferredName + ')' : '')) : ''
             reviewRows = [
                 ['Employer', found.organizationName],
-                ['Person', person.isNew ? 'A new person' : 'Known to People'],
+                ['Person', person.isNew ? ec.l10n.localize('A new person') : ec.l10n.localize('Known to People')],
                 ['Employment', found.planText],
                 ['Starts', terms.fromDateText],
                 ['Ends', terms.thruDateText],
@@ -88,7 +88,7 @@ along with this software (see the LICENSE.md file). If not, see
                 ['Work email', hireDraft.workEmail],
                 ['Work phone', hireDraft.workPhone]
             ].filter(([, value]) => value).map(([label, value]) => ({label, value}))
-            const severityTexts = {error: 'Cannot hire', warning: 'Check', info: 'Note'}
+            const severityTexts = {error: ec.l10n.localize('Cannot hire'), warning: 'Check', info: 'Note'}
             findingRows = Array.from(found.findings || []).map(row => Object.assign({}, row, {severityText: severityTexts[row.severity] || ''}))
             relationshipRows = Array.from(found.relationships || [])
             canHire = !!found.canHire

@@ -180,8 +180,8 @@ along with this software (see the LICENSE.md file). If not, see
             canMove = canEdit && !!(app?.nextStages || []).length
             captionText = app ? [app.openingTitle, app.openingOrganizationName, app.applicationDateText ? 'applied ' + app.applicationDateText : '']
                 .filter(Boolean).join(' · ') : ''
-            factRows = app && recruiter ? [['Email', app.emailAddress], ['Source', app.sourceText], ['Referred by', app.referredByName],
-                ['May be contacted', app.contactAllowed ? 'Yes, about other openings' : 'Only about this opening'], ['Notes', app.comments],
+            factRows = app && recruiter ? [['Email', app.emailAddress], ['Source', app.sourceText], [ec.l10n.localize('Referred by'), app.referredByName],
+                [ec.l10n.localize('May be contacted'), app.contactAllowed ? ec.l10n.localize('Yes, about other openings') : ec.l10n.localize('Only about this opening')], ['Notes', app.comments],
                 ['Owner', app.ownerName]].filter(([, value]) => value).map(([label, value]) => ({label, value})) : []
             interviewRows = app ? app.interviews.map(interview => ({workEffortId: interview.workEffortId, employmentApplicationId: app.employmentApplicationId, whenText: interview.whenText,
                 panelText: interview.panelText, location: interview.location, facilityId: interview.facilityId || '',

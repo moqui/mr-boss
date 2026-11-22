@@ -55,7 +55,7 @@ along with this software (see the LICENSE.md file). If not, see
             setupPath = sharedLinks['Events/RegistrationSetup']
             offerList = Array.from(setup?.offers || []).filter(offer => offer.statusId === 'ErpPublished')
             canEnter = !!found?.canEnter && offerList.length > 0
-            titleText = setup?.event ? 'Registrations: ' + setup.event.eventName : 'Registrations'
+            titleText = setup?.event ? ec.resource.expand('Registrations: ${name}', '', {name: setup.event.eventName}) : ec.l10n.localize('Registrations')
             findValues = {workEffortId, registrationPolicyId, statusId, term}
             entryValues = {workEffortId, acceptTerms: 'Y'}
             ticketOptions = offerList.flatMap(offer => Array.from(offer.tickets || []).map(ticket => ({ticketKey: offer.registrationPolicyId + ':' + ticket.ticketTypeId,

@@ -5,7 +5,7 @@ const {policy, array, money} = lib
 const plainRows = lib.rows
 const nativeInvoice = "mantle.account.InvoiceServices."
 const emailStatus = statusId =>
-    ({ES_SENT: "Sent", ES_READY: "Queued for delivery", ES_SCHEDULED: "Queued for delivery"})[statusId] || "Failed"
+    ({ES_SENT: ec.l10n.localize("Sent"), ES_READY: ec.l10n.localize("Queued for delivery"), ES_SCHEDULED: ec.l10n.localize("Queued for delivery")})[statusId] || ec.l10n.localize("Failed")
 // The color of an invoice status chip (style guide §5.2): draft grey, in progress primary, sent info, paid positive,
 // ended negative.
 const statusColors = {
@@ -211,7 +211,7 @@ function billingQueue(parameters) {
                 ? [{value: "receivable", label: "Customer invoices"}]
                 : []),
             ...(scope.capabilities.apRead || scope.capabilities.reportRead || scope.capabilities.admin
-                ? [{value: "payable", label: "Worker bills"}]
+                ? [{value: "payable", label: ec.l10n.localize("Worker bills")}]
                 : [])
         ],
         billingOperationKey: parameters.operationKey || lib.operationKey("time")
@@ -280,7 +280,7 @@ function customerContext(parameters) {
                 overdueText: money(row.overdue, row.currencyUomId),
                 billedThisYearText: money(row.billedThisYear, row.currencyUomId),
                 lastPaymentText:
-                    row.lastPaymentAmount == null ? "No payment received" : money(row.lastPaymentAmount, row.currencyUomId)
+                    row.lastPaymentAmount == null ? ec.l10n.localize("No payment received") : money(row.lastPaymentAmount, row.currencyUomId)
             })
         ),
         incomplete: !!output.incomplete,
@@ -329,7 +329,7 @@ function batchContext(parameters) {
                       .filter(Boolean)
         )
     )
-    if (ids.length > 100) throw new Error("Select no more than 100 invoices")
+    if (ids.length > 100) throw new Error(ec.l10n.localize("Select no more than 100 invoices"))
     const batchRows = []
     for (const invoiceId of ids) {
         let result = {recordFound: false}
@@ -341,7 +341,7 @@ function batchContext(parameters) {
         batchRows.push(
             result.recordFound
                 ? Object.assign({}, result.receivable, {available: true})
-                : {invoiceId, available: false, reviewError: "This invoice is not available"}
+                : {invoiceId, available: false, reviewError: ec.l10n.localize("This invoice is not available")}
         )
     }
     const batchResults = array(batchResult(scope, parameters.operationKey).results).flatMap(row => {
@@ -352,7 +352,7 @@ function batchContext(parameters) {
                     invoiceId: row.invoiceId,
                     success: row.success,
                     hasPrint: !!row.result?.contentLocation,
-                    outcome: row.success ? "Completed" : "Failed",
+                    outcome: row.success ? "Completed" : ec.l10n.localize("Failed"),
                     errorMessage: row.errorMessage || ""
                 }
             ]
@@ -361,7 +361,7 @@ function batchContext(parameters) {
             recipient: recipient.recipient,
             success: recipient.status !== "failed",
             hasPrint: false,
-            outcome: {sent: "Sent", queued: "Queued for delivery"}[recipient.status] || "Failed",
+            outcome: {sent: ec.l10n.localize("Sent"), queued: ec.l10n.localize("Queued for delivery")}[recipient.status] || ec.l10n.localize("Failed"),
             errorMessage: recipient.errorMessage || "",
             sentDateText: recipient.emailMessageId
                 ? policy.dateText(policy.one("moqui.basic.email.EmailMessage", {emailMessageId: recipient.emailMessageId})?.sentDate)

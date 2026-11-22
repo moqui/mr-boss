@@ -43,8 +43,8 @@ along with this software (see the LICENSE.md file). If not, see
             changeDraftId = changeDraftFound?.employmentDraftId || null
             changeOperationKey = changeDraftFound?.operationKey || null
             changeDraftSince = changeDraftFound?.fromDateText || ''
-            changeKinds = {transfer: 'Transfer', manager: 'Manager change', leave: 'Leave of absence', return: 'Return from leave',
-                separation: 'Separation'}
+            changeKinds = {transfer: 'Transfer', manager: ec.l10n.localize('Manager change'), leave: ec.l10n.localize('Leave of absence'), return: ec.l10n.localize('Return from leave'),
+                separation: ec.l10n.localize('Separation')}
         ]]></script>
     </always-actions>
 
@@ -63,7 +63,7 @@ along with this software (see the LICENSE.md file). If not, see
                 ignore-error="true" in-map="{partyRelationshipId:(partyRelationshipId || '_NA_'), changeKind:(changeKind || null)}"/>
         <script>ec.message.clearErrors()</script>
         <set field="employmentFound" from="!!employment?.partyId &amp;&amp; !!changeKinds[changeKind]"/>
-        <set field="changeTitle" from="employmentFound ? changeKinds[changeKind] + ' of ' + employment.personName : 'Employment change'"/>
+        <set field="changeTitle" from="employmentFound ? ec.resource.expand('${what} of ${name}', '', {what: changeKinds[changeKind], name: employment.personName}) : ec.l10n.localize('Employment change')"/>
     </actions>
     <widgets>
         <container style="row items-center q-mb-sm">

@@ -49,10 +49,11 @@ along with this software (see the LICENSE.md file). If not, see
                     const refused = assignedRows.filter(row => row.outcome === 'refused')
                     if (preview == 'Y') {
                         const ready = assignedRows.filter(row => row.outcome === 'ready')
-                        ec.message.addMessage('Preview, nothing assigned: ' + (ready.length ? ready.map(row => row.personName +
-                            (row.message ? ' (' + row.message + ')' : '')).join('; ') + ' would be assigned' : 'nobody would be assigned'), 'info')
-                    } else ec.message.addMessage('Pay assigned to ' + assigned.assignedCount + ' employee' + (assigned.assignedCount == 1 ? '' : 's'), 'success')
-                    if (refused.length) ec.message.addMessage('Not assigned: ' + refused.map(row => row.personName + ' (' + row.message + ')').join('; '), 'warning')
+                        ec.message.addMessage(ready.length
+                            ? ec.resource.expand('Preview, nothing assigned: ${names} would be assigned', '', {names: ready.map(row => row.personName + (row.message ? ' (' + row.message + ')' : '')).join('; ')})
+                            : ec.l10n.localize('Preview, nothing assigned: nobody would be assigned'), 'info')
+                    } else ec.message.addMessage(ec.resource.expand("Pay assigned to ${count} employee${count == 1 ? '' : 's'}", '', {count: assigned.assignedCount}), 'success')
+                    if (refused.length) ec.message.addMessage(ec.resource.expand('Not assigned: ${names}', '', {names: refused.map(row => row.personName + ' (' + row.message + ')').join('; ')}), 'warning')
                 }
             ]]></script>
         </actions>

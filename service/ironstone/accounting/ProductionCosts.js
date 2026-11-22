@@ -10,7 +10,7 @@ const WORK = "mantle.work.effort.WorkEffort",
     EVENT = "mantle.work.production.ProductionCostEvent",
     LINE = "mantle.work.production.ProductionRunLine"
 const LIMIT = 200
-const kindTexts = {review: "Review requested", complete: "Complete, not cost closed", adjustment: "Cost events after the close"}
+const kindTexts = {review: "Review requested", complete: ec.l10n.localize("Complete, not cost closed"), adjustment: ec.l10n.localize("Cost events after the close")}
 const kindColors = {review: "primary", complete: "warning", adjustment: "orange"}
 
 function statusText(statusId) {
@@ -22,7 +22,7 @@ function queue(parameters) {
     const scope = lib.access(parameters)
     const c = scope.capabilities
     if (!c.reportRead && !c.glPost && !c.admin && !policy.lib.access.has("PRODUCTION_COST_POST"))
-        throw new Error("Financial read authority is required")
+        throw new Error(ec.l10n.localize("Financial read authority is required"))
     const organizationIds = scope.organizationPartyId ? [scope.organizationPartyId] : scope.allowedOrganizationPartyIds
     if (!organizationIds.length) return {queueRows: [], queueCount: 0, counts: {review: 0, complete: 0, adjustment: 0}}
     const runs = kind => {
@@ -93,7 +93,7 @@ function rowOf(run, kind) {
         kind,
         kindText: kindTexts[kind],
         kindColor: kindColors[kind],
-        reviewStatusText: statusText(run.productionCostReviewStatusId) || "Not requested",
+        reviewStatusText: statusText(run.productionCostReviewStatusId) || ec.l10n.localize("Not requested"),
         reviewDateText: lib.policy.lib.dateText(run.productionCostReviewDate),
         accountingDate: run.productionCostAccountingDate || null,
         // the day as text: a SQL date reaches a screen as epoch millis (ACC-UI-014)

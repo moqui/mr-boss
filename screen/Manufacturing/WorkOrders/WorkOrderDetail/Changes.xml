@@ -34,10 +34,20 @@ along with this software (see the LICENSE.md file). If not, see
                         expectedRevision:expectedRevision || null, methodDate:methodDate || null, previewKey:previewKey || null,
                         changeNoticeId:changeNoticeId || null, reason:reason || null,
                         productionChangeId:productionChangeId || null, refusalReason:refusalReason || null}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage({REQUESTED: 'Amendment sent for review',
-                    REVIEWED: 'Review given; the amendment waits for ' + (amended.result?.waitingFor || 'another review'),
-                    APPLIED: 'Amendment applied to the remaining work', REFUSED: 'Amendment refused'}[amended.result?.resultCode]
-                    || 'Saved', 'success')</script>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const waiting = amended.result?.waitingFor
+                    const who = waiting === 'method approval' ? ec.l10n.localize('method approval')
+                        : waiting === 'supervisor approval' ? ec.l10n.localize('supervisor approval')
+                        : ec.l10n.localize('another review')
+                    ec.message.addMessage({
+                        REQUESTED: ec.l10n.localize('Amendment sent for review'),
+                        REVIEWED: ec.resource.expand('Review given; the amendment waits for ${who}', '', {who: who}),
+                        APPLIED: ec.l10n.localize('Amendment applied to the remaining work'),
+                        REFUSED: ec.l10n.localize('Amendment refused')
+                    }[amended.result?.resultCode] || ec.l10n.localize('Saved'), 'success')
+                }
+            ]]></script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>
@@ -48,9 +58,9 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.work.ProductionServices.cancel#ProductionOrder" out-map="closed"
                     in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
                         previewKey:previewKey, returnUnused:returnUnused == 'true', reason:reason || null}"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage(closed.result?.resultCode == 'CANCELLED'
-                    ? 'Work order ' + workEffortId + ' cancelled; its issues were returned'
-                    : 'Work order ' + workEffortId + ' closed out; the cost close settles it', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand(closed.result?.resultCode == 'CANCELLED'
+                    ? 'Work order ${workEffortId} cancelled; its issues were returned'
+                    : 'Work order ${workEffortId} closed out; the cost close settles it', '', {workEffortId: workEffortId}), 'success')</script>
         </actions>
         <default-response url=".."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>

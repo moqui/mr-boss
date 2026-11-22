@@ -13,7 +13,7 @@ function measured(findings, label, read) {
         return read()
     } catch (error) {
         ec.logger.error("Accounting Home " + label + ": " + error.message)
-        findings.push(label + " is unavailable")
+        findings.push(ec.resource.expand(ec.l10n.localize("${label} is unavailable"), "", {label: ec.l10n.localize(label)}))
         return null
     }
 }
@@ -76,7 +76,7 @@ function moneyCards(scope, counts, findings) {
             if (out.recordCount > BANK_PAGE) throw new Error("more than " + BANK_PAGE + " bank accounts")
             const rows = lib.array(out.bankRows)
             if (rows.some(row => row.currencyUomId && row.currencyUomId !== currencyUomId))
-                findings.push("Bank accounts in other currencies are left out of the bank balance")
+                findings.push(ec.l10n.localize("Bank accounts in other currencies are left out of the bank balance"))
             return {
                 balance: rows
                     .filter(row => !row.currencyUomId || row.currencyUomId === currencyUomId)
@@ -125,9 +125,9 @@ function work(scope) {
             found = {count: undefined, unavailable: true}
         }
         rows.push({
-            title: found.title || title,
+            title: found.title || ec.l10n.localize(title),
             count: found.count ?? null,
-            countText: found.unavailable ? "Unavailable" : found.count == null ? "" : String(found.count),
+            countText: found.unavailable ? ec.l10n.localize("Unavailable") : found.count == null ? "" : String(found.count),
             path,
             linkParameters: found.parameters || parameters
         })
@@ -148,7 +148,9 @@ function work(scope) {
             const period = lastOpenMonth(org)
             if (!period) return null
             return {
-                title: "Close " + (period.periodName || period.timePeriodId),
+                title: ec.resource.expand(ec.l10n.localize("Close ${periodTitle}"), "", {
+                    periodTitle: period.periodName || period.timePeriodId
+                }),
                 count: null,
                 parameters: {organizationPartyId: org, timePeriodId: period.timePeriodId}
             }
@@ -267,7 +269,7 @@ function summary(parameters) {
         counts.setupStatus = out.setupStatus || null
     } catch (error) {
         ec.logger.error("Accounting Home setup health: " + error.message)
-        findings.push("Setup health is unavailable")
+        findings.push(ec.l10n.localize("Setup health is unavailable"))
     }
     // in the session's zone, named: an account with no zone of its own reads in the server's, which need not be the
     // reader's (ACC-UI-002)

@@ -63,7 +63,7 @@ along with this software (see the LICENSE.md file). If not, see
                         added.push([params['orderId' + suffix], params[key], requestItemSeqId, amount].join(':') + substitute)
                     }
                 }
-                if (invalid) ec.message.addError('Enter a quantity of zero or more')
+                if (invalid) ec.message.addError(ec.l10n.localize('Enter a quantity of zero or more'))
                 else allocationsText = kept.concat(added).join(';')
             ]]></script>
         </actions>
@@ -147,7 +147,7 @@ along with this software (see the LICENSE.md file). If not, see
                     const offer = allOffers.find((row) => row.orderId == fields[0] && row.orderItemSeqId == fields[1]) || {}
                     return {orderId: fields[0], orderItemSeqId: fields[1], requestItemSeqId: fields[2], quantityText: fields[3],
                         supplierName: offer.supplierName || fields[0], productText: offer.productText || '',
-                        substituteText: fields[4] === 'S' ? 'Substitute accepted' : ''}
+                        substituteText: fields[4] === 'S' ? ec.l10n.localize('Substitute accepted') : ''}
                 })
                 const awardDemandRows = demandRows.map((row) => {
                     const selected = entries.filter((fields) => fields[2] == row.requestItemSeqId)

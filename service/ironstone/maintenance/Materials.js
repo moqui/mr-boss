@@ -9,6 +9,7 @@
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const maintenance = ec.resource.script("component://mr-boss/service/ironstone/maintenance/Maintenance.js")
 const {call, denied} = lib
+const L = (words) => ec.l10n.localize(words)
 const M = "mantle.work.MaintenanceExecutionServices."
 
 const number = value => (value == null || value === "" ? 0 : Number(String(value)))
@@ -32,7 +33,7 @@ function materialSource(p) {
             issued: number(row.issued),
             returned: number(row.returned),
             left,
-            shortText: parts.canIssue && left > 0 && !row.stockOptions.length ? "No free stock in your facilities" : "",
+            shortText: parts.canIssue && left > 0 && !row.stockOptions.length ? L("No free stock in your facilities") : "",
             heldText: "",
             stagedText: "",
             canAct,
@@ -85,27 +86,27 @@ function materialSource(p) {
         sourceType: "maintenanceWork",
         source: {
             sourceId: rootId,
-            title: "Parts of work order " + rootId,
+            title: ec.resource.expand("Parts of work order ${workEffortId}", "", {workEffortId: rootId}),
             caption: [order.workEffortName, order.targetName, order.organizationName].filter(Boolean).join(" · "),
             statusText: order.statusText,
             detailText: parts.stockIssue
                 ? parts.canIssue
                     ? ""
-                    : "Parts are issued by the technician assigned to the work or a supervisor, to approved or started work"
-                : "Issuing and returning parts needs the stock issue permission",
-            emptyText: "No parts are planned for this work order; plan them on its Parts tab.",
+                    : L("Parts are issued by the technician assigned to the work or a supervisor, to approved or started work")
+                : L("Issuing and returning parts needs the stock issue permission"),
+            emptyText: L("No parts are planned for this work order; plan them on its Parts tab."),
             actionText: "Issue",
-            submitText: "Issue part",
+            submitText: L("Issue part"),
             actionField: "asset",
             words: {
-                groupTitle: "Step",
+                groupTitle: L("Step"),
                 doneTitle: "Issued",
-                historyTitle: "Issues and returns",
-                historyEmpty: "Nothing is issued to this work order yet."
+                historyTitle: L("Issues and returns"),
+                historyEmpty: L("Nothing is issued to this work order yet.")
             },
             links: [
                 {
-                    text: "Back to the work order",
+                    text: L("Back to the work order"),
                     path: "WorkOrders/WorkOrderDetail",
                     icon: "sym_o_handyman",
                     primary: false,
@@ -144,18 +145,18 @@ function materialAction(p) {
                 quantity: p.quantity,
                 toLocationSeqId: p.toLocationSeqId || null
             },
-            doneText: "Returned " + p.quantity + " unused"
+            doneText: ec.resource.expand("Returned ${quantity} unused", "", {quantity: p.quantity})
         }
-    if (kind !== "issue") denied("ACTION_INVALID", "This action is not available for maintenance work")
+    if (kind !== "issue") denied("ACTION_INVALID", L("This action is not available for maintenance work"))
     const [nodeId, productId] = String(p.lineKey || "").split("__")
-    if (!nodeId || !productId) denied("LINE_INVALID", "Choose a planned part")
+    if (!nodeId || !productId) denied("LINE_INVALID", L("Choose a planned part"))
     return {
         recordType: "workOrder",
         recordId: nodeId,
         capability: null,
         serviceName: M + "issue#MaintenanceMaterial",
         parameters: {operationKey: p.operationKey, workEffortId: nodeId, productId, assetId: p.assetId, quantity: p.quantity},
-        doneText: "Issued " + p.quantity
+        doneText: ec.resource.expand("Issued ${quantity}", "", {quantity: p.quantity})
     }
 }
 

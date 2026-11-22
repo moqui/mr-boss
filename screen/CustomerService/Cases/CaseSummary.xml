@@ -74,7 +74,7 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <section name="SummaryMissing" condition="!caseFound || !printBody">
             <widgets>
-                <label text="${caseFound ? (printError || 'The summary of case ' + requestId + ' is not available to you') : 'Case ' + requestId + ' is not available'}" type="p"/>
+                <label text="${caseFound ? (printError || ec.resource.expand('The summary of case $' + '{requestId} is not available to you', '', {requestId: requestId})) : ec.resource.expand('Case $' + '{requestId} is not available', '', {requestId: requestId})}" type="p"/>
             </widgets>
         </section>
         <section name="Summary" condition="caseFound &amp;&amp; printBody">
@@ -121,7 +121,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </section>
                 <render-mode>
                     <text type="html,html-print,qvt"><![CDATA[<div class="m-print-document">${printBody}</div>]]></text>
-                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: (summaryAudience == 'internal' ? 'Internal summary' : 'Customer copy') + " of case " + requestId + ": print it from the browser"})}]]></text>
+                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: ec.resource.expand(summaryAudience == 'internal' ? 'Internal summary of case $' + '{requestId}: print it from the browser' : 'Customer copy of case $' + '{requestId}: print it from the browser', '', {requestId: requestId})})}]]></text>
                 </render-mode>
             </widgets>
         </section>

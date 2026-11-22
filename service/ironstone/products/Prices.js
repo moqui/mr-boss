@@ -28,7 +28,7 @@ function run(op, parameters) {
     }
     function access() {
         const context = shared()
-        if (!context.capabilities.read) throw new Error("Catalog read authority is required")
+        if (!context.capabilities.read) throw new Error(ec.l10n.localize("Catalog read authority is required"))
         return context
     }
     // Under Commerce, a store price of a store the user does not work is neither shown nor changed (impl-commerce F47, F51).
@@ -38,22 +38,22 @@ function run(op, parameters) {
     }
     function product(productId) {
         const record = local.readableProduct(productId)
-        if (!record) throw new Error("Product is not available")
+        if (!record) throw new Error(ec.l10n.localize("Product is not available"))
         return record
     }
     function row(productPriceId, write = false) {
         const price = one(E, {productPriceId})
-        if (!price) throw new Error("Price record is not available")
+        if (!price) throw new Error(ec.l10n.localize("Price record is not available"))
         product(price.productId)
         domain("access", price)
         if (write) {
-            if (!storeAllowed(price.productStoreId)) throw new Error("Price record is not available")
+            if (!storeAllowed(price.productStoreId)) throw new Error(ec.l10n.localize("Price record is not available"))
             const capabilities = access().capabilities,
                 direction = domain("direction", price)
             if (!(
                 capabilities.systemAdmin || (direction === "purchase" ? capabilities.supplierPriceEdit : capabilities.priceEdit)
             ))
-                throw new Error("Price edit authority is required")
+                throw new Error(ec.l10n.localize("Price edit authority is required"))
         }
         return price
     }
@@ -120,7 +120,7 @@ function run(op, parameters) {
                   ? !capabilities.supplierPriceRead
                   : !capabilities.priceRead)
         if (!capabilities.priceRead && !capabilities.supplierPriceRead && !capabilities.costRead)
-            throw new Error("Price read authority is required")
+            throw new Error(ec.l10n.localize("Price read authority is required"))
         if (p.productId) product(p.productId)
         // the products with price rows matching the filters the database can apply, read as one distinct column in product
         // order, then only those the user may read, and at most productLimit of them: the list with no product resolves a
@@ -214,9 +214,9 @@ function run(op, parameters) {
         access()
         if (p.productPriceId) {
             const old = row(p.productPriceId, true)
-            if (p.productId && p.productId !== old.productId) throw new Error("Price is not on this product")
+            if (p.productId && p.productId !== old.productId) throw new Error(ec.l10n.localize("Price is not on this product"))
         } else product(p.productId)
-        if (!storeAllowed(p.productStoreId)) throw new Error("Store is not available")
+        if (!storeAllowed(p.productStoreId)) throw new Error(ec.l10n.localize("Store is not available"))
         return call(M + "store#ProductPrice", p)
     }
     function replace(p) {
@@ -381,12 +381,12 @@ function run(op, parameters) {
             !["sales", "purchase"].includes(direction) ||
             !(direction === "sales" ? capabilities.priceRead : capabilities.supplierPriceRead)
         )
-            throw new Error("Price authority for this direction is required")
+            throw new Error(ec.l10n.localize("Price authority for this direction is required"))
         if (!org || (!capabilities.systemAdmin && !context.ownerPartyIds.includes(org)))
-            throw new Error("Choose an available price organization")
+            throw new Error(ec.l10n.localize("Choose an available price organization"))
         const currency = p.priceUomId || defaultCurrency(org)
         if (one("moqui.basic.Uom", {uomId: currency})?.uomTypeEnumId !== "UT_CURRENCY_MEASURE")
-            throw new Error("Choose a price currency")
+            throw new Error(ec.l10n.localize("Choose a price currency"))
         const got = call(P + "InventoryReportServices.get#PriceHistoryInfo", {
             productIdList: [p.productId],
             vendorPartyId: direction === "sales" ? org : null,

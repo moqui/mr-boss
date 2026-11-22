@@ -58,8 +58,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.humanres.PayrollExchangeServices.execute#Batch" out-map="executed"
                     in-map="{payrollExchangeBatchId:payrollExchangeBatchId}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(executed.appliedCount + ' done, ' + executed.skippedCount + ' recorded already or repeated, ' +
-                    executed.errorCount + ' not done', executed.errorCount ? 'warning' : 'success')</script>
+                <script>ec.message.addMessage(ec.resource.expand('${done} done, ${skipped} recorded already or repeated, ${errors} not done', '', {done: executed.appliedCount, skipped: executed.skippedCount, errors: executed.errorCount}), executed.errorCount ? 'warning' : 'success')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="payrollExchangeBatchId"/></default-response>
@@ -74,7 +73,7 @@ along with this software (see the LICENSE.md file). If not, see
             <script>if (!ec.message.hasError()) {
                 const files = fileFound.batch?.files
                 const wanted = files ? (part == 'manifest' ? files.manifest : files.file) : null
-                if (!wanted) ec.message.addError('RECORD_UNAVAILABLE: This exchange has no stored file')
+                if (!wanted) ec.message.addError(ec.l10n.localize('RECORD_UNAVAILABLE: This exchange has no stored file'))
                 else {
                     const was = ec.artifactExecution.disableAuthz()
                     try { ec.web.sendResourceResponse(wanted.location, true, wanted.fileName) } finally { if (!was) ec.artifactExecution.enableAuthz() }
@@ -102,9 +101,9 @@ along with this software (see the LICENSE.md file). If not, see
             recentRows = Array.from(recent?.batches || [])
             kind = ['export', 'history', 'results'].includes(exchangeKind) ? exchangeKind : 'export'
             kindList = [
-                {key: 'export', text: 'Export inputs', icon: 'sym_o_upload'},
-                {key: 'history', text: 'Import history', icon: 'sym_o_history'},
-                {key: 'results', text: 'Import results', icon: 'sym_o_download'}
+                {key: 'export', text: ec.l10n.localize('Export inputs'), icon: 'sym_o_upload'},
+                {key: 'history', text: ec.l10n.localize('Import history'), icon: 'sym_o_history'},
+                {key: 'results', text: ec.l10n.localize('Import results'), icon: 'sym_o_download'}
             ]
             totalRows = Array.from(reconciliation?.totals || [])
             differenceRows = Array.from(reconciliation?.differences || [])
@@ -116,9 +115,9 @@ along with this software (see the LICENSE.md file). If not, see
                 {key: 'reconcile', text: '2 Reconcile' + (batch.statusId != 'PxbPreviewed' ? ' ✓' : '')},
                 {key: 'commit', text: '3 ' + (batch.exchangeKindEnumId == 'PxkExport' ? 'Export' : 'Import') + (done ? ' ✓' : '')}
             ] : []
-            commitText = batch?.exchangeKindEnumId == 'PxkExport' ? 'Export ' + batch.readyCount + ' inputs'
-                : batch?.exchangeKindEnumId == 'PxkHistory' ? 'Record ' + batch.readyCount + ' pay records'
-                : 'Import the results of ' + (reconciliation?.employeeCount || 0) + ' employees'
+            commitText = batch?.exchangeKindEnumId == 'PxkExport' ? ec.resource.expand('Export ${count} inputs', '', {count: batch.readyCount})
+                : batch?.exchangeKindEnumId == 'PxkHistory' ? ec.resource.expand('Record ${count} pay records', '', {count: batch.readyCount})
+                : ec.resource.expand('Import the results of ${count} employees', '', {count: reconciliation?.employeeCount || 0})
             outcomeColors = {ready: 'primary', known: 'grey-8', duplicate: 'grey-8', refused: 'negative', exported: 'positive', applied: 'positive',
                 failed: 'negative'}
             payRunUrl = sharedLinks?.['Payroll/PayRunDetail'] || '../PayRunDetail'

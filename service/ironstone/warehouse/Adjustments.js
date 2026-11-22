@@ -5,6 +5,8 @@
 // the user's recent stock changes. The postings are Mantle's guarded WarehouseTaskServices entry points, which the screens
 // call after AccessServices.check#Record. Value is answered only with financial read, as Mantle leaves it out otherwise.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
+const labelOf = (table, key) => (table[key] != null ? L(table[key]) : key)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, denied, dateText, calendarDateText} = lib
 
@@ -125,7 +127,7 @@ function recentChanges(types) {
     const name = id => products.get(id) || id || ""
     return answers.map(({row, result}) => ({
         whenText: dateText(row.completedDate),
-        kindText: changeTypes[row.operationType] || row.operationType,
+        kindText: labelOf(changeTypes, row.operationType),
         recordText:
             row.operationType === "LotCorrect"
                 ? "Lot " + result.lotId
@@ -144,7 +146,7 @@ function recentChanges(types) {
                 : row.operationType === "StockScrap"
                   ? "−" + quantityText(result.quantity)
                   : row.operationType === "LotCorrect"
-                    ? (result.changes || []).map(change => fieldLabels[change.field] || change.field).join(", ")
+                    ? (result.changes || []).map(change => labelOf(fieldLabels, change.field)).join(", ")
                     : "",
         resultText: [result.resultCode, ...(result.warnings || []).map(warning => warning.message)].filter(Boolean).join(" · ")
     }))
@@ -249,7 +251,7 @@ function adjustmentContext(p) {
         if (preview.valueIncluded)
             answer.valueText = preview.valueAvailable
                 ? "Value change " + moneyText(preview.valueChange, preview.costUomId)
-                : "Value unavailable: stock this changes has no cost"
+                : L("Value unavailable: stock this changes has no cost")
         preview.assetRows = Array.from(preview.assets || []).map(row =>
             Object.assign({}, row, {quantityOnHandText: quantityText(row.quantityOnHand)})
         )
@@ -303,12 +305,16 @@ function repackContext(p) {
     )
     answer.targetOptions = targets.map(target => ({
         value: target.targetProductId,
-        label:
-            (target.direction === "unpack" ? "Unpack into " : "Repack into ") +
-            (names.get(target.targetProductId) || target.targetProductId) +
-            " (" +
-            quantityText(target.factor) +
-            " each)"
+        label: ec.resource.expand(
+            target.direction === "unpack"
+                ? L("Unpack into ${name} (${factor} each)")
+                : L("Repack into ${name} (${factor} each)"),
+            "",
+            {
+                name: names.get(target.targetProductId) || target.targetProductId,
+                factor: quantityText(target.factor)
+            }
+        )
     }))
     if (!answer.canMove || blank(p.quantity)) return answer
     const targetProductId = p.targetProductId || (answer.targetOptions.length === 1 ? answer.targetOptions[0].value : null)
@@ -327,7 +333,7 @@ function repackContext(p) {
             (target?.productName || preview.targetProductId) +
             (asset.lotNumber ? ", lot " + asset.lotNumber + " carried over" : "")
         if (preview.costIncluded && preview.costAvailable === false)
-            answer.costText = "Unit cost unavailable: the stock repacked has no cost"
+            answer.costText = L("Unit cost unavailable: the stock repacked has no cost")
         else if (preview.costIncluded && preview.unitCost != null)
             answer.costText =
                 "Unit cost " +
@@ -360,7 +366,7 @@ function lotCorrections(p) {
     return {
         correctionRows: rows.map(row => ({
             changedDateText: dateText(row.changedDate),
-            fieldText: fieldLabels[row.changedFieldName] || row.changedFieldName,
+            fieldText: labelOf(fieldLabels, row.changedFieldName),
             oldValueText: row.oldValueText || "—",
             newValueText: row.newValueText || "—",
             changeReason: row.changeReason || "",

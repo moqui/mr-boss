@@ -118,9 +118,18 @@ along with this software (see the LICENSE.md file). If not, see
                         stopTimer:stopTimer == 'true'}"/>
             <script><![CDATA[
                 const done = completed?.result || {}
-                if (!ec.message.hasError()) ec.message.addMessage(done.resultCode === 'APPROVAL_REQUESTED' ? done.message
-                    : 'Operation completed' + (done.quantity ? ': good ' + done.quantity.good + ', remaining ' + done.quantity.remaining : '')
-                        + (done.message ? '. ' + done.message : ''), done.resultCode === 'APPROVAL_REQUESTED' ? 'warning' : 'success')
+                if (!ec.message.hasError()) {
+                    const good = done.quantity ? done.quantity.good : ''
+                    const remaining = done.quantity ? done.quantity.remaining : ''
+                    const template = done.quantity && done.message
+                        ? 'Operation completed: good ${good}, remaining ${remaining}. ${message}'
+                        : done.quantity ? 'Operation completed: good ${good}, remaining ${remaining}'
+                        : done.message ? 'Operation completed. ${message}' : ''
+                    ec.message.addMessage(done.resultCode === 'APPROVAL_REQUESTED' ? done.message
+                        : template ? ec.resource.expand(template, '', {good: good, remaining: remaining, message: done.message})
+                        : ec.l10n.localize('Operation completed'),
+                        done.resultCode === 'APPROVAL_REQUESTED' ? 'warning' : 'success')
+                }
             ]]></script>
         </actions>
         <default-response url="."><parameter name="operationWorkEffortId"/></default-response>
@@ -141,8 +150,9 @@ along with this software (see the LICENSE.md file). If not, see
                         comments:comments || null}"/>
             <script><![CDATA[
                 const runtime = recorded?.result || {}
-                if (!ec.message.hasError()) ec.message.addMessage(runtime.resultCode === 'STARTED' ? 'Machine runtime started'
-                    : 'Machine runtime recorded: ' + runtime.hours + ' h' + (runtime.message ? '. ' + runtime.message : ''),
+                if (!ec.message.hasError()) ec.message.addMessage(runtime.resultCode === 'STARTED' ? ec.l10n.localize('Machine runtime started')
+                    : ec.resource.expand(runtime.message ? 'Machine runtime recorded: ${hours} h. ${message}' : 'Machine runtime recorded: ${hours} h', '',
+                        {hours: runtime.hours, message: runtime.message}),
                     runtime.valued === false ? 'warning' : 'success')
             ]]></script>
         </actions>

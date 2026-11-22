@@ -23,9 +23,9 @@ const formats = [
     {value: "png", label: "Picture"}
 ]
 const periods = [
-    {value: "now-7d", label: "The last 7 days"},
-    {value: "now-30d", label: "The last 30 days"},
-    {value: "now-90d", label: "The last 90 days"}
+    {value: "now-7d", label: ec.l10n.localize("The last 7 days")},
+    {value: "now-30d", label: ec.l10n.localize("The last 30 days")},
+    {value: "now-90d", label: ec.l10n.localize("The last 90 days")}
 ]
 
 const text = value => String(value ?? "").trim()
@@ -42,13 +42,13 @@ const idList = value =>
 // ===== access =====
 function reader() {
     const capabilities = insights.required().capabilities
-    if (!capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", "Reading Insights is required")
+    if (!capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", ec.l10n.localize("Reading Insights is required"))
     return capabilities
 }
 function composer() {
     const capabilities = reader()
     if (!capabilities.author && !capabilities.distribute)
-        denied("INSIGHTS_DIGEST_REQUIRED", "Composing a digest needs authoring or the distribute permission")
+        denied("INSIGHTS_DIGEST_REQUIRED", ec.l10n.localize("Composing a digest needs authoring or the distribute permission"))
     return capabilities
 }
 
@@ -134,7 +134,7 @@ function previewReport(p) {
             filename: preview.filename,
             empty: preview.empty === true
         }
-    }, "The preview could not be rendered")
+    }, ec.l10n.localize("The preview could not be rendered"))
 }
 
 // ===== management digests =====
@@ -158,7 +158,7 @@ function getDigest(p) {
     const composes = capabilities.author || capabilities.distribute
     const all = digests()
     const chosen = p.definitionId ? all.find(definition => definition.id === p.definitionId) : null
-    if (p.definitionId && !chosen) denied("DIGEST_UNAVAILABLE", "This digest is not available")
+    if (p.definitionId && !chosen) denied("DIGEST_UNAVAILABLE", ec.l10n.localize("This digest is not available"))
     const dashboards = Array.from(chosen?.body?.dashboards || [])
     const preview = chosen ? sections(chosen) : []
     return {
@@ -195,20 +195,20 @@ function storeDigest(p) {
     composer()
     return attempt(() => {
         const title = text(p.title)
-        if (!title || title.length > 120) denied("VALUE_INVALID", "Name the digest in at most 120 characters")
+        if (!title || title.length > 120) denied("VALUE_INVALID", ec.l10n.localize("Name the digest in at most 120 characters"))
         const dashboardIds = Array.from(new Set(idList(p.dashboardIds)))
-        if (!dashboardIds.length || dashboardIds.length > 6) denied("VALUE_INVALID", "Choose one to six dashboards")
+        if (!dashboardIds.length || dashboardIds.length > 6) denied("VALUE_INVALID", ec.l10n.localize("Choose one to six dashboards"))
         const period = text(p.period) || "now-7d"
-        if (!periods.some(option => option.value === period)) denied("VALUE_INVALID", "Choose a period")
+        if (!periods.some(option => option.value === period)) denied("VALUE_INVALID", ec.l10n.localize("Choose a period"))
         const commentary = text(p.commentary)
-        if (commentary.length > 2000) denied("VALUE_INVALID", "Keep the commentary to 2000 characters")
+        if (commentary.length > 2000) denied("VALUE_INVALID", ec.l10n.localize("Keep the commentary to 2000 characters"))
         const group = text(p.userGroupId) || null
         if (group && !insights.shareGroupIds().includes(group))
             denied("SHARE_GROUP_UNAVAILABLE", "Share only with a group you belong to")
         const readable = definitions().filter(definition => definition.type === "dashboard")
         for (const dashboardId of dashboardIds)
             if (!readable.some(definition => definition.id === dashboardId))
-                denied("DASHBOARD_UNAVAILABLE", "Choose dashboards you may read")
+                denied("DASHBOARD_UNAVAILABLE", ec.l10n.localize("Choose dashboards you may read"))
         let definitionId = text(p.definitionId)
         let version = null
         if (definitionId) {
@@ -246,10 +246,10 @@ function storeDigest(p) {
         if (version != null) definition.version = version
         const saved = engine("save#Definition", {
             definition,
-            note: version == null ? "Composed in Insights" : "Changed in Insights"
+            note: version == null ? ec.l10n.localize("Composed in Insights") : ec.l10n.localize("Changed in Insights")
         }).definition
         return {definitionId: saved.id, version: saved.version}
-    }, "The digest could not be saved")
+    }, ec.l10n.localize("The digest could not be saved"))
 }
 // store#DefaultDigest: the digest Home previews for this user (a preference; it grants nothing), or none.
 function storeDefaultDigest(p) {
@@ -257,10 +257,10 @@ function storeDefaultDigest(p) {
     return attempt(() => {
         const definitionId = text(p.definitionId)
         if (definitionId && !digests().some(definition => definition.id === definitionId))
-            denied("DIGEST_UNAVAILABLE", "This digest is not available")
+            denied("DIGEST_UNAVAILABLE", ec.l10n.localize("This digest is not available"))
         ec.user.setPreference(DIGEST_PREFERENCE, definitionId || null)
         return {definitionId: definitionId || null}
-    }, "The Home digest could not be set")
+    }, ec.l10n.localize("The Home digest could not be set"))
 }
 // get#DigestPreview: Home's card, the user's default digest as their own preview, else the default digest of the organization
 // in scope (Insights Settings, P10) when they read it; nothing when neither is set or it is gone.

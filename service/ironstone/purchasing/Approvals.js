@@ -18,7 +18,7 @@ const amountText = (value, currencyUomId) =>
 function organizationOf(userScope, organizationPartyId) {
     const ids = userScope.ownerIds || rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(row => row.partyId)
     if (!blank(organizationPartyId)) {
-        if (!ids.includes(organizationPartyId)) denied("RECORD_UNAVAILABLE", "Organization is not available")
+        if (!ids.includes(organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("Organization is not available"))
         return organizationPartyId
     }
     return userScope.activeOrganizationPartyId || userScope.organizationPartyIds[0] || ids[0] || null
@@ -35,7 +35,7 @@ function bandText(row) {
 // now (inEffect Y, the default) or every row with its dates, by source, band and step; for the Settings area.
 function findPolicies(p) {
     const userScope = purchasing.required()
-    if (!userScope.capabilities.settings) denied("PERMISSION_DENIED", "Purchasing settings are not available")
+    if (!userScope.capabilities.settings) denied("PERMISSION_DENIED", ec.l10n.localize("Purchasing settings are not available"))
     const organizationPartyId = organizationOf(userScope, p.organizationPartyId)
     const now = ms(ec.user.nowTimestamp)
     let query = find(POLICY, {organizationPartyId})
@@ -71,15 +71,15 @@ function findPolicies(p) {
             ? userName(row.approverUserId)
             : row.approverUserGroupId
               ? one("moqui.security.UserGroup", {userGroupId: row.approverUserGroupId})?.description || row.approverUserGroupId
-              : "Any purchase approver",
+              : ec.l10n.localize("Any purchase approver"),
         approverUserId: row.approverUserId || "",
         approverUserGroupId: row.approverUserGroupId || "",
         quorum: row.quorum || 1,
         rulesText: [
-            (row.quorum || 1) > 1 ? row.quorum + " approvers" : "",
-            row.separateApprover === "Y" ? "Another approver than the earlier steps'" : "",
-            row.selfApprovalAllowed === "Y" ? "Self-approval allowed" : row.selfApprovalAllowed === "N" ? "No self-approval" : "",
-            row.expiryDays ? "Good for " + row.expiryDays + " days" : ""
+            (row.quorum || 1) > 1 ? ec.resource.expand("${count} approvers", "", {count: row.quorum || 1}) : "",
+            row.separateApprover === "Y" ? ec.l10n.localize("Another approver than the earlier steps'") : "",
+            row.selfApprovalAllowed === "Y" ? ec.l10n.localize("Self-approval allowed") : row.selfApprovalAllowed === "N" ? ec.l10n.localize("No self-approval") : "",
+            row.expiryDays ? ec.resource.expand("Good for ${days} days", "", {days: row.expiryDays}) : ""
         ]
             .filter(Boolean)
             .join(" · "),

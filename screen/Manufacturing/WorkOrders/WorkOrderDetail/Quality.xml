@@ -32,7 +32,8 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{workEffortId:workEffortId, productionQualityGateId:productionQualityGateId,
                         quantity:quantity || null, comments:comments || null}"/>
             <set field="qualityInspectionId" from="created.qualityInspectionId"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage('Inspection ' + qualityInspectionId + ' opened', 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand('Inspection ${qualityInspectionId} opened', '',
+                    {qualityInspectionId: qualityInspectionId}), 'success')</script>
         </actions>
         <default-response url="//Manufacturing/Quality/QualityInspection">
             <parameter name="qualityInspectionId"/>

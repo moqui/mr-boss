@@ -31,7 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const list = (found?.sections || []).slice()
                 const index = list.findIndex((s) => s.id === sectionId)
                 const to = index + (direction === 'up' ? -1 : 1)
-                if (index < 0 || to < 0 || to >= list.length) ec.message.addError('That section cannot move ' + (direction === 'up' ? 'up' : 'down'))
+                if (index < 0 || to < 0 || to >= list.length) ec.message.addError(ec.l10n.localize(direction === 'up' ? 'That section cannot move up' : 'That section cannot move down'))
                 else {
                     const [moved] = list.splice(index, 1)
                     list.splice(to, 0, moved)

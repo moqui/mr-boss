@@ -53,7 +53,7 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."><parameter name="organizationPartyId"/><parameter name="teamPartyId"/></error-response>
     </transition>
     <always-actions>
-        <script>if(!(sales.capabilities.configure || sales.capabilities.teamManage))throw new Error('PERMISSION_DENIED: Sales teams are kept by the Sales administrator and the sales managers')</script>
+        <script>if(!(sales.capabilities.configure || sales.capabilities.teamManage))throw new Error(ec.l10n.localize('PERMISSION_DENIED: Sales teams are kept by the Sales administrator and the sales managers'))</script>
     </always-actions>
     <actions>
         <set field="can" from="sales.capabilities"/>

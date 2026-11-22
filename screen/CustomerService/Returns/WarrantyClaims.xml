@@ -149,7 +149,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <default-field title="Coverage until"><display text="${[coverageEndText, coverageText].filter(Boolean).join(' · ')}"/></default-field>
                             </field>
                             <field name="decisionText">
-                                <default-field title="Assessment"><display text="${[decisionText, approverName ? 'approved by ' + approverName : ''].filter(Boolean).join(' · ')}"/></default-field>
+                                <default-field title="Assessment"><display text="${[decisionText, approverName ? ec.resource.expand('approved by $' + '{name}', '', {name: approverName}) : ''].filter(Boolean).join(' · ')}"/></default-field>
                             </field>
                             <field name="workText"><default-field title="Repair or return"><display/></default-field></field>
                             <field name="nextActionText"><default-field title="Next"><display/></default-field></field>

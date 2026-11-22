@@ -44,10 +44,12 @@ along with this software (see the LICENSE.md file). If not, see
             <script><![CDATA[
                 if (!ec.message.hasError() && allocated) {
                     const done = allocated.allocatedCount + allocated.repeatedCount
-                    ec.message.addMessage('Allocated to ' + done + ' employee' + (done == 1 ? '' : 's') +
-                        (allocated.repeatedCount ? ' (' + allocated.repeatedCount + ' already done)' : ''), 'success')
+                    const names = refusedNames => refusedNames.map(row => row.personName + ' (' + row.message + ')').join('; ')
+                    ec.message.addMessage(allocated.repeatedCount
+                        ? ec.resource.expand("Allocated to ${count} employee${count == 1 ? '' : 's'} (${repeated} already done)", '', {count: done, repeated: allocated.repeatedCount})
+                        : ec.resource.expand("Allocated to ${count} employee${count == 1 ? '' : 's'}", '', {count: done}), 'success')
                     const refused = Array.from(allocated.rows || []).filter(row => row.outcome === 'refused')
-                    if (refused.length) ec.message.addMessage('Not allocated: ' + refused.map(row => row.personName + ' (' + row.message + ')').join('; '), 'warning')
+                    if (refused.length) ec.message.addMessage(ec.resource.expand('Not allocated: ${names}', '', {names: names(refused)}), 'warning')
                 }
             ]]></script>
         </actions>

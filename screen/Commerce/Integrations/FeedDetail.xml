@@ -51,8 +51,9 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.product.StoreChannelServices.build#StoreFeed" out-map="built" in-map="{productStoreFeedId:productStoreFeedId}"/>
             <if condition="!ec.message.hasError()">
                 <set field="feedBuildId" from="built.feedBuildId"/>
-                <script>ec.message.addMessage(built.failed ? 'The build failed: ' + built.build.failureText + '. What is published stays as it was.'
-                    : 'Built: ' + built.build.rowCount + ' products, ' + built.build.skipCount + ' skipped, ' + built.build.errorCount + ' errors. Check the preview, then publish it.',
+                <script>ec.message.addMessage(built.failed
+                    ? ec.resource.expand('The build failed: ${failure}. What is published stays as it was.', '', {failure: built.build.failureText})
+                    : ec.resource.expand('Built: ${rows} products, ${skipped} skipped, ${errors} errors. Check the preview, then publish it.', '', {rows: built.build.rowCount, skipped: built.build.skipCount, errors: built.build.errorCount}),
                     built.failed ? 'warning' : 'success')</script>
             </if>
         </actions>

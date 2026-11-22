@@ -203,8 +203,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         condition="caseLink"/>
                             </container>
                             <label text="${claim.requestName}" type="p" style="q-mb-none"/>
-                            <label text="${[claim.customerName, claim.productText, claim.assetText, 'claimed ' + claim.claimDateText,
-                                    claim.assigneeName ? 'with ' + claim.assigneeName : ''].filter(Boolean).join(' · ')}"
+                            <label text="${[claim.customerName, claim.productText, claim.assetText, ec.resource.expand('claimed $' + '{date}', '', {date: claim.claimDateText}),
+                                    claim.assigneeName ? ec.resource.expand('with $' + '{name}', '', {name: claim.assigneeName}) : ''].filter(Boolean).join(' · ')}"
                                     type="p" style="text-caption m-muted"/>
                         </container>
                         <container style="col-12 col-md-auto m-record-status">
@@ -402,9 +402,9 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="Evidence"/>
                             <box-body>
-                                <label type="p" text="${claim.productText ? 'Product: ' + claim.productText + (claim.quantity != null ? ' × ' + claim.quantity : '') : 'No product recorded.'}"/>
+                                <label type="p" text="${claim.productText ? (claim.quantity != null ? ec.resource.expand('Product: $' + '{product} × $' + '{quantity}', '', {product: claim.productText, quantity: claim.quantity}) : ec.resource.expand('Product: $' + '{product}', '', {product: claim.productText})) : ec.l10n.localize('No product recorded.')}"/>
                                 <label type="p" condition="claim.assetText"
-                                        text="${'Serial: ' + claim.assetText + [claim.assetOwnerName ? 'owned by ' + claim.assetOwnerName : '', claim.assetStatusText].filter(Boolean).map(text =&gt; ' · ' + text).join('')}"/>
+                                        text="${[ec.resource.expand('Serial: $' + '{serial}', '', {serial: claim.assetText}), claim.assetOwnerName ? ec.resource.expand('owned by $' + '{name}', '', {name: claim.assetOwnerName}) : '', claim.assetStatusText].filter(Boolean).join(' · ')}"/>
                                 <container style="row q-gutter-x-sm" >
                                     <link url="${orderLink}" text="Sale: order ${claim.orderId}" link-type="anchor"
                                             parameter-map="{orderId:claim.orderId}" condition="claim.orderId &amp;&amp; orderLink"/>
@@ -502,14 +502,14 @@ along with this software (see the LICENSE.md file). If not, see
                                     <box-body>
                                         <label type="p" text="${repair.comments}" condition="repair.comments"/>
                                         <label type="p" style="text-caption m-muted" condition="!repair.managed"
-                                                text="${['started ' + repair.startedText, repair.taskName ? 'task ' + repair.taskWorkEffortId + ' ' + repair.taskStatusText : '',
-                                                    repair.dueText ? 'due ' + repair.dueText : '', repair.assigneeName].filter(Boolean).join(' · ')}"/>
+                                                text="${[ec.resource.expand('started $' + '{when}', '', {when: repair.startedText}), repair.taskName ? ec.resource.expand('task $' + '{id} $' + '{status}', '', {id: repair.taskWorkEffortId, status: repair.taskStatusText}) : '',
+                                                    repair.dueText ? ec.resource.expand('due $' + '{when}', '', {when: repair.dueText}) : '', repair.assigneeName].filter(Boolean).join(' · ')}"/>
                                         <!-- impl-maintenance P12: the managed repair's safe summary, its work order and its report -->
                                         <section name="ManagedRepair" condition="repair.managed">
                                             <widgets>
                                                 <label type="p" style="text-caption m-muted"
-                                                        text="${['Work order ' + repair.workEffortId + ' · ' + repair.workStatusText, repair.finishedText ? 'finished ' + repair.finishedText : '',
-                                                            repair.outcomeText, repair.assigneeName, repair.reportStored ? 'report stored' : 'no report stored yet'].filter(Boolean).join(' · ')}"/>
+                                                        text="${[ec.resource.expand('Work order $' + '{id} · $' + '{status}', '', {id: repair.workEffortId, status: repair.workStatusText}), repair.finishedText ? ec.resource.expand('finished $' + '{when}', '', {when: repair.finishedText}) : '',
+                                                            repair.outcomeText, repair.assigneeName, repair.reportStored ? ec.l10n.localize('report stored') : ec.l10n.localize('no report stored yet')].filter(Boolean).join(' · ')}"/>
                                                 <container style="row items-center q-gutter-xs">
                                                     <link url="${repair.workOrderUrl}" url-type="plain" text="Open work order" icon="sym_o_handyman"
                                                             link-type="anchor-button" condition="repair.workOrderUrl"/>

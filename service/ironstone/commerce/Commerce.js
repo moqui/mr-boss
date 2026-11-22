@@ -159,7 +159,7 @@ function scope() {
     }
 }
 function required(userScope = scope()) {
-    if (!userScope.read) denied("COMMERCE_UNAVAILABLE", "Commerce is not available")
+    if (!userScope.read) denied("COMMERCE_UNAVAILABLE", ec.l10n.localize("Commerce is not available"))
     return userScope
 }
 const owns = (userScope, partyId) => !userScope.ownerIds || (!!partyId && userScope.ownerIds.includes(partyId))
@@ -288,7 +288,7 @@ const linkPaths = [
     "Reports/PromotionUse"
 ]
 function sharedContext(p) {
-    if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", "Commerce context is not available")
+    if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", ec.l10n.localize("Commerce context is not available"))
     const userScope = required()
     return {
         capabilities: userScope.capabilities,
@@ -374,7 +374,14 @@ const recordKinds = {
 // outside the scope are refused alike (RECORD_UNAVAILABLE), so a forged id learns nothing.
 function recordOf(userScope, kind, recordId) {
     const definition = Object.hasOwn(recordKinds, kind) ? recordKinds[kind] : null
-    const unavailable = () => denied("RECORD_UNAVAILABLE", (definition?.name || "Record") + " " + recordId + " is not available")
+    const unavailable = () =>
+        denied(
+            "RECORD_UNAVAILABLE",
+            ec.resource.expand("${name} ${recordId} is not available", "", {
+                name: ec.l10n.localize(definition?.name || "Record"),
+                recordId
+            })
+        )
     if (!recordId || !definition) unavailable()
     const found = definition.read(recordId)
     if (!found) unavailable()
@@ -395,7 +402,7 @@ function checkRecord(p) {
     if (p.capability) {
         if (!Object.hasOwn(capabilityPermissions, p.capability)) throw new Error("Unknown Commerce capability " + p.capability)
         if (!userScope.capabilities[p.capability])
-            denied("PERMISSION_DENIED", capabilityPermissions[p.capability] + " is required")
+            denied("PERMISSION_DENIED", ec.resource.expand("${permission} is required", "", {permission: capabilityPermissions[p.capability]}))
     }
     return recordOf(userScope, p.recordType, p.recordId)
 }
@@ -858,7 +865,11 @@ function callContext(p) {
     for (const record of Array.from(found.records || [])) {
         const kind = record.cart ? "cart" : "order"
         recordList.push({
-            title: (record.cart ? "Cart " : "Store order ") + record.orderId + " · " + record.storeName,
+            title: ec.resource.expand(
+                record.cart ? "Cart ${orderId} · ${storeName}" : "Store order ${orderId} · ${storeName}",
+                "",
+                {orderId: record.orderId, storeName: record.storeName}
+            ),
             status: record.statusText,
             url: recordUrl(kind, record.orderId)
         })

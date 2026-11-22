@@ -27,15 +27,15 @@ const pageSize = 50
 const amount = (field, label, unitField) => ({field, label, unitField, align: "right"})
 const orderParts = {
     datasetId: "mantle-sales-orders",
-    title: "Order parts",
+    title: ec.l10n.localize("Order parts"),
     columns: [
-        {field: "orderPartSeqId", label: "Part"},
-        {field: "placedDate", label: "Placed", date: true},
-        {field: "statusId", label: "Order status"},
-        {field: "partStatusId", label: "Part status"},
-        {field: "productStoreId", label: "Store"},
-        {field: "salesChannelEnumId", label: "Channel"},
-        amount("partTotal", "Part total", "currencyUomId")
+        {field: "orderPartSeqId", label: ec.l10n.localize("Part")},
+        {field: "placedDate", label: ec.l10n.localize("Placed"), date: true},
+        {field: "statusId", label: ec.l10n.localize("Order status")},
+        {field: "partStatusId", label: ec.l10n.localize("Part status")},
+        {field: "productStoreId", label: ec.l10n.localize("Store")},
+        {field: "salesChannelEnumId", label: ec.l10n.localize("Channel")},
+        amount("partTotal", ec.l10n.localize("Part total"), "currencyUomId")
     ]
 }
 const orderItems = {
@@ -111,7 +111,7 @@ const recordTypes = {
     Product360: {
         label: "Product",
         parameter: "productId",
-        sources: [source(stock, "productId"), source(orderItems, "productId", "Order items")],
+        sources: [source(stock, "productId"), source(orderItems, "productId", ec.l10n.localize("Order items"))],
         owners: [
             {label: "Products", path: "Products/Products/Product360", parameter: "productId"},
             {label: "Commerce", path: "Commerce/Merchandising/Product360", parameter: "productId"},
@@ -145,7 +145,7 @@ const recordTypes = {
     FacilityDetail: {
         label: "Facility",
         parameter: "facilityId",
-        sources: [source(stock, "facilityId"), source(orderParts, "facilityId", "Order parts shipping from here")],
+        sources: [source(stock, "facilityId"), source(orderParts, "facilityId", ec.l10n.localize("Order parts shipping from here"))],
         owners: [
             {label: "Warehouse", path: "Warehouse/Locations/FacilityDetail", parameter: "facilityId"},
             {label: "Manufacturing", path: "Manufacturing/WorkCenters/FacilityDetail", parameter: "facilityId"},
@@ -251,11 +251,11 @@ function returnOf(p) {
 // return to the report.
 function record(p) {
     const userScope = insights.required()
-    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", "A record behind a report needs Insights read")
+    if (!userScope.capabilities.view) denied("INSIGHTS_VIEW_REQUIRED", ec.l10n.localize("A record behind a report needs Insights read"))
     const type = recordTypes[p.recordType]
-    if (!type) denied("RECORD_UNAVAILABLE", "This record is not available")
+    if (!type) denied("RECORD_UNAVAILABLE", ec.l10n.localize("This record is not available"))
     const recordId = String(p.recordId || "")
-    if (!recordId || recordId.length > 80) denied("RECORD_UNAVAILABLE", "This record is not available")
+    if (!recordId || recordId.length > 80) denied("RECORD_UNAVAILABLE", ec.l10n.localize("This record is not available"))
     const sources = []
     for (const definition of type.sources) {
         const read = readSource(definition, recordId)

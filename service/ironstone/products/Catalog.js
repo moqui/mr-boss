@@ -63,7 +63,7 @@ function run(op, parameters) {
         "productName,pseudoId,description,comments,productTypeEnumId,productClassEnumId,assetTypeEnumId,assetClassEnumId,amountUomId,amountFixed,amountRequire,salesAllowed,purchaseAllowed,salesIntroductionDate,salesDiscontinuationDate,salesDiscWhenNotAvail,supportDiscontinuationDate,requireInventory,chargeShipping,taxable,returnable,originGeoId,storageTypeEnumId"
     function storeProduct(p) {
         const a = access()
-        if (!a.capabilities.read || !a.capabilities.catalogEdit) throw new Error("Catalog editor authority is required")
+        if (!a.capabilities.read || !a.capabilities.catalogEdit) throw new Error(ec.l10n.localize("Catalog editor authority is required"))
         return call("mantle.product.CatalogRecordServices.store#Product", p, true)
     }
 
@@ -283,7 +283,7 @@ function run(op, parameters) {
         find(P + "Product", {productId: p.productId})
             .forUpdate(true)
             .one()
-        if (product.statusId !== "PrdDraft") throw new Error("Only unused drafts may be deleted")
+        if (product.statusId !== "PrdDraft") throw new Error(ec.l10n.localize("Only unused drafts may be deleted"))
         for (const entity of [
             "mantle.order.OrderItem",
             "mantle.account.invoice.InvoiceItem",
@@ -298,7 +298,7 @@ function run(op, parameters) {
             find(P + "ProductAssoc", {toProductId: p.productId}).count() ||
             find(P + "ProductAssoc", {productId: p.productId}).count()
         )
-            throw new Error("Remove product relationships before deleting an unused draft")
+            throw new Error(ec.l10n.localize("Remove product relationships before deleting an unused draft"))
         for (const entity of [
             P + "ProductUomDimension",
             P + "ProductOtherIdentification",
@@ -325,13 +325,13 @@ function run(op, parameters) {
                           .filter(Boolean)
             )
         ]
-        if (!ids.length || ids.length > 1000) throw new Error("Select 1–1000 product IDs")
+        if (!ids.length || ids.length > 1000) throw new Error(ec.l10n.localize("Select 1–1000 product IDs"))
         const results = []
         for (const id of ids) {
             ec.message.pushErrors()
             try {
                 const data = Object.assign({}, p, {productId: id, kind: p.kind, productIds: null})
-                if (!["category", "feature"].includes(p.kind)) throw new Error("Choose a category or feature bulk action")
+                if (!["category", "feature"].includes(p.kind)) throw new Error(ec.l10n.localize("Choose a category or feature bulk action"))
                 record(id, "catalogEdit")
                 callNew("mantle.product.CatalogRecordServices.ensure#CatalogAssignment", data)
                 if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
@@ -446,7 +446,7 @@ function run(op, parameters) {
                 if (!copied) continue
                 const target =
                     contentRoot + "/product/" + id + "/content_" + newId + "/" + content.safeName(location.split("/").pop())
-                if (!content.owned({productId: id}, contentConfig, target)) throw new Error("A copied file's place is not its product's folder")
+                if (!content.owned({productId: id}, contentConfig, target)) throw new Error(ec.l10n.localize("A copied file's place is not its product's folder"))
                 const stream = ec.resource.getLocationReference(location).openStream()
                 try {
                     ec.resource.getLocationReference(target).putStream(stream)
@@ -481,7 +481,7 @@ function run(op, parameters) {
         if (p.keyword) {
             ec.message.pushErrors()
             try {
-                if (!ec.search.isAvailable()) throw new Error("Search backend is unavailable")
+                if (!ec.search.isAvailable()) throw new Error(ec.l10n.localize("Search backend is unavailable"))
                 const request = {
                     documentType: ["MantleProduct"],
                     query: ec.search.parseQuery(String(p.keyword)),
@@ -576,7 +576,7 @@ function run(op, parameters) {
             .filter(Boolean)
         for (const id of tagIds)
             if (record(id, "read", P + "category.ProductCategory").productCategoryTypeEnumId !== "PctTag")
-                throw new Error("Choose a tag category")
+                throw new Error(ec.l10n.localize("Choose a tag category"))
         const tagSets = tagIds.map(
             id =>
                 new Set(
@@ -826,7 +826,7 @@ function run(op, parameters) {
                 label: row.productName ? row.productName + " (" + row.productId + ")" : row.productId
             }))
         const allowed = ["owners", "units", "categories", "features", "parties", "contentTypes"]
-        if (!allowed.includes(p.choice)) throw new Error("Unknown catalog choice")
+        if (!allowed.includes(p.choice)) throw new Error(ec.l10n.localize("Unknown catalog choice"))
         const term = String(p.term || "").toLowerCase()
         return options({optionNames: [p.choice]})
             .options[p.choice].filter(

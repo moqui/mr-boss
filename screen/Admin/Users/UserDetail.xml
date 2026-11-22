@@ -56,7 +56,7 @@ along with this software (see the LICENSE.md file). If not, see
                         ipAllowed:(ipAllowed ?? ''), requirePasswordChange:(requirePasswordChange || 'N'), locale:(locale ?? ''),
                         timeZone:(timeZone ?? ''), reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Account saved' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Account saved') : stored.reason, stored.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="userId"/></default-response>
@@ -68,7 +68,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{partyId:partyId, organizationPartyId:organizationPartyId, relationshipTypeEnumId:relationshipTypeEnumId,
                         fromDate:(fromDate || null), thruDate:(thruDate || null), reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Organization membership added' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Organization membership added') : stored.reason, stored.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="userId"/></default-response>
@@ -80,7 +80,7 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{partyRelationshipId:partyRelationshipId, expectedRevision:expectedRevision, thruDate:(thruDate || null),
                         reason:(reason || null)}"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Organization membership ended' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Organization membership ended') : stored.reason, stored.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="userId"/></default-response>
@@ -96,7 +96,7 @@ along with this software (see the LICENSE.md file). If not, see
                             reason:(reason || null)}"/>
             </if>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(stored.applied ? 'Membership added' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(stored.applied ? ec.l10n.localize('Membership added') : stored.reason, stored.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="userId"/></default-response>
@@ -112,7 +112,7 @@ along with this software (see the LICENSE.md file). If not, see
                             thruDate:(thruDate || null), reason:(reason || null)}"/>
             </if>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(ended.applied ? 'Membership ended' : ended.reason, ended.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(ended.applied ? ec.l10n.localize('Membership ended') : ended.reason, ended.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="userId"/></default-response>
@@ -140,8 +140,8 @@ along with this software (see the LICENSE.md file). If not, see
                             reason:(reason || null)}"/>
             </if>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(revoked.failedKinds?.length ? 'Some access could not be revoked: ' + revoked.failedKinds.join(', ')
-                    : credentialKind ? 'Credential revoked' : 'Sessions, keys, app passwords and phones revoked', revoked.failedKinds?.length ? 'warning' : 'success')</script>
+                <script>ec.message.addMessage(revoked.failedKinds?.length ? ec.resource.expand('Some access could not be revoked: ${kinds}', '', {kinds: revoked.failedKinds.join(', ')})
+                    : credentialKind ? ec.l10n.localize('Credential revoked') : ec.l10n.localize('Sessions, keys, app passwords and phones revoked'), revoked.failedKinds?.length ? 'warning' : 'success')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="userId"/></default-response>
@@ -156,7 +156,7 @@ along with this software (see the LICENSE.md file). If not, see
                         in-map="{userId:userId, sessionKeyList:(sessionKey ? [sessionKey] : null), allOthers:!sessionKey}"/>
             </if>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(revoked.sessionCount ? 'Signed out: its next request goes to the sign-in page' : 'No live session to end', revoked.sessionCount ? 'success' : 'info')</script>
+                <script>ec.message.addMessage(revoked.sessionCount ? ec.l10n.localize('Signed out: its next request goes to the sign-in page') : ec.l10n.localize('No live session to end'), revoked.sessionCount ? 'success' : 'info')</script>
             </if>
         </actions>
         <default-response url="."><parameter name="userId"/></default-response>
@@ -169,8 +169,8 @@ along with this software (see the LICENSE.md file). If not, see
                     kind:kind, organizationPartyId:organizationPartyId, effectiveDate:effectiveDate, reason:reason,
                     expectedRevision:expectedRevision, operationKey:operationKey})"/>
             <if condition="!ec.message.hasError()">
-                <script>ec.message.addMessage(started.applied ? (started.statusId === 'UlopAttention' ? 'Done; some steps wait for you below'
-                    : started.statusId === 'UlopScheduled' ? 'Scheduled: access ends at the date' : 'Done') : started.reason, started.applied ? 'success' : 'warning')</script>
+                <script>ec.message.addMessage(started.applied ? (started.statusId === 'UlopAttention' ? ec.l10n.localize('Done; some steps wait for you below')
+                    : started.statusId === 'UlopScheduled' ? ec.l10n.localize('Scheduled: access ends at the date') : ec.l10n.localize('Done')) : started.reason, started.applied ? 'success' : 'warning')</script>
             </if>
         </actions>
         <conditional-response url="../LifecycleDetail" condition="started?.applied">
@@ -201,7 +201,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#Account', {userId:userId}, 'User ' + userId + ' is not available.')"/>
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.get#Account', {userId:userId}, ec.resource.expand('User ${id} is not available.', '', {id: userId}))"/>
         <set field="found" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <set field="account" from="found?.account || null"/>
@@ -217,7 +217,7 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- a lifecycle operation's review (P6): what it would do, and what the account owns that waits for a new owner -->
         <if condition="account &amp;&amp; previewKind">
             <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.preview#Lifecycle', {userId:userId, kind:previewKind, organizationPartyId:(previewOrganizationPartyId || null),
-                        effectiveDate:(previewEffectiveDate || null)}, 'The change could not be reviewed.')"/>
+                        effectiveDate:(previewEffectiveDate || null)}, ec.l10n.localize('The change could not be reviewed.'))"/>
             <set field="preview" from="called.out"/>
             <set field="previewFailure" from="called.failure"/>
             <if condition="preview?.movesResources">
@@ -249,36 +249,36 @@ along with this software (see the LICENSE.md file). If not, see
                 username: account.username, ipAllowed: account.ipAllowed, requirePasswordChange: account.requirePasswordChange ? 'Y' : 'N',
                 locale: account.locale, timeZone: account.timeZone} : {}
             terminateText = account?.terminateDate ? when(account.terminateDate) : ''
-            const kinds = {PrtEmployee: 'Employee', PrtAgent: 'Agent', PrtMember: 'Member', PrtRepresentative: 'Representative'}
+            const kinds = {PrtEmployee: ec.l10n.localize('Employee'), PrtAgent: 'Agent', PrtMember: ec.l10n.localize('Member'), PrtRepresentative: ec.l10n.localize('Representative')}
             relationships = Array.from(found?.relationships || []).map(row => Object.assign({}, row, {
                 kindText: kinds[row.relationshipTypeEnumId] || row.relationshipTypeEnumId,
                 fromText: when(row.fromDate), thruText: when(row.thruDate),
-                stateText: row.active ? 'Current' : row.ended ? 'Ended' : 'Starts ' + when(row.fromDate)}))
+                stateText: row.active ? 'Current' : row.ended ? ec.l10n.localize('Ended') : ec.resource.expand('Starts ${when}', '', {when: when(row.fromDate)})}))
             const memberRows = Array.from(found?.memberships || []).map(row => Object.assign({}, row, {
                 fromText: when(row.fromDate), thruText: when(row.thruDate),
-                stateText: row.active ? 'Member' : row.ended ? 'Ended' : 'Starts ' + when(row.fromDate),
-                markerText: [row.registered ? (row.appName || 'Registered') : 'Not registered', row.privileged ? 'Privileged' : ''].filter(Boolean).join(' · ')}))
+                stateText: row.active ? ec.l10n.localize('Member') : row.ended ? ec.l10n.localize('Ended') : ec.resource.expand('Starts ${when}', '', {when: when(row.fromDate)}),
+                markerText: [row.registered ? (row.appName || ec.l10n.localize('Registered')) : ec.l10n.localize('Not registered'), row.privileged ? ec.l10n.localize('Privileged') : ''].filter(Boolean).join(' · ')}))
             currentMemberships = memberRows.filter(row => !row.ended)
             endedMembershipCount = memberRows.length - currentMemberships.length
             factors = Array.from(found?.factorList || []).map(row => Object.assign({}, row, {
-                verifiedText: row.verified ? 'Verified' : 'Not verified', fromText: when(row.fromDate)}))
-            const credentialKinds = {accessToken: 'Access token', deviceKey: 'App or device', loginKey: 'Sign-in key', appPassword: 'App password',
-                sshKey: 'SSH key', sipDevice: 'Phone'}
+                verifiedText: row.verified ? ec.l10n.localize('Verified') : ec.l10n.localize('Not verified'), fromText: when(row.fromDate)}))
+            const credentialKinds = {accessToken: ec.l10n.localize('Access token'), deviceKey: ec.l10n.localize('App or device'), loginKey: ec.l10n.localize('Sign-in key'), appPassword: ec.l10n.localize('App password'),
+                sshKey: ec.l10n.localize('SSH key'), sipDevice: ec.l10n.localize('Phone')}
             credentials = Array.from(found?.credentialList || []).map(row => Object.assign({fingerprint: ''}, row, {
                 kindText: credentialKinds[row.kind] || row.kind,
                 fromText: when(row.fromDate), usedText: when(row.lastUsedDate), thruText: when(row.thruDate)}))
             sessions = Array.from(sessionsFound?.sessionList || []).map(row => Object.assign({}, row, {
                 startedText: when(row.startedDate), seenText: when(row.lastSeenDate),
-                stateText: row.active ? 'Signed in' : row.state === 'ended' ? 'Signed out ' + when(row.endedDate) : 'Expired',
+                stateText: row.active ? ec.l10n.localize('Signed in') : row.state === 'ended' ? ec.resource.expand('Signed out ${when}', '', {when: when(row.endedDate)}) : ec.l10n.localize('Expired'),
                 whereText: [row.clientAddress, row.clientPlace].filter(Boolean).join(' · ')}))
             hasActiveSession = sessions.some(row => row.active)
             events = Array.from(history?.eventList || []).map(row => Object.assign({}, row, {timeText: when(row.time)}))
-            stateChips = account ? [account.stateText, account.requirePasswordChange ? 'Password change required' : '',
-                account.ipAllowed ? 'IP limited' : '', found.sharedBeyondScope ? 'Shared identity' : '',
-                !account.hasPassword && !account.externalIdentity ? 'No password yet' : ''].filter(Boolean) : []
+            stateChips = account ? [account.stateText, account.requirePasswordChange ? ec.l10n.localize('Password change required') : '',
+                account.ipAllowed ? ec.l10n.localize('IP limited') : '', found.sharedBeyondScope ? ec.l10n.localize('Shared identity') : '',
+                !account.hasPassword && !account.externalIdentity ? ec.l10n.localize('No password yet') : ''].filter(Boolean) : []
             // the Lifecycle box (P6)
             lifecycleOperations = Array.from(lifecycleFound?.operationList || []).map(row => Object.assign({}, row, {
-                requestedText: when(row.requestedDate), effectiveText: row.effectiveDate ? when(row.effectiveDate) : 'At once'}))
+                requestedText: when(row.requestedDate), effectiveText: row.effectiveDate ? when(row.effectiveDate) : ec.l10n.localize('At once')}))
             const closedForGood = !!account && account.disabled && !account.locked
             canDisable = canManage && !!account && !closedForGood && account.state !== 'terminated' && account.userId !== ec.user.userId
             canRestore = canManage && !!account && (closedForGood || !!account.terminateDate) && account.userId !== ec.user.userId
@@ -300,7 +300,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box type="warning">
                     <box-header title="User not available"/>
                     <box-body>
-                        <label type="p" text="${failure || ('User ' + userId + ' is not available.')}"/>
+                        <label type="p" text="${failure || ec.resource.expand('User $' + '{id} is not available.', '', {id: userId})}"/>
                         <link url="../Users" text="Back to users" link-type="anchor"/>
                     </box-body>
                 </container-box>

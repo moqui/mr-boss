@@ -98,7 +98,7 @@ along with this software (see the LICENSE.md file). If not, see
         <script>
             const participation = participationOut?.participation || {}
             for (const team of teams) for (const member of team.members)
-                Object.assign(member, participation[team.teamPartyId + '|' + member.partyId] || {participationText: 'Takes cases'},
+                Object.assign(member, participation[team.teamPartyId + '|' + member.partyId] || {participationText: ec.l10n.localize('Takes cases')},
                     {organizationPartyId: teamsOut?.organizationPartyId, canChange: team.canChange})
         </script>
         <set field="cfgOrganizations" from="teamsOut?.organizations || []"/>

@@ -24,7 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/SalesParts.xml"/>
     <always-actions>
-        <script>if(!(sales.capabilities.configure))throw new Error('PERMISSION_DENIED: Sales settings are the Sales administrator\'s')</script>
+        <script>if(!(sales.capabilities.configure))throw new Error(ec.l10n.localize('PERMISSION_DENIED: Sales settings are the Sales administrator\'s'))</script>
     </always-actions>
     <actions>
         <set field="can" from="sales.capabilities"/>

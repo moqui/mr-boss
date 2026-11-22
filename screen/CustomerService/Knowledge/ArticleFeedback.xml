@@ -164,7 +164,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="title">
                                 <default-field title="Article">
                                     <link url="${articleUrl}" url-type="plain" text="${title}" link-type="anchor"/>
-                                    <label text="${[spaceName, versionText ? 'version ' + versionText : ''].filter(Boolean).join(' · ')}" type="div"
+                                    <label text="${[spaceName, versionText ? ec.resource.expand('version $' + '{version}', '', {version: versionText}) : ''].filter(Boolean).join(' · ')}" type="div"
                                             style="text-caption m-muted"/>
                                 </default-field>
                             </field>

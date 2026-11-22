@@ -26,7 +26,7 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="Settings" default-menu-index="10" menu-image="sym_o_settings" menu-image-type="icon"
         default-menu-include="ec.user.hasPermission('MARKETING_CONFIGURE')">
     <always-actions>
-        <script>if(!marketing.capabilities.settings)throw new Error('PERMISSION_DENIED: Marketing settings are the Marketing administrator\'s')</script>
+        <script>if(!marketing.capabilities.settings)throw new Error(ec.l10n.localize('PERMISSION_DENIED: Marketing settings are the Marketing administrator\'s'))</script>
         <!-- P13: Sales' context for this root, for its LeadSources (none for a user without Sales) -->
         <service-call name="ironstone.sales.ContextServices.get#SharedContext" in-map="{appRoot:'Marketing'}" out-map="salesFound"
                 transaction="force-new" ignore-error="true"/>

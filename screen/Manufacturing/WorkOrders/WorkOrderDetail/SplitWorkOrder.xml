@@ -50,9 +50,19 @@ along with this software (see the LICENSE.md file). If not, see
                         estimatedCompletionDate:estimatedCompletionDate || null, previewKey:previewKey,
                         complete:complete == 'true', acceptMaterialVariance:acceptMaterialVariance == 'true', reason:reason}"/>
             <set field="newWorkEffortId" from="splitOut.result?.newWorkEffortId"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage((splitOut.result?.resultCode == 'BACKORDERED' ? 'Backorder '
-                    : 'Split ') + newWorkEffortId + ' made for ' + splitOut.result?.quantity
-                    + (splitOut.result?.completed ? '; work order ' + workEffortId + ' completed' : ''), 'success')</script>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const backorder = splitOut.result?.resultCode == 'BACKORDERED'
+                    const completed = !!splitOut.result?.completed
+                    const template = backorder
+                        ? (completed ? 'Backorder ${newWorkEffortId} made for ${quantity}; work order ${workEffortId} completed'
+                            : 'Backorder ${newWorkEffortId} made for ${quantity}')
+                        : (completed ? 'Split ${newWorkEffortId} made for ${quantity}; work order ${workEffortId} completed'
+                            : 'Split ${newWorkEffortId} made for ${quantity}')
+                    ec.message.addMessage(ec.resource.expand(template, '',
+                        {newWorkEffortId: newWorkEffortId, quantity: splitOut.result?.quantity, workEffortId: workEffortId}), 'success')
+                }
+            ]]></script>
         </actions>
         <default-response url="..">
             <parameter name="workEffortId" from="newWorkEffortId"/>

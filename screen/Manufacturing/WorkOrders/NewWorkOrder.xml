@@ -59,7 +59,7 @@ along with this software (see the LICENSE.md file). If not, see
                         sourceOrderId:sourceOrderId || null, orderItemSeqId:orderItemSeqId || null,
                         requirementId:requirementId || null}"/>
             <set field="workEffortId" from="created.workEffortId"/>
-            <script>if (created.existing) ec.message.addMessage('This draft was created already', 'info')</script>
+            <script>if (created.existing) ec.message.addMessage(ec.l10n.localize('This draft was created already'), 'info')</script>
         </actions>
         <default-response url="../WorkOrderDetail">
             <parameter name="workEffortId"/>

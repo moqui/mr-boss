@@ -43,7 +43,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.work.ProductionServices.clone#ProductionOrder" out-map="cloned"
                     in-map="{operationKey:operationKey, workEffortId:workEffortId}"/>
             <set field="clonedId" from="cloned.result?.workEffortId"/>
-            <script>if (!ec.message.hasError()) ec.message.addMessage('Draft work order ' + clonedId + ' made like ' + workEffortId, 'success')</script>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(ec.resource.expand('Draft work order ${clonedId} made like ${workEffortId}', '',
+                    {clonedId: clonedId, workEffortId: workEffortId}), 'success')</script>
         </actions>
         <default-response url=".">
             <parameter name="workEffortId" from="clonedId"/>

@@ -41,7 +41,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="mantle.humanres.PayrollResultServices.get#Payslip" out-map="slipFound" in-map="{payslipId:payslipId}"/>
             <script>if (!ec.message.hasError()) {
-                if (!slipFound.file) ec.message.addError('RECORD_UNAVAILABLE: This payslip has no issued statement')
+                if (!slipFound.file) ec.message.addError(ec.l10n.localize('RECORD_UNAVAILABLE: This payslip has no issued statement'))
                 else {
                     const was = ec.artifactExecution.disableAuthz()
                     try { ec.web.sendResourceResponse(slipFound.file.location, true, slipFound.file.fileName) } finally { if (!was) ec.artifactExecution.enableAuthz() }

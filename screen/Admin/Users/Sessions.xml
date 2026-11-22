@@ -69,7 +69,7 @@ along with this software (see the LICENSE.md file). If not, see
                 refused += Number(out.refusedCount || 0)
             }
             if (!ec.message.hasError())
-                ec.message.addMessage(ended + ' session(s) signed out' + (refused ? '; ' + refused + ' not yours to end' : ''), refused ? 'warning' : 'success')
+                ec.message.addMessage(ec.resource.expand(refused ? '${count} session(s) signed out; ${refused} not yours to end' : '${count} session(s) signed out', '', {count: ended, refused: refused}), refused ? 'warning' : 'success')
         ]]></script></actions>
         <default-response url="."/>
         <error-response url="."/>
@@ -77,13 +77,13 @@ along with this software (see the LICENSE.md file). If not, see
 
     <actions>
         <!-- a refusal is shown as its reason (AdminCalls.read; ignore-error would clear it, F129) -->
-        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.find#Users', {text:(text || null), organizationPartyId:(organizationPartyId || null), pageSize:200}, 'Sessions are not available to you.')"/>
+        <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('mantle.party.IdentityServices.find#Users', {text:(text || null), organizationPartyId:(organizationPartyId || null), pageSize:200}, ec.l10n.localize('Sessions are not available to you.'))"/>
         <set field="usersFound" from="called.out"/>
         <set field="failure" from="called.failure"/>
         <set field="userIds" from="(usersFound?.userList || []).map(row => row.userId)"/>
         <if condition="userIds.length">
             <set field="called" from="ec.resource.script('component://framework/service/org/moqui/admin/AdminCalls.js').read('org.moqui.admin.IdentityServices.find#Sessions',
-                    {userIdList:userIds, activeOnly:(recent != 'Y'), sinceDays:7, limit:200}, 'Sessions are not available to you.')"/>
+                    {userIdList:userIds, activeOnly:(recent != 'Y'), sinceDays:7, limit:200}, ec.l10n.localize('Sessions are not available to you.'))"/>
             <set field="found" from="called.out"/>
             <set field="failure" from="failure || called.failure"/>
         </if>

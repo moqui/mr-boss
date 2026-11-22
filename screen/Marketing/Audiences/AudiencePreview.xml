@@ -58,12 +58,12 @@ along with this software (see the LICENSE.md file). If not, see
                 }
             }
             const refusals = {
-                SOURCE_UNAVAILABLE: 'A segment reads a source you cannot read in this organization, so no count is shown.',
-                RECORD_UNAVAILABLE: 'A list or segment is not available: each must be one of the topic\'s organization.',
-                LIST_ARCHIVED: 'The topic list is archived: it takes no send.',
-                SEGMENT_ARCHIVED: 'An archived segment cannot be used.',
-                AUDIENCE_TOO_LARGE: 'The audience is too large to preview here; narrow it with fewer lists or segments.',
-                TOO_MANY_SOURCES: 'Choose at most twenty lists and segments.'
+                SOURCE_UNAVAILABLE: ec.l10n.localize('A segment reads a source you cannot read in this organization, so no count is shown.'),
+                RECORD_UNAVAILABLE: ec.l10n.localize('A list or segment is not available: each must be one of the topic\'s organization.'),
+                LIST_ARCHIVED: ec.l10n.localize('The topic list is archived: it takes no send.'),
+                SEGMENT_ARCHIVED: ec.l10n.localize('An archived segment cannot be used.'),
+                AUDIENCE_TOO_LARGE: ec.l10n.localize('The audience is too large to preview here; narrow it with fewer lists or segments.'),
+                TOO_MANY_SOURCES: ec.l10n.localize('Choose at most twenty lists and segments.')
             }
             if (previewRefusal) {
                 const code = Object.keys(refusals).find(key => previewRefusal.includes(key))

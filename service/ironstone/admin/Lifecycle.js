@@ -25,7 +25,7 @@ const contracts = {
 const text = value => String(value ?? "").trim()
 const refused = (reasonCode, reason, extra = {}) => Object.assign({applied: false, reasonCode, reason}, extra)
 function requirePermission(permission) {
-    if (!ec.user.userId) denied("SIGN_IN", "Sign in to administer identities")
+    if (!ec.user.userId) denied("SIGN_IN", ec.l10n.localize("Sign in to administer identities"))
     if (!access.has(permission)) denied("PERMISSION_DENIED", permission + " is required")
 }
 function carriesContract(service, kind) {
@@ -118,7 +118,7 @@ function findOwnedResources(p) {
                 }))
         } catch (error) {
             ec.logger.error("Lifecycle participant " + row.participantKey + " lookup of " + userId + " failed: " + error.message)
-            Object.assign(entry, {state: "failed", reason: "Its owner could not answer"})
+            Object.assign(entry, {state: "failed", reason: ec.l10n.localize("Its owner could not answer")})
             continue
         }
         if (row.pauseService)
@@ -157,17 +157,17 @@ function transferOwnedResource(p) {
         .call()
     if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
     const step = one("mantle.party.UserLifecycleOperationStep", {operationId: text(p.operationId), stepSeqId: text(p.stepSeqId)})
-    if (!read?.operation || !step) denied("RECORD_UNAVAILABLE", "The step is not available")
-    if (step.stepKind !== "transfer") return refused("NOT_A_TRANSFER", "This step does not move a resource")
+    if (!read?.operation || !step) denied("RECORD_UNAVAILABLE", ec.l10n.localize("The step is not available"))
+    if (step.stepKind !== "transfer") return refused("NOT_A_TRANSFER", ec.l10n.localize("This step does not move a resource"))
     const registered = participants().find(row => row.participantKey === step.providerKey)
     if (
         !registered ||
         registered.transferService !== step.actionService ||
         registered.resourceParameter !== step.resourceParameter
     )
-        return refused("NOT_REGISTERED", "This step's owner is no longer registered to move it; ask its owner")
+        return refused("NOT_REGISTERED", ec.l10n.localize("This step's owner is no longer registered to move it; ask its owner"))
     if (registered.requiredPermission && !access.has(registered.requiredPermission))
-        return refused("PERMISSION_DENIED", registered.requiredPermission + " is needed to move this")
+        return refused("PERMISSION_DENIED", ec.resource.expand("${permission} is needed to move this", "", {permission: registered.requiredPermission}))
     // the new owner: a staff identity in the caller's scope (Mantle's retry checks it again) that can sign in
     const toUserId = text(p.toUserId)
     const candidate = identityLib.identity(toUserId)
@@ -176,7 +176,7 @@ function transferOwnedResource(p) {
         (account.disabled === "Y" && !account.disabledDateTime) ||
         (account.terminateDate != null && Number(String(account.terminateDate)) <= Number(String(ec.user.nowTimestamp)))
     if (closed)
-        return refused("OWNER_INELIGIBLE", (account.userFullName || account.username) + " cannot sign in: choose another owner")
+        return refused("OWNER_INELIGIBLE", ec.resource.expand("${name} cannot sign in: choose another owner", "", {name: account.userFullName || account.username}))
     const out = ec.service
         .sync()
         .name(S + "retry#LifecycleStep")
@@ -215,7 +215,7 @@ function startOperation(p) {
 // Users' bulk disable: one operation per identity, each checked on its own in its own transaction; the refused ones named.
 function bulkDisable(p) {
     const ids = (Array.isArray(p.userIds) ? p.userIds : String(p.userIds || "").split(",")).map(text).filter(Boolean)
-    if (!ids.length) throw new Error("Select one or more users first")
+    if (!ids.length) throw new Error(ec.l10n.localize("Select one or more users first"))
     let doneCount = 0
     const failures = []
     for (const userId of ids) {
@@ -243,7 +243,7 @@ const assignmentNames = {tasks: "Open tasks", workItems: "Open project work item
 const openTask = row => !["WeComplete", "WeClosed", "WeCancelled"].includes(row.statusId)
 // The caller's own assignments, or another identity's in the caller's scope with the permission.
 function assignmentParty(userId, permission) {
-    if (!ec.user.userId) denied("SIGN_IN", "Sign in to see assignments")
+    if (!ec.user.userId) denied("SIGN_IN", ec.l10n.localize("Sign in to see assignments"))
     if (text(userId) === ec.user.userId) return ec.user.userAccount?.partyId || null
     requirePermission(permission)
     return identityLib.identity(userId).account.partyId || null
@@ -304,19 +304,19 @@ function findAssignments(p) {
             .filter(kind => found[kind].length)
             .map(kind => ({
                 resourceId: kind,
-                resourceName: assignmentNames[kind] + " (" + found[kind].length + ")",
+                resourceName: ec.l10n.localize(assignmentNames[kind]) + " (" + found[kind].length + ")",
                 resourceKind: "assignment",
                 transferable: true,
-                note: found[kind].length + " open"
+                note: ec.resource.expand("${count} open", "", {count: found[kind].length})
             }))
     }
 }
 function transferAssignments(p) {
     const kind = text(p.assignmentKind)
-    if (!assignmentNames[kind]) throw new Error("Unknown assignment kind " + kind)
+    if (!assignmentNames[kind]) throw new Error(ec.resource.expand("Unknown assignment kind ${name}", "", {name: kind}))
     const fromPartyId = assignmentParty(p.fromUserId, "ADMIN_IDENTITY_MANAGE")
     const to = one("moqui.security.UserAccount", {userId: text(p.toUserId)})
-    if (!to?.partyId) throw new Error("User " + text(p.toUserId) + " has no party to assign work to")
+    if (!to?.partyId) throw new Error(ec.resource.expand("User ${id} has no party to assign work to", "", {id: text(p.toUserId)}))
     const ids = openAssignments(fromPartyId)[kind]
     const failures = []
     if (kind === "workItems" && ids.length) {
@@ -356,7 +356,7 @@ const operations = {findOwnedResources, transferOwnedResource, findAssignments, 
     startOperation,
     bulkDisable,
     execute: (op, parameters) => {
-        if (!Object.hasOwn(operations, op)) throw new Error("Unknown lifecycle operation " + op)
+        if (!Object.hasOwn(operations, op)) throw new Error(ec.resource.expand("Unknown lifecycle operation ${name}", "", {name: op}))
         return operations[op](parameters)
     }
 })

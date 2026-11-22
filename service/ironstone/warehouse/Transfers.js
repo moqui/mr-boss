@@ -8,6 +8,7 @@
 // and received quantities are summed apart (F37). The postings are Mantle's guarded entry points, which the screens call after
 // AccessServices.check#Record. No cost is read here: a receipt's cost is carried by Mantle and shown nowhere on these screens.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
+const L = text => ec.l10n.localize(text)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, rows, call, denied, dateText} = lib
 const cf = () => ec.entity.conditionFactory
@@ -171,7 +172,7 @@ function kindOf(shipment, route, custody) {
     if (!shipment.subcontractWorkEffortId) return {kind: "transfer", kindText: "Transfer"}
     return custody.has(route?.originFacilityId)
         ? {kind: "return", kindText: "Subcontract return"}
-        : {kind: "dispatch", kindText: "Subcontract dispatch"}
+        : {kind: "dispatch", kindText: L("Subcontract dispatch")}
 }
 function transfers(p) {
     const userScope = warehouse.required(warehouse.scope())

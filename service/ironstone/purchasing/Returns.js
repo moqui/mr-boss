@@ -15,17 +15,17 @@ const {find, one, rows, denied} = lib
 const HEADER = "mantle.order.return.ReturnHeader",
     ITEM = "mantle.order.return.ReturnItem"
 const choiceLimit = 30
-const withheld = "Withheld"
+const withheld = ec.l10n.localize("Withheld")
 const openStatuses = ["ReturnCreated", "ReturnRequested"]
 const authorizedStatuses = ["ReturnApproved", "ReturnShipped", "ReturnReceived", "ReturnManResp"]
 const returnableOrderStatuses = ["OrderApproved", "OrderSent", "OrderProcessing", "OrderCompleted"]
 const views = {
-    open: {label: "Open", statuses: openStatuses.concat(authorizedStatuses)},
-    authorize: {label: "To authorize", statuses: openStatuses},
-    dispatch: {label: "To dispatch", statuses: ["ReturnApproved"]},
-    settle: {label: "Awaiting credit or replacement", statuses: ["ReturnShipped", "ReturnReceived", "ReturnManResp"]},
-    completed: {label: "Completed", statuses: ["ReturnCompleted"]},
-    cancelled: {label: "Cancelled", statuses: ["ReturnCancelled"]}
+    open: {label: ec.l10n.localize("Open"), statuses: openStatuses.concat(authorizedStatuses)},
+    authorize: {label: ec.l10n.localize("To authorize"), statuses: openStatuses},
+    dispatch: {label: ec.l10n.localize("To dispatch"), statuses: ["ReturnApproved"]},
+    settle: {label: ec.l10n.localize("Awaiting credit or replacement"), statuses: ["ReturnShipped", "ReturnReceived", "ReturnManResp"]},
+    completed: {label: ec.l10n.localize("Completed"), statuses: ["ReturnCompleted"]},
+    cancelled: {label: ec.l10n.localize("Cancelled"), statuses: ["ReturnCancelled"]}
 }
 const statusColors = {
     ReturnCreated: "grey-8",
@@ -57,7 +57,7 @@ const statusNames = ids => namesOf("moqui.basic.StatusItem", "statusId", "descri
 const enumNames = ids => namesOf("moqui.basic.Enumeration", "enumId", "description", ids)
 function buyersFor(userScope, organizationPartyId) {
     if (blank(organizationPartyId)) return userScope.ownerIds || internalIds()
-    if (!purchasing.owns(userScope, organizationPartyId)) denied("RECORD_UNAVAILABLE", "The organization is not available")
+    if (!purchasing.owns(userScope, organizationPartyId)) denied("RECORD_UNAVAILABLE", ec.l10n.localize("The organization is not available"))
     return [String(organizationPartyId)]
 }
 
@@ -123,8 +123,8 @@ function progressOf(returnIds) {
 }
 // The physical state of a supplier return: what its outbound shipment did.
 function physicalText(header, row, shipmentStatuses) {
-    if (header.statusId === "ReturnCancelled") return "Cancelled"
-    if (!row.shipments.length) return openStatuses.includes(header.statusId) ? "Not authorized yet" : "No shipment"
+    if (header.statusId === "ReturnCancelled") return ec.l10n.localize("Cancelled")
+    if (!row.shipments.length) return openStatuses.includes(header.statusId) ? ec.l10n.localize("Not authorized yet") : ec.l10n.localize("No shipment")
     const shipment = row.shipments[0]
     const authorized = sumOf(row.items, "returnQuantity")
     return (
@@ -150,14 +150,14 @@ function settlementText(header, row, can) {
     if (header.statusId === "ReturnCompleted") parts.push("Settled")
     else if (left > 0 && !openStatuses.includes(header.statusId) && header.statusId !== "ReturnCancelled")
         parts.push(quantityText(left) + " open")
-    return parts.join(" · ") || (openStatuses.includes(header.statusId) ? "" : "Nothing credited yet")
+    return parts.join(" · ") || (openStatuses.includes(header.statusId) ? "" : ec.l10n.localize("Nothing credited yet"))
 }
 
 // ===== ReturnFind and SupplierReturnList; OrderDetail's and Supplier360's returns =====
 function findSupplierReturns(p) {
     const userScope = purchasing.required()
     const can = userScope.capabilities
-    if (!can.listRead) denied("PERMISSION_DENIED", "Supplier returns are not available")
+    if (!can.listRead) denied("PERMISSION_DENIED", ec.l10n.localize("Supplier returns are not available"))
     if (!blank(p.orderId)) purchasing.recordOf(userScope, "order", String(p.orderId))
     if (!blank(p.vendorPartyId) && !purchasing.supplierOf(userScope, String(p.vendorPartyId)))
         denied("RECORD_UNAVAILABLE", "Supplier " + p.vendorPartyId + " is not available")
@@ -404,7 +404,7 @@ function returnDetail(p) {
                   quantityText(received) +
                   " of " +
                   quantityText(ordered)
-                : "No expected receipt",
+                : ec.l10n.localize("No expected receipt"),
             replacedText: quantityText(
                 sumOf(
                     items.filter(item => item.replacementOrderId === orderId),
