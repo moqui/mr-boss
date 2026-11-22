@@ -79,7 +79,7 @@ In an [mr-moqui](https://github.com/moqui/mr-moqui#quick-start) checkout:
 ./moq run
 ```
 
-Open `http://localhost:8080` and sign in as `john.doe` with the password `moqui`. The app list shows the BOSS apps.
+Open `https://localhost:8443` and sign in as `john.doe` with the password `moqui`. The app list shows the BOSS apps.
 The demo data is a company, Ziziwork Industries, with its customers, suppliers, products, orders, mail and
 projects. There is also a demo user for each role, such as `sales.rep`, `finance.ar` and `maint.tech`, with the same
 password, to see an app as that role does.
