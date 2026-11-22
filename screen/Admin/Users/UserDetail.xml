@@ -249,11 +249,11 @@ along with this software (see the LICENSE.md file). If not, see
                 username: account.username, ipAllowed: account.ipAllowed, requirePasswordChange: account.requirePasswordChange ? 'Y' : 'N',
                 locale: account.locale, timeZone: account.timeZone} : {}
             terminateText = account?.terminateDate ? when(account.terminateDate) : ''
-            const kinds = {PrtEmployee: ec.l10n.localize('Employee'), PrtAgent: 'Agent', PrtMember: ec.l10n.localize('Member'), PrtRepresentative: ec.l10n.localize('Representative')}
+            const kinds = {PrtEmployee: ec.l10n.localize('Employee'), PrtAgent: ec.l10n.localize('Agent##party'), PrtMember: ec.l10n.localize('Member'), PrtRepresentative: ec.l10n.localize('Representative')}
             relationships = Array.from(found?.relationships || []).map(row => Object.assign({}, row, {
                 kindText: kinds[row.relationshipTypeEnumId] || row.relationshipTypeEnumId,
                 fromText: when(row.fromDate), thruText: when(row.thruDate),
-                stateText: row.active ? 'Current' : row.ended ? ec.l10n.localize('Ended') : ec.resource.expand('Starts ${when}', '', {when: when(row.fromDate)})}))
+                stateText: row.active ? ec.l10n.localize('Current##active') : row.ended ? ec.l10n.localize('Ended') : ec.resource.expand('Starts ${when}', '', {when: when(row.fromDate)})}))
             const memberRows = Array.from(found?.memberships || []).map(row => Object.assign({}, row, {
                 fromText: when(row.fromDate), thruText: when(row.thruDate),
                 stateText: row.active ? ec.l10n.localize('Member') : row.ended ? ec.l10n.localize('Ended') : ec.resource.expand('Starts ${when}', '', {when: when(row.fromDate)}),
@@ -273,9 +273,13 @@ along with this software (see the LICENSE.md file). If not, see
                 whereText: [row.clientAddress, row.clientPlace].filter(Boolean).join(' · ')}))
             hasActiveSession = sessions.some(row => row.active)
             events = Array.from(history?.eventList || []).map(row => Object.assign({}, row, {timeText: when(row.time)}))
-            stateChips = account ? [account.stateText, account.requirePasswordChange ? ec.l10n.localize('Password change required') : '',
-                account.ipAllowed ? ec.l10n.localize('IP limited') : '', found.sharedBeyondScope ? ec.l10n.localize('Shared identity') : '',
-                !account.hasPassword && !account.externalIdentity ? ec.l10n.localize('No password yet') : ''].filter(Boolean) : []
+            stateChips = account ? [
+                account.stateText ? {text: account.stateText, tone: ['Disabled', 'Ended', 'Locked'].includes(account.stateText) ? 'negative' : 'primary'} : null,
+                account.requirePasswordChange ? {text: ec.l10n.localize('Password change required'), tone: 'primary'} : null,
+                account.ipAllowed ? {text: ec.l10n.localize('IP limited'), tone: 'primary'} : null,
+                found.sharedBeyondScope ? {text: ec.l10n.localize('Shared identity'), tone: 'warning'} : null,
+                !account.hasPassword && !account.externalIdentity ? {text: ec.l10n.localize('No password yet'), tone: 'primary'} : null
+            ].filter(Boolean) : []
             // the Lifecycle box (P6)
             lifecycleOperations = Array.from(lifecycleFound?.operationList || []).map(row => Object.assign({}, row, {
                 requestedText: when(row.requestedDate), effectiveText: row.effectiveDate ? when(row.effectiveDate) : ec.l10n.localize('At once')}))
@@ -315,11 +319,10 @@ along with this software (see the LICENSE.md file). If not, see
                             <label text="${account.userFullName}" type="h5"/>
                             <label text="${account.username} · ${organizationText}" type="p" style="text-caption m-muted"/>
                             <render-mode>
-                                <text type="qvt"><![CDATA[${stateChips.map(text => '<q-chip dense square class="q-ma-none q-mr-xs m-tonal ' +
-                                    (['Disabled', 'Ended', 'Locked'].includes(text) ? 'text-negative' : text === 'Shared identity' ? 'text-warning' : 'text-primary') + '">' +
-                                    WebUtilities.encodeHtml(text) + '</q-chip>').join('')}]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "UserState", text: stateChips.join(' · ')})}]]></text>
-                                <text type="html">${stateChips.join(' · ')}</text>
+                                <text type="qvt"><![CDATA[${stateChips.map(chip => '<q-chip dense square class="q-ma-none q-mr-xs m-tonal text-' + chip.tone + '">' +
+                                    WebUtilities.encodeHtml(chip.text) + '</q-chip>').join('')}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "UserState", text: stateChips.map(chip => chip.text).join(' · ')})}]]></text>
+                                <text type="html">${stateChips.map(chip => chip.text).join(' · ')}</text>
                             </render-mode>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm">

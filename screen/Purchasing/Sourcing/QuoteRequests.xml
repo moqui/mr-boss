@@ -53,7 +53,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="can" from="purchasing.capabilities"/>
         <set field="newRfq" from="{organizationPartyId:purchasing.activeOrganizationPartyId || purchasing.organizationPartyIds[0] || ''}"/>
         <set field="viewLinks" from="[['', 'Open'], ['draft', 'Drafts'], ['due', 'Responses due'], ['changed', 'Changed since sent'],
-                ['closed', 'Closed'], ['all', 'All']].map(([key, label]) =&gt; ({key, label, current: (view || '') == key}))"/>
+                ['closed', 'Closed'], ['all', 'All']].map(([key, label]) =&gt; ({key, label: ec.l10n.localize(label), current: (view || '') == key}))"/>
         <set field="filtered" from="!!(view || statusId || organizationPartyId || vendorPartyId || text)"/>
         <set field="emptyText" from="filtered ? 'No RFQ matches these filters.' : can.buy
                 ? 'No open RFQ. Ask suppliers for prices with New RFQ, or from the sourcing of a purchase request.'

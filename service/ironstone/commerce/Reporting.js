@@ -139,7 +139,7 @@ function frame(scope, periodInfo, filters, omitted) {
                 ? ec.resource.expand("Stores: ${names}", "", {
                       names: scope.stores.map(store => store.storeName || store.productStoreId).join(", ")
                   })
-                : L("No stores"),
+                : L("Stores: none"),
             ...filters.filter(Boolean)
         ].join(" · "),
         omittedText: unique(omitted).join(" "),
@@ -510,8 +510,8 @@ function promotionUse(p) {
         [
             row.promotionUsesLeft == null
                 ? null
-                : ec.resource.expand("${count} promotion uses left", "", {count: row.promotionUsesLeft}),
-            row.codeUsesLeft == null ? null : ec.resource.expand("${count} code uses left", "", {count: row.codeUsesLeft})
+                : ec.resource.expand("promotion ${count}", "", {count: row.promotionUsesLeft}),
+            row.codeUsesLeft == null ? null : ec.resource.expand("code ${count}", "", {count: row.codeUsesLeft})
         ]
             .filter(Boolean)
             .join(", ") || L("No limit")
@@ -553,7 +553,7 @@ function csvOf(title, answer, tables) {
         [L("Period"), answer.periodText + " (" + answer.timeZoneText + ")"],
         [L("Filters"), answer.filtersText],
         [L("As of"), answer.asOfText],
-        [L("Left out"), answer.omittedText || L("Nothing left out")]
+        [L("Left out"), answer.omittedText || L("Nothing##left out")]
     ].map(cells => cells.map(cell => csvCell(cell, false)).join(","))
     for (const {columns, list} of tables) {
         lines.push("")

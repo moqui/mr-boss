@@ -5,7 +5,7 @@ const {policy, array, plain, rows, day} = lib
 const native = "mantle.account.PaymentServices."
 const kinds = lib.settlementKinds
 const maxDraftBytes = 262144
-const adjustmentLabels = {ItemWriteOff: "Write-off", ItemPromptDiscount: "Discount"}
+const adjustmentLabels = {ItemWriteOff: ec.l10n.localize("Write-off"), ItemPromptDiscount: ec.l10n.localize("Discount")}
 
 const itemToken = lib.settlementToken
 // The two sides a workbench settles: a customer's receivables (Receivables/ReceivablesWorkbench) and a supplier's payables
@@ -25,13 +25,13 @@ const sides = {
         invoiceDetail: "Receivables/InvoiceDetail",
         workbench: "Receivables/ReceivablesWorkbench",
         title: ec.l10n.localize("Allocate receipts and credits"),
-        hint: "Choose a customer and currency. Balances are current; the dates limit the documents listed.",
+        hint: ec.l10n.localize("Choose a customer and currency. Balances are current; the dates limit the documents listed."),
         sources: ec.l10n.localize("Available receipts and credits"),
         sourceLabel: ec.l10n.localize("Receipt or credit"),
         targetLabel: ec.l10n.localize("Invoice or payment"),
-        sourceRows: "Receipts",
-        targetRows: "Invoices",
-        targetPayments: "Payments",
+        sourceRows: ec.l10n.localize("Receipts##cash"),
+        targetRows: ec.l10n.localize("Invoices"),
+        targetPayments: ec.l10n.localize("Payments"),
         resetHint: ec.l10n.localize("Changing the customer, currency or dates starts a new selection."),
         clearedHint: ec.l10n.localize("The selection was cleared for the new customer, currency or dates.")
     },
@@ -49,12 +49,12 @@ const sides = {
         invoiceDetail: "Payables/BillDetail",
         workbench: "Payables/PayablesWorkbench",
         title: ec.l10n.localize("Apply supplier credits and payments"),
-        hint: "Choose a supplier and currency. Balances are current; a bill's discount is open through its date.",
+        hint: ec.l10n.localize("Choose a supplier and currency. Balances are current; a bill's discount is open through its date."),
         sources: ec.l10n.localize("Available payments and supplier credits"),
         sourceLabel: ec.l10n.localize("Payment or supplier credit"),
         targetLabel: ec.l10n.localize("Bill or supplier refund"),
-        sourceRows: "Payments",
-        targetRows: "Bills",
+        sourceRows: ec.l10n.localize("Payments"),
+        targetRows: ec.l10n.localize("Bills"),
         targetPayments: ec.l10n.localize("Supplier refunds"),
         resetHint: ec.l10n.localize("Changing the supplier, currency or dates starts a new selection."),
         clearedHint: ec.l10n.localize("The selection was cleared for the new supplier, currency or dates.")

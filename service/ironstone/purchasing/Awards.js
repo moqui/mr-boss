@@ -87,7 +87,10 @@ function quoteAwards(p) {
         })
     return {
         awardState: "awarded",
-        awardText: "Awarded: purchase order " + order.orderId + " · " + statusText(order.statusId),
+        awardText: ec.resource.expand("Awarded: purchase order ${orderId} · ${status}", "", {
+            orderId: order.orderId,
+            status: statusText(order.statusId)
+        }),
         awardRows,
         purchaseOrderUrl: purchasing.recordUrl("order", order.orderId)
     }

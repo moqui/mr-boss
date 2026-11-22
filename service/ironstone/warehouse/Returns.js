@@ -190,7 +190,7 @@ function returns(p) {
             : ""
         return {
             returnId: header.returnId,
-            directionText: supplier ? "To supplier" : L("From customer"),
+            directionText: supplier ? L("To supplier") : L("From customer"),
             supplierReturn: supplier,
             partyId,
             partyName: names[partyId] || partyId || "",
@@ -447,7 +447,7 @@ function returnDetail(p) {
               )
         return {
             shipmentId: row.shipmentId,
-            kindText: row.shipmentTypeEnumId === "ShpTpPurchaseReturn" ? "Supplier return shipment" : L("Return receipt"),
+            kindText: row.shipmentTypeEnumId === "ShpTpPurchaseReturn" ? L("Supplier return shipment") : L("Return receipt"),
             linkPath:
                 row.shipmentTypeEnumId === "ShpTpPurchaseReturn" ? "Returns/SupplierReturnShipment" : "Returns/ReturnReceipt",
             statusText: shipmentStatuses.get(row.statusId) || row.statusId,
@@ -494,7 +494,7 @@ function returnDetail(p) {
         returnHeader: {
             returnId: header.returnId,
             supplierReturn: supplier,
-            directionText: supplier ? "Supplier return" : "Customer return",
+            directionText: supplier ? L("Supplier return") : L("Customer return"),
             partyId,
             partyName: names[partyId] || partyId || "",
             organizationName: names[supplier ? header.customerPartyId : header.vendorPartyId] || "",
@@ -785,7 +785,7 @@ function returnShipment(p) {
         returnShipment: {
             shipmentId: shipment.shipmentId,
             supplierReturn: supplier,
-            kindText: supplier ? "Supplier return" : L("Return receipt"),
+            kindText: supplier ? L("Supplier return") : L("Return receipt"),
             partyName: supplier
                 ? names[shipment.toPartyId] || shipment.toPartyId
                 : names[shipment.fromPartyId] || shipment.fromPartyId,

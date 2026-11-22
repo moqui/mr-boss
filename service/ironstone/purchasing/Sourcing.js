@@ -26,7 +26,7 @@ const readLimit = 500
 const dayMs = 24 * 60 * 60 * 1000
 const rfqViews = {
     open: {label: ec.l10n.localize("Open"), statuses: openStatuses},
-    draft: {label: "Drafts", statuses: ["ReqDraft"]},
+    draft: {label: ec.l10n.localize("Drafts"), statuses: ["ReqDraft"]},
     due: {label: ec.l10n.localize("Responses due"), statuses: ["ReqSubmitted", "ReqReviewed"], due: true},
     changed: {label: ec.l10n.localize("Changed since sent"), statuses: openStatuses, changed: true},
     closed: {label: ec.l10n.localize("Closed"), statuses: ["ReqCompleted", "ReqCancelled"]},
@@ -135,6 +135,7 @@ function invitationRows(requestId, revision, can) {
             statusText: quoteStateText[invitation.order.statusId] || statusText(invitation.order.statusId),
             statusColor: quoteColors[invitation.order.statusId] || "grey-8",
             sentText: sentAt ? dateText(sentAt) : ec.l10n.localize("Not sent"),
+            wasSent: !!sentAt,
             sendState: !live ? "" : !sentAt ? ec.l10n.localize("Not sent") : sentAt < revision ? ec.l10n.localize("Changed since sent") : ec.l10n.localize("Sent"),
             needsSend: live && (sentAt ?? -1) < revision,
             proposed: invitation.order.statusId === "OrderProposed",
@@ -194,9 +195,9 @@ function findRfqs(p) {
             invitedText: String(live.length),
             respondedText: live.length ? live.filter(invitation => invitation.proposed).length + " of " + live.length : "",
             sendText: changed
-                ? invitations.some(invitation => invitation.sentText !== "Not sent")
+                ? invitations.some(invitation => invitation.wasSent)
                     ? ec.l10n.localize("Changed since sent")
-                    : "Not sent"
+                    : ec.l10n.localize("Not sent")
                 : ""
         })
     }
