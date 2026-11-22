@@ -246,7 +246,7 @@ function storeDigest(p) {
         if (version != null) definition.version = version
         const saved = engine("save#Definition", {
             definition,
-            note: version == null ? ec.l10n.localize("Composed in Insights") : ec.l10n.localize("Changed in Insights")
+            note: version == null ? "Composed in Insights" : "Changed in Insights"
         }).definition
         return {definitionId: saved.id, version: saved.version}
     }, ec.l10n.localize("The digest could not be saved"))

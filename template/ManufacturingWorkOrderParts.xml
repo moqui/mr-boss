@@ -42,7 +42,7 @@ along with this software (see the LICENSE.md file). If not, see
                         REQUESTED: 'Work order ${workEffortId} sent to the supervisors for a staged release',
                         APPROVED: 'Work order ${workEffortId} approved for a staged release'}
                     const template = templates[result.resultCode]
-                    ec.message.addMessage(template ? ec.resource.expand(template, '', {workEffortId: workEffortId}) : result.resultCode, 'success')
+                    ec.message.addMessage(ec.resource.expand(template || 'Work order ${workEffortId} ${resultCode}', '', {workEffortId: workEffortId, resultCode: result.resultCode}), 'success')
                 }
             ]]></script>
         </actions>

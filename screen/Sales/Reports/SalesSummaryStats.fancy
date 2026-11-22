@@ -25,14 +25,14 @@ along with this software (see the LICENSE.md file). If not, see
     <m-container-dialog title="${WebUtilities.encodeHtml(panel.title)}">
         <template v-slot:button>
             <q-card flat bordered class="q-ma-sm"><q-card-section>
-                <h5 class="text-center" style="margin-top:0;margin-bottom:8px;">${panel.title}</h5>
+                <h5 class="text-center" style="margin-top:0;margin-bottom:8px;">${html(panel.title)}</h5>
 <#list panel.rows as row>
                 <div class="row q-col-gutter-sm"><div class="col-xs-5 text-right">
-                    <div class="small text-muted">${row.label}</div><h6 class="text-primary">${row.value}</h6>
+                    <div class="small text-muted">${html(row.label)}</div><h6 class="text-primary">${row.value}</h6>
                 </div><div class="col-xs-7"><#list row.versus as vs>
                     <div><i class="fa ${vs.down ? 'fa-caret-down text-danger' : 'fa-caret-up text-success'}"></i>
                         <span class="${vs.down ? 'text-danger' : 'text-success'}">${vs.percent}%</span>
-                        <span class="small">${vs.label} (${vs.base})</span></div>
+                        <span class="small">${html(vs.label)} (${vs.base})</span></div>
                 </#list></div></div>
 </#list>
                 <m-chart height="90px" :config="${WebUtilities.encodeHtml(panel.smallConfig)}"></m-chart>
@@ -41,11 +41,11 @@ along with this software (see the LICENSE.md file). If not, see
         <template v-slot:default>
 <#list panel.rows as row>
             <div class="row q-col-gutter-sm"><div class="col-xs-5 text-right">
-                <div class="small text-muted">${row.label}</div><h6 class="text-primary">${row.value}</h6>
+                <div class="small text-muted">${html(row.label)}</div><h6 class="text-primary">${row.value}</h6>
             </div><div class="col-xs-7"><#list row.versus as vs>
                 <div><i class="fa ${vs.down ? 'fa-caret-down text-danger' : 'fa-caret-up text-success'}"></i>
                     <span class="${vs.down ? 'text-danger' : 'text-success'}">${vs.percent}%</span>
-                    <span class="small">${vs.label} (${vs.base})</span></div>
+                    <span class="small">${html(vs.label)} (${vs.base})</span></div>
             </#list></div></div>
 </#list>
             <m-chart height="500px" :config="${WebUtilities.encodeHtml(panel.bigConfig)}"></m-chart>
@@ -53,14 +53,14 @@ along with this software (see the LICENSE.md file). If not, see
     </m-container-dialog>
 <#else>
     <div class="panel panel-default"><div class="panel-body" onclick="$('#${panel.id}_Modal').modal('show');">
-        <h5 class="text-center" style="margin-top:0;">${panel.title}</h5>
+        <h5 class="text-center" style="margin-top:0;">${html(panel.title)}</h5>
 <#list panel.rows as row>
         <div class="row"><div class="col-xs-5 text-right">
-            <div class="small text-muted">${row.label}</div><h6 class="text-primary">${row.value}</h6>
+            <div class="small text-muted">${html(row.label)}</div><h6 class="text-primary">${row.value}</h6>
         </div><div class="col-xs-7"><#list row.versus as vs>
             <div><i class="fa ${vs.down ? 'fa-caret-down text-danger' : 'fa-caret-up text-success'}"></i>
                 <span class="${vs.down ? 'text-danger' : 'text-success'}">${vs.percent}%</span>
-                <span class="small">${vs.label} (${vs.base})</span></div>
+                <span class="small">${html(vs.label)} (${vs.base})</span></div>
         </#list></div></div>
 </#list>
         <div class="chart-container" style="position:relative; height:90px; width:100%;"><canvas id="${panel.id}_Chart"></canvas></div>
@@ -70,7 +70,7 @@ along with this software (see the LICENSE.md file). If not, see
         <div class="modal-dialog modal-lg" role="document"><div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title">${panel.detailTitle}</h4>
+                <h4 class="modal-title">${html(panel.detailTitle)}</h4>
             </div>
             <div class="modal-body">
                 <div class="chart-container" style="position:relative; height:500px; width:100%;"><canvas id="${panel.id}_Detail_Chart"></canvas></div>

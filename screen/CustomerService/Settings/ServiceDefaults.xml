@@ -212,7 +212,7 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                     </box-toolbar>
                     <box-body>
-                        <label type="p" style="text-caption m-muted" text="${feedbackPolicy ? ec.resource.expand('In effect since $' + '{from}.', '', {from: feedbackPolicy.fromText}) + ' ' + feedbackPolicy.formText + ', ' + feedbackPolicy.typesText + ', ' + feedbackPolicy.queuesText + '.' :
+                        <label type="p" style="text-caption m-muted" text="${feedbackPolicy ? ec.resource.expand('In effect since $' + '{from}: $' + '{form}, $' + '{types}, $' + '{queues}.', '', {from: feedbackPolicy.fromText, form: feedbackPolicy.formText, types: feedbackPolicy.typesText, queues: feedbackPolicy.queuesText}) :
                                 feedbackFormOptions.length ? ec.l10n.localize('Not set: resolved cases are not asked for feedback.') :
                                 ec.l10n.localize('Not set: publish a feedback form first (Settings, Feedback forms).')}"/>
                         <form-single name="FeedbackDeliveryPolicy" transition="saveFeedbackPolicy" map="feedbackValues">

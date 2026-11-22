@@ -242,7 +242,7 @@ function runItem(p) {
         })
     const out = call(M + "create#VariantProducts", args)
     if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
-    const r = out.results?.[0] || {result: "failed", error: ec.l10n.localize("Variant produced no result")}
+    const r = out.results?.[0] || {result: "failed", error: "Variant produced no result"}
     call("update#" + P + "ProductCatalogOperationItem", {
         operationKey: p.operationKey,
         itemSeqId: p.itemSeqId,

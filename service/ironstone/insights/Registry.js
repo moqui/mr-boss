@@ -33,7 +33,26 @@ const ownerNames = {
     Warehouse: "Warehouse"
 }
 // the refusals an owner's catalogue answers a user without its app, which hide its entries quietly
-const refusalText = /not available|authority is required|PERMISSION_DENIED|_UNAVAILABLE|may not|is required/
+const refusalWords = /not available|authority is required|PERMISSION_DENIED|_UNAVAILABLE|may not|is required/
+// The English originals of a message in the session's locale: an owner refuses through ec.l10n.localize, so its refusal
+// reads in the viewer's language, while the wording above is English. Only a failed call asks, so the read is rare.
+function originalsOf(text) {
+    const locale = String(ec.user.locale || "")
+    // each message of the text (an owner's errors come joined by lines), without a reason code before it
+    const lines = String(text || "").split("\n").map(line => line.trim().replace(/^[A-Z][A-Z0-9_]+: /, "")).filter(Boolean)
+    if (!lines.length || !locale || /^en(_|$)/.test(locale)) return []
+    const already = ec.artifactExecution.disableAuthz()
+    try {
+        const rows = ec.entity.find("moqui.basic.LocalizedMessage").condition("locale", "in", [locale, locale.split("_")[0]])
+            .condition("localized", "in", lines).useCache(true).list()
+        return Array.from(rows, row => String(row.original))
+    } finally {
+        if (!already) ec.artifactExecution.enableAuthz()
+    }
+}
+const refused = text =>
+    refusalWords.test(text) ||
+    originalsOf(text).some(original => refusalWords.test(original))
 const blank = value => value == null || value === ""
 const list = text =>
     String(text || "")
@@ -107,7 +126,7 @@ function reader() {
                 keys = new Set(Array.from(answer.reports || []).map(row => row.entryId || row.reportId))
             } catch (error) {
                 // a user without the owner's app is refused there: its entries are hidden; any other failure is named
-                if (!refusalText.test(String(error.message))) {
+                if (!refused(String(error.message))) {
                     ec.logger.error("Insights catalog: " + entry.catalogueService + " failed: " + error.message)
                     unavailable.add(ownerNames[entry.ownerApp] || entry.ownerApp)
                 }
@@ -570,7 +589,7 @@ function storePanelMeasure(p) {
     const body = Object.assign({}, definition.body || {})
     if (blank(p.metricId)) {
         delete body.business
-        return savePanel(definition, body, p.expectedVersion, ec.l10n.localize("Measure cleared"))
+        return savePanel(definition, body, p.expectedVersion, "Measure cleared")
     }
     const registered = registration(p.metricId)
     const previous = body.business || {}
@@ -593,7 +612,7 @@ function storePanelTarget(p) {
     if (blank(p.targetKind)) {
         delete business.target
         body.business = business
-        return savePanel(definition, body, p.expectedVersion, ec.l10n.localize("Target cleared"))
+        return savePanel(definition, body, p.expectedVersion, "Target cleared")
     }
     if (!["constant", "metric"].includes(p.targetKind)) denied("TARGET_KIND_INVALID", ec.l10n.localize("A target is a measure or a value"))
     const direction = blank(p.betterDirection) ? "higher" : p.betterDirection
@@ -1026,7 +1045,7 @@ function countAt(answer, field) {
 const countText = count => ec.l10n.format(toDecimal(String(count)), "#,##0")
 // An owner's answer that it gives the viewer no count: the catalog's refusals, a coded *_REQUIRED refusal (Payables'
 // ORGANIZATION_REQUIRED with no organization chosen or active) and the framework's artifact denial; any other error is a failure.
-const refusesCount = text => refusalText.test(text) || /\b[A-Z]+(?:_[A-Z]+)*_REQUIRED:|is not authorized for /.test(text)
+const refusesCount = text => refused(text) || /\b[A-Z]+(?:_[A-Z]+)*_REQUIRED:|is not authorized for /.test(text)
 
 // get#Attention: each registered provider as the viewer (design §3): one whose route does not open to the viewer, whose
 // permission they lack, whose owner refuses them or answers them no count is left out, naming nothing; one whose count fails
@@ -1352,6 +1371,7 @@ const operations = {
     reader,
     attention,
     ownerNames,
+    refused,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Insights registry operation " + op)
         return operations[op](parameters || {})

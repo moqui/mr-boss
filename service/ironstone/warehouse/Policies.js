@@ -5,7 +5,7 @@
 // the policy permissions again, and every change goes to them directly.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const L = text => ec.l10n.localize(text)
-const labelOf = (table, key) => (table[key] != null ? L(table[key]) : key)
+const labelOf = (table, key) => (table[key] ? L(table[key]) : key)
 const {find, one, rows, map, ms, denied, dateText, partyNames} = lib
 const W = "mantle.facility.WarehousePolicyServices.",
     AP = "mantle.product.AssetPoolServices."

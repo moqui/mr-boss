@@ -157,6 +157,48 @@ feature("a reader sees only the entries their owner grants; SalesAnalysis is Sal
     }
 })
 
+// An owner refuses in the reader's language (its refusal goes through ec.l10n.localize), and Insights still reads it as a
+// refusal, which hides the owner's entries rather than naming the owner unavailable: it reads the message's English original
+// back from the catalog. A made-up locale keeps the spec off the loaded language packs.
+feature("a refusal in the reader's language is still a refusal", {
+    when() {
+        const registry = ec.resource.script("component://mr-boss/service/ironstone/insights/Registry.js")
+        const rows = [
+            {original: "Accounting read authority is required", locale: "xx", localized: "xx refusal"},
+            {original: "The ledger answered late", locale: "xx", localized: "xx failure"}
+        ]
+        system(() => rows.forEach(row => ec.entity.makeValue("moqui.basic.LocalizedMessage").setAll(row).createOrUpdate()))
+        try {
+            return asUser(users.reader, () => {
+                const before = ec.user.locale
+                ec.user.setLocale("xx")
+                try {
+                    return {
+                        localized: ec.l10n.localize("Accounting read authority is required"),
+                        refusal: registry.refused("xx refusal"),
+                        // an owner's errors come joined by lines, and a reason code may lead one
+                        joined: registry.refused("xx failure\nSOME_CODE: xx refusal"),
+                        failure: registry.refused("xx failure"),
+                        unknown: registry.refused("xx not a catalog text")
+                    }
+                } finally {
+                    ec.user.setLocale(before)
+                }
+            })
+        } finally {
+            system(() => rows.forEach(row =>
+                ec.entity.find("moqui.basic.LocalizedMessage").condition({original: row.original, locale: "xx"}).deleteAll()))
+        }
+    },
+    then({localized, refusal, joined, failure, unknown}) {
+        localized == "xx refusal"
+        refusal == true
+        joined == true
+        failure == false
+        unknown == false
+    }
+})
+
 feature("a pin edits the user's preference only, over entries they read; Reports shows it first", {
     when() {
         const entryId = "CustomerService.ServiceLevelCompliance"

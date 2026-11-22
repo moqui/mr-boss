@@ -274,7 +274,7 @@ along with this software (see the LICENSE.md file). If not, see
             hasActiveSession = sessions.some(row => row.active)
             events = Array.from(history?.eventList || []).map(row => Object.assign({}, row, {timeText: when(row.time)}))
             stateChips = account ? [
-                account.stateText ? {text: account.stateText, tone: ['Disabled', 'Ended', 'Locked'].includes(account.stateText) ? 'negative' : 'primary'} : null,
+                account.stateText ? {text: ec.l10n.localize(account.stateText), tone: ['disabled', 'terminated', 'locked'].includes(account.state) ? 'negative' : 'primary'} : null,
                 account.requirePasswordChange ? {text: ec.l10n.localize('Password change required'), tone: 'primary'} : null,
                 account.ipAllowed ? {text: ec.l10n.localize('IP limited'), tone: 'primary'} : null,
                 found.sharedBeyondScope ? {text: ec.l10n.localize('Shared identity'), tone: 'warning'} : null,

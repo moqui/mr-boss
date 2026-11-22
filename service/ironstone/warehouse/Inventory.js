@@ -5,13 +5,8 @@
 // service, which checks its permission and organization again. Cost is answered only with financial read.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const L = text => ec.l10n.localize(text)
-const labelOf = (table, key) => {
-    const label = table[key]
-    if (label == null) return key
-    // Catalog Container is a shipping container (集装箱). A warehouse container stays the English label.
-    if (key === "containerId") return label
-    return L(label)
-}
+// a label with a ## suffix (Container##warehouse) is told apart from the same words elsewhere in the catalog
+const labelOf = (table, key) => (table[key] ? L(table[key]) : key)
 const warehouse = ec.resource.script("component://mr-boss/service/ironstone/warehouse/Warehouse.js")
 const {find, one, denied, call, dateText, calendarDateText} = lib
 
@@ -50,7 +45,7 @@ const fieldLabels = {
     serialNumber: "Serial number",
     facilityId: "Facility",
     locationSeqId: "Location",
-    containerId: "Container",
+    containerId: "Container##warehouse",
     lotId: "Lot",
     geoPointId: "Map point",
     acquireCost: "Acquire cost",
