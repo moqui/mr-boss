@@ -120,8 +120,15 @@ along with this software (see the LICENSE.md file). If not, see
                     </template>
                 </q-banner>
 
+                <!-- a whiteboard among the notes (Comms' New board in my notes): its preview, opened in the board editor -->
+                <div v-if="isBoard" id="boss-notes-board" class="q-py-md">
+                    <img v-if="note.boardPreviewUrl" :src="note.boardPreviewUrl" alt="" class="rounded-borders"
+                            style="max-width:100%;max-height:60vh;display:block;border:1px solid rgba(127,127,127,.3)">
+                    <div v-else class="text-body2 m-muted">{{t('This whiteboard has no preview yet.')}}</div>
+                    <q-btn unelevated no-caps color="primary" icon="sym_o_draw" class="q-mt-sm" :label="t('Open the board')" @click="go(note.boardUrl)"></q-btn>
+                </div>
                 <!-- the note's co-edited document (each device and tab live; saved as a version when left a while), else the markdown text -->
-                <m-coedit v-if="useCoedit" id="boss-notes-editor" :key="'coedit-' + note.wikiPageId" :doc-key="'WikiPage:' + note.wikiPageId" rows="18"
+                <m-coedit v-else-if="useCoedit" id="boss-notes-editor" :key="'coedit-' + note.wikiPageId" :doc-key="'WikiPage:' + note.wikiPageId" rows="18"
                         :placeholder="t('Write the note')" @fallback="coeditFallback" @saved="coeditSaved"></m-coedit>
                 <m-text-area v-else id="boss-notes-editor" name="pageText" v-model="text" editor-type="md" rows="18" :label="t('Note (Markdown)')"></m-text-area>
 
@@ -225,8 +232,10 @@ module.exports = {
         linkPath() { return this.$root.linkBasePath + '/' + (this.nIndex >= 0 ? this.pathList.slice(0, this.nIndex + 1) : ['Commons', 'Notes']).join('/'); },
         selectedId() { return (this.$root.currentParameters || {}).wikiPageId || null; },
         // edited together when the page has its notification socket: the server keeps each change and saves it
-        useCoedit() { return !this.coeditOff && !!(this.note && this.note.wikiPageId && this.$root.notificationClient); },
-        dirty() { return !!this.note && !this.useCoedit && this.text !== this.savedText; },
+        isBoard() { return !!this.note && this.note.wikiType === 'excalidraw'; },
+        useCoedit() { return !this.coeditOff && !this.isBoard && !!(this.note && this.note.wikiPageId && this.$root.notificationClient); },
+        // a whiteboard is never saved from here: its scene is the board editor's
+        dirty() { return !!this.note && !this.isBoard && !this.useCoedit && this.text !== this.savedText; },
         liveTitle() {
             const heading = String(this.text || '').match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/m);
             return heading ? heading[1].replace(/[*_`]/g, '').trim() : (this.note ? this.note.pageName : '');

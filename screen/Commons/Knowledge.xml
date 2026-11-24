@@ -239,6 +239,18 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
+    <!-- a whiteboard at the top of the space (the framework's create#WikiBoard), opened in Comms' board editor -->
+    <transition name="createBoard">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('org.moqui.resource.WikiServices.create#WikiBoard').parameters({wikiSpaceId: wikiSpaceId || '',
+                pageName: pageName || ''}).call()
+            const board = (ec.factory.getConfValue('comms@app-root') || '/qapps/BasicComms').replace(/\/+$/, '') + '/Boards/Board'
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {wikiPageId: out.wikiPageId,
+                boardUrl: board + '?wikiPageId=' + encodeURIComponent(out.wikiPageId),
+                messageInfos: [{type: 'success', message: ec.resource.expand('Whiteboard ${name} created', '', {name: pageName})}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
     <transition name="renamePage">
         <actions><script><![CDATA[
             const out = ec.service.sync().name('ironstone.commons.KnowledgeServices.rename#Page').parameters({wikiPageId: wikiPageId || '', pageName: pageName || ''}).call()

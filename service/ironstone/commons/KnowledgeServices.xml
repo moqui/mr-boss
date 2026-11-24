@@ -275,6 +275,17 @@ along with this software (see the LICENSE.md file). If not, see
             } else {
                 text = pageRef.getText() ?? ''
             }
+            // a whiteboard (an .excalidraw page) is opened in Comms' board editor, never as markdown: its scene is not sent
+            // as the text, so no editor here can write markdown over it
+            page.wikiType = /\.excalidraw$/i.test(String(pageRef.location || '')) ? 'excalidraw' : 'md'
+            if (page.wikiType === 'excalidraw') {
+                const board = (ec.factory.getConfValue('comms@app-root') || '/qapps/BasicComms').replace(/\/+$/, '') + '/Boards/Board'
+                page.boardUrl = board + '?wikiPageId=' + encodeURIComponent(ref.wikiPageId || '')
+                const previews = pageRef.getChild('_attachments')?.getChild('_board.svg')
+                page.boardPreviewUrl = ref.wikiPageId && previews?.exists
+                    ? board + '/image?wikiPageId=' + encodeURIComponent(ref.wikiPageId) + '&filename=_board.svg' : null
+                text = ''
+            }
             page.text = text
             const heading = String(text).match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/m)
             page.title = heading ? heading[1].replace(/[*_`]/g, '').trim() : ref.pageName

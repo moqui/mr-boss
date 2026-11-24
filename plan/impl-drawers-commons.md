@@ -677,6 +677,11 @@ with what the drawers and Commons gained for it.
   Settings/Sync, and the addresses on Calendars, Contact books and a drive's settings.
 - `m-coedit` with `yrs` and CollabDocument: built Oct 21 (§8; mr-moqui docs/data/Revision-Management.md, Co-editing); Knowledge
   and Notes edit with it.
+- Whiteboards (mr-moqui `plans/archive/Comms-Whiteboard.md` §6, built in the framework Nov 21–24, 2026): Knowledge and
+  Notes show an `.excalidraw` page's preview with Open the board (Comms' board editor, `Comms/Boards`, now mounted), never
+  the markdown editor; Knowledge's New page makes a Whiteboard. Left: a board drawn in place in Knowledge (`m-whiteboard`
+  with the page's own file transitions), a project's boards in its record room's space, a planning, retrospective or story
+  map board from a project, and Maintenance's Markup of an asset's photo or a work order's image.
 - The Assist drawer port (Phase 13), BOSS skills and agent room members.
 - PWA install and web push.
 - Search: extracted text from PDF and office files. PDFs, spreadsheets and text files built Oct 21 in the framework; Commons

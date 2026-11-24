@@ -36,6 +36,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="ChatTui" location="component://basic-comms/screen/BasicComms/ChatTui.xml" menu-include="false"/>
         <subscreens-item name="Calls" location="component://basic-comms/screen/BasicComms/Calls.xml" menu-title="Calls" menu-index="4"/>
         <subscreens-item name="Panel" location="component://basic-comms/screen/BasicComms/Panel.xml" menu-include="false"/>
+        <!-- a board opened from a chat message, a call's stage, Knowledge or Notes (comms@app-root + /Boards/Board) -->
+        <subscreens-item name="Boards" location="component://basic-comms/screen/BasicComms/Boards.xml" menu-include="false"/>
         <subscreens-item name="Settings" location="component://basic-comms/screen/BasicComms/Settings.xml" menu-title="Settings" menu-index="6"/>
     </subscreens>
 

@@ -171,6 +171,29 @@ feature("a new page under Office is made and opened; a page there already is ref
     },
 })
 
+feature("a whiteboard is made at the top of a space and opened in Comms' board editor, never as markdown text", {
+    when() {
+        const created = post("createBoard", { wikiSpaceId: "BOSSKB", pageName: `Spec board ${RUN}` })
+        const view = page({ wikiPageId: created.json.wikiPageId })
+        // Comms mounts the board editor where its links go (comms@app-root)
+        const rendered = ec.screen.makeTest().rootScreen("component://mr-boss/screen/Comms.xml")
+            .render("Boards/Board/board", { wikiPageId: created.json.wikiPageId }, null)
+        let editor = {}
+        try { editor = JSON.parse(rendered.output) } catch (err) { editor = { errors: rendered.errorMessages.join(" | ") } }
+        ec.message.clearErrors()
+        const refused = as("bob.developer", () => post("createBoard", { wikiSpaceId: "BOSSKB", pageName: `Bob board ${RUN}` }))
+        const removed = post("deletePage", { wikiPageId: created.json.wikiPageId })
+        return { created, view, editor, refused, removed }
+    },
+    then({ created, view, editor, refused, removed }) {
+        created.errors == "" && created.json.boardUrl == `/qapps/Comms/Boards/Board?wikiPageId=${created.json.wikiPageId}`
+        view.wikiType == "excalidraw" && view.text == "" && view.boardUrl == created.json.boardUrl
+        !editor.errors && JSON.stringify(editor).includes("excalidraw")
+        refused.errors.includes("You may not create a board here")
+        removed.errors == ""
+    },
+})
+
 feature("a Chinese page name is created and renamed, and a slash or .. is still refused", {
     when() {
         const name = `产品说明${RUN}`

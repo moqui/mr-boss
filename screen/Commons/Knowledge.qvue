@@ -355,6 +355,14 @@ along with this software (see the LICENSE.md file). If not, see
                             <q-btn v-if="page.canUpdate" unelevated no-caps color="primary" icon="sym_o_add" :label="t('Create this page')" @click="createMissing(page.wikiSpaceId, page.pagePath)"></q-btn>
                         </div>
 
+                        <!-- a whiteboard: its preview, opened in Comms' board editor -->
+                        <div v-else-if="isBoard" id="boss-knowledge-board" class="q-py-md">
+                            <img v-if="page.boardPreviewUrl" :src="page.boardPreviewUrl" alt="" class="rounded-borders"
+                                    style="max-width:100%;max-height:60vh;display:block;border:1px solid rgba(127,127,127,.3)">
+                            <div v-else class="text-body2 m-muted">{{t('This whiteboard has no preview yet.')}}</div>
+                            <q-btn unelevated no-caps color="primary" icon="sym_o_draw" class="q-mt-sm" :label="t('Open the board')" @click="go(page.boardUrl)"></q-btn>
+                        </div>
+
                         <!-- the rendered page -->
                         <template v-else>
                             <div v-if="!String(page.text || '').trim()" class="text-body2 m-muted q-py-md">{{page.canUpdate ? t('This page is empty. Edit it to write the first words.') : t('This page is empty.')}}</div>
@@ -544,8 +552,10 @@ along with this software (see the LICENSE.md file). If not, see
 
     <m-dialog v-model="newPage.open" :title="t('New page')" width="560">
         <div class="q-gutter-y-sm">
+            <q-btn-toggle id="boss-knowledge-newkind" v-model="newPage.kind" no-caps unelevated toggle-color="primary" :options="[{label: t('Page'), value: 'md'}, {label: t('Whiteboard'), value: 'excalidraw'}]"></q-btn-toggle>
             <m-text-line id="boss-knowledge-newname" name="pageName" v-model="newPage.name" :label="t('Name')" @keyup.enter="createPage"></m-text-line>
-            <m-drop-down id="boss-knowledge-newparent" name="parentPath" v-model="newPage.parentPath" :options="newPage.options" allow-empty :label="t('Under')"></m-drop-down>
+            <m-drop-down v-if="newPage.kind !== 'excalidraw'" id="boss-knowledge-newparent" name="parentPath" v-model="newPage.parentPath" :options="newPage.options" allow-empty :label="t('Under')"></m-drop-down>
+            <div v-else class="text-caption m-muted">{{t('A whiteboard is made at the top of the space and opens in the board editor.')}}</div>
             <div class="text-caption m-muted">{{t("Letters, digits, spaces and . , ' - _ : ( ) ! ? The name is part of the page's address, so links can name it.")}}</div>
             <div class="row justify-end q-gutter-sm">
                 <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
@@ -663,7 +673,7 @@ module.exports = {
             newTag: '', linkRecordValue: null, uploadOpen: false, uploadFiles: [], uploading: false,
             history: { open: false, loading: false, versions: [], picked: [], canRestore: false, canPublish: false, storage: null, review: null },
             diff: { open: false, loading: false, html: '', stats: {}, fromShort: '', toShort: '' },
-            newPage: { open: false, name: '', parentPath: '', options: [], busy: false },
+            newPage: { open: false, kind: 'md', name: '', parentPath: '', options: [], busy: false },
             rename: { open: false, name: '', busy: false },
             move: { open: false, spaceId: null, parentPath: '', options: [], name: '', note: '', busy: false },
             duplicate: { open: false, spaceId: null, parentPath: '', options: [], name: '', withChildren: 'N', busy: false },
@@ -731,8 +741,10 @@ module.exports = {
         selectedKey() { return this.page && this.page.wikiSpaceId === this.spaceId && this.page.pagePath ? this.page.pagePath : null; },
         canEdit() {
             if (this.inCommerce) return !!(this.commerce && this.commerce.canEdit && this.page && this.page.exists && !this.page.viewingOld);
-            return !!(this.page && this.page.exists && this.page.canUpdate && !this.page.viewingOld);
+            // a whiteboard is drawn in Comms' board editor (Open the board), not edited here as markdown
+            return !!(this.page && this.page.exists && this.page.canUpdate && !this.page.viewingOld && !this.isBoard);
         },
+        isBoard() { return !!this.page && this.page.wikiType === 'excalidraw'; },
         canPublish() { return !this.inCommerce && !!(this.page && this.page.exists && this.page.canUpdate && !this.page.isNotes && this.page.wikiPageId && !this.page.isPublished && this.page.currentVersionName && !this.page.viewingOld); },
         canRequestReview() { return !this.inCommerce && !!(this.page && this.page.exists && this.page.canUpdate && !this.page.isNotes && this.page.wikiPageId && !this.page.viewingOld); },
         openReviews() { return this.page ? (this.page.reviews || []).filter((review) => review.statusId === 'WprRequested') : []; },
@@ -1226,7 +1238,7 @@ module.exports = {
         // ===== new page, rename, move, delete =====
         openNewPage(parentPath) {
             if (!this.space || !this.space.canUpdate) return true;
-            this.newPage = { open: true, name: '', parentPath: parentPath || '', options: [{ value: '', label: this.t('Top level') }], busy: false };
+            this.newPage = { open: true, kind: 'md', name: '', parentPath: parentPath || '', options: [{ value: '', label: this.t('Top level') }], busy: false };
             this.request('pageOptions', { wikiSpaceId: this.spaceId }).then((json) => { this.newPage.options = json.optionList || this.newPage.options; }, () => {});
             this.$nextTick(() => setTimeout(() => { const el = document.getElementById('boss-knowledge-newname'); if (el) el.focus(); }, 150));
             return true;
@@ -1235,6 +1247,15 @@ module.exports = {
             const name = String(this.newPage.name || '').trim();
             if (!name || this.newPage.busy) return;
             this.newPage.busy = true;
+            if (this.newPage.kind === 'excalidraw') {
+                this.post('createBoard', { wikiSpaceId: this.spaceId, pageName: name }).then((json) => {
+                    this.newPage.open = false;
+                    this.newPage.busy = false;
+                    this.refreshTree();
+                    if (json.boardUrl) this.go(json.boardUrl);
+                }, () => { this.newPage.busy = false; });
+                return;
+            }
             this.post('createPage', { wikiSpaceId: this.spaceId, parentPath: this.newPage.parentPath || '', pageName: name }).then((json) => {
                 this.newPage.open = false;
                 this.newPage.busy = false;
