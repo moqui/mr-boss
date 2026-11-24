@@ -154,6 +154,7 @@ feature("send, edit, react, pin and delete; a reply, a thread reply, and a menti
         const sent = post("send", { chatRoomId: ROOM.team, clientRef: "spec-1",
             body: '<p>Lunch on Thursday works, <span data-mention-id="ORG_ZIZI_JD">@Joe Developer</span>.</p>' })
         const seq = sent.json.eventSeq
+        ec.factory.waitWorkerPoolEmpty(50)
         const notified = list("moqui.security.user.NotificationMessageByUser", { userId: JOE, topic: "ChatMention" })
                 .filter((row) => String(row.linkText || "").includes("chatRoomId=BOSS_DEMO_CHAT_TEAM"))
         const mentionRows = list("moqui.chat.ChatEventMention", { chatRoomId: ROOM.team, eventSeq: seq }).length

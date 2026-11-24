@@ -279,7 +279,8 @@ feature("a contact group in the recipients expands to its members on send", {
         const sentRow = settled(sent.json.emailMessageId)
         const captured = capture.last()
         const emptyId = sys(() => call("mantle.party.ContactBookServices.create#ContactBookGroup", { contactBookId: "BOSS_DEMO_BOOK_JD", groupName: "Nobody" })).contactBookGroupId
-        const empty = post("send", { fromValue: identityValue, toJson: JSON.stringify([{ value: "group:" + emptyId, label: "Nobody" }]),
+        const empty = post("send", { fromValue: identityValue, toJson: JSON.stringify([{ value: "group:" + emptyId, label: "Nobody" }, {value: "bad-to"}]),
+            ccJson: chips(["bad-cc"]), bccJson: chips(["bad-to"]),
             subject: "x", body: "<p>x</p>", holdSeconds: "0" })
         return { found, sent, sentRow, captured, empty }
     },
@@ -293,6 +294,8 @@ feature("a contact group in the recipients expands to its members on send", {
         captured.toList[0].includes("mary.doe@example.com")
         !String(captured.toList).includes("group:")
         empty.errors.includes("no email addresses")
+        empty.errors.split("Not an email address: bad-to").length == 2
+        empty.errors.split("Not an email address: bad-cc").length == 2
     },
 })
 

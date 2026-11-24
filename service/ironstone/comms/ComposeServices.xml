@@ -711,19 +711,23 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="chipList" type="List"/>
             <parameter name="chipsJson" allow-html="any"/>
             <parameter name="mode" required="true"/>
+            <parameter name="collectProblems" type="Boolean" default="false"><description>Return the recipient problems to the
+                composer so it can report them together across To, Cc and Bcc.</description></parameter>
             <parameter name="keepPartyIdList" type="List"><description>Internal: an internal reply's thread participants (send#Compose,
                 when the user is one of them), whom a party or address chip keeps without the reach check, as create#Message keeps
                 them (SEC-BOS-98)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="addressText"/>
+            <parameter name="recipientProblems" type="List"/>
             <parameter name="partyIdList" type="List"/>
             <parameter name="contactListIdList" type="List"/>
         </out-parameters>
         <actions><script><![CDATA[
             const cf = ec.entity.conditionFactory
+            const problems = new Set()
             let chips = chipList ? Array.from(chipList) : []
-            if (!chips.length && chipsJson) { try { chips = JSON.parse(chipsJson) } catch (err) { ec.message.addError('The recipients are not JSON'); return } }
+            if (!chips.length && chipsJson) { try { chips = JSON.parse(chipsJson) } catch (err) { problems.add('The recipients are not JSON') } }
             if (!Array.isArray(chips)) chips = []
             const addresses = []
             partyIdList = []
@@ -751,7 +755,7 @@ along with this software (see the LICENSE.md file). If not, see
             const seenAddress = new Set()
             const expandGroup = (groupId, label) => {
                 const group = ec.entity.find('mantle.party.contact.ContactBookGroup').condition('contactBookGroupId', groupId).one()
-                if (group == null) { ec.message.addError(ec.resource.expand('Contact group ${name} not found', '', {name: label})); return null }
+                if (group == null) { problems.add(ec.resource.expand('Contact group ${name} not found', '', {name: label})); return null }
                 ec.message.pushErrors()
                 let allowed = false
                 try {
@@ -759,7 +763,7 @@ along with this software (see the LICENSE.md file). If not, see
                             .parameters({contactBookId: group.contactBookId, permissionEnumId: 'CbpView'}).call()
                     allowed = !ec.message.hasError()
                 } finally { ec.message.clearErrors(); ec.message.popErrors() }
-                if (!allowed) { ec.message.addError(ec.resource.expand('Contact group ${name} not found', '', {name: label})); return null }
+                if (!allowed) { problems.add(ec.resource.expand('Contact group ${name} not found', '', {name: label})); return null }
                 const found = []
                 for (const member of ec.entity.find('mantle.party.contact.ContactBookGroupParty').condition('contactBookGroupId', groupId).list()) {
                     const id = member.partyId
@@ -776,7 +780,7 @@ along with this software (see the LICENSE.md file). If not, see
                     found.push({partyId: id, address: String(address).trim(), name: name})
                 }
                 if (!found.length) {
-                    ec.message.addError(ec.resource.expand(mode === 'internal' ? 'Contact group ${name} has no one to message' : 'Contact group ${name} has no email addresses', '', {name: label}))
+                    problems.add(ec.resource.expand(mode === 'internal' ? 'Contact group ${name} has no one to message' : 'Contact group ${name} has no email addresses', '', {name: label}))
                     return null
                 }
                 return found
@@ -786,11 +790,11 @@ along with this software (see the LICENSE.md file). If not, see
                 const label = String((chip && chip.label) || value)
                 if (!value) continue
                 if (value.startsWith('list:')) {
-                    if (mode !== 'internal') { ec.message.addError(ec.resource.expand('${name} is a mailbox: send it as an internal message', '', {name: label})); return }
+                    if (mode !== 'internal') { problems.add(ec.resource.expand('${name} is a mailbox: send it as an internal message', '', {name: label})); continue }
                     contactListIdList.push(value.substring(5))
                 } else if (value.startsWith('group:')) {
                     const found = expandGroup(value.substring(6), label)
-                    if (!found) return
+                    if (!found) continue
                     for (const member of found) {
                         if (mode === 'internal') { if (!partyIdList.includes(member.partyId)) partyIdList.push(member.partyId) }
                         else {
@@ -803,12 +807,12 @@ along with this software (see the LICENSE.md file). If not, see
                     }
                 } else if (value.startsWith('party:')) {
                     const id = value.substring(6)
-                    if (!reachableParty(id)) { ec.message.addError(ec.resource.expand('Recipient ${name} not found', '', {name: label})); return }
+                    if (!reachableParty(id)) { problems.add(ec.resource.expand('Recipient ${name} not found', '', {name: label})); continue }
                     if (mode === 'internal') { if (!partyIdList.includes(id)) partyIdList.push(id) }
                     else {
                         const address = ec.service.sync().name('mantle.party.ContactServices.get#PrimaryEmailAddress').parameter('partyId', id).call()?.emailAddress
                         ec.message.clearErrors()
-                        if (!address) { ec.message.addError(ec.resource.expand('${name} has no email address', '', {name: label})); return }
+                        if (!address) { problems.add(ec.resource.expand('${name} has no email address', '', {name: label})); continue }
                         const key = String(address).trim().toLowerCase()
                         if (!seenAddress.has(key)) { seenAddress.add(key); addresses.push(`"${label.replace(/<.*$/, '').replace(/"/g, '').trim()}" <${address}>`) }
                     }
@@ -816,16 +820,18 @@ along with this software (see the LICENSE.md file). If not, see
                     const match = /<([^>]+)>/.exec(value)
                     const address = (match ? match[1] : value).trim().toLowerCase()
                     const map = ec.service.sync().name('ironstone.comms.InboxServices.match#Addresses').parameter('addressList', [address]).call().partyMap || {}
-                    if (!map[address] || !reachableParty(map[address].partyId)) { ec.message.addError(ec.resource.expand('${name} is not someone here; send email from a mail account', '', {name: label})); return }
+                    if (!map[address] || !reachableParty(map[address].partyId)) { problems.add(ec.resource.expand('${name} is not someone here; send email from a mail account', '', {name: label})); continue }
                     if (!partyIdList.includes(map[address].partyId)) partyIdList.push(map[address].partyId)
                 } else {
                     const match = /<([^>]+)>/.exec(value)
                     const address = (match ? match[1] : value).trim()
-                    if (!/^[^\s@<>,]+@[^\s@<>,]+$/.test(address)) { ec.message.addError(ec.l10n.localize('Not an email address') + ': ' + label); return }
+                    if (!/^[^\s@<>,]+@[^\s@<>,]+$/.test(address)) { problems.add(ec.l10n.localize('Not an email address') + ': ' + label); continue }
                     const key = address.toLowerCase()
                     if (!seenAddress.has(key)) { seenAddress.add(key); addresses.push(value) }
                 }
             }
+            recipientProblems = Array.from(problems)
+            if (!collectProblems) for (const problem of problems) ec.message.addError(problem)
             addressText = addresses.join(', ')
         ]]></script></actions>
     </service>
@@ -884,25 +890,17 @@ along with this software (see the LICENSE.md file). If not, see
                 else ec.message.addError(ec.l10n.localize('Choose a mail account to send from'))
                 return
             }
+            const problems = new Set()
             const header = (json) => {
                 if (!json) return ''
-                ec.message.pushErrors()
-                try {
-                    const out = ec.service.sync().name('ironstone.comms.ComposeServices.resolve#Recipients').parameters({chipsJson: json, mode: 'email'}).call()
-                    if (ec.message.hasError()) {
-                        if (strict) throw new Error(ec.message.getErrorsString())
-                        // a draft keeps what it can
-                        let chips = []
-                        try { chips = JSON.parse(json) } catch (err) { chips = [] }
-                        return Array.from(chips).map((chip) => String(chip?.value || '')).filter((value) => value.includes('@') && !value.startsWith('party:')).join(', ')
-                    }
-                    return out.addressText || ''
-                } finally { if (!strict) ec.message.clearErrors(); ec.message.popErrors() }
+                const out = ec.service.sync().name('ironstone.comms.ComposeServices.resolve#Recipients')
+                        .parameters({chipsJson: json, mode: 'email', collectProblems: true}).call()
+                for (const problem of Array.from(out.recipientProblems || [])) problems.add(problem)
+                return out.addressText || ''
             }
-            let toText, ccText, bccText
-            try { toText = header(toJson); ccText = header(ccJson); bccText = header(bccJson) }
-            // a strict refusal keeps its own errors (popErrors brings them back), so the thrown text is not added twice
-            catch (err) { if (!ec.message.hasError()) ec.message.addError(err && err.message ? err.message : String(err)); return }
+            const toText = header(toJson), ccText = header(ccJson), bccText = header(bccJson)
+            if (strict) for (const problem of problems) ec.message.addError(problem)
+            if (ec.message.hasError()) return
             const fullBody = String(body || '') + (quoteHtml ? String(quoteHtml) : '')
             const parameters = {emailMessageId: emailMessageId || null, emailAccountId: identity.emailAccountId, emailIdentityId: identity.emailIdentityId,
                 toAddresses: toText, ccAddresses: ccText, bccAddresses: bccText, subject: subject ?? '', body: fullBody, bodyText: bodyText || null,
