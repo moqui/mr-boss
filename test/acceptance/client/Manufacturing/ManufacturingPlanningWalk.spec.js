@@ -100,15 +100,20 @@ feature("the planner recalculates the plant, sees make and buy suggestions, expl
     }
 })
 
+// an action the user lacks is absent, or shown disabled with the access it needs (area actions show disabled, not hidden)
+const notOffered = (page, name) => {
+    const buttons = page.getByRole("button", {name, exact: true})
+    for (let i = 0; i < buttons.count(); i++) if (buttons.nth(i).isEnabled()) return false
+    return true
+}
 feature("the scheduler reads the plan with no Recalculate, Schedule or Convert", {
     expect() {
         const page = pages["manufacturing.schedule:1280"]
         page.goto("/qapps/Manufacturing/Planning/SupplyPlanning?plantId=ZIRET_WH").status == 200
         waitForText(page, componentName)
-        const text = page.text()
-        !text.includes("Recalculate")
-        page.getByRole("button", {name: "Schedule", exact: true}).count() == 0
-        page.getByRole("button", {name: "Convert", exact: true}).count() == 0
+        notOffered(page, "Recalculate")
+        notOffered(page, "Schedule")
+        notOffered(page, "Convert")
     }
 })
 

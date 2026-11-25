@@ -67,8 +67,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Facilities inside"/>
                     <box-toolbar>
-                        <section-include name="NewFacility"
-                                location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+                        <!-- Warehouse's New facility, shown disabled to a Warehouse user without facility editing; no other app's -->
+                        <section name="NewWarehouseChild" condition="appRoot == 'Warehouse'">
+                            <widgets>
+                                <section-include name="NewFacility"
+                                        location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+                            </widgets>
+                        </section>
                         <section name="NewMaintenanceChild" condition="appRoot == 'Maintenance'">
                             <widgets>
                                 <section-include name="NewMaintenanceFacility" location="component://mr-boss/template/MaintenanceParts.xml"/>

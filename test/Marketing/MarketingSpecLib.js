@@ -410,6 +410,8 @@ const sweepRecords = (made = {}) => ({
     "Surveys/ResponseDetail": {formResponseId: ids.anonymousResponseId},
     "Leads/LeadRuleDetail": {leadRuleId: ids.leadRuleId},
     "Customers/Customer360": {customerPartyId: ids.acceptedPartyId, organizationPartyId: ids.organizationId},
+    // Contacts opens on its default ContactDetail
+    Contacts: {partyId: ids.acceptedPartyId},
     "Contacts/ContactDetail": {partyId: ids.acceptedPartyId},
     Reports: organizationOnly,
     Settings: organizationOnly

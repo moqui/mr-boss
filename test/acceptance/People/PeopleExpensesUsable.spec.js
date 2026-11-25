@@ -13,6 +13,7 @@ const {ids, users, asUser, system, invoke} = lib
 const E = "mantle.humanres.ExpenseServices."
 const webroot = "component://webroot/screen/webroot.xml"
 const finance = "finance.admin"
+const FINANCE_AGENT = "PPL_ACCEPT_FINANCE_AGENT"
 // a request under the web root as the user (a transition's post, a page), with its errors
 function request(user, path, parameters, method) {
     return asUser(user, () => {
@@ -37,9 +38,26 @@ spec({
     stepwise: true,
     setupSpec() {
         login("john.doe")
+        // the finance administrator works for the People demo's organization too: ACCOUNTING_ADMIN reaches only its holder's
+        // organizations (SEC-BOS-02), and the demo's finance.admin is an agent of Accounting's demo organizations alone
+        system(() =>
+            ec.service
+                .sync()
+                .name("store#mantle.party.PartyRelationship")
+                .parameters({
+                    partyRelationshipId: FINANCE_AGENT,
+                    relationshipTypeEnumId: "PrtAgent",
+                    fromPartyId: "BOSS_ACCT_ADMIN",
+                    toPartyId: ids.organizationId,
+                    toRoleTypeId: "OrgInternal",
+                    fromDate: ec.user.nowTimestamp
+                })
+                .call()
+        )
     },
     cleanupSpec() {
         ec.message.clearErrors()
+        system(() => ec.entity.find("mantle.party.PartyRelationship").condition("partyRelationshipId", FINANCE_AGENT).deleteAll())
         login("john.doe")
         ec.artifactExecution.enableAuthz()
     }

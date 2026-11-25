@@ -1,4 +1,4 @@
-feature("a finance administrator saves due terms, dated rates and document preferences", {
+feature("a finance administrator saves due terms and document preferences; the system administrator imports dated rates", {
     expect() {
         const page = browser.newPage({
             user: "finance.admin",
@@ -66,12 +66,20 @@ feature("a finance administrator saves due terms, dated rates and document prefe
         dialog.locator("input[name=changeReason]").fill("Browser finance settings review")
         dialog.getByRole("button", {name: "Save payment term", exact: true}).click()
         page.waitFor(() => document.querySelector(".q-page")?.innerText.includes("Browser net 37"))
+        // exchange rates are every organization's: a finance administrator of some organizations sees Import rates disabled with
+        // its reason, and the system administrator (ACCOUNTING_ALL_ORGANIZATIONS) imports them (ACC-UI-039, SEC-BOS-02)
         go("Currencies").status == 200
-        page.getByRole("button", {
+        page.getByRole("button", {name: "Import rates", exact: true}).count() == 1
+        !page.getByRole("button", {name: "Import rates", exact: true}).isEnabled()
+        const admin = browser.newPage({user: "john.doe", viewport: {width: 1280, height: 900}, timeout: 30})
+        admin.allowProblems(/userPhoto\?userId=/)
+        admin.allowProblems(/Blocked script execution in 'about:srcdoc'.*sandboxed/)
+        admin.goto("/qapps/Accounting/Settings/Currencies?organizationPartyId=BOSS_ACCT_ORG").status == 200
+        admin.getByRole("button", {
             name: "Import rates",
             exact: true
         }).click()
-        dialog = page.getByRole("dialog")
+        dialog = admin.getByRole("dialog")
         dialog
             .locator("textarea[name=csvText]")
             .fill(
@@ -79,9 +87,9 @@ feature("a finance administrator saves due terms, dated rates and document prefe
             )
         dialog.locator("input[name=changeReason]").fill("Browser rate import review")
         dialog.getByRole("button", {name: "Import rate rows", exact: true}).click()
-        page.waitFor(() => document.querySelector(".q-page")?.innerText.includes("Browser review"))
-        page.text().includes("1 stored, 1 refused")
-        assert.ok(/\d{4}-\d{2}-\d{2}/.test(page.text()))
+        admin.waitFor(() => document.querySelector(".q-page")?.innerText.includes("Browser review"))
+        admin.text().includes("1 stored, 1 refused")
+        assert.ok(/\d{4}-\d{2}-\d{2}/.test(admin.text()))
         go("DocumentSettings").status == 200
         page.fill("input[name=invoiceIdPrefix]", "BROWSER-")
         page.fill("input[name=changeReason]", "Browser numbering preferences")

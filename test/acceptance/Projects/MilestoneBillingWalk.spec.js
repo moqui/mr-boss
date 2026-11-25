@@ -293,7 +293,9 @@ feature("Delivery reached without a gate is due; Unbilled's Invoice adds it to t
         dec(invoice.invoiceTotal) == "13500.00"
         file.output.includes("Product pages")
         newProjectMoney.status == 200 && !newProjectMoney.broken
-        newProjectMoney.output.includes("The order line it fulfils")
-        newProjectMoney.output.includes("Web shop, fixed fee")
+        // the project is past planning: the new-project wizard names its status and opens its page, and its Money step offers
+        // neither its form nor the order line (PR-UI-038)
+        !newProjectMoney.output.includes("ProjectMoneyStep")
+        !newProjectMoney.output.includes("The order line it fulfils")
     },
 })

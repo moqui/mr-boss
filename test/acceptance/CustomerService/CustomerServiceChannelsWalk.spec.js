@@ -49,7 +49,16 @@ function profileOf(requestId, waitMs = 4000) {
     return profile
 }
 let count = 0
-function receive(fields) {
+// a received message with the From field the store keeps and the trusted gateway's DMARC pass for its domain (Mantle's
+// Channels.js senderTrust, SEC-BAP-84: mail is its sender's only when the gateway authenticated its From); fields.headers
+// adds fields to those
+const GATEWAY = "gw.cscw.test"
+function receive(given) {
+    const {headers, ...fields} = given
+    const from = String(fields.fromAddress || "")
+    fields.headersString = ["From: " + from, "Authentication-Results: " + GATEWAY + "; dmarc=pass header.from=" + from.split("@").pop()]
+        .concat(headers ? [headers] : [])
+        .join("\r\n")
     count++
     const id = "CSCW_MSG_" + count + "_" + receivedAt
     system(() =>
@@ -92,6 +101,8 @@ spec({
     stepwise: true,
     setupSpec() {
         login("john.doe")
+        // the mail gateway whose Authentication-Results the intake trusts (receive's)
+        setConf("smtp-server@authserv-id", GATEWAY)
         // the service mailbox's rule: its mail to the support address files into the Support queue
         system(() =>
             invoke("store#moqui.basic.email.EmailRule", {
@@ -183,7 +194,7 @@ feature(
                 subject: "Automatic reply: away",
                 bodyText: "Away.",
                 inReplyTo: firstMessage.messageId,
-                headersString: "Auto-Submitted: auto-replied"
+                headers: "Auto-Submitted: auto-replied"
             })
             runRules([auto])
             const unknown = receive({

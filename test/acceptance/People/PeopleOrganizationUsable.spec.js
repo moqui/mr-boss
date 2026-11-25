@@ -164,8 +164,12 @@ feature("people.reader walks the chart one level at a time in the browser and th
         const structure = asUser(users.reader, () => page("Employees/OrgStructure", {unitPartyId: ids.departmentId}, "tui"))
         if (!opened(structure) || !structure.output.includes("Store Operations"))
             problems.push(`OrgStructure in the terminal: ${structure.status} ${structure.errors}`)
+        // an action is not the reader's: absent, or shown disabled with the access it needs (a disabled link with its reason)
+        const offered = JSON.stringify(JSON.parse(structure.output), (key, value) =>
+            value && value.disabled === true && value.reason ? undefined : value
+        )
         for (const text of ["New unit", "Add member", "End membership"])
-            if (structure.output.includes(text)) problems.push(`the reader's OrgStructure offers ${text}`)
+            if (offered.includes(text)) problems.push(`the reader's OrgStructure offers ${text}`)
         return {problems}
     },
     then({problems}) {

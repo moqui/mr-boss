@@ -121,6 +121,12 @@ feature("an approver's over-budget bill is stopped, then approved over budget wi
     }
 })
 
+// an action the user lacks is absent, or shown disabled with the access it needs (area actions show disabled, not hidden)
+const notOffered = (page, name) => {
+    const buttons = page.getByRole("button", {name, exact: true})
+    for (let i = 0; i < buttons.count(); i++) if (buttons.nth(i).isEnabled()) return false
+    return true
+}
 feature("a reader's budget variance shows the committed order and the controls its exception", {
     expect() {
         const reader = financePage("finance.read")
@@ -131,6 +137,6 @@ feature("a reader's budget variance shows the committed order and the controls i
         reader.goto(budgets("BudgetControls")).status == 200
         waitText(reader, "BOSS_ACCT_BILL_OVER")
         waitText(reader, "Over budget, overridden")
-        reader.getByRole("button", {name: "Add policy", exact: true}).count() == 0
+        notOffered(reader, "Add policy")
     }
 })

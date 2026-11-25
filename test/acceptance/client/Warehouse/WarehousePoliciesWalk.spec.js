@@ -80,13 +80,19 @@ feature("a manager sets a facility reservation default with no store; the store'
         page.text().includes("LIFO Receive")
     }
 })
+// an action the user lacks is absent, or shown disabled with the access it needs (area actions show disabled, not hidden)
+const notOffered = (page, name) => {
+    const buttons = page.getByRole("button", {name, exact: true})
+    for (let i = 0; i < buttons.count(); i++) if (buttons.nth(i).isEnabled()) return false
+    return true
+}
 feature("a reader reads the effective policy and its sources without the change actions", {
     expect() {
         const page = pages["warehouse.read"]
         page.goto(settings + "StockPolicies/OperationPolicy?facilityId=ZIRET_WH").status == 200
         waitForText(page, "Operations at Ziziwork Retail Warehouse")
         page.text().includes("Facility: Ziziwork Retail Warehouse")
-        page.getByRole("button", {name: "Change operations", exact: true}).count() == 0
+        notOffered(page, "Change operations")
         page.goto(settings + "Index").status == 200
         waitForText(page, "Warehouse managers change it")
         !/Error rendering|Exception in render/.test(page.text())

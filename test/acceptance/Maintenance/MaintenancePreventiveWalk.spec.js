@@ -119,7 +119,9 @@ feature(
             due.output.includes("Air handler AHU-2 filter change")
             due.output.includes("Compressor C-1 contactor check every 500 starts")
             opened(readerDue)
-            !readerDue.output.includes("Generate due work")
+            // Generate due work is shown disabled with the access it needs, no dialog
+            !readerDue.output.includes('id="GenerateWorkDialog"')
+            readerDue.output.includes('aria-label="Generate due work: Needs maintenance planning')
             readerGenerates.errors.join(" ").includes("PERMISSION_DENIED") || readerGenerates.status != 200
             generated.errors.length == 0
             filterAfter == filterBefore + 1

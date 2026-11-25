@@ -138,9 +138,15 @@ feature("the facility tree names no ancestor outside the scope; Facilities and F
         const detail = asUser(users.resources, () =>
             page("Facilities/FacilityDetail", {facilityId: ids.meetingRoomId, moveToParentId: ids.otherFloorId})
         )
-        return {tree, top, retail, palette, parents, listed, rooms, detail}
+        // the shared Children tab under Maintenance: Maintenance's own New facility, never Warehouse's (which reads a Warehouse context)
+        const children = asUser(users.resources, () =>
+            page("Facilities/FacilityDetail/Children", {facilityId: ids.buildingId, lastStandalone: "true"})
+        )
+        return {tree, top, retail, palette, parents, listed, rooms, detail, children}
     },
-    then({tree, top, retail, palette, parents, listed, rooms, detail}) {
+    then({tree, top, retail, palette, parents, listed, rooms, detail, children}) {
+        children.status == 200 && children.errors.length == 0 && !/Error rendering/.test(children.output)
+        !children.output.includes('id="NewFacilityDialog"')
         detail.status == 200 && detail.errors.length == 0
         detail.output.includes("Room 101 Huddle") && detail.output.includes("America/Chicago (inherited)")
         detail.output.includes("Bookings to come") && detail.output.includes("Move it")
