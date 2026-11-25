@@ -125,7 +125,10 @@ feature("MailRelays lists SYSTEM and no mail account's server, which opens on no
     when() {
         return {
             relays: asUser(users.integrations, () => page("Protocols/MailRelays")),
-            system: asUser(users.integrations, () => page("Protocols/MailRelayDetail", {connectionKey: "SYSTEM"})),
+            system: asUser(users.integrations, () => {
+                const rendered = page("Protocols/MailRelayDetail", {connectionKey: "SYSTEM"})
+                return Object.assign(rendered, {text: rendered.output.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")})
+            }),
             owned: asUser(users.integrations, () => page("Protocols/MailRelayDetail", {connectionKey: ownedId})),
             ownedTest: asUser(users.integrations, () =>
                 invoke(C + "test#Connection", {adapterKey: "relay", connectionKey: ownedId})
@@ -137,7 +140,10 @@ feature("MailRelays lists SYSTEM and no mail account's server, which opens on no
         relays.status == 200 && relays.errors.length == 0
         relays.output.includes("RelayList") && relays.output.includes("SYSTEM")
         !relays.output.includes(ownedId) && !relays.output.includes("mail.example.com")
-        system.status == 200 && system.output.includes("NativeConnection") && system.output.includes("SMTP host")
+        // SYSTEM sends the sign-in mail: read only to an integration administrator (SEC-ADM-82: an access administrator changes
+        // it), its settings shown as facts, no configuration form
+        system.status == 200 && system.text.includes("Read only here") && system.text.includes("SMTP host")
+        !system.output.includes("NativeConnection")
         owned.output.includes("not available") && !owned.output.includes("mail.example.com") && !owned.output.includes(key)
         ownedTest.applied == false && ownedTest.reasonCode == "ACCOUNT_OWNED"
         reader.status != 200 || reader.output.includes("not available")

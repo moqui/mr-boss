@@ -262,19 +262,28 @@ spec({
     }
 })
 
-feature("a visitor registers free for the demo webinar and its ticket carries the video link", {
+feature("a visitor registers free for the demo webinar, confirms it from the receipt, and its ticket carries the video link", {
     when() {
         const reserved = reserve("ZIZI_SHOP", ids.webinarOfferId, ids.webinarTicketId, "webinar.mkrs@example.test")
         const done = complete("ZIZI_SHOP", reserved.token, "Scenario buyer")
         ec.factory.waitWorkerPoolEmpty(50)
-        const ticket = Array.from(capture.getMessages()).find(
-            m => Array.from(m.toList || []).includes("webinar.mkrs@example.test") && /Entry code/.test(String(m.body || ""))
-        )
+        // a visitor's free place waits for its buyer's address (SEC-PSS-88): the receipt mailed there carries the link whose
+        // "Confirm my places" confirms it
+        const mailed = () => Array.from(capture.getMessages()).filter(m => Array.from(m.toList || []).includes("webinar.mkrs@example.test"))
+        const receiptToken = mailed()
+            .map(m => (/\/Registration\?token=([A-Za-z0-9_%-]+)/.exec(String(m.body || "")) || [])[1])
+            .find(token => !!token)
+        const confirmed = receiptToken
+            ? visitor("get#Registration", {siteId: "ZIZI_SHOP", token: decodeURIComponent(receiptToken), confirm: "Y"})
+            : null
+        ec.factory.waitWorkerPoolEmpty(50)
+        const ticket = mailed().find(m => /Entry code/.test(String(m.body || "")))
         const webinar = one("mantle.work.effort.WorkEffort", {workEffortId: ids.webinarEventId})
-        return {done, ticket, webinar}
+        return {done, confirmed, ticket, webinar}
     },
     then(r) {
-        r.done.registration.state == "confirmed"
+        r.done.registration.state == "held"
+        r.confirmed?.registration?.state == "confirmed"
         !!r.ticket && !!r.webinar.infoUrl && String(r.ticket.body).includes(r.webinar.infoUrl)
     }
 })

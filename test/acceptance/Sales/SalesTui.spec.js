@@ -98,8 +98,9 @@ feature("every Sales screen, shared mount and mounted tab renders in tui as a mo
         return {failures, screens}
     },
     then({failures, screens}) {
-        // 55 screen files under the root, 18 shared mounts and the 50 tabs of Customer360, Product360 and InventoryAvailability
-        screens.length > 110
+        // 55 screen files under the root, 18 shared mounts and the 17 tabs Sales' menu offers of Customer360 (7), Product360 (7)
+        // and InventoryAvailability (3): a tab whose screen condition leaves it out of Sales is not offered (90 in all)
+        screens.length > 85
         screens.includes("Pipeline/OpportunityDetail")
         screens.includes("Pipeline/WorkItemDetail")
         screens.includes("Pipeline/OpportunityImport/Index")

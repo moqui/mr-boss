@@ -90,7 +90,10 @@ feature("the reader's launcher has Commerce alone; the shared catalog context gi
         catalog.capabilities.supplierPriceRead == false
         catalog.capabilities.marginRead == false
         !catalog.productTabs.includes("Costs") && !catalog.productTabs.includes("Suppliers")
-        tabs.every(([, rendered]) => !/Standard cost|Supplier price|Last purchase price/i.test(rendered.output))
+        // no tab shows a cost (a tab the condition keeps out says its title is not offered here)
+        tabs.every(([, rendered]) =>
+            !/Standard cost|Supplier price|Last purchase price/i.test(rendered.output.replace(/<p[^>]*>[^<]*is not offered here\.<\/p>/g, ""))
+        )
     }
 })
 

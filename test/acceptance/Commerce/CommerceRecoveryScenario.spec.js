@@ -196,7 +196,8 @@ feature("past the delay the job sends the shopper one notice and the guest none;
         const first = run()
         const mails = capture.getMessages()
         const second = run()
-        walk.token = decodeURIComponent((/Recover\?r=([A-Za-z0-9_%-]+)/.exec(mails[0]?.body || "") || [])[1] || "")
+        // the link's token rides in recoveryToken, a name the request log leaves out (SEC-PSF-03)
+        walk.token = decodeURIComponent((/Recover\?recoveryToken=([A-Za-z0-9_%-]+)/.exec(mails[0]?.body || "") || [])[1] || "")
         const guestReason = asUser(
             users.operator,
             () =>
@@ -235,7 +236,7 @@ feature("in a fresh session the link asks the visitor to sign in, then restores 
     when() {
         // a fresh session: no cart capability, nobody signed in
         session().remove("passShopCart:" + SITE)
-        const opened = page(null, "Recover", {r: walk.token})
+        const opened = page(null, "Recover", {recoveryToken: walk.token})
         const kept = session()["passShopRecovery:" + SITE]
         const visitor = page(null, "Recover")
         const signedIn = page(walk.shopper, "Recover")

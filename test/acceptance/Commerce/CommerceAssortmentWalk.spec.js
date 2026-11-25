@@ -266,7 +266,9 @@ feature("a merchandiser without PRICE_EDIT sees the store's prices on Product360
         opened(prices)
         prices.output.includes("16.99")
         prices.output.includes("Ziziwork Retail Store")
-        !prices.output.includes("New sales price")
+        // New sales price is shown disabled with the access it needs, no dialog
+        !prices.output.includes('id="NewSalesPriceDialog"')
+        prices.output.includes('aria-label="New sales price: Needs price editing')
         !prices.output.includes("Review bulk change")
         change.includes("Price edit authority is required")
     }

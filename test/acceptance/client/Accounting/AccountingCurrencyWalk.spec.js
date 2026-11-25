@@ -1,12 +1,13 @@
-// Base-currency posting (P20), its rates: a finance administrator fetches the day's rates on Currencies from the European
-// Central Bank's file pasted in (the walk never reaches the network), sees the proposed euro rate, accepts it, and finds
+// Base-currency posting (P20), its rates: the system administrator (exchange rates are every organization's: a finance
+// administrator of some organizations is refused them, ACC-UI-039 and SEC-BOS-02) fetches the day's rates on Currencies from
+// the European Central Bank's file pasted in (the walk never reaches the network), sees the proposed euro rate, accepts it, and finds
 // it among the active exchange rates. The rate's day changes with each run, so the walk passes again on the same database.
 const day = offset => {
     const date = new Date(Date.now() + offset * 86400000)
     const pad = number => String(number).padStart(2, "0")
     return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate())
 }
-feature("a finance administrator proposes the day's rates from the provider's file and accepts one", {
+feature("the system administrator proposes the day's rates from the provider's file and accepts one", {
     expect() {
         const rateDay = day(-(30 + (Math.floor(Date.now() / 60000) % 600)))
         const file =
@@ -14,7 +15,7 @@ feature("a finance administrator proposes the day's rates from the provider's fi
             rateDay +
             "'><Cube currency='USD' rate='1.0800'/><Cube currency='GBP' rate='0.8400'/></Cube></Cube></gesmes:Envelope>"
         const page = browser.newPage({
-            user: "finance.admin",
+            user: "john.doe",
             viewport: {width: 1280, height: 900},
             timeout: 30
         })

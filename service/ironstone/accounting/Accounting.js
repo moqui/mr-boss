@@ -233,15 +233,22 @@ function chartAccounts(parameters, term) {
         .query({kind: "accounts", organizationPartyId: parameters.organizationPartyId, text: term})
         .q.orderBy("accountCode")
 }
+// The accounts the organization may assign itself and has not: as assign#GlAccountOrganization takes them (Mantle's
+// AccountingPolicy.js requireAssignableAccount, SEC-BOS-94), one of the standard chart's (DefaultSettings), any for
+// every-organization finance administration; never another organization's own account
 function unassignedAccounts(parameters) {
-    const organizationPartyId = policy.organization(parameters, "glPost").organizationPartyId
-    const assigned = policy
-        .organizationChain(organizationPartyId)
-        .flatMap(id =>
+    const scope = policy.organization(parameters, "glPost")
+    const chainIds = policy.organizationChain(scope.organizationPartyId)
+    const accountsOf = ids =>
+        ids.flatMap(id =>
             policy.rows("mantle.ledger.account.GlAccountOrganization", {organizationPartyId: id}).map(row => row.glAccountId)
         )
-    const query = policy.find("mantle.ledger.account.GlAccount").orderBy("accountCode")
-    return assigned.length ? query.condition("glAccountId", "not-in", assigned) : query
+    const assigned = accountsOf(chainIds)
+    let query = policy.find("mantle.ledger.account.GlAccount").orderBy("accountCode")
+    if (assigned.length) query = query.condition("glAccountId", "not-in", assigned)
+    if (scope.capabilities.systemAdmin || scope.capabilities.allOrganizations) return query
+    const standard = accountsOf(["DefaultSettings"])
+    return query.condition("glAccountId", "in", standard.length ? standard : ["_NONE_"])
 }
 // The cost centres of the organization: the internal organizations that roll up to it, as the ledger's dimension rule
 // (AccountingPolicy.js dimensions) admits; a department or team rolling up to it is People's unit (impl-people P3, F49).

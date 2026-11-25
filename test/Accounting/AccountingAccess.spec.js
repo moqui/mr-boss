@@ -1444,6 +1444,40 @@ function choicesFeature() {
 }
 
 // mr-pass impl-shop P5 (X4, F15): the payment operator (treasury) releases a Payment hold; AR does not hold the permission
+// SEC-BOS-94: Chart of accounts' Existing chart account offers only what assign#GlAccountOrganization takes: a standard-chart
+// account the organization has not taken, never an account only another organization has (one offered was refused on Assign)
+feature("the chart's existing-account choice offers a standard-chart account, never another organization's own account", {
+    when() {
+        invoke("store#mantle.ledger.account.GlAccount", {glAccountId: "BOSS_ACC_SPEC_FOREIGN", accountCode: "909900098",
+            accountName: "Another organization's own account", glAccountClassEnumId: "EXPENSE", glAccountTypeEnumId: "GatCogs",
+            glResourceTypeEnumId: "GlrtMoney", isDebit: "Y", disallowPosting: "N"})
+        invoke("store#mantle.ledger.account.GlAccountOrganization", {glAccountId: "BOSS_ACC_SPEC_FOREIGN",
+            organizationPartyId: ids.foreignOrganizationPartyId})
+        const offered = user => as(user, () =>
+            (lib.call("ironstone.accounting.AccessServices.get#Choices", {organizationPartyId: org, choice: "unassignedAccounts",
+                term: "9099000", pageSize: 100}).options || []).map(row => row.value))
+        const finance = offered("finance.admin")
+        // with every-organization finance administration (the spec's ACCT_SPEC_ALL_ORGS) any account is the organization's to take
+        const since = ec.user.nowTimestamp
+        if (!ec.entity.find("moqui.security.UserGroup").condition("userGroupId", "ACCT_SPEC_ALL_ORGS").disableAuthz().one()) {
+            invoke("create#moqui.security.UserGroup", {userGroupId: "ACCT_SPEC_ALL_ORGS", description: "Accounting spec: every organization"})
+            invoke("create#moqui.security.UserGroupPermission", {userGroupId: "ACCT_SPEC_ALL_ORGS",
+                userPermissionId: "ACCOUNTING_ALL_ORGANIZATIONS", fromDate: since})
+        }
+        invoke("create#moqui.security.UserGroupMember", {userGroupId: "ACCT_SPEC_ALL_ORGS", userId: "BOSS_ACCT_ADMIN", fromDate: since})
+        try {
+            return {finance, everyOrganization: offered("finance.admin")}
+        } finally {
+            invoke("update#moqui.security.UserGroupMember", {userGroupId: "ACCT_SPEC_ALL_ORGS", userId: "BOSS_ACCT_ADMIN", fromDate: since,
+                thruDate: ec.user.nowTimestamp})
+        }
+    },
+    then({finance, everyOrganization}) {
+        finance.includes("BOSS_ACCOUNTING_EXPENSE") && !finance.includes("BOSS_ACC_SPEC_FOREIGN")
+        everyOrganization.includes("BOSS_ACC_SPEC_FOREIGN")
+    }
+})
+
 feature("treasury holds the Payment hold's release permission (PAYMENT_HOLD_RELEASE); AR does not", {
     when() {
         return {

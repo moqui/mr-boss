@@ -16,6 +16,9 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- for BOSS_ACCT_ORG, defined with the finance users in 10AccountingUsers.xml -->
     <moqui.basic.Enumeration enumId="BOSS_ACCOUNTING_SERVICE_ITEM" enumTypeId="ItemType" description="Accounting service item"/>
     <mantle.ledger.account.GlAccount glAccountId="BOSS_ACCOUNTING_EXPENSE" accountCode="909900001" accountName="Accounting demo purchase expense" glAccountClassEnumId="EXPENSE" glAccountTypeEnumId="GatCogs" glResourceTypeEnumId="GlrtMoney" isDebit="Y" disallowPosting="N"/>
+    <!-- of the standard chart, which the demo organization has not taken: its finance administrator assigns it in the browser walk
+        (AccountingSettingsWalk), an organization taking only standard-chart accounts (SEC-BOS-94) -->
+    <mantle.ledger.account.GlAccountOrganization glAccountId="BOSS_ACCOUNTING_EXPENSE" organizationPartyId="DefaultSettings"/>
     <!-- Demo delivery stays on a local sink. A deployment provisions its own server and account sharing. -->
     <moqui.basic.email.EmailServer emailServerId="BOSS_ACCOUNTING_DEMO" smtpHost="127.0.0.1" smtpPort="9" smtpStartTls="N" smtpSsl="N"/>
     <moqui.basic.email.EmailAccount emailAccountId="BOSS_ACCOUNTING_MAIL" ownerPartyId="BOSS_ACCT_ORG" accountKindEnumId="EakShared" emailServerId="BOSS_ACCOUNTING_DEMO" emailAddress="accounts@finance.example" accountName="Accounting demo mail" statusId="EasActive" recordFilingEnumId="ErfLinkedOnly"/>

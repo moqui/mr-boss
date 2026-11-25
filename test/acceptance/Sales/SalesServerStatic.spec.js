@@ -74,8 +74,9 @@ feature("the full check of every Sales XML screen, shared mount and mounted tab;
         }
     },
     then({rows}) {
-        // 55 screen files under the root, 16 plain XML shared mounts and the tabs of Customer360, Product360 and InventoryAvailability
-        rows.length > 95
+        // 55 screen files under the root, 16 plain XML shared mounts and the 17 tabs Sales' menu offers of Customer360, Product360
+        // and InventoryAvailability (88 in all)
+        rows.length > 85
         rows.some(row => row.key === "Sales/Orders/OrderDetail")
         rows.some(row => row.key === "Sales/Pipeline/LogCall" && row.marked)
         rows.every(row => row.verdict !== "error")

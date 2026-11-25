@@ -132,6 +132,12 @@ feature("closing a location that holds stock is refused, naming the stock", {
     }
 })
 
+// an action the user lacks is absent, or shown disabled with the access it needs (area actions show disabled, not hidden)
+const notOffered = (page, name) => {
+    const buttons = page.getByRole("button", {name, exact: true})
+    for (let i = 0; i < buttons.count(); i++) if (buttons.nth(i).isEnabled()) return false
+    return true
+}
 feature("a reader opens the facility and reads its locations, with no edit action", {
     expect() {
         const page = pages["warehouse.read:1280"]
@@ -144,7 +150,7 @@ feature("a reader opens the facility and reads its locations, with no edit actio
         !page.text().includes("Set status")
         page.getByRole("link", {name: "Facilities", exact: true}).first().click()
         waitForText(page, "Ziziwork Retail East Warehouse")
-        !page.text().includes("New facility")
+        notOffered(page, "New facility")
     }
 })
 

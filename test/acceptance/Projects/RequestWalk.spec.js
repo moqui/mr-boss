@@ -37,12 +37,18 @@ const all = (entityName, fields) => sys(() => Array.from(ec.entity.find(entityNa
 const byName = (name) => all("mantle.request.Request", { requestName: name })[0] || null
 const request = (id) => one("mantle.request.Request", { requestId: id })
 const stamp = Date.now()
-// a message the sync stores in the Support Inbox, then the account's rules, as the sync runs them (authorization off)
+// the mail provider whose Authentication-Results the intake trusts: a project's mail is its sender's only when the gateway
+// authenticated its From (Mantle's SEC-BAP-84), so a reply joins its request
+const GATEWAY = "gw.walk.test"
+// a message the sync stores in the Support Inbox, with the gateway's DMARC pass for its From, then the account's rules, as the
+// sync runs them (authorization off)
 function arrive(id, fields) {
+    const from = String(fields.fromAddress || "")
+    const headersString = `From: ${from}\r\nAuthentication-Results: ${GATEWAY}; dmarc=pass header.from=${from.split("@").pop()}`
     sys(() => {
         call("store#moqui.basic.email.EmailMessage", Object.assign({ emailMessageId: id, emailAccountId: SUPPORT, emailFolderId: "BOSS_DEMO_MAIL_S_INBOX",
             statusId: "ES_RECEIVED", contentType: "text/plain", messageDate: ec.user.nowTimestamp, receivedDate: ec.user.nowTimestamp, isRead: "N",
-            hasAttachment: "N", rootEmailMessageId: id, messageId: `<${id}-${stamp}@walk.example>` }, fields))
+            hasAttachment: "N", rootEmailMessageId: id, messageId: `<${id}-${stamp}@walk.example>`, headersString }, fields))
         call("org.moqui.mail.EmailClientServices.run#EmailRules", { emailAccountId: SUPPORT, emailMessageIdList: [id] })
     })
     return one("moqui.basic.email.EmailMessage", { emailMessageId: id })
@@ -50,7 +56,11 @@ function arrive(id, fields) {
 
 spec({
     stepwise: true,
-    setupSpec() { login("john.doe") },
+    setupSpec() {
+        login("john.doe")
+        // the Support account is a synced mailbox: its provider's authserv-id is the one trusted
+        setConf("mantle@mail-provider-authserv-ids", GATEWAY)
+    },
 })
 
 feature("a request arrives by email to IRON's address and one from IRON's public form", {

@@ -52,15 +52,22 @@ function live(input) {
 const runJob = () => asUser("john.doe", () => invoke(T + "run#ScheduledSitePublications", {}), false)
 const dueNow = sitePageId =>
     system(() => call("update#mantle.public.PublicSitePage", {sitePageId, scheduledFromDate: Date.now() - 1000}))
+// the publisher's membership in the publisher group, ended at thruDate (or open again with null): each row of it, whatever its
+// fromDate in the demo data
 const publisherMembership = thruDate =>
-    system(() =>
-        call("update#moqui.security.UserGroupMember", {
-            userGroupId: "BOSS_COMMERCE_PUBLISHER",
-            userId: "BOSS_COM_PUBLISHER",
-            fromDate: 0,
+    system(() => {
+        const rows = ec.entity
+            .find("moqui.security.UserGroupMember")
+            .condition({userGroupId: "BOSS_COMMERCE_PUBLISHER", userId: "BOSS_COM_PUBLISHER"})
+            .list()
+        if (!rows.length) throw new Error("the demo publisher has no membership in BOSS_COMMERCE_PUBLISHER")
+        for (const row of rows) call("update#moqui.security.UserGroupMember", {
+            userGroupId: row.userGroupId,
+            userId: row.userId,
+            fromDate: row.fromDate,
             thruDate
         })
-    )
+    })
 const walk = {}
 
 spec({

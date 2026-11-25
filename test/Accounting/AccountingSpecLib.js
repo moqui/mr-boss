@@ -259,6 +259,8 @@ function routeFixtures() {
             text,
             {supplierPartyId: "BOSS_ACCT_SUPPLIER", lastStandalone: "true"}
         ]),
+        // Records opens on its default OrderDetail, which needs the order
+        ["Records", "Purchase order", {orderId: "BOSS_ACCT_PO"}],
         ["Records/OrderDetail", "Purchase order", {orderId: "BOSS_ACCT_PO"}],
         ["Records/ShipmentDetail", "From Accounting Demo Supplier", {shipmentId: receivedShipmentId()}],
         ["Records/ReturnDetail", "Customer return BOSS_ACCT_RETURN", {returnId: "BOSS_ACCT_RETURN"}],
