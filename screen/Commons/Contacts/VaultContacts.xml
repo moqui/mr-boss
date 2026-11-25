@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The private contacts of the user's open vaults (mr-moqui plans/Vault-Instances.md §3.6, V3): VaultContacts.qvue next to this
+<!-- The private contacts of the user's open vaults (mr-moqui plans/archive/Vault-Instances.md §3.6, V3): VaultContacts.qvue next to this
     file, which the Contacts list loads in a dynamic-container with its find (text, letter, scope). The contacts are the contact
     items of the vaults open in this page's vault session (Commons/Vault.qvue, window.BossVaultSession), read and filtered in the
     browser and marked as private. This screen reads nothing on the server and has no transition: a private contact never reaches

@@ -11,7 +11,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Commons Vault (Vault.xml; mr-moqui plans/Vault-Instances.md §3.1 to §3.12, V3), and the user's vault key under Settings
+<!-- Commons Vault (Vault.xml; mr-moqui plans/archive/Vault-Instances.md §3.1 to §3.12, V3), and the user's vault key under Settings
     (Settings/VaultKey.xml shows this component too: keyView). The vaults of both locks in a column (a locked one shows its lock
     and its item count, which is all the server knows), the open vault's items by type with a client-side search over names,
     websites, tags and the fields that are not masked, and an item's page: its fields, a masked value shown only when asked for
@@ -912,7 +912,7 @@ const SERVER_TIME_KEY = 'bossVault.serverTime';
 const ICONS = { login: 'sym_o_key', otp: 'sym_o_pin', note: 'sym_o_sticky_note_2', card: 'sym_o_credit_card', identity: 'sym_o_badge', contact: 'sym_o_person',
     'ssh-key': 'sym_o_terminal', 'api-key': 'sym_o_api', 'database-credential': 'sym_o_database', 'tls-key-pair': 'sym_o_verified_user',
     'registry-login': 'sym_o_inventory_2', 'recovery-code': 'sym_o_password', 'recovery-share': 'sym_o_vpn_key' };
-// plans/Vault-Instances.md §3.11, in its exact words
+// plans/archive/Vault-Instances.md §3.11, in its exact words
 const SINGLE_WARNING = 'Only this password opens this vault. It is never sent to the server and it is not stored anywhere. Nobody can open the vault without it: not an administrator, not your organization, not the makers of this software. If you lose it, everything in the vault is lost for good.';
 const COMMON = ['password', 'passw0rd', 'p@ssw0rd', '123456', '12345678', '123456789', '1234567890', 'qwerty', 'qwertyuiop', 'asdfgh', 'letmein',
     'welcome', 'iloveyou', 'admin', 'monkey', 'dragon', 'football', 'baseball', 'sunshine', 'princess', 'abc123', '111111', '000000',

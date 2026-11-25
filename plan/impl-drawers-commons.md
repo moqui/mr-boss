@@ -874,7 +874,7 @@ plans/Remaining-Work.md.
 
 ## 10. Addendum, Nov 19, 2026: Commons › Vault (mr-moqui Vault-Instances V3)
 
-Commons › Vault and Settings › Vault key are mr-moqui's [Vault-Instances](https://github.com/moqui/mr-moqui/blob/master/plans/Vault-Instances.md)
+Commons › Vault and Settings › Vault key are mr-moqui's [Vault-Instances](https://github.com/moqui/mr-moqui/blob/master/plans/archive/Vault-Instances.md)
 phase V3, on the framework's vault services (V1, `/rest/s1/vault`) and its vault module (`webroot` `js/vault/`, the wasm build
 of `crates/moqui-vault` in a worker). The design is that plan's §3 and §5; the user's guide is mr-moqui's
 [docs/security/Vaults.md](https://github.com/moqui/mr-moqui/blob/master/docs/security/Vaults.md).

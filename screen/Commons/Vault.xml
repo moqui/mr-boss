@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Commons Vault (mr-moqui plans/Vault-Instances.md §3, §5 and phase V3; docs/security/Vaults.md): the user's personal vaults of
+<!-- Commons Vault (mr-moqui plans/archive/Vault-Instances.md §3, §5 and phase V3; docs/security/Vaults.md): the user's personal vaults of
     both locks, their items by type, search, an item's page (show, copy, history), making a vault (single-secret with §3.11's
     steps, or shared-key), members with their key fingerprints, items sent to the user, import from Bitwarden and KeePass exports,
     an encrypted export, and Lock. The component is Vault.qvue next to this file; Settings/VaultKey shows the same component on the

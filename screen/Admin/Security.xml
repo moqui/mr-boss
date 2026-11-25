@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     IdentityProviderDetail, one provider's configuration, mappings and test (contextual); Devices, the shared devices
     (P18: a registered browser that opens one route group as a display account; its services check ADMIN_ACCESS_VIEW and
     ADMIN_ACCESS_MANAGE and the caller's identity scope); RecoveryKeys, the organization's vault recovery keys, their holders
-    and the recoveries in progress (mr-moqui plans/Vault-Instances.md V4, §3.10; the vault services check VAULT_RECOVERY and a
+    and the recoveries in progress (mr-moqui plans/archive/Vault-Instances.md V4, §3.10; the vault services check VAULT_RECOVERY and a
     recent sign-in themselves). For the
     access administrator, the configuration administrator, the integration administrator and the administrator
     (BOSS_ADM_SECURITY): each screen shows a viewer what the framework's services answer them, since those check

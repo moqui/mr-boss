@@ -1,4 +1,4 @@
-// Commons › Vault in the browser (mr-moqui plans/Vault-Instances.md V3, §3.6, §3.9): the real Vault.qvue and VaultContacts.qvue
+// Commons › Vault in the browser (mr-moqui plans/archive/Vault-Instances.md V3, §3.6, §3.9): the real Vault.qvue and VaultContacts.qvue
 // with the real vault module (webroot js/vault: VaultClient.js, its worker and moqui_vault.wasm, each loaded with its integrity
 // hash), over an in-page stand-in for the vault REST services that keeps what a server keeps (test/client/pages/VaultStandIn.js).
 // A private contact shows under Contacts while the vault is open, and no request carries it. An encrypted export opens only as

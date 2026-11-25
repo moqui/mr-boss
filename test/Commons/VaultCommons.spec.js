@@ -1,4 +1,4 @@
-// Commons › Vault's rules on the server (mr-moqui plans/Vault-Instances.md V3; the screens are screen/Commons/Vault.xml and
+// Commons › Vault's rules on the server (mr-moqui plans/archive/Vault-Instances.md V3; the screens are screen/Commons/Vault.xml and
 // Vault.qvue, which call org.moqui.security.VaultServices over REST): a single-secret vault refuses a member and a recovery key,
 // with the same parameters that make one when they are left out; and a private contact, a contact item in the user's vault, never
 // reaches CardDAV: the user's address book over the DAV server (Mantle's contact adapter) lists the same cards, with the same

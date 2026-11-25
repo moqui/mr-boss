@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The people Commons › Vault, Settings › Vault key and Admin › Security › Recovery keys name (screen/Commons/Vault.xml and the
-    screens that take in its transitions; mr-moqui plans/Vault-Instances.md §3.5, §3.10). Never a key or a value: who may be
+    screens that take in its transitions; mr-moqui plans/archive/Vault-Instances.md §3.5, §3.10). Never a key or a value: who may be
     added to a vault or sent an item (people the user may reach with an active vault key), the names of the people the user's
     own vault records name, the holders a recovery key may be split to, and the groups it may be kept for. People are found
     only as Chatter's people search finds them (ironstone.shared.ChatterServices.search#Users: the users the apps'

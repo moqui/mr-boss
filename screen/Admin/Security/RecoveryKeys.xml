@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Admin › Security › Recovery keys (mr-moqui plans/Vault-Instances.md §3.10, §5 and phase V4; docs/security/Vaults.md,
+<!-- Admin › Security › Recovery keys (mr-moqui plans/archive/Vault-Instances.md §3.10, §5 and phase V4; docs/security/Vaults.md,
     "Organization recovery"): the organization's vault recovery keys, each with the group or instance it is kept for, how many of
     its holders a recovery takes, its maker, its holders (a holder whose vault key was replaced since can no longer open their
     share) and its state, a used key shown as "Used, replace"; New recovery key, made and split in the browser among holders who

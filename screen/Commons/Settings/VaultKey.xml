@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Settings › Vault key (mr-moqui plans/Vault-Instances.md §3.5, §5): the user's personal vault key, set up here with its recovery
+<!-- Settings › Vault key (mr-moqui plans/archive/Vault-Instances.md §3.5, §5): the user's personal vault key, set up here with its recovery
     code (shown once, part of it typed back), unlocked, its passphrase changed, opened with the recovery code, or made again when
     both are lost; its fingerprint; the keys this user compared with their owners; and the devices that remember the key (the
     desktop and mobile apps, none in a browser). The component is Commons/Vault.qvue in its keyView: the same session and the

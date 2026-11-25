@@ -1,6 +1,6 @@
 // The users of the acceptance walk VaultPersonal (test/acceptance/client/Commons): vault.ana, vault.ben and vault.cal, each with a
 // password and one single-use code as a second factor, so that a REST sign-in with the code is a strong one, which a personal vault
-// key needs (mr-moqui plans/Vault-Instances.md §9; made as mr-moqui's framework test/ClientFixtures.spec.js makes sec.vault.*). The
+// key needs (mr-moqui plans/archive/Vault-Instances.md §9; made as mr-moqui's framework test/ClientFixtures.spec.js makes sec.vault.*). The
 // code is consumed by each sign-in, so it and the account are set again on every run. vault.ben and vault.cal also hold
 // VAULT_RECOVERY, a sealed permission, through BOSS_VAULT_RECOVERY_TEST (granted here with authorization off, as a data load
 // grants it), to split the walk's organization recovery key. Not demo data: no production load reaches them. Run with the

@@ -1,4 +1,4 @@
-// Personal vaults end to end (mr-moqui plans/Vault-Instances.md V3, §3.1 to §3.11): what Commons › Vault does in the browser's
+// Personal vaults end to end (mr-moqui plans/archive/Vault-Instances.md V3, §3.1 to §3.11): what Commons › Vault does in the browser's
 // worker, done here by the test client's vault member (the vault crate's session run natively, as the worker runs it) over the
 // vault REST services, with three users who sign in with a password and a second factor (VaultClientFixtures). Both locks: a
 // single-secret vault opens on another device with its password only; a shared-key vault opens only through its signed member
