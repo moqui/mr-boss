@@ -2300,7 +2300,11 @@ record and other permitted layers. A standalone Maps app grant is separate from 
 Full display fields are the readable record label, canonical identity, selected address text/purpose, longitude,
 latitude or extent, CRS, source/edition, precision, observation/match date where known and permitted record link.
 Full selection inputs add the selected candidate/manual point and current record/address version; neither a profile
-ID nor the client-supplied adapter context is authority. Service package names for the domain adapters are finalized
+ID nor the client-supplied adapter context is authority. `get#RecordMapContext` and `store#RecordLocation` are
+interface services of the framework's `org.moqui.maps.MapServices`
+([Maps §3.2](../../../../../plans/Maps.md#32-map-widget-and-local-map-dialog)); a domain adapter implements them
+and registers by key, and **Choose location** posts to the dialog's own transition, which calls the adapter, so no
+value is handed back to the host form. Service package names for the domain adapters are finalized
 with their owner; these names describe proposed contracts, not existing services or new generic entity writers.
 
 **Per-app context and rollout:**
@@ -3875,7 +3879,7 @@ domain-owned. INS-12 owns the cash forecast service; Accounting keeps no AC row 
 
 | Need | Kind | Owner | Shared contract |
 | --- | --- | --- | --- |
-| CX-MAPS | XML Screen element, Vue component, service type, data model, seed data | framework; Mantle record adapters; app contexts | [Maps](../../../../../plans/Maps.md) owns the OpenLayers Tools browser/dialog, OpenFreeMap, ResourceFacade PMTiles, global/personal metadata, Rust services and postal Geo lookup. §3.32 owns BOSS placement/access; app designs refer to it. All are proposed work, independent of the existing report geomap. |
+| CX-MAPS | XML Screen element, Vue component, service type, data model, seed data | framework; Mantle record adapters; app contexts | [Maps](../../../../../plans/Maps.md) owns the OpenLayers Tools browser/dialog, OpenFreeMap, ResourceFacade PMTiles, global/personal metadata, Rust services and postal Geo lookup. Its configuration screen is `component://tools/screen/Maps/Configuration.xml` (`/qapps/maps/Configuration`), where an administrator also imports the Geo data the lookup reads; none ships. §3.32 owns BOSS placement/access; app designs refer to it. All are proposed work, independent of the existing report geomap. |
 
 ## 8. Decided
 
