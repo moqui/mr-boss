@@ -63,6 +63,11 @@ along with this software (see the LICENSE.md file). If not, see
                                     parameter-map="{resourceUnavailabilityId:maintenanceAsset.outage.resourceUnavailabilityId}"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <!-- View map (design-crosscut §3.10, §3.32): Maintenance's LocalMap with Mantle's asset adapter, its own point or
+                                else where its facility is (labeled so), and Choose location only to a holder of MAINTENANCE_RESOURCE_EDIT or
+                                FACILITY_EDIT in its scope -->
+                            <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${maintenanceAsset.assetName}" width="760"
+                                    transition="//Maintenance/LocalMap" parameter-map="{adapterKey: 'asset', recordKey: JSON.stringify({assetId: assetId})}"/>
                             <link url="${sharedLinks['Equipment/AssetTags']}" text="Print tag" icon="sym_o_qr_code_2"
                                     link-type="anchor-button" parameter-map="tagParameters"/>
                         </container>

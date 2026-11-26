@@ -34,6 +34,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundle userGroupId="BOSS_COMMS_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Comms" description="Comms administrator" scopeDependency="organization" sequenceNum="30"/>
     <moqui.security.CapabilityBundle userGroupId="BOSS_CONTACT_ADMIN" appName="Comms" description="Contact admins (IronStone): edit and delete directory contacts, review duplicates" scopeDependency="organization" sequenceNum="40"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CONTACT_ADMIN" userPermissionId="CONTACT_ADMIN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CONTACT_ADMIN" userPermissionId="PARTY_LOCATION_EDIT" capabilityKindEnumId="CpkEdit"/>
     <!-- Customer Service -->
     <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" delegablePermissionId="ADMIN_ACCESS_MANAGE" appName="Customer Service" description="Customer Service administrator" scopeDependency="organization, team" sequenceNum="50"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_CASE_EDIT" capabilityKindEnumId="CpkEdit"/>

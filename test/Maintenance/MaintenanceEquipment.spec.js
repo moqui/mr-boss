@@ -76,6 +76,9 @@ feature("EquipmentDetail under Maintenance shows the resource administrator its 
         header.output.includes("Compressor C-1") && header.output.includes("In service")
         header.output.includes('name="Meters"') && header.output.includes('name="Assignments"')
         !header.output.includes('name="Book"')
+        // View map (design-crosscut §3.32): the dialog of Maintenance's LocalMap with the asset adapter (under the app root as the
+        // render's root the //Maintenance path is not resolved, so the button is checked, not its URL)
+        header.output.includes('icon="sym_o_map" label="View map"')
         rendered.status == 200 && rendered.errors.length == 0
         rendered.output.includes("AC200-0042")
         rendered.output.includes("Supplier warranty")
@@ -151,6 +154,7 @@ feature("the facility tree names no ancestor outside the scope; Facilities and F
         detail.output.includes("Room 101 Huddle") && detail.output.includes("America/Chicago (inherited)")
         detail.output.includes("Bookings to come") && detail.output.includes("Move it")
         detail.output.includes('name="Rooms"') && !detail.output.includes('name="Locations"')
+        detail.output.includes('icon="sym_o_map" label="View map"')
         tree.facilityList.some(row => row.facilityId == leased && row.parentFacilityId.startsWith("hidden-") && row.parentName == "")
         tree.facilityList.some(row => row.hiddenAncestor && row.facilityName == "")
         !JSON.stringify(tree.facilityList).includes(ids.otherFacilityId)

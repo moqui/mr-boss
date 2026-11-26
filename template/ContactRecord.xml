@@ -248,7 +248,9 @@ along with this software (see the LICENSE.md file). If not, see
                     contactMechList = (rec.contactMechList || []).map((mech) => Object.assign({}, mech, {linkHtml: mech.href && !mech.expired
                             ? anchor(mech.href, mech.value, mech.isPrimary ? 'text-weight-medium' : '') : null,
                             detailText: [mech.typeLabel, mech.purposeText].filter((part) => part).join(' · ')}))
-                    addressList = rec.addressList || []
+                    // each row's place in the list, for its View map dialog's id (a dialog in a list row is given the row's index:
+                    // LocalMapDialog_0, _1, ...), which the dialog closes by after a save
+                    addressList = (rec.addressList || []).map((address, index) => Object.assign({}, address, {mapDialogId: 'LocalMapDialog_' + index}))
                     organizationList = rec.organizationList || []
                     relationshipList = rec.relationshipList || []
                     bookList = rec.bookList || []
@@ -589,8 +591,15 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <form-list name="ContactAddressList" list="addressList" skip-form="true" paginate="false" skip-header="true">
                                                     <field name="oneLine"><default-field title="Address"><display style="${expired ? 'text-strike m-muted' : (isPrimary ? 'text-weight-medium' : '')}"/></default-field></field>
                                                     <field name="purposeText"><default-field title="Purpose"><display style="text-caption m-muted"/></default-field></field>
+                                                    <!-- View map (design-crosscut §3.1, §3.32) on each current address: the app's LocalMap with Mantle's
+                                                        postalAddress adapter (no purpose: the address itself), which reads the address through its parties under
+                                                        their own rules and offers Choose location only to a holder of PARTY_LOCATION_EDIT (BOSS_CONTACT_ADMIN) or
+                                                        the contact's owner; a shared (_NA_) contact's address is read only -->
                                                     <field name="rowActions" align="right"><conditional-field condition="canEditIdentity &amp;&amp; !expired" title="">
                                                         <container style="row no-wrap justify-end items-center">
+                                                            <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${record.name}" width="760"
+                                                                    transition="//${appRoot}/LocalMap" parameter-map="{adapterKey: 'postalAddress', recordKey: JSON.stringify({contactMechId}),
+                                                                    dialogId: mapDialogId}"/>
                                                             <container-dialog id="ContactAddressEditDialog" button-text="" icon="sym_o_edit" width="600" title="Change the address" tooltip="Change">
                                                                 <form-single name="ContactAddressEdit" transition="contactInfoStore">
                                                                     <field name="partyId" from="recordPartyId"><default-field><hidden/></default-field></field>
@@ -620,6 +629,12 @@ along with this software (see the LICENSE.md file). If not, see
                                                             </container-dialog>
                                                             <link url="contactInfoPurpose" link-type="hidden-form-link" icon="sym_o_delete" text="" tooltip="Remove" style="m-btn-flat"
                                                                     confirmation="Remove this address?" parameter-map="{partyId:recordPartyId, contactMechId:contactMechId, remove:'true'}"/>
+                                                        </container>
+                                                    </conditional-field><conditional-field condition="!expired" title="">
+                                                        <container style="row no-wrap justify-end items-center">
+                                                            <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${record.name}" width="760"
+                                                                    transition="//${appRoot}/LocalMap" parameter-map="{adapterKey: 'postalAddress', recordKey: JSON.stringify({contactMechId}),
+                                                                    dialogId: mapDialogId}"/>
                                                         </container>
                                                     </conditional-field><default-field title=""><display text=""/></default-field></field>
                                                     <form-list-column><field-ref name="oneLine"/><field-ref name="purposeText"/></form-list-column>

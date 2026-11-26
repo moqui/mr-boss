@@ -82,6 +82,8 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- the local-map dialog of View map (design-crosscut §3.32), the framework's LocalMap by the thin-wrapper rule -->
+        <subscreens-item name="LocalMap" location="component://mr-boss/screen/Shared/LocalMap.xml" menu-include="false"/>
         <!-- P2: Campaigns (design §3): the campaigns list and board, CampaignDetail, its plan print and Approvals (the approvers',
             BOSS_MKT_APPROVALS), for a user who reads Marketing; Mantle's campaign services scope every read to the organizations -->
         <subscreens-item name="Campaigns" location="component://mr-boss/screen/Marketing/Campaigns.xml" menu-index="2"

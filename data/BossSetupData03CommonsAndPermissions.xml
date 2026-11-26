@@ -69,6 +69,12 @@ along with this software (see the LICENSE.md file). If not, see
         a contact admin marks "not a duplicate" is Mantle's PartyNotDuplicate; the PartySetting BossNotDuplicates that held such
         pairs before is moved to it on a load (ironstone.commons.ContactServices.migrate#NotDuplicateSettings, nothing to do once done). -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_CONTACT_ADMIN" userPermissionId="CONTACT_ADMIN" fromDate="0"/>
+    <!-- Maps (design-crosscut §3.1, §3.32; mr-mantle docs/MapAdapters.md): a contact admin, who keeps the directory's addresses, chooses
+        a party's or an address's location in View map (Mantle's party and postalAddress adapters check PARTY_LOCATION_EDIT and a party
+        of the user's organizations; the owner of a personal contact needs none; a shared, _NA_-owned, contact stays read only, and an
+        internal organization's own address needs ADMIN_SETTINGS_MANAGE too, as SEC-BOS-89). Sales' account editors, who change a contact's
+        addresses too, do not hold it: the adapter's reach (every party of the user's organizations) is wider than Sales' own. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CONTACT_ADMIN" userPermissionId="PARTY_LOCATION_EDIT" fromDate="0"/>
     <ironstone.commons.ContactServices.migrate-NotDuplicateSettings/>
 
     <!-- Files (design-drawers-commons.md §9 Records, impl-drawers-commons.md M8, R25): the Records drive, a view over the record

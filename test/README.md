@@ -31,7 +31,7 @@ regression suite; a screen sweep belongs only in `test/acceptance/`
 
 In each of the four directories the specs are in a subdirectory named for the `screen/` directory of the app they
 cover. Specs that cover the whole suite stay at the top: `AppOrganizationFilters` and the public pages (`PublicShare`,
-`PublishedCalendar`, `Unsubscribe`) in `test/`, `Shared/` for the conversation and files on a record, and
+`PublishedCalendar`, `Unsubscribe`) in `test/`, `Shared/` for the conversation, files and map of a record (`RecordMap`), and
 `AppStructure`, `ServerStatic` and `TuiRender` in `test/acceptance/`. `client/suite.js`,
 `acceptance/client/suite.js` and `proofs/suite.js` list the client specs in order and declare the server and fixtures
 each suite starts with `--serve`; the proofs' fixtures are `ProofFixtures`, which sets again on every run the password and

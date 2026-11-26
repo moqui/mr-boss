@@ -39,6 +39,8 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- the local-map dialog of View map (design-crosscut §3.32), the framework's LocalMap by the thin-wrapper rule -->
+        <subscreens-item name="LocalMap" location="component://mr-boss/screen/Shared/LocalMap.xml" menu-include="false"/>
         <!-- later phases: the shared screens mounted at the root, hidden from the menu -->
     </subscreens>
 

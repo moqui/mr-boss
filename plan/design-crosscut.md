@@ -631,7 +631,7 @@ calendar, Chatter, files and approvals references keep their existing design own
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | ContactDetail | Commons/Contacts/ContactDetail | detail | xml | Maintain the existing contact record | Party | Commons §6 owner; per-app mounts in §3.1 here | party readers | parity | Party partyId |
-| LocalMap (proposed) | `component://tools/screen/Maps/LocalMap.xml`, mounted dialog | detail dialog | xml + shared map widget | View an authorized record location; open full-screen Maps or propose a location when permitted | address, GeoPoint or registered record adapter | framework Maps owner; §3.32 | map-view plus source-record reader; separate source edit for saving | new | registered adapter, canonical record/address purpose, authorized profile and initial extent |
+| LocalMap | `component://tools/screen/Maps/LocalMap.xml`, mounted dialog (`Shared/LocalMap.xml`) | detail dialog | xml + shared map widget | View an authorized record location; open full-screen Maps or propose a location when permitted | address, GeoPoint or registered record adapter | framework Maps owner; §3.32 | map-view plus source-record reader; separate source edit for saving | new | registered adapter, canonical record/address purpose, authorized profile and initial extent |
 | Customer360 | Shared/Customer360 | 360 | xml | Customer operations and financial context | Party | own §3.2 | customer readers | parity | Party partyId |
 | Supplier360 | Shared/Supplier360 | 360 | xml | Supplier sourcing, receipts and AP context | Party | own §3.3 | supplier readers | parity | Party partyId |
 | PersonDetail | Projects/Resources/PersonDetail | 360 | xml | Existing person/resource workbench; links the People-owned HR record | Party | Projects §9; §3.4 here | resource readers | new | Party partyId |
@@ -2285,6 +2285,22 @@ an employee's time entry and no employee rate row.
 `component://tools/screen/Maps.xml`, its full-screen browser and `Maps/LocalMap.xml`. OpenLayers is selected for its
 formats, standards, projections and editing support. BOSS reuses the widget/dialog and contributes authorized record
 adapters; it does not duplicate the renderer, postal reference dataset or resource/tile service. Needs: CX-MAPS.
+
+**Built** (mr-moqui Maps P3, November 25, 2026): `screen/Shared/LocalMap.xml`, the framework's LocalMap by the thin-wrapper
+rule (`include-screen`, `getConfig` and `storeLocation`; no `source`, which the framework's own route serves), is mounted
+hidden as `LocalMap` under Commons, Sales, Marketing, Customer Service, Maintenance, Warehouse and Manufacturing and reached
+by each root's own grant; no grant names it, and Mantle's adapters ([MapAdapters](https://github.com/moqui/mr-mantle/blob/master/docs/MapAdapters.md))
+check every read and save. **View map** is on each current address of the contact record (`template/ContactRecord.xml`,
+adapter `postalAddress`, so Commons ContactDetail and the Sales, Marketing and Customer Service contact mounts), in
+FacilityDetail's header (`facility`, every app's context) and in Maintenance's EquipmentDetail header (`asset`); a save closes
+the dialog and reloads the host. The answer's route keys (`partyDetail`, `facilityDetail`, `assetDetail`) are resolved under
+the dialog by `service/ironstone/shared/MapLinks.js` to the host app's screen of the record, else
+`PaletteServices.get#RecordLink`'s, for a screen the user may open, leaving out the record shown. `BOSS_CONTACT_ADMIN` holds
+`PARTY_LOCATION_EDIT` (with its bundle row); as in the contact record, the adapter leaves a shared (`_NA_`-owned) contact read
+only and an internal organization's own address to its settings manager (`ADMIN_SETTINGS_MANAGE`, SEC-BOS-89); facility and equipment editors already held `FACILITY_EDIT` and
+`MAINTENANCE_RESOURCE_EDIT`. BOSS adds no Maps app entry: Open in Maps opens the framework's `/qapps/maps` for a holder of its
+own grant. Regression: `test/Shared/RecordMap.spec.js`. Not yet: Customer360, Supplier360, Employee360, OrderDetail and
+ShipmentDetail addresses, Warehouse and Manufacturing equipment headers, Commerce stores and Admin organization contacts.
 
 **Layout and interaction:** **View map** beside an address or coordinate opens a local-context dialog, preserving
 the host form and selected address purpose. The dialog shows the point/area, label, source/precision, nearby context

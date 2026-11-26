@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- LocalMap (design-crosscut §3.32; mr-moqui docs/tools/Maps.md "The local-map dialog", "Under an app's route"): the framework's
+    local-map dialog under a BOSS app's own route, by the thin-wrapper rule (mr-moqui docs/dev/Practices-App-Dev.md "A framework
+    screen under an app's root"). Each app root with a View map mounts this file hidden as its LocalMap subscreen (Commons,
+    Sales, Marketing and Customer Service for the contact record's addresses, template/ContactRecord.xml; Maintenance, Warehouse
+    and Manufacturing for FacilityDetail and Maintenance's EquipmentDetail), and View map is a dynamic-dialog loading
+    //<appRoot>/LocalMap with a Mantle adapter's key and the record's key (mr-mantle docs/MapAdapters.md: postalAddress
+    {contactMechId}, facility {facilityId}, asset {assetId}). It is reached by the app root's own grant (no row names this file
+    or the framework's LocalMap.xml); the framework's MAPS_DIALOG gives every signed-in user the services the dialog calls, and
+    the adapter checks the caller on every read and save (Choose location only for a holder of the record's edit permission:
+    PARTY_LOCATION_EDIT, FACILITY_EDIT, MAINTENANCE_RESOURCE_EDIT), so the mount narrows nothing and grants nothing.
+    Taken in: getConfig (the basemap and layers) and storeLocation (Save location, which calls the adapter's
+    store#RecordLocation; on success the dialog closes and the host screen reloads in place). Not taken in: source, since the
+    effective configuration hands a map the framework's own archive path (/apps/maps/LocalMap/source), which checks every
+    caller. Open in Maps shows only to a user whose own grants open the framework's Maps app (MAPS_APP).
+    What BOSS adds under the dialog: the record's links (an answer's route keys partyDetail, facilityDetail and assetDetail)
+    resolved to the BOSS screen of the record the user may open (service/ironstone/shared/MapLinks.js: the host app's own first,
+    Maintenance's facility and equipment, else ironstone.commons.PaletteServices.get#RecordLink's); a link to the record the dialog
+    shows is left out. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
+        default-menu-title="Map" default-menu-include="false" history="false">
+
+    <transition-include name="getConfig" location="component://tools/screen/Maps/LocalMap.xml"/>
+    <transition-include name="storeLocation" location="component://tools/screen/Maps/LocalMap.xml"/>
+
+    <widgets>
+        <include-screen location="component://tools/screen/Maps/LocalMap.xml" share-scope="true"/>
+        <!-- the record's links (route keys) to BOSS screens, read after the included screen read the record -->
+        <section name="LocalMapLinks">
+            <actions>
+                <set field="recordLinks" from="ec.resource.script('component://mr-boss/service/ironstone/shared/MapLinks.js')
+                        .recordLinks(record, recordKey, appRoot)"/>
+            </actions>
+            <widgets>
+                <container id="LocalMapLinkList" style="row q-gutter-sm q-mt-xs">
+                    <section-iterate name="LocalMapLink" list="recordLinks" entry="recordLink">
+                        <widgets>
+                            <link url="${recordLink.url}" url-type="plain" text="${recordLink.label}" link-type="anchor" icon="sym_o_open_in_new"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
