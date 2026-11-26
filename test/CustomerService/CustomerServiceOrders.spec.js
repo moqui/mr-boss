@@ -268,11 +268,15 @@ feature("OrderDetail's and Customer360's Customer Service branches render for th
         held.output.includes("Waiting for the customer to confirm the delivery address")
         held.output.includes("Resend confirmation")
         held.output.includes("Link to case")
+        // neither the order nor the customer (a person) has an address the agent reads: no View map (design-crosscut §3.32;
+        // MapLinks.js placeShown)
+        !held.output.includes("View map")
         customer.status == 200
         customer.errors == []
         customer.output.includes("Joe Public")
         customer.output.includes("Open cases")
         customer.output.includes("CustomerServiceCustomerTabs")
+        !customer.output.includes("View map")
         !customer.output.includes("AccountingCustomerTabs")
         !customer.output.includes("Customer statement")
         other.output.includes("Order not available")

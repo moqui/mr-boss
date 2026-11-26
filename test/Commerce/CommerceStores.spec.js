@@ -70,6 +70,8 @@ feature(
             // Shop P5: its card gateway BOSS_COM_HOSTED has the hosted page Shop's checkout needs)
             manager.output.includes("1 thing to fix")
             manager.output.includes("Clone store")
+            // View map of the store's inventory facility (design-crosscut §3.32)
+            manager.output.includes("View map")
             manager.output.includes("Customer and other party rows")
             managerGeneral.status == 200
             managerGeneral.errors == []

@@ -2,8 +2,9 @@
 // thin-wrapper rule; service/ironstone/shared/MapLinks.js): what BOSS adds, with artifact authorization on, on the demo data
 // (MaintenanceSpecLib). Services' resource administrator saves the site's location through Maintenance/LocalMap's storeLocation,
 // which calls Mantle's facility adapter, and its reader sees the place in View map's dialog (the one render of the dialog, html)
-// with no Choose location and no Open in Maps; the mount offers no archive source of its own. BOSS's grant of PARTY_LOCATION_EDIT:
-// a contact admin may choose a customer's address location, a Sales account editor of the same organization may not. The van's
+// with no Choose location and no Open in Maps; the mount offers no archive source of its own. BOSS's grants: a contact admin
+// (PARTY_LOCATION_EDIT) and a Sales representative (SALES_ACCOUNT_EDIT, for an account of their sales scope) may choose a customer's
+// address location, a Sales reader of the same organization may not. The van's
 // map (no point of its own: where its facility is) links its facility to Maintenance's FacilityDetail, and not the van itself.
 // Mantle's rules of who reads and writes a place (another organization, a reader's save, a stale version) are mr-mantle's
 // MapPlaces spec. The site's location is put back afterwards; the contact admin is a spec user made once.
@@ -141,20 +142,25 @@ feature(
     }
 )
 
-feature("a contact admin may choose a customer's address location; a Sales account editor of the same organization may not", {
-    when() {
-        contactAdmin()
-        const address = {contactMechId: "BOSS_SAL_WINGTIP_ADDR"}
-        const actions = username =>
-            asUser(username, () => Array.from(mapRecord("postalAddress", address).record?.permittedActions || []))
-        return {admin: actions(CONTACT_ADMIN), salesRep: actions("sales.rep")}
-    },
-    then({admin, salesRep}) {
-        admin.includes("chooseLocation")
-        salesRep.includes("view")
-        !salesRep.includes("chooseLocation")
+feature(
+    "a contact admin and a Sales account editor may choose their account's address location; a Sales reader of the same organization may not",
+    {
+        when() {
+            contactAdmin()
+            const address = {contactMechId: "BOSS_SAL_WINGTIP_ADDR"}
+            const actions = username =>
+                asUser(username, () => Array.from(mapRecord("postalAddress", address).record?.permittedActions || []))
+            return {admin: actions(CONTACT_ADMIN), salesRep: actions("sales.rep"), salesReader: actions("sales.reader")}
+        },
+        then({admin, salesRep, salesReader}) {
+            admin.includes("chooseLocation")
+            // BOSS_SALES_REP holds SALES_ACCOUNT_EDIT: Mantle's adapter admits it for an account of the rep's sales scope
+            salesRep.includes("chooseLocation")
+            salesReader.includes("view")
+            !salesReader.includes("chooseLocation")
+        }
     }
-})
+)
 
 feature(
     "an equipment map's links go to the BOSS screens the user may open: the van's facility to Maintenance's FacilityDetail, not the van itself",

@@ -37,10 +37,37 @@ feature(
                     invoke("mantle.humanres.AttendanceServices.issue#KioskBadge", {partyRelationshipId: ids.employmentId})
                 )
             )
-            return {
-                rendered: asUser(users.hr, () =>
-                    page("Employees/Employee360", {partyId: ids.employeePartyId, partyRelationshipId: ids.employmentId})
+            // a work and a home address for the render's two View map buttons (design-crosscut §3.32), removed afterwards
+            const made = system(() =>
+                ["PostalWork", "PostalHome"].map(
+                    contactMechPurposeId =>
+                        invoke("mantle.party.ContactServices.create#PostalAddress", {
+                            partyId: ids.employeePartyId,
+                            contactMechPurposeId,
+                            address1: contactMechPurposeId === "PostalWork" ? "1 Store Street" : "7 Home Lane",
+                            city: "Provo",
+                            postalCode: "84601",
+                            countryGeoId: "USA"
+                        }).contactMechId
                 )
+            )
+            try {
+                return {
+                    rendered: asUser(users.hr, () =>
+                        page("Employees/Employee360", {partyId: ids.employeePartyId, partyRelationshipId: ids.employmentId})
+                    )
+                }
+            } finally {
+                system(() => {
+                    for (const contactMechId of made) {
+                        for (const entity of [
+                            "mantle.party.contact.PartyContactMech",
+                            "mantle.party.contact.PostalAddress",
+                            "mantle.party.contact.ContactMech"
+                        ])
+                            ec.entity.find(entity).condition("contactMechId", contactMechId).deleteAll()
+                    }
+                })
             }
         },
         then({rendered}) {
@@ -50,6 +77,9 @@ feature(
             rendered.output.includes("tomas.lindqvist@ziziwork.example")
             rendered.output.includes("Reports to Hannah Okafor")
             rendered.output.includes("Personal information")
+            // View map of the work address in the Overview and of the home address in the personal information (Mantle's party
+            // adapter reads the home address for the HR officer, read only)
+            rendered.output.split("View map").length == 3
             rendered.output.includes("Edit personal information")
             rendered.output.includes("Employment history")
             rendered.output.includes("Files and activity")

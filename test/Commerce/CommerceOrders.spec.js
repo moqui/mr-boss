@@ -145,6 +145,8 @@ feature("OrderDetail's Commerce branch shows the Payment hold read only with Ord
         r.order.output.includes("The capture failed after placement")
         r.order.output.includes("an Accounting payment operator releases the hold")
         r.order.output.includes("Order again")
+        // the order has no ship-to address: no View map (design-crosscut §3.32; MapLinks.js placeShown)
+        !r.order.output.includes("View map")
         !r.order.output.includes("Not available")
         r.cart.status == 200
         r.cart.errors == []

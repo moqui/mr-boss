@@ -511,6 +511,11 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-list>
                             </widgets>
                         </section>
+                        <!-- View map (design-crosscut §3.32) of the work address, the public work identity's: the app's LocalMap
+                            with Mantle's party adapter on the purpose PostalWork (Choose location to the adapter's editors); not under
+                            Insights, which mounts no LocalMap -->
+                        <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${overview.personName}" width="760" condition="overview.workAddress &amp;&amp; appRoot != 'Insights'"
+                                transition="//${appRoot}/LocalMap" parameter-map="{adapterKey: 'party', recordKey: JSON.stringify({partyId: partyId}), addressPurpose: 'PostalWork'}"/>
                         <label text="No work contact is recorded." type="p" style="m-muted" condition="!workRows.length"/>
                         <section name="EmploymentsSection" condition="employmentRows.length">
                             <widgets>
@@ -1040,6 +1045,12 @@ along with this software (see the LICENSE.md file). If not, see
                                         </form-list>
                                     </widgets>
                                 </section>
+                                <!-- View map of the home address, shown with the private region it is in (the person, an HR
+                                    reader): Mantle's party adapter on PostalHome reads it only for the person, their personal contact's
+                                    owner and an HR reader People admits them to (PEOPLE_HR_VIEW), and offers Choose location to the
+                                    person alone -->
+                                <dynamic-dialog id="LocalMapHomeDialog" button-text="View map" icon="sym_o_map" title="${overview.personName}" width="760" condition="personal.homeAddress &amp;&amp; appRoot != 'Insights'"
+                                        transition="//${appRoot}/LocalMap" parameter-map="{adapterKey: 'party', recordKey: JSON.stringify({partyId: partyId}), addressPurpose: 'PostalHome', dialogId: 'LocalMapHomeDialog'}"/>
                                 <label text="No personal contact is recorded." type="p" style="m-muted" condition="!personalRows.length"/>
                                 <section name="IdentificationsSection" condition="identificationRows.length">
                                     <widgets>

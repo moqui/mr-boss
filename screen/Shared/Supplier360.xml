@@ -151,6 +151,13 @@ along with this software (see the LICENSE.md file). If not, see
                             <link url="Prices" text="New supplier offer" link-type="anchor-button" btn-type="primary" icon="sym_o_add" disable-condition="!canOffer"
                                     disable-message="Needs supplier price editing access, which an administrator can grant."
                                     parameter-map="{vendorPartyId:vendorPartyId,organizationPartyId:organizationPartyId,_openDialog:'NewSupplierOfferDialog'}"/>
+                            <!-- View map (design-crosscut §3.32): the app's LocalMap with Mantle's party adapter, the supplier's
+                                own point else its first readable address; only under the app roots that mount LocalMap (Products' mount
+                                has none).
+                                Offered only when the adapter has a place to show the user (MapLinks.js placeShown): a person with no readable
+                                address opens no empty dialog. -->
+                            <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${supplier.supplierName}" width="760" condition="['Purchasing', 'Manufacturing', 'Warehouse'].includes(appRoot) &amp;&amp; ec.resource.script('component://mr-boss/service/ironstone/shared/MapLinks.js').placeShown('party', {partyId: vendorPartyId})"
+                                    transition="//${appRoot}/LocalMap" parameter-map="{adapterKey: 'party', recordKey: JSON.stringify({partyId: vendorPartyId})}"/>
                             <!-- Purchasing P4: submit, approve or refuse, and suspend -->
                             <section-include name="PurchasingSupplierApproval"
                                     location="component://mr-boss/template/PurchasingSupplierApproval.xml"/>

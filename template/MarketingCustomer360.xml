@@ -62,6 +62,14 @@ along with this software (see the LICENSE.md file). If not, see
                                 <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                                     <link url="${sharedLinks['Contacts/ContactDetail']}" text="Contact record" icon="sym_o_contact_page"
                                             link-type="anchor-button" btn-type="primary" parameter-map="contactParameters"/>
+                                    <!-- View map (design-crosscut §3.32): the app's LocalMap with Mantle's party adapter, the
+                                        customer's own point else its first readable address; Choose location only to the adapter's
+                                        editors.
+                                        Offered only when the adapter has a place to show the user (MapLinks.js placeShown): a person with no readable
+                                        address opens no empty dialog. -->
+                                    <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${customerDetail.partyName}" width="760"
+                                            condition="ec.resource.script('component://mr-boss/service/ironstone/shared/MapLinks.js').placeShown('party', {partyId: customerPartyId})"
+                                            transition="//${appRoot}/LocalMap" parameter-map="{adapterKey: 'party', recordKey: JSON.stringify({partyId: customerPartyId})}"/>
                                     <link url="${consentPath}" text="Consent history" icon="sym_o_history" link-type="anchor-button"
                                             parameter-map="contactParameters" condition="consentPath"/>
                                 </container>

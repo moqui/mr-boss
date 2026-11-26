@@ -2286,21 +2286,43 @@ an employee's time entry and no employee rate row.
 formats, standards, projections and editing support. BOSS reuses the widget/dialog and contributes authorized record
 adapters; it does not duplicate the renderer, postal reference dataset or resource/tile service. Needs: CX-MAPS.
 
-**Built** (mr-moqui Maps P3, November 25, 2026): `screen/Shared/LocalMap.xml`, the framework's LocalMap by the thin-wrapper
-rule (`include-screen`, `getConfig` and `storeLocation`; no `source`, which the framework's own route serves), is mounted
-hidden as `LocalMap` under Commons, Sales, Marketing, Customer Service, Maintenance, Warehouse and Manufacturing and reached
-by each root's own grant; no grant names it, and Mantle's adapters ([MapAdapters](https://github.com/moqui/mr-mantle/blob/master/docs/MapAdapters.md))
-check every read and save. **View map** is on each current address of the contact record (`template/ContactRecord.xml`,
-adapter `postalAddress`, so Commons ContactDetail and the Sales, Marketing and Customer Service contact mounts), in
-FacilityDetail's header (`facility`, every app's context) and in Maintenance's EquipmentDetail header (`asset`); a save closes
-the dialog and reloads the host. The answer's route keys (`partyDetail`, `facilityDetail`, `assetDetail`) are resolved under
-the dialog by `service/ironstone/shared/MapLinks.js` to the host app's screen of the record, else
-`PaletteServices.get#RecordLink`'s, for a screen the user may open, leaving out the record shown. `BOSS_CONTACT_ADMIN` holds
-`PARTY_LOCATION_EDIT` (with its bundle row); as in the contact record, the adapter leaves a shared (`_NA_`-owned) contact read
-only and an internal organization's own address to its settings manager (`ADMIN_SETTINGS_MANAGE`, SEC-BOS-89); facility and equipment editors already held `FACILITY_EDIT` and
+**Built** (mr-moqui Maps P3 and its follow-ups, November 25, 2026): `screen/Shared/LocalMap.xml`, the framework's
+LocalMap by the thin-wrapper rule (`include-screen`, `getConfig` and `storeLocation`; no `source`, which the framework's own
+route serves), is mounted hidden as `LocalMap` under Commons, Sales, Marketing, Customer Service, Maintenance, Warehouse,
+Manufacturing, Accounting, Purchasing, Commerce, People and Admin and reached by each root's own grant; no grant names it, and
+Mantle's adapters ([MapAdapters](https://github.com/moqui/mr-mantle/blob/master/docs/MapAdapters.md)) check every read and
+save. **View map** is on each current address of the contact record (`template/ContactRecord.xml`, adapter `postalAddress`, so
+Commons ContactDetail and the Sales, Marketing and Customer Service contact mounts); in the header of FacilityDetail
+(`facility`, every app's context), of the equipment of Maintenance, Warehouse and Manufacturing (`asset`), of Customer360
+(`party`: Accounting, Customer Service, Sales, Commerce and Marketing), of Supplier360 (`party`: Accounting's Payables, and the
+shared screen under Purchasing, Manufacturing and Warehouse) and of Commerce's StoreDetail (`facility`, the store's inventory
+facility); on Employee360's work address in the Overview (`party` on `PostalWork`, People, Commons and Maintenance) and its home
+address in the personal information, shown only with that region (`party` on `PostalHome`, which the adapter reads only for the
+person, their personal contact's owner and an HR reader People admits, `PEOPLE_HR_VIEW`, read only); on Admin's
+OrganizationDetail contacts (`party` on `PostalPrimary`, an internal organization's own place its settings manager's to choose);
+and in the header of OrderDetail (Sales, Purchasing, Warehouse, Customer Service, Commerce), InvoiceDetail (Accounting's
+Receivables, Purchasing, Customer Service) and ShipmentDetail (Warehouse outbound, Customer Service), with Mantle's read-only
+`transactionAddress` adapter: the address the document was made with, read only by a reader of the document by Mantle's rule
+of its kind (Sales' order scope, so only an assigned representative or a team reader; Customer Service's, Commerce's,
+purchasing's, receivables' or payables', fulfillment at its facility), never by another member of the organization (a
+consumer's ship-to is their home), never located there, its link the party whose address it is. The Customer360, Supplier360
+and `transactionAddress` buttons show only when the adapter, asked as the user, answers a place
+(`service/ironstone/shared/MapLinks.js` `placeShown`), so a person customer with no readable address, a document with no
+address or a user who reads neither opens no empty dialog. A save closes the dialog and reloads the host. The answer's route keys (`partyDetail`, `facilityDetail`,
+`assetDetail`) are resolved under the dialog by `service/ironstone/shared/MapLinks.js` to the host app's screen of the record,
+else `PaletteServices.get#RecordLink`'s, for a screen the user may open, leaving out the record shown. `BOSS_CONTACT_ADMIN`
+holds `PARTY_LOCATION_EDIT` (with its bundle row); Sales' representatives and managers locate the addresses of an unshared
+account of their sales scope and its contacts by their `SALES_ACCOUNT_EDIT`, which the adapter accepts there (an address row
+also current for a party they may not locate, an internal organization's, stays unlocated); as in the contact
+record, the adapter leaves a shared (`_NA_`-owned) contact read only and an internal organization's own address to its settings
+manager (`ADMIN_SETTINGS_MANAGE`, SEC-BOS-89); facility and equipment editors already held `FACILITY_EDIT` and
 `MAINTENANCE_RESOURCE_EDIT`. BOSS adds no Maps app entry: Open in Maps opens the framework's `/qapps/maps` for a holder of its
-own grant. Regression: `test/Shared/RecordMap.spec.js`. Not yet: Customer360, Supplier360, Employee360, OrderDetail and
-ShipmentDetail addresses, Warehouse and Manufacturing equipment headers, Commerce stores and Admin organization contacts.
+own grant. Regression: `test/Shared/RecordMap.spec.js`, and a View map check on the one render each host screen's spec already
+makes (its presence where the record has a place, its absence where it has none). Not yet: the Projects, People and
+Warehouse variants of InvoiceDetail (no Mantle rule makes a Warehouse reader an invoice's reader), a purchase order's
+ship-to taken from its facility when the part names no address, Warehouse's receipt, return and transfer ShipmentDetail,
+Products' Supplier360 mount and the Insights record mounts (no LocalMap there); Admin's settings managers hold no
+`PARTY_LOCATION_EDIT`, so their organization's address is read only to them unless an administrator grants it.
 
 **Layout and interaction:** **View map** beside an address or coordinate opens a local-context dialog, preserving
 the host form and selected address purpose. The dialog shows the point/area, label, source/precision, nearby context

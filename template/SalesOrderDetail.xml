@@ -660,6 +660,13 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field name="submitButton"><default-field title="Add line"><submit/></default-field></field>
                                     </form-single>
                                 </container-dialog>
+                                <!-- View map (design-crosscut §3.32) of the order's ship-to: the app's LocalMap with Mantle's
+                                    transactionAddress adapter (the address the order was made with, read only; its location is chosen
+                                    on the party's address, which the dialog links); offered only to a reader of the document by
+                                    Mantle's rules, when it has an address (MapLinks.js placeShown) -->
+                                <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${ec.l10n.localize('Order')} ${orderId}" width="760"
+                                        condition="ec.resource.script('component://mr-boss/service/ironstone/shared/MapLinks.js').placeShown('transactionAddress', {orderId: orderId})"
+                                        transition="//${appRoot}/LocalMap" parameter-map="{adapterKey: 'transactionAddress', recordKey: JSON.stringify({orderId: orderId})}"/>
                                 <button-menu text="More" icon="sym_o_more_horiz">
                                     <container-dialog id="SalesOrderHold" button-text="Hold" icon="sym_o_pause_circle" width="520"
                                             title="Hold order ${orderId}" condition="soCan.hold">

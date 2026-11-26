@@ -312,6 +312,8 @@ feature("EquipmentDetail shows the equipment's files and notes once under Wareho
     },
     then({equipment, files, notes}) {
         equipment.errors == []
+        // the header's View map (design-crosscut §3.32)
+        equipment.output.includes("View map")
         files == 1
         notes == 1
     }

@@ -274,6 +274,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     icon="sym_o_print"
                                     target-window="_blank"
                                     url-type="plain"/>
+                            <!-- View map (design-crosscut §3.32) of the invoice's billing address: the app's LocalMap with Mantle's
+                                transactionAddress adapter (the address on the invoice, read only; its location is chosen on the party's
+                                address, which the dialog links); offered only to a reader of the document by Mantle's rules, when it
+                                has an address (MapLinks.js placeShown) -->
+                            <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${ec.l10n.localize('Invoice')} ${invoiceId}" width="760"
+                                    condition="ec.resource.script('component://mr-boss/service/ironstone/shared/MapLinks.js').placeShown('transactionAddress', {invoiceId: invoiceId})"
+                                    transition="//Accounting/LocalMap" parameter-map="{adapterKey: 'transactionAddress', recordKey: JSON.stringify({invoiceId: invoiceId})}"/>
                             <button-menu text="More" icon="more_horiz">
                                 <container-dialog id="AccountingInvoiceEdit"
                                         button-text="Edit invoice"

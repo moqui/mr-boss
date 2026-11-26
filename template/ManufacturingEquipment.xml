@@ -63,6 +63,11 @@ along with this software (see the LICENSE.md file). If not, see
                                     parameter-map="{facilityId:productionEquipment.asset.facilityId}"/>
                         </container>
                         <container style="col-12 col-md-auto row items-center q-gutter-x-sm m-record-actions">
+                            <!-- View map (design-crosscut §3.10, §3.32): the app's LocalMap with Mantle's asset adapter, its own
+                                point or else where its facility is (labeled so), and Choose location only to a holder of
+                                MAINTENANCE_RESOURCE_EDIT or FACILITY_EDIT in its scope -->
+                            <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${productionEquipment.asset.assetName}" width="760"
+                                    transition="//Manufacturing/LocalMap" parameter-map="{adapterKey: 'asset', recordKey: JSON.stringify({assetId: assetId})}"/>
                             <!-- one primary: Request maintenance while a fault stop of it waits for one, else Report stop -->
                             <container-dialog id="EquipmentReportStopDialog" condition="downtimeReport"
                                     type="${suggestedStop ? 'default' : 'primary'}" button-text="Report stop" icon="sym_o_report"

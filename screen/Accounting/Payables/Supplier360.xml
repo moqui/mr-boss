@@ -82,6 +82,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     link-type="anchor-button"
                                     btn-type="primary"
                                     parameter-map="supplierLinkParameters"/>
+                            <!-- View map (design-crosscut §3.32): the app's LocalMap with Mantle's party adapter, the supplier's
+                                own point else its first readable address.
+                                Offered only when the adapter has a place to show the user (MapLinks.js placeShown): a person with no readable
+                                address opens no empty dialog. -->
+                            <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${supplierDetail.supplierName}" width="760"
+                                    condition="ec.resource.script('component://mr-boss/service/ironstone/shared/MapLinks.js').placeShown('party', {partyId: supplierPartyId})"
+                                    transition="//Accounting/LocalMap" parameter-map="{adapterKey: 'party', recordKey: JSON.stringify({partyId: supplierPartyId})}"/>
                             <button-menu text="More" icon="more_horiz">
                                 <link url="//Commons/Contacts/ContactDetail"
                                         text="Maintain contact"

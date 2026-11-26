@@ -139,6 +139,10 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="Changed ${store.lastUpdatedText}" type="span" style="text-caption m-muted"/>
                     </container>
                     <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
+                        <!-- View map (design-crosscut §3.32) of the store's inventory facility: Commerce's LocalMap with Mantle's
+                            facility adapter (read in the facility scope; Choose location only to a holder of FACILITY_EDIT there) -->
+                        <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${store.inventoryFacilityText}" width="760" condition="store.inventoryFacilityId"
+                                transition="//Commerce/LocalMap" parameter-map="{adapterKey: 'facility', recordKey: JSON.stringify({facilityId: store.inventoryFacilityId})}"/>
                         <button-menu text="More" icon="more_horiz">
                             <container-dialog id="CloneStore" button-text="Clone store" icon="sym_o_content_copy" width="760"
                                     title="Clone ${store.storeName}" condition="canClone">

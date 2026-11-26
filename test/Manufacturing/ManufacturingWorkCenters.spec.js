@@ -178,6 +178,8 @@ feature("the Centers list shows each center's slots and load; Equipment and Equi
         detail.errors == []
         detail.output.includes("Safe use")
         detail.output.includes("Production assignments")
+        // the header's View map (design-crosscut §3.32)
+        detail.output.includes("View map")
         !detail.output.includes("Net book value")
         !detail.output.includes("4,000")
         facility.errors == []

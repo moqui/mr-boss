@@ -61,6 +61,8 @@ feature(
             detail.output.includes("Nothing shipped yet")
             detail.output.includes("SalesOrderChatter")
             detail.output.includes("SalesOrderFiles")
+            // View map of the ship-to (design-crosscut §3.32): Mantle's transactionAddress adapter
+            detail.output.includes("View map")
             // follow-up 5: the part ships from Retail's default facility
             detail.output.includes("Ships from") && detail.output.includes("Ziziwork Retail Warehouse")
             // an approver sees the order to decide it, not to change it: no line editing or copy

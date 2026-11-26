@@ -7,7 +7,7 @@
 // InternalOrganizations spec.
 // Run: ./moq test mr-boss --spec AdminOrganizations
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
-const {ids, users, asUser, invoke, page} = lib
+const {ids, users, asUser, system, invoke, page} = lib
 // Retail's child organization (the returns center), in the configuration administrator's scope through its parent
 const childId = "BOSS_WH_RETURNS"
 const emailOf = partyId =>
@@ -34,13 +34,40 @@ feature(
     "OrganizationDetail shows Retail's profile, contacts, members, defaults and Constitution to its configuration administrator",
     {
         when() {
-            return asUser(users.configure, () => page("Settings/OrganizationDetail", {organizationPartyId: ids.organizationId}))
+            // a primary address for the Contacts box's View map (design-crosscut §3.32), removed afterwards
+            const contactMechId = system(
+                () =>
+                    invoke("mantle.party.ContactServices.create#PostalAddress", {
+                        partyId: ids.organizationId,
+                        contactMechPurposeId: "PostalPrimary",
+                        address1: "1 Office Way",
+                        city: "Provo",
+                        postalCode: "84601",
+                        countryGeoId: "USA"
+                    }).contactMechId
+            )
+            try {
+                return asUser(users.configure, () =>
+                    page("Settings/OrganizationDetail", {organizationPartyId: ids.organizationId})
+                )
+            } finally {
+                system(() => {
+                    for (const entity of [
+                        "mantle.party.contact.PartyContactMech",
+                        "mantle.party.contact.PostalAddress",
+                        "mantle.party.contact.ContactMech"
+                    ])
+                        ec.entity.find(entity).condition("contactMechId", contactMechId).deleteAll()
+                })
+            }
         },
         then({status, output, errors}) {
             status == 200
             errors.length == 0
             output.includes("Ziziwork Retail") && output.includes("Ziziwork Returns Center")
             output.includes("Contacts") && output.includes("Edit contacts")
+            // View map of the primary address (design-crosscut §3.32)
+            output.includes("1 Office Way") && output.includes("View map")
             // members are counted, not named, for a user who is not an identity operator
             output.includes("current member(s)") && !output.includes("Add member")
             output.includes("Default Invoice Product Store ID") && output.includes("Where it is used")

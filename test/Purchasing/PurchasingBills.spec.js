@@ -60,6 +60,8 @@ feature("InvoiceDetail shows a held bill's holds and match exceptions; the buyer
     then({render, buyer, matcher, reader}) {
         render.status == 200
         render.errors == []
+        // the bill has no address of its own: no View map (design-crosscut §3.32; MapLinks.js placeShown)
+        !render.output.includes("View map")
         render.output.includes("Bill " + state.held.invoiceId)
         render.output.includes("Ask to release")
         render.output.includes("Payments are withheld")

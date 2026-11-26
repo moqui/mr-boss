@@ -93,6 +93,8 @@ feature("optional invoice supporting files offer their reviewed versions and def
         sender.page.errors == []
         sender.page.output.includes("Supporting files")
         sender.page.output.includes("The invoice PDF is included")
+        // the invoice has no address of its own: no View map (design-crosscut §3.32; MapLinks.js placeShown)
+        !sender.page.output.includes("View map")
         reader.status == 200
         reader.errors == []
         !reader.output.includes("Supporting files")
@@ -126,6 +128,8 @@ feature("customer aging and latest receipt presentation uses the authorized curr
                     failures.push("Missing authorized latest receipt amount")
             }
             if (headerHtml.status !== 200 || headerHtml.errors.length) failures.push("Latest receipt HTML failed rendering")
+            // the header's View map (design-crosscut §3.32)
+            if (!headerHtml.output.includes("View map")) failures.push("Missing the customer's View map")
             return {failures}
         })
     },

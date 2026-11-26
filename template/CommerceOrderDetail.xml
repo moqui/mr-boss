@@ -84,6 +84,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     <label type="p" style="text-caption m-muted"
                                             text="A new open order for ${co.customerName} in ${co.storeName} with this order's product lines at today's prices. No payment is copied and nothing is placed or charged."/>
                                 </container-dialog>
+                                <!-- View map (design-crosscut §3.32) of the order's ship-to: the app's LocalMap with Mantle's
+                                    transactionAddress adapter (the address the order was made with, read only; its location is chosen
+                                    on the party's address, which the dialog links); offered only to a reader of the document by
+                                    Mantle's rules, when it has an address (MapLinks.js placeShown) -->
+                                <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${ec.l10n.localize('Order')} ${orderId}" width="760"
+                                        condition="ec.resource.script('component://mr-boss/service/ironstone/shared/MapLinks.js').placeShown('transactionAddress', {orderId: orderId})"
+                                        transition="//${appRoot}/LocalMap" parameter-map="{adapterKey: 'transactionAddress', recordKey: JSON.stringify({orderId: orderId})}"/>
                                 <button-menu text="More" icon="more_horiz">
                                     <link url="${operationLinks.serviceOrder}${orderId}" url-type="plain" text="Open in Customer Service"
                                             condition="operationLinks.serviceOrder"/>

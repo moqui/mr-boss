@@ -96,6 +96,8 @@ feature(
             render.output.includes("Add line")
             render.output.includes("Place")
             render.output.includes("Lines · 1")
+            // the draft has no ship-to address: no View map (design-crosscut §3.32; MapLinks.js placeShown)
+            !render.output.includes("View map")
             // P4: the approvals section (template/PurchasingOrderApprovals.xml) of a draft
             render.output.includes("No approval decision yet.")
             Object.values(reader.actions).every(allowed => !allowed)

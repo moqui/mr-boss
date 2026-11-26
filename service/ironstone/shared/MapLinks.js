@@ -6,6 +6,7 @@
 // (ironstone.commons.PaletteServices.get#RecordLink: a party to Customer Service's customer or Commons' contact, a facility or an
 // asset to Warehouse's, each for a user that app admits). A key with no BOSS screen, a link to the record the map itself shows and
 // a record no app opens to the user are left out. A link is data, never authority: the screen it opens checks the user again.
+// placeShown (below) tells a host whether a record's map has anything to show the user.
 const routes = {
     partyDetail: {entity: "mantle.party.Party", field: "partyId"},
     facilityDetail: {entity: "mantle.facility.Facility", field: "facilityId", maintenance: "facility"},
@@ -59,4 +60,33 @@ function recordLinks(record, recordKey, appRoot) {
         ec.message.popErrors()
     }
 }
-;({routes, recordLinks})
+// placeShown(adapterKey, recordKey, addressPurpose): whether a record's map has something to show the user, as its registered
+// adapter answers the user (a point, or an address's postal code for the approximate position), so a host offers View map only
+// then (a person customer with no readable address opens no empty dialog). The adapter checks the caller itself; a refusal, a
+// missing or disabled adapter and a failure (logged) answer false.
+function placeShown(adapterKey, recordKey, addressPurpose) {
+    ec.message.pushErrors()
+    try {
+        const adapter = ec.entity
+            .find("moqui.maps.MapAdapter")
+            .condition("adapterKey", String(adapterKey || ""))
+            .useCache(true)
+            .disableAuthz()
+            .one()
+        if (!adapter?.contextServiceName || adapter.disabled === "Y") return false
+        const out =
+            ec.service
+                .sync()
+                .name(adapter.contextServiceName)
+                .parameters({recordKey: recordKey || {}, addressPurpose: addressPurpose || null})
+                .call() || {}
+        return !ec.message.hasError() && !out.reasonCode && (!!out.geometry || !!out.postalCode)
+    } catch (error) {
+        ec.logger.warn("Map place of " + adapterKey + " not read: " + String(error?.message || error))
+        return false
+    } finally {
+        ec.message.clearErrors()
+        ec.message.popErrors()
+    }
+}
+;({routes, recordLinks, placeShown})

@@ -15,13 +15,16 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- LocalMap (design-crosscut §3.32; mr-moqui docs/tools/Maps.md "The local-map dialog", "Under an app's route"): the framework's
     local-map dialog under a BOSS app's own route, by the thin-wrapper rule (mr-moqui docs/dev/Practices-App-Dev.md "A framework
     screen under an app's root"). Each app root with a View map mounts this file hidden as its LocalMap subscreen (Commons,
-    Sales, Marketing and Customer Service for the contact record's addresses, template/ContactRecord.xml; Maintenance, Warehouse
-    and Manufacturing for FacilityDetail and Maintenance's EquipmentDetail), and View map is a dynamic-dialog loading
-    //<appRoot>/LocalMap with a Mantle adapter's key and the record's key (mr-mantle docs/MapAdapters.md: postalAddress
-    {contactMechId}, facility {facilityId}, asset {assetId}). It is reached by the app root's own grant (no row names this file
+    Sales, Marketing, Customer Service, Maintenance, Warehouse, Manufacturing, Accounting, Purchasing, Commerce, People and
+    Admin: the contact record's addresses, FacilityDetail, the equipment headers, Customer360, Supplier360, Employee360,
+    StoreDetail, OrganizationDetail and the order, invoice and shipment details; design-crosscut §3.32 lists them), and View map
+    is a dynamic-dialog loading //<appRoot>/LocalMap with a Mantle adapter's key and the record's key (mr-mantle
+    docs/MapAdapters.md: postalAddress {contactMechId}, party {partyId}, facility {facilityId}, asset {assetId}, and the read-only
+    transactionAddress {orderId} | {shipmentId} | {invoiceId}). It is reached by the app root's own grant (no row names this file
     or the framework's LocalMap.xml); the framework's MAPS_DIALOG gives every signed-in user the services the dialog calls, and
     the adapter checks the caller on every read and save (Choose location only for a holder of the record's edit permission:
-    PARTY_LOCATION_EDIT, FACILITY_EDIT, MAINTENANCE_RESOURCE_EDIT), so the mount narrows nothing and grants nothing.
+    PARTY_LOCATION_EDIT or Sales' SALES_ACCOUNT_EDIT for its accounts, FACILITY_EDIT, MAINTENANCE_RESOURCE_EDIT), so the mount
+    narrows nothing and grants nothing.
     Taken in: getConfig (the basemap and layers) and storeLocation (Save location, which calls the adapter's
     store#RecordLocation; on success the dialog closes and the host screen reloads in place). Not taken in: source, since the
     effective configuration hands a map the framework's own archive path (/apps/maps/LocalMap/source), which checks every

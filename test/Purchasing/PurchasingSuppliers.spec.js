@@ -80,6 +80,8 @@ feature(
             output.includes("Purchasing from Halvorsen Metals is blocked: Quality hold")
             output.includes("Buying profile of Ziziwork Retail")
             output.includes("Change profile")
+            // the supplier has no address or point: no View map (design-crosscut §3.32; MapLinks.js placeShown)
+            !output.includes("View map")
             // P4: the header's Approval menu offers a buyer the suspension of a supplier not suspended
             output.includes("Suspend")
             output.includes("(set by finance)")

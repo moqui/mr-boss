@@ -265,6 +265,11 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="Contacts"/>
                     <box-toolbar>
+                        <!-- View map (design-crosscut §3.32) of the primary address: Admin's LocalMap with Mantle's party adapter
+                            on PostalPrimary; an internal organization's own place is its settings manager's to choose
+                            (PARTY_LOCATION_EDIT with ADMIN_SETTINGS_MANAGE, working in it, SEC-BOS-89), read only to anyone else -->
+                        <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${organization.organizationName}" width="760" condition="addressText"
+                                transition="//Admin/LocalMap" parameter-map="{adapterKey: 'party', recordKey: JSON.stringify({partyId: organizationPartyId}), addressPurpose: 'PostalPrimary'}"/>
                         <container-dialog id="ContactsDialog" button-text="Edit contacts" icon="sym_o_edit" width="640"
                                 title="${organization.organizationName} contacts" condition="canManage">
                             <label type="p" text="The primary address, phone and email. Bank accounts and payment instruments stay in Accounting."/>

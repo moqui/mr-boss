@@ -61,6 +61,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     type="p"
                                     style="q-mb-none"/>
                         </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-x-sm m-record-actions">
+                            <!-- View map (design-crosscut §3.10, §3.32): the app's LocalMap with Mantle's asset adapter, its own
+                                point or else where its facility is (labeled so), and Choose location only to a holder of
+                                MAINTENANCE_RESOURCE_EDIT or FACILITY_EDIT in its scope -->
+                            <dynamic-dialog id="LocalMapDialog" button-text="View map" icon="sym_o_map" title="${equipment.asset.assetName}" width="760"
+                                    transition="//Warehouse/LocalMap" parameter-map="{adapterKey: 'asset', recordKey: JSON.stringify({assetId: assetId})}"/>
+                        </container>
                     </container>
                 </container>
                 <container-row>

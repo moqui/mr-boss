@@ -27,6 +27,8 @@ feature("Customer360 shows the representative's account in Sales' context with i
         own.output.includes("Wingtip Traders")
         own.output.includes("Customer · WINGTIP · Ziziwork Retail")
         own.output.includes("New contact")
+        // View map (design-crosscut §3.32)
+        own.output.includes("View map")
         // Sales' Overview: the manager, the parent account
         own.output.includes("Account managers")
         own.output.includes("Sales Representative")
