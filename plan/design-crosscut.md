@@ -2310,7 +2310,10 @@ and `transactionAddress` buttons show only when the adapter, asked as the user, 
 (`service/ironstone/shared/MapLinks.js` `placeShown`), so a person customer with no readable address, a document with no
 address or a user who reads neither opens no empty dialog. A save closes the dialog and reloads the host. The answer's route keys (`partyDetail`, `facilityDetail`,
 `assetDetail`) are resolved under the dialog by `service/ironstone/shared/MapLinks.js` to the host app's screen of the record,
-else `PaletteServices.get#RecordLink`'s, for a screen the user may open, leaving out the record shown. `BOSS_CONTACT_ADMIN`
+else `PaletteServices.get#RecordLink`'s, for a screen the user may open, leaving out the record shown; the wrapper sets
+`routeLinks` false, so the framework's own section of links (its `moqui.maps.MapRoute` rows, the host app's then those of
+no app) is not shown beside these, and `routeApp` `boss`, which Open in Maps carries to Browse (BOSS could later register its
+own `MapRoute` rows with `routeApp` `boss` in place of `MapLinks.js`). `BOSS_CONTACT_ADMIN`
 holds `PARTY_LOCATION_EDIT` (with its bundle row); Sales' representatives and managers locate the addresses of an unshared
 account of their sales scope and its contacts by their `SALES_ACCOUNT_EDIT`, which the adapter accepts there (an address row
 also current for a party they may not locate, an internal organization's, stays unlocated); as in the contact

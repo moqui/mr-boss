@@ -32,13 +32,22 @@ along with this software (see the LICENSE.md file). If not, see
     What BOSS adds under the dialog: the record's links (an answer's route keys partyDetail, facilityDetail and assetDetail)
     resolved to the BOSS screen of the record the user may open (service/ironstone/shared/MapLinks.js: the host app's own first,
     Maintenance's facility and equipment, else ironstone.commons.PaletteServices.get#RecordLink's); a link to the record the dialog
-    shows is left out. -->
+    shows is left out. The wrapper sets routeLinks false before the include, so the framework's own section of a record's links
+    (MapRoute rows of the host app, then of no app) is not shown beside MapLinks.js's, and routeApp boss, which Open in Maps
+    carries to Browse, whose links then prefer BOSS's MapRoute rows (none yet). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Map" default-menu-include="false" history="false">
 
     <transition-include name="getConfig" location="component://tools/screen/Maps/LocalMap.xml"/>
     <transition-include name="storeLocation" location="component://tools/screen/Maps/LocalMap.xml"/>
 
+    <actions>
+        <!-- BOSS resolves a record's links itself (MapLinks.js below): the framework's section of them is not shown; routeApp
+            names the host app for the framework's links elsewhere (Browse, from Open in Maps) (mr-moqui docs/tools/Maps.md
+            "Record links") -->
+        <set field="routeLinks" value="false"/>
+        <set field="routeApp" value="boss"/>
+    </actions>
     <widgets>
         <include-screen location="component://tools/screen/Maps/LocalMap.xml" share-scope="true"/>
         <!-- the record's links (route keys) to BOSS screens, read after the included screen read the record -->
