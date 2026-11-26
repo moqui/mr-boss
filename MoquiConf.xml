@@ -77,4 +77,9 @@
             <subscreens-item name="BasicComms" menu-include="false"/>
         </screen>
     </screen-facade>
+    <!-- the hosting offer (mr-moqui docs/interfaces/Git-Hosting.md, add#GitHostingOffer): Mantle's (Smithy's REST and pages,
+        Mantle's task source), then the pages of Projects › Code for a repository the framework's hosting keeps, which the
+        Dev AIDE's Open on the server fills (ironstone.projects.CodeServices.add#HostingOffer calls Mantle's first, as one
+        offer-service is named) -->
+    <git-server offer-service="ironstone.projects.CodeServices.add#HostingOffer"/>
 </moqui-conf>

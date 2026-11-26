@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- RepositoryFiles (design-projects.md §7 RepositoryFiles): the ref picker (branches and tags; a commit id in the URL), the
     path as breadcrumbs, the directory's entries with each one's last commit (org.moqui.git.GitServices.get#GitTree) and its
-    README rendered below; a file as code with line numbers and highlighting (code-view), an image, or a download for a binary,
+    README rendered below; a file as code with line numbers and highlighting (code-view; the line of line marked and scrolled to), an image, or a download for a binary,
     a file over 1 MB or one kept in LFS (get#GitBlob), with History (Commits with the path), Raw, Download and Permalink (the
     path at the commit). Raw and Download stream the file at its commit through the raw transition, after the view check
     (git:// reads are not checked). Service: ironstone.projects.CodeServices get#RepositoryFiles, get#RefOptions. -->
@@ -23,6 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <parameter name="ref"/>
     <parameter name="path"/>
+    <!-- a file's line to mark and scroll to (the Dev AIDE's Open on the server, CodeServices.add#HostingOffer's pages) -->
+    <parameter name="line"/>
 
     <transition name="commitDetail"><default-response url="../../CommitDetail"/></transition>
     <transition name="pickRef"><default-response url="."><parameter name="repositoryId"/><parameter name="ref"/><parameter name="path"/></default-response></transition>
@@ -162,7 +164,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <code-view text="${file.text}" file-name="${file.name}"/>
                                 </container-dialog>
                             </widgets><fail-widgets>
-                                <code-view id="RepositoryFileCode" text="${file.text}" file-name="${file.name}"/>
+                                <code-view id="RepositoryFileCode" text="${file.text}" file-name="${file.name}" highlight-lines="${String(line || '').replace(/[^0-9]/g, '')}"/>
                             </fail-widgets></section>
                         </widgets></section>
                         <section name="FileImage" condition="file.isImage"><widgets>
