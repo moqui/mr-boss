@@ -4,7 +4,7 @@
 // header and tabs (files, a file, commits, branches, tags, the push log, the settings for its maintainers only), a branch and a tag
 // made and deleted, Compare with a merge request opened from it and its work items linked, a commit with a work item linked and
 // unlinked, git access (an SSH key, an access token), the code settings, the project's Code tab, the palette's Code group and the
-// raw file. Authorization stays on. The spec makes its own branches (bt-…), tags and merge request and takes them out after.
+// raw file, and the hosting offer's pages of Code (the Dev AIDE's Open on the server). Authorization stays on. The spec makes its own branches (bt-…), tags and merge request and takes them out after.
 // Run: ./moq test mr-boss --spec Code
 const webroot = "component://webroot/screen/webroot.xml"
 const SSH_KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl bt@example"
@@ -109,7 +109,7 @@ feature("RepositoryDetail: the header and each tab on the demo, and a repository
     when() {
         const tab = (name, parameters) => render(`apps/Projects/Code/RepositoryDetail/${name}`, Object.assign({ repositoryId: "iron" }, parameters || {}))
         return { header: render("apps/Projects/Code/RepositoryDetail", { repositoryId: "iron" }, "qvt", "2"), files: tab("Files"),
-            file: tab("Files", { path: "src/tree.js" }), dir: tab("Files", { path: "src" }), commits: tab("Commits"), history: tab("Commits", { path: "src/board.js" }),
+            file: tab("Files", { path: "src/tree.js", line: "3" }), dir: tab("Files", { path: "src" }), commits: tab("Commits"), history: tab("Commits", { path: "src/board.js" }),
             branches: tab("Branches"), tags: tab("Tags"), activity: tab("Activity"), settings: tab("Settings"),
             joeSettings: as("joe.developer", () => tab("Settings")),
             bobAcme: as("bob.developer", () => render("apps/Projects/Code/RepositoryDetail", { repositoryId: "acme-portal" }, "qvt", "2")),
@@ -129,6 +129,8 @@ feature("RepositoryDetail: the header and each tab on the demo, and a repository
         file.output.includes("m-code") || file.output.includes("RepositoryFileCode")
         file.output.includes("Remember") == false
         file.output.includes("toggle(row)")
+        // the line the Dev AIDE's Open on the server names is marked and scrolled to
+        file.output.includes('highlight-lines="3"')
         dir.output.includes("tree.js")
         dir.output.includes("board.js")
         commits.output.includes("IRON-3 Expand and collapse rows")
@@ -448,5 +450,22 @@ feature("a mirror's new URL clears its stored token unless given again, and a UR
         moved.errors == ""
         after.remoteUrl == "https://git.example.org/docs.git"
         after.accessToken == null
+    },
+})
+
+feature("the hosting offer: Mantle's, and the pages of Projects › Code for a repository the framework hosts, for Open on the server", {
+    when() {
+        return { offer: sys(() => call("org.moqui.git.GitRestServices.get#HostingOffer", {}).offer),
+            restWrite: ec.factory.getConfValue("git-server@rest-write-check-service") }
+    },
+    then({ offer, restWrite }) {
+        offer.pages.file.endsWith("/qapps/Projects/Code/RepositoryDetail/Files?repositoryId={repositoryId}&ref={ref}&path={file}&line={line}")
+        offer.pages.commit.endsWith("/qapps/Projects/Code/CommitDetail?repositoryId={repositoryId}&commitId={commitId}")
+        offer.pages.branch.endsWith("/qapps/Projects/Code/RepositoryDetail/Files?repositoryId={repositoryId}&ref={branch}")
+        offer.pages.file.startsWith(offer.baseUrl + "/")
+        // Mantle's offer is in it (its task source), and the conf keeps Mantle's other git-server services
+        offer.tasks.kind == "moqui-rest"
+        offer.tasks.issuesPath == "/rest/s1/mantle/gitRepositories/{repositoryId}/issues"
+        restWrite == "mantle.smithy.SmithyGitServices.check#RestWrite"
     },
 })

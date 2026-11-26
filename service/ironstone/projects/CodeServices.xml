@@ -31,6 +31,39 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
 
+    <service verb="add" noun="HostingOffer" authenticate="anonymous-all" allow-remote="false">
+        <description>git-server offer-service (mr-moqui's add#GitHostingOffer contract, MoquiConf.xml): Mantle's offer first
+            (mantle.smithy.SmithyGitServices.add#HostingOffer: Smithy's REST and pages for a repository Smithy keeps, Mantle's
+            task source), then, for a repository the framework's hosting keeps, the pages of Projects › Code where the offer has
+            none (pages: file, commit and branch, absolute on the offer's baseUrl, with {repositoryId}, {ref}, {file}, {line},
+            {commitId} and {branch}), which the Dev AIDE's Open on the server fills: Files at a ref and path (its line marked),
+            CommitDetail, and Files at a branch. None where git hosting is not in this build. Mantle's offer failing is logged
+            and the framework's offer kept. Asked for callers with no credentials too: it names no account.</description>
+        <implements service="org.moqui.git.GitServices.add#GitHostingOffer"/>
+        <actions><script><![CDATA[
+            const given = offer
+            ec.message.pushErrors()
+            try {
+                // in a transaction of its own, so its failure cannot leave the caller's rollback-only
+                const mantle = ec.service.sync().name('mantle.smithy.SmithyGitServices.add#HostingOffer').parameters({offer: given, userId})
+                        .requireNewTransaction(true).call()
+                if (ec.message.hasError()) ec.logger.error('Mantle\'s hosting offer failed, the framework\'s kept: ' + ec.message.errorsString)
+                else if (mantle && mantle.offer) offer = mantle.offer
+            } catch (error) {
+                ec.logger.error('Mantle\'s hosting offer failed, the framework\'s kept: ' + error)
+            } finally { ec.message.clearErrors(); ec.message.popErrors() }
+            offer = Object.assign({}, offer || {})
+            if (!offer.pages && ec.factory.hasFeature('git')) {
+                const code = String(offer.baseUrl || '').replace(/\/+$/, '') + '/qapps/Projects/Code/'
+                offer.pages = {
+                    file: code + 'RepositoryDetail/Files?repositoryId={repositoryId}&ref={ref}&path={file}&line={line}',
+                    commit: code + 'CommitDetail?repositoryId={repositoryId}&commitId={commitId}',
+                    branch: code + 'RepositoryDetail/Files?repositoryId={repositoryId}&ref={branch}'
+                }
+            }
+        ]]></script></actions>
+    </service>
+
     <service verb="get" noun="RepositoryAccess" allow-remote="false">
         <description>A repository for its screens: what the user may do in it (org.moqui.git.GitServices.get#GitRepositoryAccess:
             view, create, update, delete; archived), its row's public fields (no credentials), the projects it is linked to
