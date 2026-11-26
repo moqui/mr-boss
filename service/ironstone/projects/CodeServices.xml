@@ -44,7 +44,9 @@ along with this software (see the LICENSE.md file). If not, see
             const given = offer
             ec.message.pushErrors()
             try {
-                const mantle = ec.service.sync().name('mantle.smithy.SmithyGitServices.add#HostingOffer').parameters({offer: given, userId}).call()
+                // in a transaction of its own, so its failure cannot leave the caller's rollback-only
+                const mantle = ec.service.sync().name('mantle.smithy.SmithyGitServices.add#HostingOffer').parameters({offer: given, userId})
+                        .requireNewTransaction(true).call()
                 if (ec.message.hasError()) ec.logger.error('Mantle\'s hosting offer failed, the framework\'s kept: ' + ec.message.errorsString)
                 else if (mantle && mantle.offer) offer = mantle.offer
             } catch (error) {

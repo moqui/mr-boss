@@ -164,7 +164,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <code-view text="${file.text}" file-name="${file.name}"/>
                                 </container-dialog>
                             </widgets><fail-widgets>
-                                <code-view id="RepositoryFileCode" text="${file.text}" file-name="${file.name}" highlight-lines="${String(line || '').replace(/[^0-9]/g, '')}"/>
+                                <code-view id="RepositoryFileCode" text="${file.text}" file-name="${file.name}" highlight-lines="${String(line || '').length > 7 || /\D/.test(String(line || '')) ? '' : (line || '')}"/>
                             </fail-widgets></section>
                         </widgets></section>
                         <section name="FileImage" condition="file.isImage"><widgets>
