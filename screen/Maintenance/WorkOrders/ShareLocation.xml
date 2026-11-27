@@ -12,19 +12,19 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Maintenance › Work orders › ShareLocation (mr-moqui plans/Location-Sharing.md §3.7, LL6): "Share my location with the
-    customer" for the technician assigned to an open customer repair, opened from WorkOrderDetail's header. The technician
-    chooses until when (no later than the planned end), exact or approximate, and a note (an ETA); share posts Mantle's
-    create#RecordGuestShare, which checks the work order and the technician again, makes the framework's share with a guest
-    link and names the work order and its planned end on it (its completion or cancellation stops it). The customer is told
-    only once the technician has confirmed: in the Android app the page calls its own confirmation and foreground service
-    (moquiDesktop.location, the same bridge Maps' Browse calls: allow, then start, whose dialog says whom and until when in
-    the server's words), and only its "started" posts sendLink (Mantle's send#RecordGuestLink, which mails the link); its
-    Not now stops the share and sends nothing. In a browser the press is the confirmation: sendLink with the first position
-    the page takes (a browser that gives none stops the share, nothing sent), and the page sends while it is open (watchPosition, /qapps/reportClientLocation), with Stop. The link's secret goes back to the
-    server only in sendLink's body.
-    A delivery has no such action until the warehouse trips (WH-TRIP) give it a driver and status. The tui text says to
-    share from the app or a browser: the terminal has no position to send. -->
+<!-- Maintenance › Work orders › ShareLocation (mr-moqui plans/Location-Sharing.md §3.7, LL6): "Share my location with
+    the customer" for the technician assigned to an open customer repair, opened from WorkOrderDetail's header. The
+    technician chooses until when (no later than the planned end), exact or approximate, and a note (an ETA). share
+    posts Mantle's create#RecordGuestShare, which checks the work order and the technician again and makes the
+    framework's share with a guest link on the work order, ended by its completion or cancellation; it answers the link's
+    secret to the page alone. The customer is mailed (sendLink, Mantle's send#RecordGuestLink) only once the technician confirmed:
+    in the Android app after the app's own dialog (moquiDesktop.location allow, then start, as Maps' Browse calls it)
+    answers "started", its Not now stopping the share with nothing sent; in a browser with the first position the server
+    takes from the page (watchPosition to /qapps/reportClientLocation). Leaving the page before that (beforeUnmount, or
+    pagehide with a keepalive post to stop), a denied location or one unavailable for 30 seconds stops the share unsent.
+    The secret goes back to the server only in sendLink's body. A delivery has no such action until the warehouse trips
+    (WH-TRIP) give it a driver and status. The tui text says to share from the app or a browser: the terminal has no
+    position to send. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Share my location" default-menu-include="false" render-modes="qvue,tui" server-static="qvue">
     <parameter name="workEffortId" required="true"/>
