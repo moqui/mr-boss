@@ -62,11 +62,11 @@ feature("a link with a password: nothing without the grant, a wrong password ref
         const wrong = visit("open", PHOTOS, { password: "not it" }, "post")
         const opened = visit("open", PHOTOS, { password: "family" }, "post")
         const grant = opened.json.grant
-        const files = visit("files", PHOTOS, { grant })
-        const picture = visit("download", PHOTOS, { grant, path: "beach.png", inline: "true" })
-        const zip = visit("download", PHOTOS, { grant, path: "" })
-        const outside = visit("files", PHOTOS, { grant, path: "../Documents" })
-        const forged = visit("files", PHOTOS, { grant: grant + "x" })
+        const files = visit("files", PHOTOS, { grantToken: grant })
+        const picture = visit("download", PHOTOS, { grantToken: grant, path: "beach.png", inline: "true" })
+        const zip = visit("download", PHOTOS, { grantToken: grant, path: "" })
+        const outside = visit("files", PHOTOS, { grantToken: grant, path: "../Documents" })
+        const forged = visit("files", PHOTOS, { grantToken: grant + "x" })
         const after = sys(() => ec.entity.find("moqui.resource.ResourceShare").condition("shareId", "BOSS_DEMO_LINK_PHOTOS").one().openedCount)
         return { before, noGrant, noFile, wrong, opened, files, picture, zip, outside, forged, after }
     },
@@ -205,7 +205,7 @@ feature("a folder link's zip is kept and sent again, replaced when the folder ch
 feature("a link without a password to one file: open, list, download", {
     when() {
         const opened = visit("open", PLAN, {}, "post")
-        return { opened, files: visit("files", PLAN, { grant: opened.json.grant }), text: visit("download", PLAN, {}),
+        return { opened, files: visit("files", PLAN, { grantToken: opened.json.grant }), text: visit("download", PLAN, {}),
             below: visit("files", PLAN, { path: "Checklist.txt" }) }
     },
     allowMessageErrors: true,

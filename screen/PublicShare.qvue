@@ -201,7 +201,7 @@ module.exports = {
             this.state = 'error';
             this.error = text && !/^\s*</.test(text) ? text : t('This link cannot be opened now. It may have expired or been revoked; ask the person who shared it.');
         },
-        params(extra) { return Object.assign(this.grant ? { grant: this.grant } : {}, extra || {}); },
+        params(extra) { return Object.assign(this.grant ? { grantToken: this.grant } : {}, extra || {}); },
         loadFiles(path) {
             this.loadingFiles = true;
             moqui.request(this.url('files'), { params: this.params({ path: path || '' }) }).then((result) => {
@@ -277,7 +277,7 @@ module.exports = {
         send(files) {
             if (this.uploading) return;
             const form = new FormData();
-            if (this.grant) form.append('grant', this.grant);
+            if (this.grant) form.append('grantToken', this.grant);
             if (!this.uploadOnly && this.path) form.append('path', this.path);
             if (this.uploaderName) form.append('uploaderName', this.uploaderName);
             files.forEach((file) => form.append('contentFile', file, file.name));
