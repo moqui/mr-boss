@@ -215,7 +215,10 @@ feature("Test fails at once on a server that is not there, with what to try; Nex
         tested.success == false
         tested.stepList.length == 2
         tested.stepList.every((step) => !step.ok && step.hint)
-        tested.stepList.some((step) => step.hint.includes("Nothing answers on that port"))
+        // nothing listens: the port's advice for both, never the password's (COM-UI-040; settings_tests.rs in moqui-mail has
+        // a server that refuses the password)
+        tested.stepList.every((step) => step.hint.includes("Nothing answers on that port"))
+        !tested.stepList.some((step) => step.hint.includes("user name or password"))
         tested.adviceText.includes("Go back to fix what failed")
         refused.errors.includes("The test did not pass")
         anyway.errors == ""
