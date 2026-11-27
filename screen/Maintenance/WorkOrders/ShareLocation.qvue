@@ -1,0 +1,306 @@
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ShareLocation (ShareLocation.xml; mr-moqui plans/archive/Location-Sharing.md §3.7): Share my location with the customer of
+    a customer repair. The share is made by the share transition only on the technician's press (§1, "Only by the
+    person's act"), and the customer is mailed (sendLink) only once the technician has confirmed it: in the Android app
+    the app asks for the location permission (allow) and confirms in its own dialog with the server's words before its
+    foreground service sends (start, as Maps' Browse calls it); only "started" mails the link, and Not now stops the share
+    with nothing sent. Elsewhere the press is the confirmation: the link is mailed once the server took the page's first
+    position. Before that, the share is stopped and nothing is sent when the browser denies the location, when it stays
+    unavailable for 30 seconds, or when the page is left (beforeUnmount, or pagehide with a keepalive post); a timeout
+    says so and keeps trying. A "started" that comes after the page was left stops the app's service again, and a page
+    restored from the back/forward cache after its pagehide stop shows the share stopped. This page sends while it is
+    open (watchPosition, at most one report a share's interval, to /qapps/reportClientLocation, which answers
+    report#Position's statusCode: 429 waits, 410 and 404 stop), with a banner and Stop. The link's secret is held by this
+    instance only (not reactive) until sendLink. No position is shown or kept by this page. -->
+<template><div class="q-pa-md m-maintenance-share-location" style="max-width:640px">
+    <div class="text-h6">{{t('Share my location with the customer')}}</div>
+    <div v-if="!info" class="row justify-center q-pa-md"><q-spinner size="2em"></q-spinner></div>
+    <div v-else-if="!info.found || !info.repair" class="text-body2 q-mt-sm" id="ShareLocationNotAvailable">
+        {{t('Only a customer repair\'s work order has a customer to share your location with.')}}</div>
+    <template v-else>
+        <div class="text-body2 q-mt-xs m-muted">{{info.name}} · {{info.customerName}}<span v-if="info.plannedEndText"> · {{t('due')}} {{info.plannedEndText}}</span></div>
+        <template v-if="!shareId">
+            <div v-if="info.overdue" class="text-body2 text-warning q-mt-md" id="ShareLocationOverdue">{{t('The work order is past its planned end: schedule it again to share your location.')}}</div>
+            <div class="text-body2 q-mt-md">{{t('The customer gets a link by email that shows where you are until the time you choose, no later than the work order\'s planned end. Completing or cancelling the work order ends it.')}}</div>
+            <q-option-group v-model="hours" :options="untilOptions" inline dense class="q-mt-sm" id="ShareLocationUntil"></q-option-group>
+            <q-toggle v-model="approximate" dense :label="t('Approximate (about 1 km)')" class="q-mt-sm"></q-toggle>
+            <q-input v-model="purposeText" dense outlined maxlength="200" class="q-mt-sm" :label="t('A note for the customer, such as an arrival time')" name="purposeText"></q-input>
+            <div v-if="error" class="text-negative text-caption q-mt-sm" role="alert">{{error}}</div>
+            <div class="row q-gutter-sm q-mt-md">
+                <q-btn unelevated no-caps color="primary" :loading="busy" :disable="!!info.overdue" :label="t('Share my location with the customer')" id="ShareLocationGo" @click="share"></q-btn>
+                <q-btn flat no-caps :label="t('Back to the work order')" @click="back"></q-btn>
+            </div>
+        </template>
+        <template v-else>
+            <q-banner dense rounded class="m-tonal q-mt-md" id="ShareLocationSending">
+                <template v-slot:avatar><q-icon name="sym_o_share_location" color="positive"></q-icon></template>
+                {{sendingText}}
+                <template v-slot:action><q-btn flat dense no-caps color="negative" :label="t('Stop sharing')" @click="stopShare"></q-btn></template>
+            </q-banner>
+            <div v-if="mailText" class="text-caption q-mt-sm" :class="mailSent ? 'm-muted' : 'text-warning'">{{mailText}}</div>
+            <div v-if="error" class="text-negative text-caption q-mt-sm" role="alert">{{error}}</div>
+            <q-btn flat no-caps class="q-mt-sm" :label="t('Back to the work order')" @click="back"></q-btn>
+        </template>
+    </template>
+</div></template>
+
+<script>
+const t = (text) => (moqui.l10n && moqui.l10n.localize ? moqui.l10n.localize(text) : text);
+const HOUR = 3600000;
+// how long a position "unavailable" (the browser's code 2) is waited out before a share not yet told is stopped
+const UNAVAILABLE_WAIT_MS = 30000;
+module.exports = {
+    name: 'MaintenanceShareLocation',
+    inject: { mScreen: { default: null } },
+    data() {
+        return { info: null, hours: 1, approximate: false, purposeText: '', busy: false, error: null, shareId: null, thruDate: null,
+            mailSent: null, mailReason: null, native: false, watchId: null, lastSent: 0, waitUntil: 0, intervalMs: 5000, unavailableSince: 0 };
+    },
+    // this instance's own, not reactive (set here, not in data): the link's secret until sendLink, never in the page's data
+    // or a URL; whether this screen was left; the share a pagehide stopped; the unavailable timer; the pagehide and
+    // pageshow listeners (a page restored from the back/forward cache after a pagehide stop shows that share stopped)
+    created() {
+        this.pendingSecret = null;
+        this.left = false;
+        this.stoppedOnHide = null;
+        this.unavailableTimer = null;
+        this.onPageHide = () => this.stopUntold(true);
+        this.onPageShow = (event) => { if (event.persisted && this.stoppedOnHide) this.resetStopped(); };
+    },
+    computed: {
+        workEffortId() { return (this.mScreen && this.mScreen.parameters && this.mScreen.parameters.workEffortId) || ''; },
+        untilOptions() {
+            return [{ label: t('30 minutes'), value: 0.5 }, { label: t('1 hour'), value: 1 }, { label: t('2 hours'), value: 2 },
+                { label: t('Until the planned end'), value: 0 }];
+        },
+        sendingText() {
+            const until = this.thruDate ? new Date(this.thruDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            return (this.native ? t('Sent from this phone, also with the app in the background, until') : t('Sent from this page while it is open, until')) + ' ' + until;
+        },
+        mailText() {
+            if (this.mailSent == null) return '';
+            if (this.mailSent) return t('The link went to the customer by email.');
+            if (this.mailReason === 'NO_MAIL_SERVER') return t('The link waits in the mail queue: this server sends no mail now.');
+            return t('The link could not be mailed to the customer: stop the share if they will not get it.');
+        },
+    },
+    methods: {
+        t,
+        path(name) { return this.mScreen.path + '/' + name; },
+        post(name, params) { return moqui.request(this.path(name), { method: 'POST', params: Object.assign({ workEffortId: this.workEffortId }, params || {}) }).then((result) => result.json || {}); },
+        nativeLocation() {
+            const desktop = window.moquiDesktop;
+            const native = desktop && desktop.location;
+            return native && typeof native.start === 'function' ? native : null;
+        },
+        back() { if (this.$root && this.$root.setUrl) this.$root.setUrl(this.mScreen.path.replace(/ShareLocation$/, 'WorkOrderDetail') + '?workEffortId=' + encodeURIComponent(this.workEffortId)); },
+        // the end chosen, no later than the planned end nor location@max-share-hours from now
+        thruFor() {
+            const now = Date.now();
+            const cap = now + (Number(this.info && this.info.maxShareHours) || 24) * HOUR;
+            const planned = this.info && this.info.plannedEnd ? Number(this.info.plannedEnd) : cap;
+            const asked = this.hours ? now + this.hours * HOUR : planned;
+            return Math.min(asked, planned, cap);
+        },
+        clearUnavailable() {
+            if (this.unavailableTimer) clearTimeout(this.unavailableTimer);
+            this.unavailableTimer = null;
+            this.unavailableSince = 0;
+        },
+        clearWatch() {
+            if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId);
+            this.watchId = null;
+        },
+        // a share whose customer was never told, stopped: when the page goes away (pagehide, keepalive so it is posted as
+        // the page unloads) or this screen is left (beforeUnmount)
+        stopUntold(unloading) {
+            if (!this.pendingSecret || !this.shareId) return;
+            const shareId = this.shareId;
+            this.pendingSecret = null;
+            if (!unloading) { this.post('stop', { shareId }); return; }
+            this.stoppedOnHide = shareId;
+            const body = new URLSearchParams({ workEffortId: this.workEffortId, shareId });
+            const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+            if (moqui.sessionToken) headers['X-CSRF-Token'] = moqui.sessionToken;
+            try {
+                window.fetch(this.path('stop'), { method: 'POST', keepalive: true, credentials: 'same-origin', headers, body: body.toString() }).catch(() => {});
+            } catch (err) { /* the page is going */ }
+        },
+        // the page back from the back/forward cache after its pagehide stopped the share: nothing watches or sends, and
+        // the page says the share was stopped
+        resetStopped() {
+            this.stoppedOnHide = null;
+            this.pendingSecret = null;
+            this.clearUnavailable();
+            this.clearWatch();
+            this.native = false;
+            this.shareId = null;
+            this.error = t('The page was left before the customer was told: the share was stopped');
+        },
+        share() {
+            if (this.busy) return;
+            this.busy = true;
+            this.error = null;
+            const native = this.nativeLocation();
+            // in the app, its location permission first (approximate alone for an approximate share), as Browse asks it
+            const allowed = native ? Promise.resolve(native.allow(!this.approximate)) : Promise.resolve(true);
+            allowed.then((ok) => {
+                if (!ok) { this.error = t('Allow the app to use this phone\'s location to share it, then try again'); return null; }
+                if (this.left) return null;
+                return this.post('share', { thruDate: String(this.thruFor()), precisionEnumId: this.approximate ? 'LspApproximate' : 'LspExact', purposeText: this.purposeText });
+            }).then((json) => {
+                if (!json) return null;
+                if (!json.applied) { this.error = json.reason || t('Your location was not shared'); return null; }
+                // the page was left while the share was made: it is stopped, and nothing watches or mails
+                if (this.left) { this.post('stop', { shareId: json.shareId }); return null; }
+                this.pendingSecret = json.linkSecret || null;
+                this.shareId = json.shareId;
+                this.thruDate = json.thruDate;
+                this.intervalMs = (json.approximate ? 60 : 5) * 1000;
+                return this.send(native);
+            }).catch((err) => { this.error = String((err && err.message) || err); }).finally(() => { this.busy = false; });
+        },
+        // the customer told only once the technician confirmed: the app's started, or this page's first position taken
+        sendLink() {
+            const linkSecret = this.pendingSecret;
+            this.pendingSecret = null;
+            if (!linkSecret || this.left) return Promise.resolve();
+            return this.post('sendLink', { shareId: this.shareId, linkSecret }).then((json) => {
+                if (!json.applied) { this.error = json.reason || t('The link was not mailed'); this.mailSent = false; return; }
+                this.mailSent = !!json.mailSent;
+                this.mailReason = json.mailReason || null;
+            }, () => { this.mailSent = false; });
+        },
+        // in a browser the link goes out with the first position the server takes (report), never before one: a page that
+        // cannot tell where the technician is sends the customer nothing
+        send(native) {
+            if (this.left) return null;
+            if (!native) { this.watch(); return null; }
+            const shareId = this.shareId;
+            // the page was left, or the share stopped (its pagehide) or changed, while the app asked
+            const gone = () => this.left || this.stoppedOnHide === shareId || this.shareId !== shareId;
+            return Promise.resolve(native.start({ shareId })).then((answer) => {
+                // a service it started for a share gone meanwhile stops again
+                if (gone()) {
+                    if (answer === 'started' && typeof native.stop === 'function') Promise.resolve(native.stop(shareId)).catch(() => {});
+                    return null;
+                }
+                if (answer === 'started') { this.native = true; return this.sendLink(); }
+                if (answer === 'declined') {
+                    // Not now: the share just made is stopped and the customer is sent nothing
+                    this.pendingSecret = null;
+                    this.post('stop', { shareId: this.shareId });
+                    this.shareId = null;
+                    this.error = t('Your location was not shared');
+                    return null;
+                }
+                // the app could not start its service: this page sends, the link with its first position
+                this.watch();
+                return null;
+            }, () => { if (!gone()) this.watch(); return null; });
+        },
+        // no position before the link went out: the share is stopped and the customer told nothing
+        abandon(message) {
+            this.pendingSecret = null;
+            this.clearUnavailable();
+            this.clearWatch();
+            if (this.shareId) this.post('stop', { shareId: this.shareId });
+            this.shareId = null;
+            this.error = message;
+        },
+        watch() {
+            if (this.left) return;
+            if (!navigator.geolocation) { this.abandon(t('This browser cannot tell where you are: your location was not shared')); return; }
+            this.watchId = navigator.geolocation.watchPosition((fix) => { this.clearUnavailable(); this.report(fix); }, (err) => this.watchFailed(err),
+                { enableHighAccuracy: !this.approximate, maximumAge: 10000, timeout: 60000 });
+        },
+        // the browser's refusal, by its code: denied (1) ends it; unavailable (2) waits a while for the next fix; a
+        // timeout (3) says so and keeps watching. Before the link went out, denied and a lasting unavailable stop the share.
+        watchFailed(err) {
+            if (this.left) return;
+            const code = err && err.code;
+            const words = code === 1 ? t('Your location is not allowed: allow it for this site in the browser, then share again')
+                : code === 3 ? t('No position came in time: still trying')
+                : t('Your location is not available now: still trying');
+            if (code === 1) {
+                if (this.pendingSecret) this.abandon(words);
+                else this.error = words;
+                return;
+            }
+            this.error = words;
+            // the next fix is waited for a while (a fix clears the timer); none by then, the share is stopped unsent
+            if (code === 2 && this.pendingSecret && !this.unavailableTimer) {
+                this.unavailableSince = Date.now();
+                this.unavailableTimer = setTimeout(() => {
+                    this.unavailableTimer = null;
+                    if (this.pendingSecret && this.unavailableSince && !this.left) this.abandon(t('Your location is not available: your location was not shared'));
+                }, UNAVAILABLE_WAIT_MS);
+            }
+        },
+        report(fix) {
+            const now = Date.now();
+            if (this.left || !this.shareId || now - this.lastSent < this.intervalMs || now < this.waitUntil) return;
+            this.lastSent = now;
+            const c = fix.coords;
+            const params = { shareId: this.shareId, latitude: String(c.latitude), longitude: String(c.longitude),
+                accuracy: c.accuracy == null ? '' : String(c.accuracy), heading: c.heading == null || isNaN(c.heading) ? '' : String(c.heading),
+                speed: c.speed == null || isNaN(c.speed) ? '' : String(c.speed) };
+            moqui.request('/qapps/reportClientLocation', { method: 'POST', params }).then((result) => result.json || {}).then((json) => {
+                if (this.left) return;
+                // the first position the server took: the customer is told now, and never before one
+                if (json.statusCode === 200) {
+                    this.error = null;
+                    if (this.pendingSecret && this.shareId) this.sendLink();
+                }
+                if (json.statusCode === 429) this.waitUntil = Date.now() + (Number(json.retryAfterSeconds) || 5) * 1000;
+                else if (json.statusCode === 410 || json.statusCode === 404 || json.reasonCode === 'OTHER_DEVICE') this.endWatch(t('The share has ended'));
+            }, () => {});
+        },
+        endWatch(message) {
+            this.pendingSecret = null;
+            this.clearUnavailable();
+            this.clearWatch();
+            if (message) moqui.notifyMessages([{ type: 'info', message }], null);
+            this.shareId = null;
+        },
+        stopShare() {
+            this.pendingSecret = null;
+            this.clearUnavailable();
+            const shareId = this.shareId;
+            const native = this.nativeLocation();
+            if (this.native && native && typeof native.stop === 'function') Promise.resolve(native.stop(shareId)).catch(() => {});
+            this.native = false;
+            this.endWatch(null);
+            this.post('stop', { shareId }).then((json) => moqui.notifyMessages(json.applied ? [{ type: 'success', message: t('Sharing stopped') }] : null,
+                json.applied ? null : [t('That did not change the share')]));
+        },
+    },
+    mounted() {
+        window.addEventListener('pagehide', this.onPageHide);
+        window.addEventListener('pageshow', this.onPageShow);
+        moqui.request(this.path('info') + '?workEffortId=' + encodeURIComponent(this.workEffortId), {}).then((result) => result.json || {})
+            .then((json) => { this.info = json; }, () => { this.info = { found: false }; });
+    },
+    // leaving before the customer was told: the share no one was told of is stopped, not left on
+    beforeUnmount() {
+        this.left = true;
+        window.removeEventListener('pagehide', this.onPageHide);
+        window.removeEventListener('pageshow', this.onPageShow);
+        this.stopUntold(false);
+        this.clearUnavailable();
+        this.clearWatch();
+    },
+};
+</script>

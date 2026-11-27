@@ -31,7 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
     equipment only where the user's Maintenance scope covers the customer's asset (it is read through the repair). P19 (design §1.4 Meetings, §12): More offers Print work order (the
     Instructions print, with the QR of the work order's link), Add to calendar (.ics of its planned window) and, for a planner,
     supervisor or its assigned technician, Add video call (a Commons event with a call link, the vendor's expert and the
-    technicians invited; add#MaintenanceVideoCall). No cost outside the Costs tab. -->
+    technicians invited; add#MaintenanceVideoCall). LL6 (mr-moqui plans/archive/Location-Sharing.md §3.7): on an open customer repair, Share my
+    location with the customer (ShareLocation.xml), the assigned technician's, disabled for anyone else. No cost outside the Costs tab. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
         default-menu-title="Work order" default-menu-include="false">
     <parameter name="workEffortId" required="true"/>
@@ -101,6 +102,11 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="printParameters" from="{workEffortId:workEffortId, renderMode:'html-print', lastStandalone:'true'}"/>
         <set field="canAddCall" from="!['WeClosed', 'WeCancelled'].includes(workOrder.statusId) &amp;&amp; (ec.user.hasPermission('MAINTENANCE_PLAN')
                 || ec.user.hasPermission('MAINTENANCE_SUPERVISE') || (ec.user.hasPermission('MAINTENANCE_EXECUTE') &amp;&amp; !!workOrderDetail?.assigned))"/>
+        <!-- mr-moqui plans/archive/Location-Sharing.md §3.7 (LL6): Share my location with the customer, on an open customer repair, the
+            assigned technician's (Mantle's create#RecordGuestShare checks again); shown disabled to anyone else -->
+        <set field="shareLocationShown" from="!!workOrder.repair &amp;&amp; !['WeComplete', 'WeClosed', 'WeCancelled'].includes(workOrder.statusId)"/>
+        <set field="canShareLocation" from="shareLocationShown &amp;&amp; !workOrder.overdue &amp;&amp; !!workOrderDetail?.assigned
+                &amp;&amp; (ec.user.hasPermission('MAINTENANCE_EXECUTE') || ec.user.hasPermission('MAINTENANCE_SUPERVISE'))"/>
         <set field="videoValues" from="{workEffortId:workEffortId, durationMinutes:'30', operationKey:'video-' + ec.user.randomString(24)}"/>
         <set field="windowText" from="[workOrder.estimatedStartText ? 'Planned from ' + workOrder.estimatedStartText : null,
                 workOrder.estimatedCompletionText ? 'due ' + workOrder.estimatedCompletionText + (workOrder.overdue ? ' (overdue)' : '') : null]
@@ -210,6 +216,9 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="submitButton"><default-field title="Add video call"><submit/></default-field></field>
                                 </form-single>
                             </container-dialog>
+                            <link url="${sharedLinks['WorkOrders/ShareLocation']}" text="Share my location with the customer" icon="sym_o_share_location"
+                                    parameter-map="{workEffortId:workEffortId}" condition="shareLocationShown" disable-condition="!canShareLocation"
+                                    disable-message="${workOrder.overdue ? 'The work order is past its planned end: schedule it again to share your location' : 'Only the technician assigned to this work order shares their location with its customer'}"/>
                             <button-menu text="More" icon="more_horiz">
                                 <link url="Instructions" text="Print work order" icon="sym_o_print" target-window="_blank"
                                         parameter-map="printParameters"/>
