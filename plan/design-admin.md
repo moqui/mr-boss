@@ -545,7 +545,7 @@ The registration code is shown once and never stored in plain text. A device cre
 ## 7. Organizations and settings
 
 **Maps configuration (proposed, CX-MAPS):** register the canonical Tools Maps configuration screen in SettingsHome,
-linking [framework Maps](../../../../../plans/Maps.md) rather than copying its provider/layer/postal-import forms.
+linking [framework Maps](../../../../../plans/archive/Maps.md) rather than copying its provider/layer/postal-import forms.
 Installation administrators manage global profiles, OpenFreeMap/self-hosted resources, outgoing-service policy and
 dataset readiness; users manage their own permitted preferences. Organization delegates may select an authorized
 profile for their app context without changing installation policy or reading provider secrets. Organization contact
