@@ -13,11 +13,13 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- ShareLocation (ShareLocation.xml; mr-moqui plans/Location-Sharing.md §3.7): Share my location with the customer of a
     customer repair. The share is made by the share transition only on the technician's press (§1, "Only by the person's
-    act"); then, in the Android app, the app asks for the location permission (allow) and confirms in its own dialog with
-    the server's words before its foreground service sends (start, as Maps' Browse calls it; Not now stops the share just
-    made); elsewhere this page sends while it is open (watchPosition, at most one report a share's interval, to
-    /qapps/reportClientLocation, which answers report#Position's statusCode: 429 waits, 410 and 404 stop), with a banner
-    and Stop. No position is shown or kept by this page. -->
+    act"), and the customer is mailed (sendLink) only once the technician has confirmed it: in the Android app the app asks
+    for the location permission (allow) and confirms in its own dialog with the server's words before its foreground
+    service sends (start, as Maps' Browse calls it); only "started" mails the link, and Not now stops the share with
+    nothing sent. Elsewhere the press is the confirmation: the link is mailed at once and this page sends while it is open
+    (watchPosition, at most one report a share's interval, to /qapps/reportClientLocation, which answers report#Position's
+    statusCode: 429 waits, 410 and 404 stop), with a banner and Stop. The link's secret is held in this page only until
+    sendLink. No position is shown or kept by this page. -->
 <template><div class="q-pa-md m-maintenance-share-location" style="max-width:640px">
     <div class="text-h6">{{t('Share my location with the customer')}}</div>
     <div v-if="!info" class="row justify-center q-pa-md"><q-spinner size="2em"></q-spinner></div>
@@ -26,13 +28,14 @@ along with this software (see the LICENSE.md file). If not, see
     <template v-else>
         <div class="text-body2 q-mt-xs m-muted">{{info.name}} · {{info.customerName}}<span v-if="info.plannedEndText"> · {{t('due')}} {{info.plannedEndText}}</span></div>
         <template v-if="!shareId">
+            <div v-if="info.overdue" class="text-body2 text-warning q-mt-md" id="ShareLocationOverdue">{{t('The work order is past its planned end: schedule it again to share your location.')}}</div>
             <div class="text-body2 q-mt-md">{{t('The customer gets a link by email that shows where you are until the time you choose, no later than the work order\'s planned end. Completing or cancelling the work order ends it.')}}</div>
             <q-option-group v-model="hours" :options="untilOptions" inline dense class="q-mt-sm" id="ShareLocationUntil"></q-option-group>
             <q-toggle v-model="approximate" dense :label="t('Approximate (about 1 km)')" class="q-mt-sm"></q-toggle>
             <q-input v-model="purposeText" dense outlined maxlength="200" class="q-mt-sm" :label="t('A note for the customer, such as an arrival time')" name="purposeText"></q-input>
             <div v-if="error" class="text-negative text-caption q-mt-sm" role="alert">{{error}}</div>
             <div class="row q-gutter-sm q-mt-md">
-                <q-btn unelevated no-caps color="primary" :loading="busy" :label="t('Share my location with the customer')" id="ShareLocationGo" @click="share"></q-btn>
+                <q-btn unelevated no-caps color="primary" :loading="busy" :disable="!!info.overdue" :label="t('Share my location with the customer')" id="ShareLocationGo" @click="share"></q-btn>
                 <q-btn flat no-caps :label="t('Back to the work order')" @click="back"></q-btn>
             </div>
         </template>
@@ -42,7 +45,7 @@ along with this software (see the LICENSE.md file). If not, see
                 {{sendingText}}
                 <template v-slot:action><q-btn flat dense no-caps color="negative" :label="t('Stop sharing')" @click="stopShare"></q-btn></template>
             </q-banner>
-            <div v-if="!mailSent" class="text-caption text-warning q-mt-sm">{{t('The link could not be mailed to the customer: stop the share, or ask the office to send it again.')}}</div>
+            <div v-if="mailText" class="text-caption q-mt-sm" :class="mailSent ? 'm-muted' : 'text-warning'">{{mailText}}</div>
             <div v-if="error" class="text-negative text-caption q-mt-sm" role="alert">{{error}}</div>
             <q-btn flat no-caps class="q-mt-sm" :label="t('Back to the work order')" @click="back"></q-btn>
         </template>
@@ -52,22 +55,30 @@ along with this software (see the LICENSE.md file). If not, see
 <script>
 const t = (text) => (moqui.l10n && moqui.l10n.localize ? moqui.l10n.localize(text) : text);
 const HOUR = 3600000;
+// the link's secret until sendLink: in this module only, never in the page's data or a URL
+let pendingSecret = null;
 module.exports = {
     name: 'MaintenanceShareLocation',
     inject: { mScreen: { default: null } },
     data() {
         return { info: null, hours: 1, approximate: false, purposeText: '', busy: false, error: null, shareId: null, thruDate: null,
-            mailSent: true, native: false, watchId: null, lastSent: 0, waitUntil: 0, intervalMs: 5000 };
+            mailSent: null, mailReason: null, native: false, watchId: null, lastSent: 0, waitUntil: 0, intervalMs: 5000 };
     },
     computed: {
         workEffortId() { return (this.mScreen && this.mScreen.parameters && this.mScreen.parameters.workEffortId) || ''; },
         untilOptions() {
-            const options = [{ label: t('30 minutes'), value: 0.5 }, { label: t('1 hour'), value: 1 }, { label: t('2 hours'), value: 2 }];
-            return options.concat([{ label: t('Until the planned end'), value: 0 }]);
+            return [{ label: t('30 minutes'), value: 0.5 }, { label: t('1 hour'), value: 1 }, { label: t('2 hours'), value: 2 },
+                { label: t('Until the planned end'), value: 0 }];
         },
         sendingText() {
             const until = this.thruDate ? new Date(this.thruDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
             return (this.native ? t('Sent from this phone, also with the app in the background, until') : t('Sent from this page while it is open, until')) + ' ' + until;
+        },
+        mailText() {
+            if (this.mailSent == null) return '';
+            if (this.mailSent) return t('The link went to the customer by email.');
+            if (this.mailReason === 'NO_MAIL_SERVER') return t('The link waits in the mail queue: this server sends no mail now.');
+            return t('The link could not be mailed to the customer: stop the share if they will not get it.');
         },
     },
     methods: {
@@ -80,11 +91,13 @@ module.exports = {
             return native && typeof native.start === 'function' ? native : null;
         },
         back() { if (this.$root && this.$root.setUrl) this.$root.setUrl(this.mScreen.path.replace(/ShareLocation$/, 'WorkOrderDetail') + '?workEffortId=' + encodeURIComponent(this.workEffortId)); },
+        // the end chosen, no later than the planned end nor location@max-share-hours from now
         thruFor() {
-            const planned = this.info && this.info.plannedEnd ? Number(this.info.plannedEnd) : 0;
-            if (!this.hours) return planned || 0;
-            const asked = Date.now() + this.hours * HOUR;
-            return planned ? Math.min(asked, planned) : asked;
+            const now = Date.now();
+            const cap = now + (Number(this.info && this.info.maxShareHours) || 24) * HOUR;
+            const planned = this.info && this.info.plannedEnd ? Number(this.info.plannedEnd) : cap;
+            const asked = this.hours ? now + this.hours * HOUR : planned;
+            return Math.min(asked, planned, cap);
         },
         share() {
             if (this.busy) return;
@@ -99,27 +112,40 @@ module.exports = {
             }).then((json) => {
                 if (!json) return null;
                 if (!json.applied) { this.error = json.reason || t('Your location was not shared'); return null; }
+                pendingSecret = json.linkSecret || null;
                 this.shareId = json.shareId;
                 this.thruDate = json.thruDate;
-                this.mailSent = !!json.mailSent;
                 this.intervalMs = (json.approximate ? 60 : 5) * 1000;
                 return this.send(native);
             }).catch((err) => { this.error = String((err && err.message) || err); }).finally(() => { this.busy = false; });
         },
-        // the app's service, after its own dialog with the server's words; else this page while it is open
+        // the customer told only once the technician confirmed: the app's started, or this press in a browser
+        sendLink() {
+            const linkSecret = pendingSecret;
+            pendingSecret = null;
+            if (!linkSecret) return Promise.resolve();
+            return this.post('sendLink', { shareId: this.shareId, linkSecret }).then((json) => {
+                if (!json.applied) { this.error = json.reason || t('The link was not mailed'); this.mailSent = false; return; }
+                this.mailSent = !!json.mailSent;
+                this.mailReason = json.mailReason || null;
+            }, () => { this.mailSent = false; });
+        },
         send(native) {
-            if (!native) { this.watch(); return null; }
+            if (!native) { this.watch(); return this.sendLink(); }
             return Promise.resolve(native.start({ shareId: this.shareId })).then((answer) => {
-                if (answer === 'started') { this.native = true; return; }
+                if (answer === 'started') { this.native = true; return this.sendLink(); }
                 if (answer === 'declined') {
-                    // Not now: the share just made is stopped, so nothing shows the customer a position that is never sent
+                    // Not now: the share just made is stopped and the customer is sent nothing
+                    pendingSecret = null;
                     this.post('stop', { shareId: this.shareId });
                     this.shareId = null;
                     this.error = t('Your location was not shared');
-                    return;
+                    return null;
                 }
+                // the app could not start its service: this page sends, and the press confirmed it
                 this.watch();
-            }, () => this.watch());
+                return this.sendLink();
+            }, () => { this.watch(); return this.sendLink(); });
         },
         watch() {
             if (!navigator.geolocation) { this.error = t('This browser cannot tell where you are'); return; }
@@ -159,6 +185,6 @@ module.exports = {
         moqui.request(this.path('info') + '?workEffortId=' + encodeURIComponent(this.workEffortId), {}).then((result) => result.json || {})
             .then((json) => { this.info = json; }, () => { this.info = { found: false }; });
     },
-    beforeUnmount() { if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); },
+    beforeUnmount() { pendingSecret = null; if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); },
 };
 </script>

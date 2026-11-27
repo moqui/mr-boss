@@ -105,8 +105,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- mr-moqui plans/Location-Sharing.md §3.7 (LL6): Share my location with the customer, on an open customer repair, the
             assigned technician's (Mantle's create#RecordGuestShare checks again); shown disabled to anyone else -->
         <set field="shareLocationShown" from="!!workOrder.repair &amp;&amp; !['WeComplete', 'WeClosed', 'WeCancelled'].includes(workOrder.statusId)"/>
-        <set field="canShareLocation" from="shareLocationShown &amp;&amp; !!workOrderDetail?.assigned &amp;&amp; (ec.user.hasPermission('MAINTENANCE_EXECUTE')
-                || ec.user.hasPermission('MAINTENANCE_SUPERVISE'))"/>
+        <set field="canShareLocation" from="shareLocationShown &amp;&amp; !workOrder.overdue &amp;&amp; !!workOrderDetail?.assigned
+                &amp;&amp; (ec.user.hasPermission('MAINTENANCE_EXECUTE') || ec.user.hasPermission('MAINTENANCE_SUPERVISE'))"/>
         <set field="videoValues" from="{workEffortId:workEffortId, durationMinutes:'30', operationKey:'video-' + ec.user.randomString(24)}"/>
         <set field="windowText" from="[workOrder.estimatedStartText ? 'Planned from ' + workOrder.estimatedStartText : null,
                 workOrder.estimatedCompletionText ? 'due ' + workOrder.estimatedCompletionText + (workOrder.overdue ? ' (overdue)' : '') : null]
@@ -218,7 +218,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </container-dialog>
                             <link url="${sharedLinks['WorkOrders/ShareLocation']}" text="Share my location with the customer" icon="sym_o_share_location"
                                     parameter-map="{workEffortId:workEffortId}" condition="shareLocationShown" disable-condition="!canShareLocation"
-                                    disable-message="Only the technician assigned to this work order shares their location with its customer"/>
+                                    disable-message="${workOrder.overdue ? 'The work order is past its planned end: schedule it again to share your location' : 'Only the technician assigned to this work order shares their location with its customer'}"/>
                             <button-menu text="More" icon="more_horiz">
                                 <link url="Instructions" text="Print work order" icon="sym_o_print" target-window="_blank"
                                         parameter-map="printParameters"/>
