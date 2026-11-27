@@ -340,6 +340,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="submitButton"><default-field title="Add"><submit/></default-field></field>
                         </form-single></container-dialog>
                     <container-dialog id="AddSmsFactorDialog" button-text="Text message" icon="sym_o_sms" width="480" title="Add a text message factor" condition="isSmsActive">
+                        <!-- the risk of a text message factor, said where it is chosen (SEC-BOS-145) -->
+                        <label type="p" style="text-caption m-muted" text="A text message can be redirected to another phone (a SIM swap, a forwarded number). An authenticator app is safer."/>
                         <form-single name="CreateUserAuthcFactorSms" transition="createUserAuthcFactorSms">
                             <field name="thruDate" from="thruDefault"><default-field title="Valid until"><date-time/></default-field></field>
                             <field name="factorOption"><default-field title="Phone"><text-line size="15"/></default-field></field>
