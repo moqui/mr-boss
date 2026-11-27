@@ -62,7 +62,7 @@ along with this software (see the LICENSE.md file). If not, see
             const day = date ? String(date).substring(0, 10) : ''
             const out = ec.service.sync().name('ironstone.commons.ScheduleServices.book#ResourceSlot').parameters({resourceType: resourceType || (at > 0 ? key.substring(0, at) : ''),
                 resourceId: resourceId || (at > 0 ? key.substring(at + 1) : ''), start: start || (day ? day + ' ' + (from || '09:00') : ''),
-                end: end || (day ? day + ' ' + (to || '10:00') : ''), purpose: purpose || null, notes: notes || null}).call()
+                end: end || (day ? day + ' ' + (to || '10:00') : ''), purpose: purpose || null, notes: notes || null, listedOnly: true}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {workEffortId: out.workEffortId, statusId: out.statusId, requiresApproval: out.requiresApproval,
                 messageInfos: [{type: out.requiresApproval ? 'warning' : 'success', message: out.message,
                     link: '/qapps/Commons/Calendar/EventDetail?workEffortId=' + out.workEffortId, linkText: ec.l10n.localize('Open')}]})

@@ -304,6 +304,33 @@ feature("rooms and equipment: Maple booked at once, the Board room requested (Bo
     },
 })
 
+// SEC-BAP-104: an event books equipment of the user's organizations only, never manufacturing equipment, and lists only those;
+// the projector above (john.doe's organization's) is booked
+feature("an event does not book another organization's equipment or manufacturing equipment, nor list them", {
+    when() {
+        const projector = one("mantle.product.asset.Asset", { assetId: "BOSS_DEMO_PROJECTOR" })
+        sys(() => {
+            for (const [assetId, ownerPartyId, classEnumId] of [["BOSS_TEST_EVT_OTHER_KIT", "ORG_ACME", "AsClsComputerHard"],
+                    ["BOSS_TEST_EVT_MFG_KIT", projector.ownerPartyId, "AsClsMfgEquip"]]) {
+                if (ec.entity.find("mantle.product.asset.Asset").condition("assetId", assetId).one() != null) continue
+                ec.service.sync().name("create#mantle.product.asset.Asset").parameters({ assetId, assetTypeEnumId: "AstTpEquipment", classEnumId,
+                    assetName: "BOSS_TEST " + assetId, ownerPartyId, bookable: "Y" }).call()
+            }
+        })
+        const id = made.meeting
+        const other = detailPost("bookResource", { workEffortId: id, assetId: "BOSS_TEST_EVT_OTHER_KIT" })
+        const mfg = detailPost("bookResource", { workEffortId: id, assetId: "BOSS_TEST_EVT_MFG_KIT" })
+        const options = (detail(id).equipmentOptions || []).map((row) => row.value || row.assetId)
+        return { other, mfg, options, rows: current("mantle.work.effort.WorkEffortAssetAssign", { workEffortId: id, assetId: "BOSS_TEST_EVT_OTHER_KIT" }) }
+    },
+    then({ other, mfg, options, rows }) {
+        other.errors.includes("is not available to book")
+        mfg.errors.includes("is not a room or equipment to book")
+        rows.length == 0
+        !options.includes("BOSS_TEST_EVT_OTHER_KIT") && !options.includes("BOSS_TEST_EVT_MFG_KIT")
+    },
+})
+
 feature("a new time that clashes with another booking of its room is refused; with allowConflicts it is kept and the booking stays", {
     when() {
         // the planning has the Maple room on D+2 from 13:00

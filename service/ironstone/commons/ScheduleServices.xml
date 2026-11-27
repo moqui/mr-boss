@@ -220,6 +220,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="end" required="true"/>
             <parameter name="purpose"/>
             <parameter name="notes"/>
+            <parameter name="listedOnly" type="Boolean" default="false"><description>Only a resource Commons' list offers: never
+                manufacturing equipment, which Manufacturing schedules (SEC-BAP-104). Set by Commons' Schedules and ResourceDetail;
+                Maintenance's calendar books manufacturing equipment under its policy.</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="workEffortId"/>
@@ -252,7 +255,7 @@ along with this software (see the LICENSE.md file). If not, see
                 const facility = resource.facilityId ? ec.entity.find('mantle.facility.Facility').condition('facilityId', resource.facilityId).disableAuthz().one() : null
                 const owner = resource.ownerPartyId || facility?.ownerPartyId || null
                 const userOrgIds = Array.from(ec.service.sync().name('mantle.party.PartyServices.get#PartyOrganizationInfo').call()?.userOrgIds || [])
-                if (owner && owner !== '_NA_' && !userOrgIds.includes(owner)) {
+                if ((listedOnly && resource.classEnumId === 'AsClsMfgEquip') || (owner && owner !== '_NA_' && !userOrgIds.includes(owner))) {
                     ec.message.addError(ec.resource.expand('${id} is not a room or equipment to book', '', {id: resourceId})); return }
             }
             const name = String(purpose || '').trim() || (isRoom ? resource.facilityName : resource.assetName) || resourceId

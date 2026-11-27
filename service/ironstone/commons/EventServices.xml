@@ -132,8 +132,12 @@ along with this software (see the LICENSE.md file). If not, see
                 const endMs = event.endText ? toMillis(ec.l10n.parseTimestamp((event.allDay ? event.endText + ' 00:00' : event.endText) + ':00.000', pattern)) : (startMs != null ? startMs + 3600000 : null)
                 const rooms = Array.from(ec.entity.find('mantle.facility.Facility').condition('facilityTypeEnumId', 'FcTpRoom').condition('bookable', 'Y')
                         .condition('closedDate', 'is-null', null).orderBy('facilityName').limit(100).list())
+                // the equipment of the user's organizations or of none, as Schedules lists it (SEC-BAP-104)
+                const equipmentOwners = ['_NA_'].concat(Array.from(ec.service.sync().name('mantle.party.PartyServices.get#PartyOrganizationInfo').call()?.userOrgIds || []))
                 const assets = Array.from(ec.entity.find('mantle.product.asset.Asset').condition('assetTypeEnumId', 'AstTpEquipment').condition('bookable', 'Y')
-                        .condition(cf.makeCondition('classEnumId', 'not-in', ['AsClsMfgEquip'], true)).orderBy('assetName').limit(100).list())
+                        .condition(cf.makeCondition('classEnumId', 'not-in', ['AsClsMfgEquip'], true))
+                        .condition(cf.makeCondition([cf.makeCondition('ownerPartyId', 'in', equipmentOwners), cf.makeCondition('ownerPartyId', 'is-null', null)], 'or'))
+                        .orderBy('assetName').limit(100).list())
                 const busyText = (list) => {
                     const overlapping = (list || []).filter((busy) => toMillis(busy.fromDate) < endMs && toMillis(busy.thruDate) > startMs)
                     if (!overlapping.length) return ['free', L('Free')]
@@ -595,6 +599,10 @@ along with this software (see the LICENSE.md file). If not, see
         <out-parameters><parameter name="statusId"/><parameter name="message"/></out-parameters>
         <actions><script><![CDATA[
             const L = (text) => ec.l10n.localize(text)
+            // manufacturing equipment, which Manufacturing schedules, is not booked from an event (SEC-BAP-104); the owner and
+            // bookable rules are book#Resource's
+            if (assetId && ec.entity.find('mantle.product.asset.Asset').condition('assetId', assetId).disableAuthz().one()?.classEnumId === 'AsClsMfgEquip') {
+                ec.message.addError(ec.resource.expand('${id} is not a room or equipment to book', '', {id: assetId})); return }
             const out = ec.service.sync().name('mantle.work.EventServices.book#Resource').parameters({workEffortId: workEffortId, facilityId: facilityId || null,
                 assetId: assetId || null, comments: comments || null}).call()
             if (ec.message.hasError()) return

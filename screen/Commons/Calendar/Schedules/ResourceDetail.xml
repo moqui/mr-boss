@@ -29,7 +29,7 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.commons.ScheduleServices.book#ResourceSlot" out-map="bookOut" in-map="{resourceType:resourceType, resourceId:resourceId,
                     start:(date ? String(date).substring(0, 10) + ' ' + (from || '09:00') : ''), end:(date ? String(date).substring(0, 10) + ' ' + (to || '10:00') : ''),
-                    purpose:purpose, notes:notes}"/>
+                    purpose:purpose, notes:notes, listedOnly:true}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(bookOut.message, bookOut.requiresApproval ? 'warning' : 'success')</script></if>
         </actions>
         <default-response url="."><parameter name="resourceType"/><parameter name="resourceId"/></default-response>
