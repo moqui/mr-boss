@@ -282,11 +282,47 @@ function counterparties() {
         )
         .orderBy("organizationName")
 }
-function adminOnly(entity, orderField) {
-    return parameters => {
-        policy.organization(parameters, "admin")
-        return policy.find(entity).orderBy(orderField)
-    }
+// The user accounts of the people who work for the organization (a current agent, employee or member relationship), the
+// lock exception picker's: an organization-bound administrator does not list the instance's accounts (SEC-BOS-138);
+// every account for ACCOUNTING_ALL_ORGANIZATIONS. Null for every account.
+function organizationUserIds(parameters) {
+    const scope = policy.organization(parameters, "admin")
+    if (scope.capabilities.allOrganizations) return null
+    const partyIds = Array.from(
+        policy
+            .find("mantle.party.PartyRelationship", {toPartyId: scope.organizationPartyId})
+            .condition("relationshipTypeEnumId", "in", ["PrtAgent", "PrtEmployee", "PrtMember"])
+            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+            .selectField("fromPartyId")
+            .list()
+    ).map(row => row.fromPartyId)
+    if (!partyIds.length) return []
+    return Array.from(
+        policy.find("moqui.security.UserAccount").condition("partyId", "in", partyIds).selectField("userId").list()
+    ).map(row => row.userId)
+}
+// The users and the groups of the organization's people, as organizationUserIds
+function organizationUsers(parameters) {
+    const userIds = organizationUserIds(parameters)
+    const query = policy.find("moqui.security.UserAccount").orderBy("userFullName")
+    return userIds == null ? query : query.condition("userId", "in", userIds.length ? userIds : ["_NA_"])
+}
+function organizationGroups(parameters) {
+    const userIds = organizationUserIds(parameters)
+    const query = policy.find("moqui.security.UserGroup").orderBy("description")
+    if (userIds == null) return query
+    const groupIds = userIds.length
+        ? Array.from(
+              policy
+                  .find("moqui.security.UserGroupMember")
+                  .condition("userId", "in", userIds)
+                  .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                  .selectField("userGroupId")
+                  .distinct(true)
+                  .list()
+          ).map(row => row.userGroupId)
+        : []
+    return query.condition("userGroupId", "in", groupIds.length ? groupIds : ["_NA_"])
 }
 
 const enumTypes = [
@@ -411,13 +447,13 @@ const choiceSources = {
     timeUnits: uomSource("UT_TIME_FREQ_MEASURE"),
     currencies: uomSource("UT_CURRENCY_MEASURE"),
     users: {
-        find: adminOnly("moqui.security.UserAccount", "userFullName"),
+        find: organizationUsers,
         fields: ["userId", "username", "userFullName"],
         value: row => row.userId,
         label: row => row.userFullName || row.username || row.userId
     },
     groups: {
-        find: adminOnly("moqui.security.UserGroup", "description"),
+        find: organizationGroups,
         fields: ["userGroupId", "description"],
         value: row => row.userGroupId,
         label: row => row.description || row.userGroupId

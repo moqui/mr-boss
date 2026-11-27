@@ -1297,6 +1297,22 @@ feature("server choices keep a selected label outside the search page", {
         failures == []
     }
 })
+// SEC-BOS-138: the lock exception picker's users and groups are the organization's people's, not every account and group
+feature("an organization's finance administrator picks among its people's accounts and groups, not the instance's", {
+    when() {
+        const choices = p => lib.call("ironstone.accounting.AccessServices.get#Choices", p).options.map(row => row.value)
+        return as("finance.admin", () => ({
+            users: choices({organizationPartyId: org, choice: "users", term: "finance"}),
+            outsider: choices({organizationPartyId: org, choice: "users", term: "john.doe"}),
+            groups: choices({organizationPartyId: org, choice: "groups", term: "accounting"})
+        }))
+    },
+    then({users, outsider, groups}) {
+        users.includes("BOSS_ACCT_AR")
+        outsider == []
+        groups.includes("BOSS_ACCOUNTING_AR")
+    }
+})
 function choicesFeature() {
     // the fixtures are made with artifact authz off, the choices are read with it on
     return lib.asUser(
