@@ -483,3 +483,31 @@ feature(
         }
     }
 )
+
+// SEC-BAP-114: a customer return is opened against a sale of the receiving facility's organization only; another
+// organization's order part is refused, and Retail's own sale opens one
+feature("a receiver opens a customer return against their facility's organization's sale, not another organization's", {
+    when() {
+        withAuthzOff(() => {
+            if (one("mantle.order.OrderHeader", {orderId: "BOSS_WH_P14_OTHER_SO"})) return
+            create("mantle.order.OrderHeader", {orderId: "BOSS_WH_P14_OTHER_SO", statusId: "OrderApproved", currencyUomId: "USD",
+                entryDate: ec.user.nowTimestamp})
+            create("mantle.order.OrderPart", {orderId: "BOSS_WH_P14_OTHER_SO", orderPartSeqId: "01", statusId: "OrderApproved",
+                vendorPartyId: "ORG_ACME", customerPartyId: "CustJqp"})
+        })
+        return asUser("warehouse.receive", () => ({
+            other: post("Returns/Returns/newReturn", {direction: "customer", orderPart: "BOSS_WH_P14_OTHER_SO:01", facilityId: "ZIRET_WH",
+                displayId: "P14-SPEC-OTHER"}),
+            own: post("Returns/Returns/newReturn", {direction: "customer", orderPart: "BOSS_WH_SO:01", facilityId: "ZIRET_WH",
+                displayId: "P14-SPEC-OWN"}),
+            otherMade: rows("mantle.order.return.ReturnHeader", {displayId: "P14-SPEC-OTHER"}).length,
+            ownMade: rows("mantle.order.return.ReturnHeader", {displayId: "P14-SPEC-OWN"})
+        }))
+    },
+    then({other, own, otherMade, ownMade}) {
+        other.includes("RECORD_UNAVAILABLE")
+        otherMade == 0
+        own == ""
+        ownMade.length == 1 && ownMade[0].vendorPartyId == "ORG_ZIZI_RETAIL"
+    }
+})
