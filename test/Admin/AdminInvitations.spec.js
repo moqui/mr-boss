@@ -12,19 +12,19 @@ const address = "adm.invite." + run + "@example.com"
 let invitationId
 let token
 
-// AcceptInvitation as the token route renders it in the public shell (qvt, no one signed in)
-function acceptPage(routeToken, parameters = {}) {
+// AcceptInvitation as the token route renders it in the public shell (qvt, no one signed in); method "post" for a form's post
+function acceptPage(routeToken, parameters = {}, path = "", method = null) {
     const result = ec.screen
         .makeTest()
         .rootScreen("component://mr-boss/screen/AcceptInvitation.xml")
         .renderMode("qvt")
         .render(
-            "",
+            path,
             Object.assign(
                 {token: routeToken, tokenRoute: {name: "i", token: routeToken, basePath: "/i/" + routeToken}},
                 parameters
             ),
-            null
+            method
         )
     ec.message.clearErrors()
     return {status: result.status, output: String(result.output || ""), errors: Array.from(result.errorMessages || [])}
@@ -114,3 +114,37 @@ feature(
         }
     }
 )
+
+// SEC-BOS-146: each step of the invitation is a POST, as its forms send it: a GET of the account step (a link a mail client
+// or a page of this site opens) makes no account, the form's post does
+feature("a GET of the invitation's account step makes no account; the form's post makes it", {
+    when() {
+        const invited = "adm.invite.get." + run + "@example.com"
+        const username = "adm.get." + run
+        const tokenOf = () =>
+            asUser(users.identity, () => {
+                page(
+                    "Users/InviteStaff/inviteStaff",
+                    {emailAddress: invited, firstName: "Gia", lastName: "Get", organizationPartyId: ids.organizationId, bundleGroupIdList: "BOSS_PURCHASING"},
+                    "html"
+                )
+                const id = system(() => ec.entity.find("mantle.party.UserInvitation").condition("emailAddress", invited).one())?.invitationId
+                return (page("Users/Invitations", {revealInvitationId: id}).output.match(/\/i\/([A-Za-z0-9_-]{43})/) || [])[1]
+            })
+        const inviteToken = tokenOf()
+        const account = {username, userFullName: "Gia Get", newPassword: "Get-" + run + "-Passw0rd!", newPasswordVerify: "Get-" + run + "-Passw0rd!"}
+        const accountOf = () => system(() => ec.entity.find("moqui.security.UserAccount").condition("username", username).one())
+        logout()
+        acceptPage(inviteToken, account, "createAccount")
+        const afterGet = accountOf()
+        acceptPage(inviteToken, account, "createAccount", "post")
+        const afterPost = accountOf()
+        login("john.doe")
+        return {inviteToken, afterGet, afterPost}
+    },
+    then({inviteToken, afterGet, afterPost}) {
+        inviteToken != null
+        afterGet == null
+        afterPost != null
+    }
+})

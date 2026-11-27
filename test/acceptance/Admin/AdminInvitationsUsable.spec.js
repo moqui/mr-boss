@@ -39,12 +39,13 @@ function inviteAndCopy(emailAddress, bundleGroupIdList, names = {}, inviter = us
     })
 }
 // AcceptInvitation as the token route serves it: the page (qvt) or one of its transitions, for whoever is signed in
+// a step of the invitation (createAccount, acceptExisting, confirmFactor) is its form's POST (SEC-BOS-146)
 function route(token, path = "", parameters = {}) {
     const result = ec.screen
         .makeTest()
         .rootScreen("component://mr-boss/screen/AcceptInvitation.xml")
         .renderMode("qvt")
-        .render(path, Object.assign({token, tokenRoute: {name: "i", token, basePath: "/i/" + token}}, parameters), null)
+        .render(path, Object.assign({token, tokenRoute: {name: "i", token, basePath: "/i/" + token}}, parameters), path ? "post" : null)
     const errors = Array.from(result.errorMessages || [])
     ec.message.clearErrors()
     return {status: result.status, output: String(result.output || ""), errors}

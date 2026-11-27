@@ -32,7 +32,9 @@ along with this software (see the LICENSE.md file). If not, see
         require-authentication="false" default-menu-include="false" default-menu-title="Accept invitation" history="false">
     <parameter name="stage"/>
 
-    <transition name="acceptExisting">
+    <!-- each step is a POST, as the page's forms send it: a link a mail client, a bookmark or a page of this site opens is a
+        GET and accepts nothing (SEC-BOS-146; SEC-WEB-04's rule refuses only a GET another site starts) -->
+    <transition name="acceptExisting" method="post">
         <actions>
             <service-call name="mantle.party.IdentityServices.accept#Invitation" in-map="{token:(token || '')}" out-map="accepted"/>
             <if condition="!ec.message.hasError() &amp;&amp; !accepted.applied"><script>ec.message.addMessage(accepted.reason, 'warning')</script></if>
@@ -40,7 +42,7 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="${tokenRoute?.basePath ?? '.'}" url-type="plain"/>
         <error-response url="${tokenRoute?.basePath ?? '.'}" url-type="plain"/>
     </transition>
-    <transition name="createAccount">
+    <transition name="createAccount" method="post">
         <actions>
             <service-call name="mantle.party.IdentityServices.accept#Invitation" out-map="accepted"
                     in-map="{token:(token || ''), username:username, userFullName:userFullName, newPassword:newPassword, newPasswordVerify:newPasswordVerify}"/>
@@ -50,7 +52,7 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="${(tokenRoute?.basePath ?? '.') + '?stage=account'}" url-type="plain"/>
         <error-response url="${(tokenRoute?.basePath ?? '.') + '?stage=account'}" url-type="plain"/>
     </transition>
-    <transition name="confirmFactor">
+    <transition name="confirmFactor" method="post">
         <actions>
             <service-call name="mantle.party.IdentityServices.confirm#InvitationFactor" in-map="{token:(token || ''), code:code}" out-map="confirmed"/>
             <if condition="!ec.message.hasError() &amp;&amp; !confirmed.applied"><script>ec.message.addMessage(confirmed.reason, 'warning')</script></if>
