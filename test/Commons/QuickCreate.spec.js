@@ -169,7 +169,8 @@ feature("event range: #label", {
 
 feature("a note on the demo request is a rich text comment on its timeline, its mention notified", {
     when() {
-        const mentions = () => list("moqui.security.user.NotificationMessageByUser", { userId: "ORG_ZIZI_JD", topic: "ChatterMention" }).length
+        // joe.developer may not open the demo request, so he is told without it (SH-UI-009)
+        const mentions = () => list("moqui.security.user.NotificationMessageByUser", { userId: "ORG_ZIZI_JD", topic: "ChatterMentionHidden" }).length
         const before = mentions()
         const body = '<p>Contractors get <strong>view</strong> access only, <span data-mention-id="ORG_ZIZI_JD">@Joe Developer</span>.</p>'
         const created = post("createNote", Object.assign({ title: "Access", noteText: body }, request))

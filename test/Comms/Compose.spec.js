@@ -392,6 +392,39 @@ feature("an email with the record chip is filed on the record once sent and show
     },
 })
 
+// SH-UI-009 review: the filing runs after the send commits, on a worker with no screen, so the screens john.doe sent from are
+// kept with the draft's record: joe.developer, on the request and following its messages, is told of it in full
+feature("a follower who may open the record is told of an email filed on it, with its subject", {
+    when() {
+        sys(() => {
+            if (!one("mantle.request.Request", { requestId: "BOSS_TEST_COMPOSE_FOLLOW" })) {
+                call("create#mantle.request.Request", { requestId: "BOSS_TEST_COMPOSE_FOLLOW", requestTypeEnumId: "RqtSupport", statusId: "ReqSubmitted",
+                    requestName: "Compose follower test", filedByPartyId: "EX_JOHN_DOE", requestDate: ec.user.nowTimestamp })
+                call("create#mantle.request.RequestParty", { requestId: "BOSS_TEST_COMPOSE_FOLLOW", partyId: "ORG_ZIZI_JD", roleTypeId: "Reporter",
+                    fromDate: ec.user.nowTimestamp })
+                call("mantle.party.CommunicationServices.follow#Record", { recordEntityName: "mantle.request.Request", recordId: "BOSS_TEST_COMPOSE_FOLLOW",
+                    userId: "ORG_ZIZI_JD", kinds: "messages" })
+            }
+        })
+        const notices = (topic) => list("moqui.security.user.NotificationMessageByUser", { userId: "ORG_ZIZI_JD", topic })
+        const before = { full: notices("RecordFollow").length, neutral: notices("RecordFollowHidden").length }
+        capture.clear()
+        const sent = post("send", { fromValue: identityValue, toJson: chips(['"Bob Acme" <bob.acme@test.com>']), subject: "About the follower notice",
+            body: "<p>Bob, a note for the followers.</p>", recordEntity: "mantle.request.Request", recordId: "BOSS_TEST_COMPOSE_FOLLOW", holdSeconds: "0" })
+        const sentRow = settled(sent.json.emailMessageId)
+        const full = notices("RecordFollow")
+        const latest = full.map((row) => row.notificationMessageId).sort().pop()
+        return { sentRow, before, full: full.length, neutral: notices("RecordFollowHidden").length,
+            notice: latest ? one("moqui.security.user.NotificationMessage", { notificationMessageId: latest }) : null }
+    },
+    then({ sentRow, before, full, neutral, notice }) {
+        sentRow.statusId == "ES_SENT"
+        full == before.full + 1
+        neutral == before.neutral
+        notice.titleText.includes("About the follower notice")
+    },
+})
+
 feature("internal messages: new, to a mailbox, a reply all, a reply to the sender only off the mailbox, and Undo", {
     when() {
         const fresh = post("send", { fromValue: "internal", toJson: chips(["party:ORG_ZIZI_JD"]), ccJson: chips(["party:ORG_ZIZI_BD"]), subject: "Team lunch",

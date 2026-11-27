@@ -928,7 +928,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="log" noun="Note">
         <description>Log note: a Comment on the record (mantle.party.CommunicationServices.log#RecordNote), rich text whose @
             mentions (data-mention-id, a userId) are notified on topic ChatterMention, the followers of notes on RecordFollow; the
-            notifications link to recordUrl, the host page (the current app's record screen).</description>
+            notifications link to recordUrl, the host page (the current app's record screen). A user mentioned who may not open the
+            record (or whose access could not be confirmed) is told without it, and the message counts them (SH-UI-009).</description>
         <in-parameters>
             <parameter name="recordEntityName" required="true"/>
             <parameter name="recordId" required="true"/>
@@ -956,7 +957,9 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="ec.message.hasError()"><return/></if>
             <set field="communicationEventId" from="noteOut.communicationEventId"/>
             <set field="mentionedUserIds" from="noteOut.mentionedUserIds"/>
-            <set field="message" from="mentionedUserIds?.length ? ec.resource.expand('Note logged; ${count} mentioned', '', {count:mentionedUserIds.length}) : ec.l10n.localize('Note logged')"/>
+            <set field="message" from="!mentionedUserIds?.length ? ec.l10n.localize('Note logged') : (noteOut.withheldUserIds?.length
+                    ? ec.resource.expand('Note logged; ${count} mentioned (${withheld} not shown the record)', '', {count:mentionedUserIds.length, withheld:noteOut.withheldUserIds.length})
+                    : ec.resource.expand('Note logged; ${count} mentioned', '', {count:mentionedUserIds.length}))"/>
         </actions>
     </service>
 
@@ -997,12 +1000,17 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.party.CommunicationServices.link#CommunicationEventRecord" in-map="{communicationEventId:communicationEventId,
                     recordEntityName:recordOut.info.recordEntityName, recordId:recordId, notifyFollowers:true, recordUrl:urlOut.recordUrl}"/>
             <if condition="ec.message.hasError()"><return/></if>
+            <set field="mentionOut" from="null"/>
             <if condition="mentionsOut.userIdList?.length">
-                <service-call name="mantle.party.CommunicationServices.notify#RecordMention" in-map="{recordEntityName:recordOut.info.recordEntityName,
+                <service-call name="mantle.party.CommunicationServices.notify#RecordMention" out-map="mentionOut" in-map="{recordEntityName:recordOut.info.recordEntityName,
                         recordId:recordId, communicationEventId:communicationEventId, mentionUserIds:mentionsOut.userIdList, subject:messageSubject,
                         body:body, recordUrl:urlOut.recordUrl}"/>
             </if>
             <set field="message" from="ec.resource.expand('Message sent to ${names}', '', {names:toOut.nameList.join(', ')})"/>
+            <!-- a user mentioned and not found to open the record was told without it (SH-UI-009) -->
+            <if condition="mentionOut?.withheldUserIds?.length">
+                <set field="message" from="message + '; ' + ec.resource.expand('${count} mentioned (${withheld} not shown the record)', '',
+                        {count:mentionOut.notifiedUserIds.length, withheld:mentionOut.withheldUserIds.length})"/></if>
         </actions>
     </service>
 
@@ -1074,12 +1082,16 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.party.CommunicationServices.link#CommunicationEventRecord" in-map="{communicationEventId:communicationEventId,
                     recordEntityName:recordOut.info.recordEntityName, recordId:recordId, notifyFollowers:true, recordUrl:urlOut.recordUrl}"/>
             <if condition="ec.message.hasError()"><return/></if>
+            <set field="mentionOut" from="null"/>
             <if condition="mentionsOut.userIdList?.length">
-                <service-call name="mantle.party.CommunicationServices.notify#RecordMention" in-map="{recordEntityName:recordOut.info.recordEntityName,
+                <service-call name="mantle.party.CommunicationServices.notify#RecordMention" out-map="mentionOut" in-map="{recordEntityName:recordOut.info.recordEntityName,
                         recordId:recordId, communicationEventId:communicationEventId, mentionUserIds:mentionsOut.userIdList, body:body,
                         recordUrl:urlOut.recordUrl}"/>
             </if>
             <set field="message" from="ec.l10n.localize('Reply sent')"/>
+            <if condition="mentionOut?.withheldUserIds?.length">
+                <set field="message" from="message + '; ' + ec.resource.expand('${count} mentioned (${withheld} not shown the record)', '',
+                        {count:mentionOut.notifiedUserIds.length, withheld:mentionOut.withheldUserIds.length})"/></if>
         </actions>
     </service>
 
@@ -1142,7 +1154,9 @@ along with this software (see the LICENSE.md file). If not, see
                     mentionUserIds:mentionsOut.userIdList, recordUrl:urlOut.recordUrl}"/>
             <if condition="ec.message.hasError()"><return/></if>
             <set field="mentionedUserIds" from="noteOut.mentionedUserIds || []"/>
-            <set field="message" from="mentionedUserIds.length ? ec.resource.expand('Note changed; ${count} newly mentioned', '', {count:mentionedUserIds.length}) : ec.l10n.localize('Note changed')"/>
+            <set field="message" from="!mentionedUserIds.length ? ec.l10n.localize('Note changed') : (noteOut.withheldUserIds?.length
+                    ? ec.resource.expand('Note changed; ${count} newly mentioned (${withheld} not shown the record)', '', {count:mentionedUserIds.length, withheld:noteOut.withheldUserIds.length})
+                    : ec.resource.expand('Note changed; ${count} newly mentioned', '', {count:mentionedUserIds.length}))"/>
         </actions>
     </service>
 
