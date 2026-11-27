@@ -744,7 +744,7 @@ walk for Projects and place additional complete journeys, phone/access walks and
   full-suite gate for this pass. A shared widget/renderer/Git correction is framework work even when found here;
   do not run framework specs, `cargo test` or `test-all` merely for application work.
 - **Run acceptance only when requested or when adding/changing an acceptance test.** In the latter case run that
-  test and its component's acceptance suite once written. For an authorized existing scenario the form is
+  test alone; a component's whole acceptance suite only with the user's permission. For an authorized existing scenario the form is
   `./moq accept mr-boss --spec SprintWalk`. A plan entry, shared-code change or completion checkpoint is not permission
   to run acceptance. Do not run `accept-all` or add a blanket suite as a default completion step.
 - Keep focused rules/bug regressions in the owning component. Render a screen at most once per mode across regression,
@@ -1136,7 +1136,7 @@ decided behavior changes; feed reusable patterns into the framework UI review gu
   preserve Manufacturing's use of the Projects timeline.
 - **Verification:** focused checks before batch commits; full application and applicable framework gates at the
   end, as explicitly directed by the user. Preserve acceptance-run rules, budgets and the ban on duplicate sweeps
-  and screenshot suites. If an acceptance spec changes, run it immediately and its component's suite at the end.
+  and screenshot suites. If an acceptance spec changes, run it immediately; its component's suite only with the user's permission.
 - **Fixtures:** isolated Mantle+BOSS runtime, local mail/Git and disposable records; no PASS dependency for existing
   client/token routes. Prepare only missing narrow roles; credentials and tokens never enter the record.
 - **Browser automation gap:** Projects has server scenario coverage but no browser walk or dedicated client fixture.

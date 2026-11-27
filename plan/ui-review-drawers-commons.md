@@ -727,7 +727,7 @@ Resolve coverage gaps when implementing the relevant batch; this documentation c
   client walk per app policy and use existing coverage rather than duplicating it. A newly automated journey must name
   its acceptance spec and mapped DC IDs in the batch plan before writing it.
 - **Run acceptance only when explicitly requested or when adding/changing an acceptance test.** In the latter case run
-  that test and its component's acceptance suite as required. A plan entry, shared-code change or phase completion
+  that test alone; a component's whole acceptance suite only with the user's permission. A plan entry, shared-code change or phase completion
   does not independently authorize an acceptance run.
 - Capture and inspect manual screenshots at important states, compare like-for-like before/after, and retain console/
   network errors, relevant DOM observations and persisted outcomes. Do not add screenshot baseline suites. Keep local

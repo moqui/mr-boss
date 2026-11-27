@@ -1092,12 +1092,12 @@ tests](../../../../../docs/Build-Test.md#rendering-screens-in-tests). Manufactur
   `./moq test-apps` once at the end of the refinement pass, and `./moq test-framework` as well if the pass changed
   framework code (a shared renderer/widget correction, under the building skill). Never `cargo test`, framework specs
   or `test-all` for application work. Commits follow the user's execution authorization.
-- **Acceptance (user decision, 2026-11-11).** Along the way, in either pass, run the focused acceptance walks and
-  fixture specs of what is being reviewed or changed; an added or changed acceptance test always runs, then its
-  component's acceptance suite. At the end, after the final `./moq test-apps`, run the full acceptance suites of the
-  application components (`./moq accept mr-mantle mr-boss mr-pass mr-marble`), or `./moq accept-all` if framework
-  code changed. A focused walk runs as
-  `./moq accept mr-boss --spec ManufacturingShopFloorWalk`.
+- **Acceptance (user decisions, 2026-11-11 and 2026-11-27).** Along the way, in either pass, run the focused acceptance
+  walks and fixture specs of what is being reviewed or changed; an added or changed acceptance test always runs, alone.
+  A component's whole acceptance suite runs only with the user's permission: at the end, after the final
+  `./moq test-apps`, ask before running the full acceptance suites of the application components
+  (`./moq accept mr-mantle mr-boss mr-pass mr-marble`), or `./moq accept-all` if framework code changed.
+  A focused walk runs as `./moq accept mr-boss --spec ManufacturingShopFloorWalk`.
 - **Rendering.** The sweeps stay in acceptance (AppStructure, TuiRender, ServerStatic). Across regression a screen
   renders at most once per mode with all its checks, in a second mode only where it has its own qvt/tui template
   (Station, ProductionSchedule, ResourceCalendar and the `render-mode` screens of §3). No role × route × mode matrix,

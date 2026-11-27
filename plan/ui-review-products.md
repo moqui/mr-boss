@@ -800,7 +800,7 @@ phone or terminal walks in acceptance. Do not recreate ProductsShots or add scre
   explicitly in §7. Do not copy Projects' exception or infer one from older review notes. Commit only when the user
   asks.
 - **Acceptance runs require the user's request or an added/changed acceptance test.** If one is added/changed,
-  run that test and its component's acceptance suite once written. For an authorized existing scenario, use
+  run that test alone; a component's whole acceptance suite only with the user's permission. For an authorized existing scenario, use
   `./moq accept mr-boss --spec ProductsVariantWalk`. A plan entry, shared-code change, acceptance fixture dependency
   or completion checkpoint is not authorization to run acceptance. No `accept-all` is part of this plan.
 - Keep business-rule/bug regressions in their owning component. Across regression, render a screen at most once
@@ -1450,7 +1450,7 @@ into the framework review guide. An accurate, reviewable plan does not close any
   regression/lint checks before each local batch commit; run `./moq test-framework` and `./moq test-apps` only at the
   end. The user reviews along the way and pushes at the end; no push is authorized here. Focused existing Products
   acceptance walks and their six named fixture specs are authorized; no unrelated acceptance sweep. Adding/changing
-  an acceptance test still requires that test and its component's acceptance suite. One disposable local revaluation
+  an acceptance test still requires that test, alone; a component's whole suite needs the user's permission. One disposable local revaluation
   posting is authorized with persisted inventory/ledger and idempotency checks. Labels use local PDF/output only.
 - **Scope:** current Products workflows, hidden helpers, actual shared mounts, outputs and bounded handoffs;
   no absent-feature implementation or complete adjacent-app review.
