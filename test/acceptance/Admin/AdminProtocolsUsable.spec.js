@@ -1,11 +1,11 @@
 // Admin P12's "usable when" (impl-admin P12; design-admin §9 ProtocolsHome, MailQueue and ServerConfiguration, §15.3 "Protocol
 // readiness" and "Unknown provider outcome", its mail half), as an acceptance walk with artifact authorization on, through
 // the screens and their transitions, on the demo:
-// - ProtocolsHome, as Ziziwork Retail's integration administrator, shows SMTP reception off (the demo sets no listener port),
+// - ProtocolsHome, as Ziziwork Retail's integration administrator, shows SMTP reception off (smtp-server@enabled is false),
 //   calendars, contacts and files as the web listener stands (ready on a running server; "configured" in a command-line run,
 //   which opens no listeners) and a protocol the build leaves out as not in the build, each apart with its reason. On the
-//   demo's package call media is built and off (impl-admin F-P12-4; on in a test run, as basic-comms' test conf sets its
-//   port), so the absent ones are local speech to text and office documents; ServerConfiguration shows SMTP reception's
+//   demo's package call media is built and off (impl-admin F-P12-4; on in a test run, as basic-comms' test conf sets
+//   media-server@enabled), so the absent ones are local speech to text and office documents; ServerConfiguration shows SMTP reception's
 //   settings read only and runs its configuration check, and a check of a public address is refused until it is confirmed.
 // - a mail send that fails (a relay with no address) shows in MailQueue, as the operations operator, with its owner (the
 //   notice's template; the relay's link for the integration administrator, who reads the instance's own mail and is
@@ -107,18 +107,18 @@ feature("ProtocolsHome tells SMTP reception that is off, the web protocols and a
     then(out) {
         const list = out.read.protocolList
         protocol(list, "smtpIn").state == "disabled" && protocol(list, "smtpIn").built == true
-        protocol(list, "smtpIn").reason.includes("smtp-server@listen-port")
+        protocol(list, "smtpIn").reason.includes("smtp-server@enabled")
         // the web protocols stand with the web listener: ready on a running server, configured in a run that opened none
         protocol(list, "dav").state == (out.read.serverStarted ? "ready" : "notStarted")
         protocol(list, "wopi").state == "absent" && protocol(list, "speechLocal").state == "absent"
         // call media: absent where the build has none; where it has it, on in every test run (basic-comms' test/MoquiConf.xml
-        // sets media-server@port, for its call specs), so configured and not known to run in this run, which opens no listeners
+        // sets media-server@enabled, for its call specs), so configured and not known to run in this run, which opens no listeners
         protocol(list, "rtc").state ==
             (ec.factory.hasFeature("rtc") ? (out.read.serverStarted ? "ready" : "notStarted") : "absent")
         new Set(["smtpIn", "dav", "wopi"].map(key => protocol(list, key).stateText)).size == 3
         opened(out.home)
         out.home.output.includes("ProtocolReadiness") && out.home.output.includes("Mail reception")
-        out.home.output.includes("smtp-server@listen-port is not set") && out.home.output.includes("Not in this build")
+        out.home.output.includes("smtp-server@enabled is false") && out.home.output.includes("Not in this build")
         out.home.output.includes("Comms/Settings/MailAccounts") && out.home.output.includes("Protocols/MailRelays")
         opened(out.configuration)
         out.configuration.output.includes("EffectiveProtocolSettings") &&

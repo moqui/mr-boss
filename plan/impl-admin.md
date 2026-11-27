@@ -5261,7 +5261,7 @@ review: …"); Mantle and BOSS unchanged.
   span is written to `otel_spans` as the exporter writes it (AdminAuditUsable's pattern for its log line); and in `then`,
   `Array.from` of `get#AlertState`'s instances gave `[]` (so the template's "no instances" held vacuously), read now as
   plain rows. AdminProtocolsUsable expected call media off, but every test run merges basic-comms'
-  `test/MoquiConf.xml`, which sets `media-server@port`, so where the build has rtc it is configured and not started in a
+  `test/MoquiConf.xml`, which turns call media on (`media-server@enabled`), so where the build has rtc it is configured and not started in a
   command-line run. Final: each spec alone and all 21 of `test/acceptance/Admin/` together (`--spec` with a comma list),
   61 of 61 features passed; framework AdminAccessServices 6 of 6. For the lead: several `--spec` flags run only the last;
   the `Array.from` behaviour of a service's list in `then` is worth a look in the testkit.
