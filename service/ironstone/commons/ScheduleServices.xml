@@ -212,7 +212,7 @@ along with this software (see the LICENSE.md file). If not, see
             time zone): an event named purpose (the resource's name by default) in the user's default calendar with the user on
             it (mantle.work.EventServices.create#Event, sourceReferenceId BossBooking), then mantle.work.EventServices.book#Resource:
             booked at once or requested by the resource's policy; a clash refuses the booking and makes no event. Equipment of
-            another organization (its owner's, or its facility's) and manufacturing equipment are refused (SEC-BAP-104).</description>
+            another organization (its owner's, or its facility's) is refused (SEC-BAP-104).</description>
         <in-parameters>
             <parameter name="resourceType" required="true"/>
             <parameter name="resourceId" required="true"/>
@@ -245,13 +245,14 @@ along with this software (see the LICENSE.md file). If not, see
             if (resource == null || resource.bookable !== 'Y' || (isRoom && resource.facilityTypeEnumId !== 'FcTpRoom')
                     || (!isRoom && resource.assetTypeEnumId !== 'AstTpEquipment')) {
                 ec.message.addError(ec.resource.expand('${id} is not a room or equipment to book', '', {id: resourceId})); return }
-            // equipment is booked by its organization's people (its owner's, or its facility's), and never manufacturing
-            // equipment, which Manufacturing schedules, as the list leaves out (SEC-BAP-104); rooms are held by the Facility filter
+            // equipment is booked by its organization's people (its owner's, or its facility's) (SEC-BAP-104); rooms are held by
+            // the Facility filter. Manufacturing equipment Commons' list leaves out stays bookable under its resource policy, as
+            // Maintenance books it (impl-maintenance P15)
             if (!isRoom) {
                 const facility = resource.facilityId ? ec.entity.find('mantle.facility.Facility').condition('facilityId', resource.facilityId).disableAuthz().one() : null
                 const owner = resource.ownerPartyId || facility?.ownerPartyId || null
                 const userOrgIds = Array.from(ec.service.sync().name('mantle.party.PartyServices.get#PartyOrganizationInfo').call()?.userOrgIds || [])
-                if (resource.classEnumId === 'AsClsMfgEquip' || (owner && owner !== '_NA_' && !userOrgIds.includes(owner))) {
+                if (owner && owner !== '_NA_' && !userOrgIds.includes(owner)) {
                     ec.message.addError(ec.resource.expand('${id} is not a room or equipment to book', '', {id: resourceId})); return }
             }
             const name = String(purpose || '').trim() || (isRoom ? resource.facilityName : resource.assetName) || resourceId
