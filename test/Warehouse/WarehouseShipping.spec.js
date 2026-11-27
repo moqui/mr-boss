@@ -103,23 +103,32 @@ feature("the label preview opens a stored label URL only when the server would f
     when() {
         const already = ec.artifactExecution.disableAuthz()
         const seg = ec.entity.find("mantle.shipment.ShipmentPackageRouteSeg").condition("shipmentId", shipmentId).list()[0]
-        const kept = {labelImage: seg.labelImage, labelUrl: seg.labelUrl}
-        const write = fields => {
-            ec.artifactExecution.disableAuthz()
+        // every route segment of the package, as the preview reads the first it finds
+        const segs = Array.from(
             ec.entity
                 .find("mantle.shipment.ShipmentPackageRouteSeg")
-                .condition({
-                    shipmentId,
-                    shipmentPackageSeqId: seg.shipmentPackageSeqId,
-                    shipmentRouteSegmentSeqId: seg.shipmentRouteSegmentSeqId
-                })
-                .one()
-                .setAll(fields)
-                .update()
+                .condition({shipmentId, shipmentPackageSeqId: seg.shipmentPackageSeqId})
+                .list()
+        )
+        const kept = segs.map(row => ({labelImage: row.labelImage, labelUrl: row.labelUrl}))
+        const write = fieldsOf => {
+            ec.artifactExecution.disableAuthz()
+            segs.forEach((row, index) =>
+                ec.entity
+                    .find("mantle.shipment.ShipmentPackageRouteSeg")
+                    .condition({
+                        shipmentId,
+                        shipmentPackageSeqId: row.shipmentPackageSeqId,
+                        shipmentRouteSegmentSeqId: row.shipmentRouteSegmentSeqId
+                    })
+                    .one()
+                    .setAll(fieldsOf(index))
+                    .update()
+            )
             if (!already) ec.artifactExecution.enableAuthz()
         }
         const preview = url => {
-            write({labelImage: null, labelUrl: url})
+            write(() => ({labelImage: null, labelUrl: url}))
             return asUser("warehouse.ship", () =>
                 refusal(shipping + "get#LabelDocument", {shipmentId, shipmentPackageSeqId: seg.shipmentPackageSeqId})
             )
@@ -127,7 +136,7 @@ feature("the label preview opens a stored label URL only when the server would f
         try {
             return {refused: preview("javascript:alert(1)"), allowed: preview("https://labels.example.com/l.pdf")}
         } finally {
-            write(kept)
+            write(index => kept[index])
         }
     },
     then({refused, allowed}) {
