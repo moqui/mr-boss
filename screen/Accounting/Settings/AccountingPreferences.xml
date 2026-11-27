@@ -198,13 +198,19 @@ along with this software (see the LICENSE.md file). If not, see
                             </radio>
                         </default-field>
                     </field>
+                    <!-- turning self approval on takes ACCOUNTING_SELF_APPROVAL, which no finance bundle holds (SEC-BOS-06):
+                        anyone else sees the setting and who turns it on -->
                     <field name="allowAccountingSelfApproval">
-                        <default-field title="Self approval"
+                        <conditional-field condition="ec.user.hasPermission('ACCOUNTING_SELF_APPROVAL') || settings?.allowAccountingSelfApproval == 'Y'"
+                                title="Self approval"
                                 tooltip="Let the person who drafted a record approve it; each such approval is marked">
                             <radio>
                                 <option key="N" text="Off"/>
                                 <option key="Y" text="On"/>
                             </radio>
+                        </conditional-field>
+                        <default-field title="Self approval">
+                            <display text="Off (turned on by a holder of ACCOUNTING_SELF_APPROVAL)" also-hidden="false"/>
                         </default-field>
                     </field>
                     <field name="writeOffToleranceAmount">
