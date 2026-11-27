@@ -319,13 +319,15 @@ feature("the settings index links every settings page", {
 feature("Where you are signed in lists my sessions and signs another one out, not another user's", {
     when() {
         const joeId = sys(() => ec.entity.find("moqui.security.UserAccount").condition("username", "joe.developer").one()).userId
-        const browser = (key, userId) => sys(() => {
-            call("create#moqui.server.Visit", { visitId: key, userId, fromDate: ec.user.nowTimestamp,
-                initialUserAgent: "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0", clientIpAddress: "198.51.100.7" })
+        const browser = (key, userId, fromDate = ec.user.nowTimestamp, clientIpAddress = "198.51.100.7") => sys(() => {
+            call("create#moqui.server.Visit", { visitId: key, userId, fromDate,
+                initialUserAgent: "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0", clientIpAddress })
             call("create#moqui.server.HttpSession", { sessionId: key + "_S", userId, visitId: key })
         })
         browser("CMS_SIGNIN_JOHN", "EX_JOHN_DOE")
         browser("CMS_SIGNIN_JOE", joeId)
+        // a live session begun 60 days ago is listed too, to be ended (SEC-BOS-141)
+        browser("CMS_SIGNIN_OLD", "EX_JOHN_DOE", new Date(Number(String(ec.user.nowTimestamp)) - 60 * 86400000), "198.51.100.61")
         const page = render("Settings/Account")
         const mine = post("Settings/Account/signOutSession", { sessionKey: "CMS_SIGNIN_JOHN" })
         const theirs = post("Settings/Account/signOutSession", { sessionKey: "CMS_SIGNIN_JOE" })
@@ -335,13 +337,14 @@ feature("Where you are signed in lists my sessions and signs another one out, no
     then({ page, mine, theirs, johnSession, joeSession }) {
         page.status == 200 && page.errors == "" && !page.broken
         page.output.includes("Firefox on Linux") && page.output.includes("Sign out")
+        page.output.includes("198.51.100.61")
         !page.output.includes("Mozilla/5.0")
         mine.errors == "" && johnSession == null
         theirs.errors == "" && joeSession != null
     },
     cleanup() {
         sys(() => {
-            for (const key of ["CMS_SIGNIN_JOHN", "CMS_SIGNIN_JOE"]) {
+            for (const key of ["CMS_SIGNIN_JOHN", "CMS_SIGNIN_JOE", "CMS_SIGNIN_OLD"]) {
                 ec.entity.find("moqui.server.HttpSession").condition("visitId", key).deleteAll()
                 ec.entity.find("moqui.server.Visit").condition("visitId", key).deleteAll()
             }

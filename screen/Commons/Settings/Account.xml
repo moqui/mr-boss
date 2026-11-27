@@ -191,7 +191,9 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="org.moqui.impl.UserServices.get#UserAuthcFactorInfo" out-map="context">
             <field-map field-name="userId"/><field-map field-name="getFactorsIfNotRequired" from="true"/></service-call>
 
-        <!-- where I am signed in: my sessions of the last 30 days, the framework's one session definition (self-scoped) -->
+        <!-- where I am signed in: every live session of mine, however old, and the last 10 of the last 30 days, the framework's
+            one session definition (self-scoped), so each live one can be ended (SEC-BOS-141) -->
+        <service-call name="org.moqui.admin.IdentityServices.find#Sessions" out-map="liveSessionsOut" in-map="{activeOnly:true, limit:500}"/>
         <service-call name="org.moqui.admin.IdentityServices.find#Sessions" out-map="sessionsOut" in-map="{sinceDays:30, limit:10}"/>
         <script><![CDATA[
             // the times as text: a time stamp copied into a map reaches the list as its millis
@@ -203,7 +205,9 @@ along with this software (see the LICENSE.md file). If not, see
             const devicesOut = ec.service.sync().name('org.moqui.impl.UserServices.get#UserDeviceKeys').call() || {}
             deviceList = Array.from(devicesOut.deviceList ?? []).map((row) => ({loginKey: row.loginKey, deviceName: row.deviceName || '',
                 sinceText: when(row.fromDate), usedText: when(row.lastUsedDate), expiresText: row.thruDate ? ec.l10n.format(row.thruDate, 'MMM d, yyyy') : ''}))
-            sessionList = Array.from(sessionsOut?.sessionList ?? []).map((row) => ({sessionKey: row.sessionKey, device: ec.l10n.localize(row.clientSummary),
+            const liveRows = Array.from(liveSessionsOut?.sessionList ?? [])
+            const liveKeys = new Set(liveRows.map((row) => row.sessionKey))
+            sessionList = liveRows.concat(Array.from(sessionsOut?.sessionList ?? []).filter((row) => !liveKeys.has(row.sessionKey))).map((row) => ({sessionKey: row.sessionKey, device: ec.l10n.localize(row.clientSummary),
                 where: [row.clientAddress, row.clientPlace].filter((part) => part).join(' · '), sinceText: when(row.startedDate),
                 endedText: row.active ? '' : row.state === 'ended' ? when(row.endedDate) : ec.l10n.localize('Expired'), active: !!row.active, current: !!row.current}))
             singleUseCodeText = singleUseCodes && singleUseCodes.length ? Array.from(singleUseCodes).join('   ') : null
