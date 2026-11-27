@@ -774,7 +774,9 @@ const choiceSources = {
             options.push({value: selected, label: partyName(selected)})
         return options
     },
+    // a queue of the user's only, and a selected agent labelled only when it is one of them (SEC-BAP-119)
     agents: (userScope, term, selected, p) => {
+        if (p.queueId && !userScope.queueIds.includes(p.queueId)) return []
         const queue = p.queueId ? currentQueues().find(row => row.requestCategoryId === p.queueId) : null
         const teamIds = queue?.responsibleTeamPartyId ? [queue.responsibleTeamPartyId] : userScope.teamIds
         const ids = new Set()
@@ -790,11 +792,13 @@ const choiceSources = {
             .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
             .sort((a, b) => a.label.localeCompare(b.label))
             .slice(0, choiceLimit)
-        if (selected && !options.some(option => option.value === selected))
+        if (selected && !options.some(option => option.value === selected) && ids.has(selected))
             options.push({value: selected, label: partyName(selected)})
         return options
     },
     caseTypes: (userScope, term, selected, p) => {
+        // an organization of the user's only (SEC-BAP-119)
+        if (p.organizationPartyId && !vendorIds(userScope).includes(p.organizationPartyId)) return []
         const organizationIds = p.organizationPartyId ? [p.organizationPartyId] : vendorIds(userScope)
         const seen = new Map()
         for (const row of find("mantle.request.support.ServiceRequestType")

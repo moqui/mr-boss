@@ -256,6 +256,13 @@ feature("a user's customers are their organization's and the shared ones, in the
         const organizations = choices(users.read, "organizations", {})
         if (!organizations.includes(ids.organizationId) || organizations.includes(ids.otherOrganizationId))
             problems.push(`the reader's organizations: ${organizations}`)
+        // SEC-BAP-119: another organization's case types, a selected party who is no agent, are not named
+        if (choices(users.read, "caseTypes", {organizationPartyId: ids.otherOrganizationId}).length)
+            problems.push("the reader is offered the other organization's case types")
+        if (!choices(users.read, "caseTypes", {organizationPartyId: ids.organizationId}).length)
+            problems.push("the reader is offered no case type of Retail")
+        if (choices(users.read, "agents", {term: "zzz-none", selected: ids.otherCustomerId}).includes(ids.otherCustomerId))
+            problems.push("the reader's agents name a party who is no agent")
         const unknown = asUser(users.read, () => refusal(access + "get#Choices", {choice: "everything"}))
         if (!unknown.includes("Unknown Customer Service choice")) problems.push(`an unknown choice: ${unknown || "accepted"}`)
         // the palette: the reader's sales orders and customers, nothing of the other organization's, no purchase order
