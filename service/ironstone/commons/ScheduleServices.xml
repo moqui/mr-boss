@@ -76,8 +76,12 @@ along with this software (see the LICENSE.md file). If not, see
                 }
             }
             if (resourceType !== 'room') {
+                // the equipment of the user's organizations or of none (book#ResourceSlot's rule, SEC-BAP-104)
+                const owners = ['_NA_'].concat(Array.from(ec.service.sync().name('mantle.party.PartyServices.get#PartyOrganizationInfo').call()?.userOrgIds || []))
                 for (const asset of ec.entity.find('mantle.product.asset.Asset').condition('assetTypeEnumId', 'AstTpEquipment').condition('bookable', 'Y')
-                        .condition(cf.makeCondition('classEnumId', 'not-in', ['AsClsMfgEquip'], true)).orderBy('assetName').limit(200).list()) {
+                        .condition(cf.makeCondition('classEnumId', 'not-in', ['AsClsMfgEquip'], true))
+                        .condition(cf.makeCondition([cf.makeCondition('ownerPartyId', 'in', owners), cf.makeCondition('ownerPartyId', 'is-null', null)], 'or'))
+                        .orderBy('assetName').limit(200).list()) {
                     const site = siteOf(asset.facilityId)
                     if (term && !(String(asset.assetName || '') + ' ' + (site || '')).toLowerCase().includes(term)) continue
                     const approvers = Array.from(new Set(Array.from(ec.entity.find('mantle.product.asset.AssetPartyAssignment').condition('assetId', asset.assetId)
@@ -207,7 +211,8 @@ along with this software (see the LICENSE.md file). If not, see
         <description>Books a resource (resourceType room or equipment, resourceId) from start to end (yyyy-MM-dd HH:mm in the user's
             time zone): an event named purpose (the resource's name by default) in the user's default calendar with the user on
             it (mantle.work.EventServices.create#Event, sourceReferenceId BossBooking), then mantle.work.EventServices.book#Resource:
-            booked at once or requested by the resource's policy; a clash refuses the booking and makes no event.</description>
+            booked at once or requested by the resource's policy; a clash refuses the booking and makes no event. Equipment of
+            another organization (its owner's, or its facility's) and manufacturing equipment are refused (SEC-BAP-104).</description>
         <in-parameters>
             <parameter name="resourceType" required="true"/>
             <parameter name="resourceId" required="true"/>
@@ -240,6 +245,15 @@ along with this software (see the LICENSE.md file). If not, see
             if (resource == null || resource.bookable !== 'Y' || (isRoom && resource.facilityTypeEnumId !== 'FcTpRoom')
                     || (!isRoom && resource.assetTypeEnumId !== 'AstTpEquipment')) {
                 ec.message.addError(ec.resource.expand('${id} is not a room or equipment to book', '', {id: resourceId})); return }
+            // equipment is booked by its organization's people (its owner's, or its facility's), and never manufacturing
+            // equipment, which Manufacturing schedules, as the list leaves out (SEC-BAP-104); rooms are held by the Facility filter
+            if (!isRoom) {
+                const facility = resource.facilityId ? ec.entity.find('mantle.facility.Facility').condition('facilityId', resource.facilityId).disableAuthz().one() : null
+                const owner = resource.ownerPartyId || facility?.ownerPartyId || null
+                const userOrgIds = Array.from(ec.service.sync().name('mantle.party.PartyServices.get#PartyOrganizationInfo').call()?.userOrgIds || [])
+                if (resource.classEnumId === 'AsClsMfgEquip' || (owner && owner !== '_NA_' && !userOrgIds.includes(owner))) {
+                    ec.message.addError(ec.resource.expand('${id} is not a room or equipment to book', '', {id: resourceId})); return }
+            }
             const name = String(purpose || '').trim() || (isRoom ? resource.facilityName : resource.assetName) || resourceId
             const calendarId = ec.service.sync().name('mantle.work.CalendarServices.ensure#UserDefaultCalendar').call()?.calendarId || null
             if (ec.message.hasError()) return

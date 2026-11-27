@@ -58,8 +58,13 @@ along with this software (see the LICENSE.md file). If not, see
         <actions><script><![CDATA[
             const key = String(resource || '')
             const at = key.indexOf('|')
+            // only a resource the calendar lists, as bookings reads (SEC-BAP-104)
+            const allowed = new Set(Array.from(ec.resource.script('component://mr-boss/service/ironstone/maintenance/Maintenance.js')
+                    .execute('calendarResources', {resourceType: 'all'}).resourceList).map((listed) => listed.key))
+            const askedKey = resourceType && resourceId ? resourceType + '|' + resourceId : key
+            if (!allowed.has(askedKey)) ec.message.addError(ec.l10n.localize('This resource is not on your calendar'))
             const day = date ? String(date).substring(0, 10) : ''
-            const out = ec.service.sync().name('ironstone.commons.ScheduleServices.book#ResourceSlot').parameters({resourceType: resourceType || (at > 0 ? key.substring(0, at) : ''),
+            const out = ec.message.hasError() ? {} : ec.service.sync().name('ironstone.commons.ScheduleServices.book#ResourceSlot').parameters({resourceType: resourceType || (at > 0 ? key.substring(0, at) : ''),
                 resourceId: resourceId || (at > 0 ? key.substring(at + 1) : ''), start: start || (day ? day + ' ' + (from || '09:00') : ''),
                 end: end || (day ? day + ' ' + (to || '10:00') : ''), purpose: purpose || null, notes: notes || null}).call()
             ec.web.sendJsonResponse(ec.message.hasError() ? {} : {workEffortId: out.workEffortId, statusId: out.statusId, requiresApproval: out.requiresApproval,

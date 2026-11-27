@@ -226,3 +226,29 @@ feature("Schedules renders in qvue; Joe Developer may not cancel john.doe's book
         bob.json.statusId == "WefAssigned"
     },
 })
+
+// SEC-BAP-104: another organization's equipment, and manufacturing equipment, are not listed or booked; the user's
+// organization's equipment is (the video kit above)
+feature("another organization's equipment and manufacturing equipment are not listed or booked", {
+    when() {
+        const projector = one("mantle.product.asset.Asset", { assetId: "BOSS_DEMO_PROJECTOR" })
+        sys(() => {
+            for (const [assetId, ownerPartyId, classEnumId] of [["BOSS_TEST_OTHER_KIT", "ORG_ACME", "AsClsComputerHard"],
+                    ["BOSS_TEST_MFG_KIT", projector.ownerPartyId, "AsClsMfgEquip"]]) {
+                if (ec.entity.find("mantle.product.asset.Asset").condition("assetId", assetId).one() != null) continue
+                ec.service.sync().name("create#mantle.product.asset.Asset").parameters({ assetId, assetTypeEnumId: "AstTpEquipment", classEnumId,
+                    assetName: "BOSS_TEST " + assetId, ownerPartyId, bookable: "Y" }).call()
+            }
+        })
+        const list = (get("resources", { type: "equipment" }).json.resourceList || []).map((item) => item.key)
+        const other = post("bookSlot", { resource: "equipment|BOSS_TEST_OTHER_KIT", date: day(6), from: "09:00", to: "10:00", purpose: "BOSS_TEST other kit" })
+        const mfg = post("bookSlot", { resource: "equipment|BOSS_TEST_MFG_KIT", date: day(6), from: "09:00", to: "10:00", purpose: "BOSS_TEST mfg kit" })
+        return { list, other, mfg }
+    },
+    then({ list, other, mfg }) {
+        list.includes("equipment|BOSS_DEMO_PROJECTOR")
+        !list.includes("equipment|BOSS_TEST_OTHER_KIT") && !list.includes("equipment|BOSS_TEST_MFG_KIT")
+        other.errors.includes("is not a room or equipment to book")
+        mfg.errors.includes("is not a room or equipment to book")
+    },
+})
