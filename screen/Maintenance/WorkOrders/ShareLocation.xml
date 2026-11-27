@@ -12,7 +12,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Maintenance › Work orders › ShareLocation (mr-moqui plans/Location-Sharing.md §3.7, LL6): "Share my location with
+<!-- Maintenance › Work orders › ShareLocation (mr-moqui plans/archive/Location-Sharing.md §3.7, LL6): "Share my location with
     the customer" for the technician assigned to an open customer repair, opened from WorkOrderDetail's header. The
     technician chooses until when (no later than the planned end), exact or approximate, and a note (an ETA). share
     posts Mantle's create#RecordGuestShare, which checks the work order and the technician again and makes the

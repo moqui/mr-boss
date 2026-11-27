@@ -11,7 +11,7 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- ShareLocation (ShareLocation.xml; mr-moqui plans/Location-Sharing.md §3.7): Share my location with the customer of
+<!-- ShareLocation (ShareLocation.xml; mr-moqui plans/archive/Location-Sharing.md §3.7): Share my location with the customer of
     a customer repair. The share is made by the share transition only on the technician's press (§1, "Only by the
     person's act"), and the customer is mailed (sendLink) only once the technician has confirmed it: in the Android app
     the app asks for the location permission (allow) and confirms in its own dialog with the server's words before its

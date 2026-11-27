@@ -1,4 +1,4 @@
-// Maintenance › Work orders › ShareLocation (mr-moqui plans/Location-Sharing.md §3.7, LL6), through the page's transitions with
+// Maintenance › Work orders › ShareLocation (mr-moqui plans/archive/Location-Sharing.md §3.7, LL6), through the page's transitions with
 // authorization on: who may share their location with a customer repair's customer (the repair's assigned technician; maint.tech,
 // a technician of another organization with the same groups, posting the same parameters, is refused with nothing made), and the
 // split that tells the customer only after the technician confirmed: share makes the share and mails nothing, sendLink mails its
