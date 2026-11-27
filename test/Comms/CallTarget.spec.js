@@ -267,8 +267,9 @@ feature("the Chatter people search and a note's mentions leave out a user joe.de
             try { json = JSON.parse(out.output) } catch (err) { json = null }
             return { status: out.status, errors: out.errorMessages.join(" | "), json: json || {} }
         }
+        // a mention notice with the record or, for one who may not open it, without (SH-UI-009)
         const mentions = (userId) => sys(() => ec.entity.find("moqui.security.user.NotificationMessageByUser")
-            .condition("userId", userId).condition("topic", "ChatterMention").count())
+            .condition("userId", userId).condition("topic", "in", ["ChatterMention", "ChatterMentionHidden"]).count())
         // a request joe.developer reports, so he may write on it
         sys(() => {
             if (ec.entity.find("mantle.request.Request").condition("requestId", REQUEST).count() == 0) {

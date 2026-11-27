@@ -2,7 +2,8 @@
 // JSON transitions the panel calls under the Commons app root, as john.doe. The demo request's timeline (data/demo/18Commons.xml,
 // DemoServices.load#ChatterDemo) has its notes, the email with its quoted text, the message, the call done, the status change
 // and the files; the panel data has its planned call, followers, files and parties. Log note with a mention notifies the user
-// mentioned; Send message writes an internal message filed on the request; Reply answers a note; Schedule activity puts the
+// mentioned (told only who mentioned them when they may not open the record, SH-UI-009); Send message writes an internal
+// message filed on the request; Reply answers a note; Schedule activity puts the
 // activity in the planned list and in john.doe's Today; Mark done with feedback closes it with a Comment and schedules the
 // next; Edit and Cancel; Follow and Unfollow and Add followers; the record card and the user search. A note's author edits
 // it (marked edited, only the users newly mentioned notified) and deletes it; another user (joe.developer) may do neither, an
@@ -17,6 +18,7 @@ const request = { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_R
 const requestUrl = "/qapps/Commons/Requests/RequestDetail?requestId=BOSS_DEMO_REQUEST"
 let scheduledId, nextId
 const shared = { recordEntity: "mantle.request.Request", recordId: "BOSS_TEST_CHATTER_SHARED" }
+const sharedUrl = "/qapps/Commons/Requests/RequestDetail?requestId=BOSS_TEST_CHATTER_SHARED"
 function as(username, run) {
     login(username)
     try { return run() } finally { login("john.doe") }
@@ -47,6 +49,19 @@ const list = (entityName, fields) => sys(() => Array.from(ec.entity.find(entityN
 const message = (answer) => ((answer.json.messageInfos || [])[0] || {}).message || ""
 const entryOf = (entries, key) => entries.find((entry) => entry.key === key) || {}
 const plannedOf = (data, id) => (data.json.plannedActivities || []).find((item) => item.workEffortId === id)
+// a request john.doe filed with joe.developer on it, so both may open it (the demo request joe.developer may not)
+function sharedRequest() {
+    sys(() => {
+        if (one("mantle.request.Request", { requestId: "BOSS_TEST_CHATTER_SHARED" })) return
+        call("create#mantle.request.Request", { requestId: "BOSS_TEST_CHATTER_SHARED", requestTypeEnumId: "RqtSupport", statusId: "ReqSubmitted",
+            requestName: "Chatter edit test", filedByPartyId: "EX_JOHN_DOE", requestDate: ec.user.nowTimestamp })
+        for (const partyId of ["EX_JOHN_DOE", "ORG_ZIZI_JD"]) call("create#mantle.request.RequestParty", { requestId: "BOSS_TEST_CHATTER_SHARED",
+            partyId, roleTypeId: "Reporter", fromDate: ec.user.nowTimestamp })
+    })
+}
+// the mention notices of a user on a topic, newest last
+const noticesOf = (userId, topic) => list("moqui.security.user.NotificationMessageByUser", { userId, topic })
+const newest = (rows) => one("moqui.security.user.NotificationMessage", { notificationMessageId: rows.map((row) => row.notificationMessageId).sort().pop() })
 
 spec({
     setupSpec() {
@@ -174,10 +189,12 @@ feature("the user search answers users for the mentions and the drop-downs", {
     },
 })
 
-feature("Log note with a mention: a Comment on the request, first in the timeline, and the user mentioned notified with the host page", {
+// SH-UI-009: joe.developer may not open the demo request, so his notice names only its author: no request, text or link
+feature("Log note with a mention: a Comment on the request, first in the timeline, and the user mentioned, who may not open it, told only who mentioned them", {
     when() {
-        const mentions = () => list("moqui.security.user.NotificationMessageByUser", { userId: "ORG_ZIZI_JD", topic: "ChatterMention" })
+        const mentions = () => noticesOf("ORG_ZIZI_JD", "ChatterMentionHidden")
         const before = mentions().length
+        const recordNotices = noticesOf("ORG_ZIZI_JD", "ChatterMention").length
         // an outside image would tell its host who read the note and when: only this server's stays (SEC-CLI-82, allow-html="app")
         const body = '<p>The rooms are booked, <span data-mention-id="ORG_ZIZI_JD">@Joe Developer</span>.</p><script>alert(1)</script>' +
             '<p><img src="https://tracker.example/pixel.png" alt="t"><img src="/rest/s1/static/rooms.png" alt="rooms"></p>'
@@ -187,12 +204,14 @@ feature("Log note with a mention: a Comment on the request, first in the timelin
         const latest = after.map((row) => row.notificationMessageId).sort().pop()
         return { logged, before, after: after.length, comm: one("mantle.party.communication.CommunicationEvent", { communicationEventId: id }),
             link: one("mantle.request.RequestCommEvent", { requestId: "BOSS_DEMO_REQUEST", communicationEventId: id }),
-            notice: one("moqui.security.user.NotificationMessage", { notificationMessageId: latest }), first: (get("timeline").json.entryList || [])[0] || {} }
+            notice: one("moqui.security.user.NotificationMessage", { notificationMessageId: latest }), first: (get("timeline").json.entryList || [])[0] || {},
+            recordNoticesAdded: noticesOf("ORG_ZIZI_JD", "ChatterMention").length - recordNotices, joeOpens: as("joe.developer", () => get("chatterData")) }
     },
-    then({ logged, before, after, comm, link, notice, first }) {
+    then({ logged, before, after, comm, link, notice, first, recordNoticesAdded, joeOpens }) {
         logged.status == 200
         logged.errors == ""
-        message(logged) == "Note logged; 1 mentioned"
+        message(logged) == "Note logged; 1 mentioned (1 not shown the record)"
+        joeOpens.json.visible === false
         comm.communicationEventTypeId == "Comment"
         comm.fromPartyId == "EX_JOHN_DOE"
         comm.contentType == "text/html"
@@ -202,8 +221,35 @@ feature("Log note with a mention: a Comment on the request, first in the timelin
         comm.body.includes("/rest/s1/static/rooms.png")
         link != null
         after == before + 1
-        notice.linkText == requestUrl
+        recordNoticesAdded == 0
+        notice.titleText == "John Doe mentioned you on a record"
+        !notice.linkText
+        !String(notice.messageJson).includes("BOSS_DEMO_REQUEST") && !String(notice.messageJson).includes("rooms")
         first.key == `ce-${comm.communicationEventId}`
+    },
+})
+
+// SH-UI-009 review: his access is checked under the first screen of the author's he holds, picked from his grants, so the
+// screens he does not hold (the shared Chatter screen) record no authorization failure against him
+feature("Log note with a mention of a user who may open the request: told of it, its text and the host page", {
+    when() {
+        sharedRequest()
+        const failures = () => list("moqui.security.ArtifactAuthzFailure", { userId: "ORG_ZIZI_JD" }).length
+        const failuresBefore = failures()
+        const before = noticesOf("ORG_ZIZI_JD", "ChatterMention").length
+        const logged = post("logNote", { body: '<p>The rooms are booked, <span data-mention-id="ORG_ZIZI_JD">@Joe Developer</span>.</p>',
+            recordUrl: sharedUrl }, shared)
+        const after = noticesOf("ORG_ZIZI_JD", "ChatterMention")
+        return { logged, before, after: after.length, notice: newest(after), newFailures: failures() - failuresBefore }
+    },
+    then({ logged, before, after, notice, newFailures }) {
+        logged.status == 200
+        newFailures == 0
+        message(logged) == "Note logged; 1 mentioned"
+        after == before + 1
+        notice.titleText.includes("BOSS_TEST_CHATTER_SHARED")
+        notice.titleText.includes("The rooms are booked")
+        notice.linkText == sharedUrl
     },
 })
 
@@ -400,7 +446,8 @@ feature("Unlink takes a message off the request; the message stays", {
 
 feature("the author edits a note: the new text, the timeline marks it edited, and only the user newly mentioned is notified", {
     when() {
-        const mentions = (userId) => list("moqui.security.user.NotificationMessageByUser", { userId, topic: "ChatterMention" }).length
+        // neither may open the demo request, so each is told without it (SH-UI-009)
+        const mentions = (userId) => noticesOf(userId, "ChatterMention").length + noticesOf(userId, "ChatterMentionHidden").length
         const logged = post("logNote", { body: '<p>The rooms, <span data-mention-id="ORG_ZIZI_JD">@Joe Developer</span>.</p>', recordUrl: requestUrl })
         const id = logged.json.communicationEventId
         const before = { joe: mentions("ORG_ZIZI_JD"), bob: mentions("ORG_ZIZI_BD") }
@@ -417,7 +464,7 @@ feature("the author edits a note: the new text, the timeline marks it edited, an
         before0.editBody.includes("The rooms")
         edited.status == 200
         edited.errors == ""
-        message(edited) == "Note changed; 1 newly mentioned"
+        message(edited) == "Note changed; 1 newly mentioned (1 not shown the record)"
         comm.body.includes("The rooms B and C")
         comm.editedDate != null
         comm.fromPartyId == "EX_JOHN_DOE"
@@ -450,14 +497,7 @@ feature("the author deletes a note: it leaves the timeline and the request", {
 feature("joe.developer, who sees the request, may neither edit nor delete john.doe's note; john.doe, an admin, deletes joe's note but may not edit it", {
     allowMessageErrors: true,
     when() {
-        sys(() => {
-            if (!one("mantle.request.Request", { requestId: "BOSS_TEST_CHATTER_SHARED" })) {
-                call("create#mantle.request.Request", { requestId: "BOSS_TEST_CHATTER_SHARED", requestTypeEnumId: "RqtSupport", statusId: "ReqSubmitted",
-                    requestName: "Chatter edit test", filedByPartyId: "EX_JOHN_DOE", requestDate: ec.user.nowTimestamp })
-                for (const partyId of ["EX_JOHN_DOE", "ORG_ZIZI_JD"]) call("create#mantle.request.RequestParty", { requestId: "BOSS_TEST_CHATTER_SHARED",
-                    partyId, roleTypeId: "Reporter", fromDate: ec.user.nowTimestamp })
-            }
-        })
+        sharedRequest()
         const johnNote = post("logNote", { body: "<p>John's note.</p>" }, shared).json.communicationEventId
         const joe = as("joe.developer", () => {
             const entries = call_("timeline", shared).json.entryList || []

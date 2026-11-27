@@ -112,6 +112,9 @@ along with this software (see the LICENSE.md file). If not, see
 
         <notification-topic topic="ChatterMention"/>
         <notification-topic topic="RecordFollow"/>
+        <!-- the same to a user who may not open the record (SH-UI-009) -->
+        <notification-topic topic="ChatterMentionHidden"/>
+        <notification-topic topic="RecordFollowHidden"/>
         <notification-topic topic="WorkEffortReminder"/>
         <notification-topic topic="EventInvitation"/>
         <notification-topic topic="EventInvitationResponse"/>
