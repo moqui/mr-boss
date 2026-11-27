@@ -189,9 +189,11 @@ module.exports = {
             if (this.left) return null;
             if (!native) { this.watch(); return null; }
             const shareId = this.shareId;
+            // the page was left, or the share stopped (its pagehide) or changed, while the app asked
+            const gone = () => this.left || this.stoppedOnHide === shareId || this.shareId !== shareId;
             return Promise.resolve(native.start({ shareId })).then((answer) => {
-                // the page was left, or the share stopped (its pagehide), while the app asked: a service it started stops
-                if (this.left || this.stoppedOnHide === shareId || this.shareId !== shareId) {
+                // a service it started for a share gone meanwhile stops again
+                if (gone()) {
                     if (answer === 'started' && typeof native.stop === 'function') Promise.resolve(native.stop(shareId)).catch(() => {});
                     return null;
                 }
@@ -207,7 +209,7 @@ module.exports = {
                 // the app could not start its service: this page sends, the link with its first position
                 this.watch();
                 return null;
-            }, () => { if (!this.left) this.watch(); return null; });
+            }, () => { if (!gone()) this.watch(); return null; });
         },
         // no position before the link went out: the share is stopped and the customer told nothing
         abandon(message) {
