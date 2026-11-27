@@ -167,7 +167,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             outcomeColor}">${WebUtilities.encodeHtml(outcomeText || '')}</q-chip>]]></text>
                                         <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
                                             text: outcomeText || ""})}]]></text>
-                                        <text type="html">${outcomeText || ''}</text>
+                                        <text type="html">${WebUtilities.encodeHtml(outcomeText || '')}</text>
                                     </render-mode>
                                 </default-field>
                             </field>

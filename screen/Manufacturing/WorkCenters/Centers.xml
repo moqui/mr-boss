@@ -239,7 +239,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <text type="qvt"><![CDATA[${offlineReasonText ? '<q-chip dense square class="q-ma-none m-tonal text-' + offlineColor + '">'
                             + WebUtilities.encodeHtml(offlineReasonText) + '</q-chip>' : ''}]]></text>
                         <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: offlineReasonText || ''})}]]></text>
-                        <text type="html">${offlineReasonText || ''}</text>
+                        <text type="html">${WebUtilities.encodeHtml(offlineReasonText || '')}</text>
                     </render-mode>
                 </default-field>
             </field>
