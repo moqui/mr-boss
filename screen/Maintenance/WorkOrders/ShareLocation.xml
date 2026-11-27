@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Maintenance › Work orders › ShareLocation (mr-moqui plans/Location-Sharing.md §3.7, LL6): "Share my location with the
+    customer" for the technician assigned to an open customer repair, opened from WorkOrderDetail's header. The technician
+    chooses until when (no later than the planned end), exact or approximate, and a note (an ETA); share posts Mantle's
+    create#RecordGuestShare, which checks the work order and the technician again, makes the framework's share with a guest
+    link, names the work order on it (its completion or cancellation stops it) and mails the link to the customer. The page
+    (ShareLocation.qvue) then sends the location: in the Android app through its own confirmation and foreground service
+    (moquiDesktop.location, the same bridge Maps' Browse calls: allow, then start, whose dialog says whom and until when in
+    the server's words), elsewhere from this page while it is open (watchPosition, /qapps/reportClientLocation), with Stop.
+    A delivery has no such action until the warehouse trips (WH-TRIP) give it a driver and status. The tui text says to
+    share from the app or a browser: the terminal has no position to send. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/mr-xml-screen.xsd"
+        default-menu-title="Share my location" default-menu-include="false" render-modes="qvue,tui" server-static="qvue">
+    <parameter name="workEffortId" required="true"/>
+    <!-- what the page shows (the qvue has no server context); Mantle decides again when the technician shares -->
+    <transition name="info" read-only="true">
+        <actions><script><![CDATA[
+            const check = ec.service.sync().name('ironstone.maintenance.AccessServices.check#Record')
+                .parameters({appRoot, recordType: 'workOrder', recordId: workEffortId}).requireNewTransaction(true).call() || {}
+            let detail = null
+            if (!ec.message.hasError() && check.recordId)
+                detail = ec.service.sync().name('mantle.work.MaintenanceServices.get#MaintenanceWorkOrder').parameters({workEffortId}).call() || null
+            ec.message.clearErrors()
+            const order = (detail && detail.workOrder) || null
+            ec.web.sendJsonResponse(!order ? {found: false} : {found: true, workEffortId, name: order.workEffortName || workEffortId,
+                customerName: (order.repair && order.repair.customerName) || '', repair: !!order.repair,
+                plannedEnd: order.estimatedCompletionDate ? ec.user.timestampMillis(order.estimatedCompletionDate) : null,
+                plannedEndText: order.estimatedCompletionText || ''})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="share" method="post">
+        <actions><script><![CDATA[
+            let answer = {applied: false}
+            const check = ec.service.sync().name('ironstone.maintenance.AccessServices.check#Record')
+                .parameters({appRoot, recordType: 'workOrder', recordId: workEffortId}).requireNewTransaction(true).call() || {}
+            if (!ec.message.hasError() && check.recordId) {
+                const thru = Number(context.thruDate)
+                const out = ec.service.sync().name('mantle.other.LocationShareServices.create#RecordGuestShare').requireNewTransaction(true)
+                    .parameters({recordType: 'workOrder', recordId: workEffortId, thruDate: Number.isFinite(thru) && thru > 0 ? new Date(thru) : null,
+                        precisionEnumId: context.precisionEnumId === 'LspApproximate' ? 'LspApproximate' : 'LspExact',
+                        purposeText: String(context.purposeText || '').trim().slice(0, 200) || null}).call() || {}
+                if (!ec.message.hasError()) answer = {applied: true, shareId: out.shareId, thruDate: out.thruDate ? ec.user.timestampMillis(out.thruDate) : null,
+                    mailSent: !!out.mailSent, approximate: context.precisionEnumId === 'LspApproximate'}
+            }
+            if (ec.message.hasError()) answer.reason = ec.message.getErrorsString().replace(/^[A-Z][A-Z0-9_]+: /, '')
+            ec.message.clearErrors()
+            ec.web.sendJsonResponse(answer)
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="stop" method="post">
+        <actions><script><![CDATA[
+            ec.service.sync().name('org.moqui.maps.LocationServices.stop#Share').requireNewTransaction(true)
+                .parameters({shareId: String(context.shareId || '')}).call()
+            const applied = !ec.message.hasError()
+            ec.message.clearErrors()
+            ec.web.sendJsonResponse({applied})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <render-mode><text type="qvue" location="component://mr-boss/screen/Maintenance/WorkOrders/ShareLocation.qvue" template="false"/>
+            <text type="tui" template="false"><![CDATA[[{"t": "text", "id": "MaintenanceShareLocation", "text": "Share your location with the customer from the app or a browser: the terminal has no position to send."}]]]></text></render-mode>
+    </widgets>
+</screen>

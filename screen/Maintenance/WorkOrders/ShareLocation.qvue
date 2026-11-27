@@ -1,0 +1,164 @@
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ShareLocation (ShareLocation.xml; mr-moqui plans/Location-Sharing.md §3.7): Share my location with the customer of a
+    customer repair. The share is made by the share transition only on the technician's press (§1, "Only by the person's
+    act"); then, in the Android app, the app asks for the location permission (allow) and confirms in its own dialog with
+    the server's words before its foreground service sends (start, as Maps' Browse calls it; Not now stops the share just
+    made); elsewhere this page sends while it is open (watchPosition, at most one report a share's interval, to
+    /qapps/reportClientLocation, which answers report#Position's statusCode: 429 waits, 410 and 404 stop), with a banner
+    and Stop. No position is shown or kept by this page. -->
+<template><div class="q-pa-md m-maintenance-share-location" style="max-width:640px">
+    <div class="text-h6">{{t('Share my location with the customer')}}</div>
+    <div v-if="!info" class="row justify-center q-pa-md"><q-spinner size="2em"></q-spinner></div>
+    <div v-else-if="!info.found || !info.repair" class="text-body2 q-mt-sm" id="ShareLocationNotAvailable">
+        {{t('Only a customer repair\'s work order has a customer to share your location with.')}}</div>
+    <template v-else>
+        <div class="text-body2 q-mt-xs m-muted">{{info.name}} · {{info.customerName}}<span v-if="info.plannedEndText"> · {{t('due')}} {{info.plannedEndText}}</span></div>
+        <template v-if="!shareId">
+            <div class="text-body2 q-mt-md">{{t('The customer gets a link by email that shows where you are until the time you choose, no later than the work order\'s planned end. Completing or cancelling the work order ends it.')}}</div>
+            <q-option-group v-model="hours" :options="untilOptions" inline dense class="q-mt-sm" id="ShareLocationUntil"></q-option-group>
+            <q-toggle v-model="approximate" dense :label="t('Approximate (about 1 km)')" class="q-mt-sm"></q-toggle>
+            <q-input v-model="purposeText" dense outlined maxlength="200" class="q-mt-sm" :label="t('A note for the customer, such as an arrival time')" name="purposeText"></q-input>
+            <div v-if="error" class="text-negative text-caption q-mt-sm" role="alert">{{error}}</div>
+            <div class="row q-gutter-sm q-mt-md">
+                <q-btn unelevated no-caps color="primary" :loading="busy" :label="t('Share my location with the customer')" id="ShareLocationGo" @click="share"></q-btn>
+                <q-btn flat no-caps :label="t('Back to the work order')" @click="back"></q-btn>
+            </div>
+        </template>
+        <template v-else>
+            <q-banner dense rounded class="m-tonal q-mt-md" id="ShareLocationSending">
+                <template v-slot:avatar><q-icon name="sym_o_share_location" color="positive"></q-icon></template>
+                {{sendingText}}
+                <template v-slot:action><q-btn flat dense no-caps color="negative" :label="t('Stop sharing')" @click="stopShare"></q-btn></template>
+            </q-banner>
+            <div v-if="!mailSent" class="text-caption text-warning q-mt-sm">{{t('The link could not be mailed to the customer: stop the share, or ask the office to send it again.')}}</div>
+            <div v-if="error" class="text-negative text-caption q-mt-sm" role="alert">{{error}}</div>
+            <q-btn flat no-caps class="q-mt-sm" :label="t('Back to the work order')" @click="back"></q-btn>
+        </template>
+    </template>
+</div></template>
+
+<script>
+const t = (text) => (moqui.l10n && moqui.l10n.localize ? moqui.l10n.localize(text) : text);
+const HOUR = 3600000;
+module.exports = {
+    name: 'MaintenanceShareLocation',
+    inject: { mScreen: { default: null } },
+    data() {
+        return { info: null, hours: 1, approximate: false, purposeText: '', busy: false, error: null, shareId: null, thruDate: null,
+            mailSent: true, native: false, watchId: null, lastSent: 0, waitUntil: 0, intervalMs: 5000 };
+    },
+    computed: {
+        workEffortId() { return (this.mScreen && this.mScreen.parameters && this.mScreen.parameters.workEffortId) || ''; },
+        untilOptions() {
+            const options = [{ label: t('30 minutes'), value: 0.5 }, { label: t('1 hour'), value: 1 }, { label: t('2 hours'), value: 2 }];
+            return options.concat([{ label: t('Until the planned end'), value: 0 }]);
+        },
+        sendingText() {
+            const until = this.thruDate ? new Date(this.thruDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            return (this.native ? t('Sent from this phone, also with the app in the background, until') : t('Sent from this page while it is open, until')) + ' ' + until;
+        },
+    },
+    methods: {
+        t,
+        path(name) { return this.mScreen.path + '/' + name; },
+        post(name, params) { return moqui.request(this.path(name), { method: 'POST', params: Object.assign({ workEffortId: this.workEffortId }, params || {}) }).then((result) => result.json || {}); },
+        nativeLocation() {
+            const desktop = window.moquiDesktop;
+            const native = desktop && desktop.location;
+            return native && typeof native.start === 'function' ? native : null;
+        },
+        back() { if (this.$root && this.$root.setUrl) this.$root.setUrl(this.mScreen.path.replace(/ShareLocation$/, 'WorkOrderDetail') + '?workEffortId=' + encodeURIComponent(this.workEffortId)); },
+        thruFor() {
+            const planned = this.info && this.info.plannedEnd ? Number(this.info.plannedEnd) : 0;
+            if (!this.hours) return planned || 0;
+            const asked = Date.now() + this.hours * HOUR;
+            return planned ? Math.min(asked, planned) : asked;
+        },
+        share() {
+            if (this.busy) return;
+            this.busy = true;
+            this.error = null;
+            const native = this.nativeLocation();
+            // in the app, its location permission first (approximate alone for an approximate share), as Browse asks it
+            const allowed = native ? Promise.resolve(native.allow(!this.approximate)) : Promise.resolve(true);
+            allowed.then((ok) => {
+                if (!ok) { this.error = t('Allow the app to use this phone\'s location to share it, then try again'); return null; }
+                return this.post('share', { thruDate: String(this.thruFor()), precisionEnumId: this.approximate ? 'LspApproximate' : 'LspExact', purposeText: this.purposeText });
+            }).then((json) => {
+                if (!json) return null;
+                if (!json.applied) { this.error = json.reason || t('Your location was not shared'); return null; }
+                this.shareId = json.shareId;
+                this.thruDate = json.thruDate;
+                this.mailSent = !!json.mailSent;
+                this.intervalMs = (json.approximate ? 60 : 5) * 1000;
+                return this.send(native);
+            }).catch((err) => { this.error = String((err && err.message) || err); }).finally(() => { this.busy = false; });
+        },
+        // the app's service, after its own dialog with the server's words; else this page while it is open
+        send(native) {
+            if (!native) { this.watch(); return null; }
+            return Promise.resolve(native.start({ shareId: this.shareId })).then((answer) => {
+                if (answer === 'started') { this.native = true; return; }
+                if (answer === 'declined') {
+                    // Not now: the share just made is stopped, so nothing shows the customer a position that is never sent
+                    this.post('stop', { shareId: this.shareId });
+                    this.shareId = null;
+                    this.error = t('Your location was not shared');
+                    return;
+                }
+                this.watch();
+            }, () => this.watch());
+        },
+        watch() {
+            if (!navigator.geolocation) { this.error = t('This browser cannot tell where you are'); return; }
+            this.watchId = navigator.geolocation.watchPosition((fix) => this.report(fix), () => { this.error = t('Your location is not available: allow it in the browser'); },
+                { enableHighAccuracy: !this.approximate, maximumAge: 10000 });
+        },
+        report(fix) {
+            const now = Date.now();
+            if (!this.shareId || now - this.lastSent < this.intervalMs || now < this.waitUntil) return;
+            this.lastSent = now;
+            const c = fix.coords;
+            const params = { shareId: this.shareId, latitude: String(c.latitude), longitude: String(c.longitude),
+                accuracy: c.accuracy == null ? '' : String(c.accuracy), heading: c.heading == null || isNaN(c.heading) ? '' : String(c.heading),
+                speed: c.speed == null || isNaN(c.speed) ? '' : String(c.speed) };
+            moqui.request('/qapps/reportClientLocation', { method: 'POST', params }).then((result) => result.json || {}).then((json) => {
+                if (json.statusCode === 429) this.waitUntil = Date.now() + (Number(json.retryAfterSeconds) || 5) * 1000;
+                else if (json.statusCode === 410 || json.statusCode === 404 || json.reasonCode === 'OTHER_DEVICE') this.endWatch(t('The share has ended'));
+            }, () => {});
+        },
+        endWatch(message) {
+            if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId);
+            this.watchId = null;
+            if (message) moqui.notifyMessages([{ type: 'info', message }], null);
+            this.shareId = null;
+        },
+        stopShare() {
+            const shareId = this.shareId;
+            const native = this.nativeLocation();
+            if (this.native && native && typeof native.stop === 'function') Promise.resolve(native.stop(shareId)).catch(() => {});
+            this.native = false;
+            this.endWatch(null);
+            this.post('stop', { shareId }).then((json) => moqui.notifyMessages(json.applied ? [{ type: 'success', message: t('Sharing stopped') }] : null,
+                json.applied ? null : [t('That did not change the share')]));
+        },
+    },
+    mounted() {
+        moqui.request(this.path('info') + '?workEffortId=' + encodeURIComponent(this.workEffortId), {}).then((result) => result.json || {})
+            .then((json) => { this.info = json; }, () => { this.info = { found: false }; });
+    },
+    beforeUnmount() { if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); },
+};
+</script>

@@ -189,6 +189,8 @@ const linkPaths = [
     "Reports/MaintenanceCostReport",
     // P12: a customer repair's intervention report
     "WorkOrders/InterventionReport",
+    // mr-moqui plans/Location-Sharing.md §3.7 (LL6): the technician's location shared with a customer repair's customer
+    "WorkOrders/ShareLocation",
     // P17: the Reports landing and the work status report (design §8)
     "Reports/Overview",
     "Reports/WorkStatusReport"
