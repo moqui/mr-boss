@@ -90,6 +90,9 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="importReturn">
         <actions>
+            <!-- a return file is at most 10 MB, refused before it is read whole (SEC-BOS-124) -->
+            <if condition="returnFile != null &amp;&amp; returnFile.size &gt; 10485760">
+                <return error="true" message="RETURN_TOO_LARGE: A return file may be at most 10 MB"/></if>
             <set field="nachaString" from="returnFile ? returnFile.getString('UTF-8') : returnText"/>
             <service-call name="mantle.account.PaymentRunServices.import#RunReturn"
                     in-map="{paymentRunId:paymentRunId, organizationPartyId:organizationPartyId, nachaString:nachaString}"
