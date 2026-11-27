@@ -326,6 +326,12 @@ function labelDocument(p) {
         fileName:
             (p.returnLabel === "Y" ? "return-label-" : "label-") + sh.shipment.shipmentId + "-" + p.shipmentPackageSeqId + ".pdf"
     }
+    // the browser is sent to the stored URL only when the server would fetch it (SEC-BAP-126): https, and on a production
+    // instance a carrier's label host, as mr-marble's getShipmentLabel answers
+    if (text == null) {
+        const refusal = call("mantle.account.GatewayConnectionServices.check#LabelUrl", {url: String(url)}).refusal
+        if (refusal) denied("LABEL_URL_REFUSED", L("This label cannot be opened") + ": " + refusal)
+    }
 }
 
 // ===== PackageTracking =====

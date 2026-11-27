@@ -59,7 +59,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="LabelDocument" allow-remote="false">
         <description>A package's label (or return label, returnLabel Y) for its preview: the PDF as text when it is all
             ASCII, else the carrier's label URL; for the ship or pack capability;
-            the shipment checked first (RECORD_UNAVAILABLE); NO_LABEL when there is none.</description>
+            the shipment checked first (RECORD_UNAVAILABLE); NO_LABEL when there is none; LABEL_URL_REFUSED for a label URL
+            check#LabelUrl refuses, so the preview never redirects there.</description>
         <in-parameters>
             <parameter name="shipmentId"/>
             <parameter name="shipmentPackageSeqId"/>

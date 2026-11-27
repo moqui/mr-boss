@@ -99,6 +99,42 @@ feature("labels are bought, a failed print keeps them and offers a reprint, and 
         trackingRows.trackingRows.every(row => row.carrierName == "Test Carrier" && row.shipped)
     }
 })
+feature("the label preview opens a stored label URL only when the server would fetch it (SEC-BAP-126)", {
+    when() {
+        const already = ec.artifactExecution.disableAuthz()
+        const seg = ec.entity.find("mantle.shipment.ShipmentPackageRouteSeg").condition("shipmentId", shipmentId).list()[0]
+        const kept = {labelImage: seg.labelImage, labelUrl: seg.labelUrl}
+        const write = fields => {
+            ec.artifactExecution.disableAuthz()
+            ec.entity
+                .find("mantle.shipment.ShipmentPackageRouteSeg")
+                .condition({
+                    shipmentId,
+                    shipmentPackageSeqId: seg.shipmentPackageSeqId,
+                    shipmentRouteSegmentSeqId: seg.shipmentRouteSegmentSeqId
+                })
+                .one()
+                .setAll(fields)
+                .update()
+            if (!already) ec.artifactExecution.enableAuthz()
+        }
+        const preview = url => {
+            write({labelImage: null, labelUrl: url})
+            return asUser("warehouse.ship", () =>
+                refusal(shipping + "get#LabelDocument", {shipmentId, shipmentPackageSeqId: seg.shipmentPackageSeqId})
+            )
+        }
+        try {
+            return {refused: preview("javascript:alert(1)"), allowed: preview("https://labels.example.com/l.pdf")}
+        } finally {
+            write(kept)
+        }
+    },
+    then({refused, allowed}) {
+        refused.includes("LABEL_URL_REFUSED")
+        allowed == ""
+    }
+})
 function refusalOrResult(service, parameters) {
     ec.message.pushErrors()
     try {
