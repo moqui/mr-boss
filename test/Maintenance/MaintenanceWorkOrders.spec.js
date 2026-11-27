@@ -172,7 +172,11 @@ feature("Admin's offboarding lists a technician's open work orders under Mainten
         maintenance.resourceList.some(row => row.resourceId == "workOrders" && row.resourceName.includes("(2)"))
         operator.transferable === false
         operator.resourceName.includes("(2)") && operator.resourceName.includes("Maintenance planner or supervisor")
-        !Array.from(projects.resourceList || []).some(row => ["tasks", "workItems"].includes(row.resourceId))
+        // the two work orders are not Projects' assignments; the air handler's follow-up task (BOSS_MNT_TASK_AHU_GASKET, P7's demo)
+        // is an ordinary Commons task, and is its one task
+        !Array.from(projects.resourceList || []).some(
+            row => row.resourceId == "workItems" || (row.resourceId == "tasks" && !row.resourceName.includes("(1)"))
+        )
     }
 })
 
