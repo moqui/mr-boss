@@ -16,8 +16,9 @@ along with this software (see the LICENSE.md file). If not, see
     act"), and the customer is mailed (sendLink) only once the technician has confirmed it: in the Android app the app asks
     for the location permission (allow) and confirms in its own dialog with the server's words before its foreground
     service sends (start, as Maps' Browse calls it); only "started" mails the link, and Not now stops the share with
-    nothing sent. Elsewhere the press is the confirmation: the link is mailed with the first position the page takes (none
-    taken, the share is stopped and nothing is sent), and this page sends while it is open
+    nothing sent. Elsewhere the press is the confirmation: the link is mailed once the server took the page's first position
+    (none taken: the browser's refusal, or no position for a while, stops the share and nothing is sent; so does leaving
+    the page before), and this page sends while it is open
     (watchPosition, at most one report a share's interval, to /qapps/reportClientLocation, which answers report#Position's
     statusCode: 429 waits, 410 and 404 stop), with a banner and Stop. The link's secret is held in this page only until
     sendLink. No position is shown or kept by this page. -->
@@ -56,6 +57,8 @@ along with this software (see the LICENSE.md file). If not, see
 <script>
 const t = (text) => (moqui.l10n && moqui.l10n.localize ? moqui.l10n.localize(text) : text);
 const HOUR = 3600000;
+// how long a position "unavailable" (the browser's code 2) is waited out before a share not yet told is stopped
+const UNAVAILABLE_WAIT_MS = 30000;
 // the link's secret until sendLink: in this module only, never in the page's data or a URL
 let pendingSecret = null;
 module.exports = {
@@ -63,7 +66,7 @@ module.exports = {
     inject: { mScreen: { default: null } },
     data() {
         return { info: null, hours: 1, approximate: false, purposeText: '', busy: false, error: null, shareId: null, thruDate: null,
-            mailSent: null, mailReason: null, native: false, watchId: null, lastSent: 0, waitUntil: 0, intervalMs: 5000 };
+            mailSent: null, mailReason: null, native: false, watchId: null, lastSent: 0, waitUntil: 0, intervalMs: 5000, unavailableSince: 0 };
     },
     computed: {
         workEffortId() { return (this.mScreen && this.mScreen.parameters && this.mScreen.parameters.workEffortId) || ''; },
@@ -161,14 +164,31 @@ module.exports = {
         },
         watch() {
             if (!navigator.geolocation) { this.abandon(t('This browser cannot tell where you are: your location was not shared')); return; }
-            this.watchId = navigator.geolocation.watchPosition((fix) => this.report(fix), () => {
-                if (pendingSecret) this.abandon(t('Your location is not available: allow it in the browser, then share again'));
-                else this.error = t('Your location is not available: allow it in the browser');
-            }, { enableHighAccuracy: !this.approximate, maximumAge: 10000 });
+            this.watchId = navigator.geolocation.watchPosition((fix) => { this.unavailableSince = 0; this.report(fix); }, (err) => this.watchFailed(err),
+                { enableHighAccuracy: !this.approximate, maximumAge: 10000, timeout: 60000 });
+        },
+        // the browser's refusal, by its code: denied (1) ends it; unavailable (2) waits a while for the next fix; a
+        // timeout (3) says so and keeps watching. Before the link went out, a lasting failure stops the share unsent.
+        watchFailed(err) {
+            const code = err && err.code;
+            const words = code === 1 ? t('Your location is not allowed: allow it for this site in the browser, then share again')
+                : code === 3 ? t('No position came in time: still trying')
+                : t('Your location is not available now: still trying');
+            if (code === 1) {
+                if (pendingSecret) this.abandon(words);
+                else this.error = words;
+                return;
+            }
+            this.error = words;
+            // the next fix is waited for a while (a fix clears unavailableSince); none by then, the share is stopped unsent
+            if (code === 2 && pendingSecret && !this.unavailableSince) {
+                this.unavailableSince = Date.now();
+                setTimeout(() => {
+                    if (pendingSecret && this.unavailableSince) this.abandon(t('Your location is not available: your location was not shared'));
+                }, UNAVAILABLE_WAIT_MS);
+            }
         },
         report(fix) {
-            // the first fix: the customer is told now, and never before one
-            if (pendingSecret && this.shareId) this.sendLink();
             const now = Date.now();
             if (!this.shareId || now - this.lastSent < this.intervalMs || now < this.waitUntil) return;
             this.lastSent = now;
@@ -177,17 +197,24 @@ module.exports = {
                 accuracy: c.accuracy == null ? '' : String(c.accuracy), heading: c.heading == null || isNaN(c.heading) ? '' : String(c.heading),
                 speed: c.speed == null || isNaN(c.speed) ? '' : String(c.speed) };
             moqui.request('/qapps/reportClientLocation', { method: 'POST', params }).then((result) => result.json || {}).then((json) => {
+                // the first position the server took: the customer is told now, and never before one
+                if (json.statusCode === 200) {
+                    this.error = null;
+                    if (pendingSecret && this.shareId) this.sendLink();
+                }
                 if (json.statusCode === 429) this.waitUntil = Date.now() + (Number(json.retryAfterSeconds) || 5) * 1000;
                 else if (json.statusCode === 410 || json.statusCode === 404 || json.reasonCode === 'OTHER_DEVICE') this.endWatch(t('The share has ended'));
             }, () => {});
         },
         endWatch(message) {
+            pendingSecret = null;
             if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId);
             this.watchId = null;
             if (message) moqui.notifyMessages([{ type: 'info', message }], null);
             this.shareId = null;
         },
         stopShare() {
+            pendingSecret = null;
             const shareId = this.shareId;
             const native = this.nativeLocation();
             if (this.native && native && typeof native.stop === 'function') Promise.resolve(native.stop(shareId)).catch(() => {});
@@ -201,6 +228,11 @@ module.exports = {
         moqui.request(this.path('info') + '?workEffortId=' + encodeURIComponent(this.workEffortId), {}).then((result) => result.json || {})
             .then((json) => { this.info = json; }, () => { this.info = { found: false }; });
     },
-    beforeUnmount() { pendingSecret = null; if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId); },
+    // leaving before the customer was told: the share no one was told of is stopped, not left on
+    beforeUnmount() {
+        if (pendingSecret && this.shareId) this.post('stop', { shareId: this.shareId });
+        pendingSecret = null;
+        if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId);
+    },
 };
 </script>
