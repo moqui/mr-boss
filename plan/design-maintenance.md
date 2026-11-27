@@ -450,7 +450,7 @@ context. Facilities/equipment lists can contribute permission-scoped layers to t
 recorded asset point, its facility's location and an approximate postal-area fallback; none implies live tracking.
 Choosing/saving a point uses the existing domain edit authority and proposed Mantle location adapter. Work orders
 may show their authorized work-site/facility reference without moving equipment, changing custody or geocoding
-unstructured technician notes. Framework [Maps](../../../../../plans/Maps.md) owns providers, settings and streaming.
+unstructured technician notes. Framework [Maps](../../../../../plans/archive/Maps.md) owns providers, settings and streaming.
 
 ### Equipment
 

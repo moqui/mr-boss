@@ -2281,7 +2281,7 @@ an employee's time entry and no employee rate row.
 
 ### 3.32 Maps and record-location dialogs
 
-**Owner and status:** proposed framework work in [Maps](../../../../../plans/Maps.md), with Tools owning
+**Owner and status:** proposed framework work in [Maps](../../../../../plans/archive/Maps.md), with Tools owning
 `component://tools/screen/Maps.xml`, its full-screen browser and `Maps/LocalMap.xml`. OpenLayers is selected for its
 formats, standards, projections and editing support. BOSS reuses the widget/dialog and contributes authorized record
 adapters; it does not duplicate the renderer, postal reference dataset or resource/tile service. Needs: CX-MAPS.
@@ -2343,7 +2343,7 @@ latitude or extent, CRS, source/edition, precision, observation/match date where
 Full selection inputs add the selected candidate/manual point and current record/address version; neither a profile
 ID nor the client-supplied adapter context is authority. `get#RecordMapContext` and `store#RecordLocation` are
 interface services of the framework's `org.moqui.maps.MapServices`
-([Maps §3.2](../../../../../plans/Maps.md#32-map-widget-and-local-map-dialog)); a domain adapter implements them
+([Maps §3.2](../../../../../plans/archive/Maps.md#32-map-widget-and-local-map-dialog)); a domain adapter implements them
 and registers by key, and **Choose location** posts to the dialog's own transition, which calls the adapter, so no
 value is handed back to the host form. Service package names for the domain adapters are finalized
 with their owner; these names describe proposed contracts, not existing services or new generic entity writers.
@@ -3920,7 +3920,7 @@ domain-owned. INS-12 owns the cash forecast service; Accounting keeps no AC row 
 
 | Need | Kind | Owner | Shared contract |
 | --- | --- | --- | --- |
-| CX-MAPS | XML Screen element, Vue component, service type, data model, seed data | framework; Mantle record adapters; app contexts | [Maps](../../../../../plans/Maps.md) owns the OpenLayers Tools browser/dialog, OpenFreeMap, ResourceFacade PMTiles, global/personal metadata, Rust services and postal Geo lookup. Its configuration screen is `component://tools/screen/Maps/Configuration.xml` (`/qapps/maps/Configuration`), where an administrator also imports the Geo data the lookup reads; none ships. §3.32 owns BOSS placement/access; app designs refer to it. All are proposed work, independent of the existing report geomap. |
+| CX-MAPS | XML Screen element, Vue component, service type, data model, seed data | framework; Mantle record adapters; app contexts | [Maps](../../../../../plans/archive/Maps.md) owns the OpenLayers Tools browser/dialog, OpenFreeMap, ResourceFacade PMTiles, global/personal metadata, Rust services and postal Geo lookup. Its configuration screen is `component://tools/screen/Maps/Configuration.xml` (`/qapps/maps/Configuration`), where an administrator also imports the Geo data the lookup reads; none ships. §3.32 owns BOSS placement/access; app designs refer to it. All are proposed work, independent of the existing report geomap. |
 
 ## 8. Decided
 
