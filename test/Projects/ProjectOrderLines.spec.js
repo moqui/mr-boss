@@ -1,5 +1,5 @@
 // The order lines a project fulfils come from its own organization's sales orders (service/ironstone/projects/BillingServices.xml
-// get#ProjectVendors, search#OrderLines, link#OrderLine, get#OrderAccess; plans/Security-Review-Medium.md SEC-BOS-95): a client
+// get#ProjectVendors, search#OrderLines, link#OrderLine, get#OrderAccess; plans/archive/Security-Review-Medium.md SEC-BOS-95): a client
 // shared by two organizations has a sales order from each, and the project of one offers, links and shows only its own; a link to
 // the other's line made past the screens (Mantle's link#ProjectOrderItem asks only for the client) opens nothing in OrderDetail.
 // As john.doe, a Projects manager who manages money.

@@ -375,7 +375,7 @@ feature("with several organizations a Projects manager who is not ADMIN changes 
     },
 })
 
-// plans/Security-Review.md SEC-GIT-01: a project's new repository imports from an http(s) URL only, since the import runs
+// plans/archive/Security-Review.md SEC-GIT-01: a project's new repository imports from an http(s) URL only, since the import runs
 // with authorization disabled; another repository (git://) or a server directory is refused before anything is made
 feature("a new repository's import is an http(s) URL: another repository or a server path is refused and nothing is made", {
     when() {
