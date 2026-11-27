@@ -200,7 +200,23 @@ feature("PayStructureDetail previews gross to net with the group's demonstration
 
 feature("the choices give an employer's pay components, pay groups and accounts to payroll, and the localizations", {
     when() {
+        // a payee of the shared directory and another organization's supplier (SEC-BOS-137): only the first is offered
+        system(() => {
+            for (const [partyId, ownerPartyId, organizationName] of [
+                ["PCS_PAYEE_SHARED", "_NA_", "Pcs payee shared"],
+                ["PCS_PAYEE_OTHER", ids.otherOrganizationId, "Pcs payee other"]
+            ]) {
+                if (ec.entity.find("mantle.party.Party").condition("partyId", partyId).one() != null) continue
+                ec.service
+                    .sync()
+                    .name("create#mantle.party.Party")
+                    .parameters({partyId, partyTypeEnumId: "PtyOrganization", ownerPartyId})
+                    .call()
+                ec.service.sync().name("create#mantle.party.Organization").parameters({partyId, organizationName}).call()
+            }
+        })
         return {
+            payees: labels(users.payroll, {choice: "payrollPayees", term: "pcs payee"}),
             components: labels(users.payroll, {
                 choice: "payComponents",
                 organizationPartyId: ids.organizationId,
@@ -229,7 +245,8 @@ feature("the choices give an employer's pay components, pay groups and accounts 
             hrLocalizations: labels(users.hr, {choice: "payrollLocalizations"})
         }
     },
-    then({components, hrComponents, groups, otherGroups, accounts, localizations, hrLocalizations}) {
+    then({payees, components, hrComponents, groups, otherGroups, accounts, localizations, hrLocalizations}) {
+        payees == ["Pcs payee shared"]
         components == ["PCS_BASE · Spec hourly pay", "PCS_DED · Spec saving plan"]
         hrComponents == []
         groups == ["Pay config spec monthly"]

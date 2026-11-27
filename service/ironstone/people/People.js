@@ -1490,12 +1490,21 @@ choiceSources.payrollLocalizations = (userScope, term, selected) => {
     )
 }
 // P27: a pay group's localization payee (the authority its localization's amounts are paid to): an organization, by name, a
-// payroll reader's; never an internal one (an employer pays it, it is no employer)
+// payroll reader's; never an internal one (an employer pays it, it is no employer). Only the organizations the user's
+// organization filter reads (the shared directory's, _NA_, and their own organizations'), not another organization's
+// customers and suppliers (SEC-BOS-137)
 choiceSources.payrollPayees = (userScope, term, selected) => {
     if (!userScope.capabilities.payrollView) return []
     const D = "mantle.party.PartyDetail"
-    const base = () => find(D).condition("partyTypeEnumId", "PtyOrganization").condition("privateOwnerUserId", "is-null", null)
-    const rows = Array.from(searched(base(), term, ["organizationName", "partyId"]).orderBy("organizationName").limit(choiceLimit).list())
+    const owners = ["_NA_"].concat(Array.from(call("mantle.party.PartyServices.get#PartyOrganizationInfo").userOrgIds || []))
+    const base = () =>
+        find(D)
+            .condition("partyTypeEnumId", "PtyOrganization")
+            .condition("privateOwnerUserId", "is-null", null)
+            .condition("ownerPartyId", "in", owners)
+    const rows = Array.from(
+        searched(base(), term, ["organizationName", "partyId"]).orderBy("organizationName").limit(choiceLimit).list()
+    )
     return withSelected(
         rows.map(row => ({value: row.partyId, label: row.organizationName || row.partyId})),
         selected,
