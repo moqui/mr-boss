@@ -69,13 +69,16 @@ along with this software (see the LICENSE.md file). If not, see
                     </if>
                     <service-call name="ironstone.warehouse.AccessServices.check#Record"
                             in-map="{recordType:'facility', recordId:facilityId, capability:'receive'}"/>
-                    <!-- the order is the receiving facility's organization's sale (SEC-BAP-114): another organization's order part
-                        would copy its customer, address and payment method onto this return -->
+                    <!-- the order is a sale this return may take back (SEC-BAP-114): one shipped from this facility, one of the receiving
+                        facility's organization, or one of the user's organizations (a warehouse of one internal organization shipping
+                        another's sales); another organization's order part would copy its customer, address and payment method here -->
                     <set field="returnedPart" from="ec.entity.find('mantle.order.OrderPart')
                             .condition({orderId: partKey[0], orderPartSeqId: partKey[1] || '01'}).disableAuthz().one()"/>
                     <set field="receivingOwner" from="ec.entity.find('mantle.facility.Facility').condition('facilityId', facilityId)
                             .disableAuthz().one()?.ownerPartyId"/>
-                    <if condition="!returnedPart || returnedPart.vendorPartyId != receivingOwner">
+                    <set field="returnUserOrgIds" from="Array.from(ec.service.sync().name('mantle.party.PartyServices.get#PartyOrganizationInfo').call()?.userOrgIds || [])"/>
+                    <if condition="!returnedPart || !(returnedPart.facilityId == facilityId || returnedPart.vendorPartyId == receivingOwner
+                            || returnUserOrgIds.includes(returnedPart.vendorPartyId))">
                         <return error="true" message="RECORD_UNAVAILABLE: Order ${partKey[0]} is not a sale of this facility's organization"/>
                     </if>
                     <service-call name="mantle.order.ReturnServices.create#ReturnFromOrder" out-map="created"

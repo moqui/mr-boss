@@ -494,17 +494,29 @@ feature("a receiver opens a customer return against their facility's organizatio
                 entryDate: ec.user.nowTimestamp})
             create("mantle.order.OrderPart", {orderId: "BOSS_WH_P14_OTHER_SO", orderPartSeqId: "01", statusId: "OrderApproved",
                 vendorPartyId: "ORG_ACME", customerPartyId: "CustJqp"})
+            create("mantle.order.OrderHeader", {orderId: "BOSS_WH_P14_HERE_SO", statusId: "OrderApproved", currencyUomId: "USD",
+                entryDate: ec.user.nowTimestamp})
+            create("mantle.order.OrderPart", {orderId: "BOSS_WH_P14_HERE_SO", orderPartSeqId: "01", statusId: "OrderApproved",
+                vendorPartyId: "ORG_ZIZI_SERVICES", customerPartyId: "CustJqp", facilityId: "ZIRET_WH"})
+            // the receiver works for the selling organization too (a warehouse of one internal organization shipping another's)
+            const receiver = one("moqui.security.UserAccount", {username: "warehouse.receive"})
+            create("mantle.party.PartyRelationship", {relationshipTypeEnumId: "PrtAgent", fromPartyId: receiver.partyId,
+                toPartyId: "ORG_ZIZI_SERVICES", toRoleTypeId: "OrgInternal", fromDate: ec.user.nowTimestamp})
         })
         return asUser("warehouse.receive", () => ({
             other: post("Returns/Returns/newReturn", {direction: "customer", orderPart: "BOSS_WH_P14_OTHER_SO:01", facilityId: "ZIRET_WH",
                 displayId: "P14-SPEC-OTHER"}),
             own: post("Returns/Returns/newReturn", {direction: "customer", orderPart: "BOSS_WH_SO:01", facilityId: "ZIRET_WH",
                 displayId: "P14-SPEC-OWN"}),
+            // an order part shipped from this facility, though another internal organization sells it, is taken back here
+            shippedHere: post("Returns/Returns/newReturn", {direction: "customer", orderPart: "BOSS_WH_P14_HERE_SO:01", facilityId: "ZIRET_WH",
+                displayId: "P14-SPEC-HERE"}),
             otherMade: rows("mantle.order.return.ReturnHeader", {displayId: "P14-SPEC-OTHER"}).length,
             ownMade: rows("mantle.order.return.ReturnHeader", {displayId: "P14-SPEC-OWN"})
         }))
     },
-    then({other, own, otherMade, ownMade}) {
+    then({other, own, shippedHere, otherMade, ownMade}) {
+        shippedHere == ""
         other.includes("RECORD_UNAVAILABLE")
         otherMade == 0
         own == ""
