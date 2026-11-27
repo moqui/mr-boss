@@ -788,8 +788,8 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="copy" noun="Page" allow-remote="false">
         <description>One page of duplicate#Page, through the framework's clone#WikiPage without the pages under it or its
             aliases, and unpublished: the text of a page the user may view (its latest, or with usePublished its published
-            version's) as a new page the user may add (update#WikiPage checks both), with its page members and its files (a
-            file that is not copied is logged and named in failedFiles).</description>
+            version's) as a new page the user may add (update#WikiPage checks both), with its page members, its restriction
+            (restrictView, restrictUpdate) and its files (a file that is not copied is logged and named in failedFiles).</description>
         <in-parameters>
             <parameter name="fromWikiSpaceId" required="true"/>
             <parameter name="fromPagePath" required="true"/>
@@ -816,6 +816,14 @@ along with this software (see the LICENSE.md file). If not, see
             wikiPageId = out.wikiPageId
             pagePath = out.pagePath
             failedFiles = Array.from(out.failedFiles || [])
+            // the copy keeps the page's restriction, as it keeps its page members (SEC-BOS-136): a restricted page is not
+            // opened to the whole space by its copy; narrowing the new page is the system's write, the copier may not be the
+            // target space's administrator
+            const source = ec.entity.find('moqui.resource.wiki.WikiPage').condition({wikiSpaceId: fromWikiSpaceId, pagePath: fromPagePath})
+                    .disableAuthz().one()
+            if (source != null && (source.restrictView === 'Y' || source.restrictUpdate === 'Y'))
+                ec.artifactExecution.runAsSystem(() => ec.service.sync().name('update#moqui.resource.wiki.WikiPage').parameters({wikiPageId: wikiPageId,
+                    restrictView: source.restrictView === 'Y' ? 'Y' : 'N', restrictUpdate: source.restrictUpdate === 'Y' ? 'Y' : 'N'}).call())
         ]]></script></actions>
     </service>
     <service verb="rename" noun="Page">

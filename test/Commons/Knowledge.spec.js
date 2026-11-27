@@ -600,12 +600,18 @@ feature("Duplicate: a page with the pages under it, under a new name in the same
             tree: post("duplicatePage", { wikiPageId: policies, toParentPath: "Office", toPageName: `Joe policies ${RUN}`, withChildren: "true" }),
             restricted: post("duplicatePage", { wikiPageId: pageId("BOSSKB", "Policies/Security"), toPageName: `Joe security ${RUN}` }) }))
         const joeCopied = names(get("children", { wikiSpaceId: "BOSSKB", pagePath: `Office/Joe policies ${RUN}` }))
-        return { tree, copied, travel, travelSource, history, joe, joeCopied,
+        // the restricted Security page's copy is restricted too (SEC-BOS-136); the open Travel page's copy is open
+        const restriction = (path) => sys(() => ec.entity.find("moqui.resource.wiki.WikiPage").condition({ wikiSpaceId: "BOSSKB", pagePath: path }).one())?.restrictView
+        const securityCopy = restriction(`${base}/Security`)
+        const travelCopy = restriction(`${base}/Travel`)
+        return { tree, copied, travel, travelSource, history, joe, joeCopied, securityCopy, travelCopy,
             underItself: post("duplicatePage", { wikiPageId: policies, toParentPath: "Policies", toPageName: "Again", withChildren: "true" }),
             home: post("duplicatePage", { wikiPageId: pageId("BOSSKB", ""), toPageName: "Home copy" }),
             badName: post("duplicatePage", { wikiPageId: office, toPageName: "a/b" }) }
     },
-    then({ tree, copied, travel, travelSource, history, joe, joeCopied, underItself, home, badName }) {
+    then({ tree, copied, travel, travelSource, history, joe, joeCopied, securityCopy, travelCopy, underItself, home, badName }) {
+        securityCopy == "Y"
+        travelCopy != "Y"
         tree.status == 200
         tree.errors == ""
         tree.json.pageCount == 4
