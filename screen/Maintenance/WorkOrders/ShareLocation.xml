@@ -20,8 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     only once the technician has confirmed: in the Android app the page calls its own confirmation and foreground service
     (moquiDesktop.location, the same bridge Maps' Browse calls: allow, then start, whose dialog says whom and until when in
     the server's words), and only its "started" posts sendLink (Mantle's send#RecordGuestLink, which mails the link); its
-    Not now stops the share and sends nothing. In a browser the press is the confirmation: sendLink at once, and the page
-    sends while it is open (watchPosition, /qapps/reportClientLocation), with Stop. The link's secret goes back to the
+    Not now stops the share and sends nothing. In a browser the press is the confirmation: sendLink with the first position
+    the page takes (a browser that gives none stops the share, nothing sent), and the page sends while it is open (watchPosition, /qapps/reportClientLocation), with Stop. The link's secret goes back to the
     server only in sendLink's body.
     A delivery has no such action until the warehouse trips (WH-TRIP) give it a driver and status. The tui text says to
     share from the app or a browser: the terminal has no position to send. -->

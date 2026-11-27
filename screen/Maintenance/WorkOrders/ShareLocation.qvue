@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     act"), and the customer is mailed (sendLink) only once the technician has confirmed it: in the Android app the app asks
     for the location permission (allow) and confirms in its own dialog with the server's words before its foreground
     service sends (start, as Maps' Browse calls it); only "started" mails the link, and Not now stops the share with
-    nothing sent. Elsewhere the press is the confirmation: the link is mailed at once and this page sends while it is open
+    nothing sent. Elsewhere the press is the confirmation: the link is mailed with the first position the page takes (none
+    taken, the share is stopped and nothing is sent), and this page sends while it is open
     (watchPosition, at most one report a share's interval, to /qapps/reportClientLocation, which answers report#Position's
     statusCode: 429 waits, 410 and 404 stop), with a banner and Stop. The link's secret is held in this page only until
     sendLink. No position is shown or kept by this page. -->
@@ -130,8 +131,10 @@ module.exports = {
                 this.mailReason = json.mailReason || null;
             }, () => { this.mailSent = false; });
         },
+        // in a browser the link goes out with the first fix this page takes (report), never before one: a page that cannot
+        // tell where the technician is sends the customer nothing
         send(native) {
-            if (!native) { this.watch(); return this.sendLink(); }
+            if (!native) { this.watch(); return null; }
             return Promise.resolve(native.start({ shareId: this.shareId })).then((answer) => {
                 if (answer === 'started') { this.native = true; return this.sendLink(); }
                 if (answer === 'declined') {
@@ -142,17 +145,30 @@ module.exports = {
                     this.error = t('Your location was not shared');
                     return null;
                 }
-                // the app could not start its service: this page sends, and the press confirmed it
+                // the app could not start its service: this page sends, the link with its first fix
                 this.watch();
-                return this.sendLink();
-            }, () => { this.watch(); return this.sendLink(); });
+                return null;
+            }, () => { this.watch(); return null; });
+        },
+        // no position before the link went out: the share is stopped and the customer told nothing
+        abandon(message) {
+            pendingSecret = null;
+            if (this.watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(this.watchId);
+            this.watchId = null;
+            if (this.shareId) this.post('stop', { shareId: this.shareId });
+            this.shareId = null;
+            this.error = message;
         },
         watch() {
-            if (!navigator.geolocation) { this.error = t('This browser cannot tell where you are'); return; }
-            this.watchId = navigator.geolocation.watchPosition((fix) => this.report(fix), () => { this.error = t('Your location is not available: allow it in the browser'); },
-                { enableHighAccuracy: !this.approximate, maximumAge: 10000 });
+            if (!navigator.geolocation) { this.abandon(t('This browser cannot tell where you are: your location was not shared')); return; }
+            this.watchId = navigator.geolocation.watchPosition((fix) => this.report(fix), () => {
+                if (pendingSecret) this.abandon(t('Your location is not available: allow it in the browser, then share again'));
+                else this.error = t('Your location is not available: allow it in the browser');
+            }, { enableHighAccuracy: !this.approximate, maximumAge: 10000 });
         },
         report(fix) {
+            // the first fix: the customer is told now, and never before one
+            if (pendingSecret && this.shareId) this.sendLink();
             const now = Date.now();
             if (!this.shareId || now - this.lastSent < this.intervalMs || now < this.waitUntil) return;
             this.lastSent = now;
