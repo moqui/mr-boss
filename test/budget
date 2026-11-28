@@ -12,7 +12,9 @@
 # rounded up.
 # Nov 14, 2026: raised to the final suites of the Dogfood build (DG0 to DG10, Dev AIDE P11 to P13) with the Sales and
 # Marketing apps merged, with the user's agreement: 404.2 s measured, rounded up. A review of regression vs acceptance follows.
-server = 405
+# Nov 28, 2026: raised with the user's agreement for CalcGrid's Insights features (mr-moqui IronCalc-DB2 CG1 to CG5: the
+# calcgrid dataset, scheduling, the profiles, dataset sheets, AppOrganizationFilters): 409.2 s measured, set to 415.
+server = 415
 # Nov 6, 2026: client raised by Commerce's golden-path walk, CommerceThemesWalk, 7.6 s in the gate C1/S1 ./moq test-apps
 # (the user's agreement, impl-commerce §4: raised at each wave end by the measured share), rounded up.
 # Nov 12, 2026: client raised by Maintenance's golden-path walk, MaintenanceWorkOrdersWalk, 8.1 s in the final ./moq test-apps
