@@ -191,6 +191,29 @@ feature("a Sales administrator reads a saved document's range as a panel over th
     },
 })
 
+// The panel editor offers the dataset calcgrid's parameters with their choices, each read by the viewer's own grant of its
+// service (mr-moqui plans/IronCalc-DB2.md CG4.1): the documents through list#Definitions (BOSS_INS_REPORT_READ) and the
+// access profiles the viewer holds through get#CalcProfiles (BOSS_INS_CALC_DATASET), so neither falls back to a text field.
+feature("a Sales administrator's dataset listing under Insights offers calcgrid's documents and the sales profile as choices", {
+    when() {
+        const saved = saveOrders("Insights CalcGrid choices")
+        const listed = asUser(users.author, () => Array.from(ec.service.sync().name("org.moqui.report.ReportServices.list#Datasets")
+            .parameters({parameterChoices: true}).call().datasets || []))
+        ec.message.clearErrors()
+        const calcgrid = listed.find((dataset) => dataset.id == "calcgrid") || {}
+        const choices = (name) => Array.from((Array.from(calcgrid.parameters || []).find((parameter) => parameter.name == name) || {}).choices || [])
+        return {saved, profiles: choices("profileId").map((choice) => choice.value), documents: choices("definitionId").map((choice) => choice.value)}
+    },
+    then({saved, profiles, documents}) {
+        !saved.errors
+        profiles.join(",") == "sales"
+        documents.includes(saved.definitionId)
+    },
+    cleanup() {
+        removeMade()
+    },
+})
+
 feature("a sales manager and a sales reader who are Insights users hold the sales profile to read, and do not author", {
     when() {
         const manager = ask(users.distributor, "calcAccess")

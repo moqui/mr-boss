@@ -55,10 +55,14 @@ along with this software (see the LICENSE.md file). If not, see
         asks below them, check#DefinitionRead, is the readers' (BOSS_INS_REPORT_READ, BossSetupData07). It reads no
         index and is not a business dataset (the engine refuses a business dataset that names a service): get#CalcFrame
         checks the document's share and the caller's access profile on each call, so this grant gives no row the reader's
-        own profile does not. Each Insights group reads it, as the business datasets above. -->
+        own profile does not. Each Insights group reads it, as the business datasets above. The panel editor offers the
+        dataset's parameters with their choices, each read by the viewer's own grant of its service (mr-moqui
+        plans/IronCalc-DB2.md CG4.1): the documents through list#Definitions (BOSS_INS_REPORT_READ), the access profiles
+        through get#CalcProfiles, which answers only the profiles the caller holds, so it is here too. -->
     <artifactGroups artifactGroupId="BOSS_INS_CALC_DATASET" description="Insights: the CalcGrid range dataset">
         <artifacts artifactName="org.moqui.report.dataset.calcgrid" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.calc.CalcServices.get#CalcFrame" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.calc.CalcServices.get#CalcProfiles" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_CALC_DATASET_READ" userGroupId="BOSS_INSIGHTS_READ"
                 authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
         <authz artifactAuthzId="BOSS_INS_CALC_DATASET_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
