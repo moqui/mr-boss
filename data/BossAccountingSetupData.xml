@@ -594,16 +594,19 @@ along with this software (see the LICENSE.md file). If not, see
             authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_CALC_PROFILE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_CALC_PROFILE" entityFilterSetId="CALC_NO_PAYROLL"/>
     <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_ACCOUNTING_GL_CALC_PROFILE" userGroupId="BOSS_ACCOUNTING_GL" artifactGroupId="CALC_PROFILE_ACCOUNTING"
             authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_GL_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_GL_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_GL_CALC_PROFILE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_GL_CALC_PROFILE" entityFilterSetId="CALC_NO_PAYROLL"/>
     <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_ACCOUNTING_READ_CALC_PROFILE" userGroupId="BOSS_ACCOUNTING_READ" artifactGroupId="CALC_PROFILE_ACCOUNTING"
             authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_READ_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_READ_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_READ_CALC_PROFILE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_READ_CALC_PROFILE" entityFilterSetId="CALC_NO_PAYROLL"/>
     <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_ACCOUNTING_CALC_AUTHOR" userGroupId="BOSS_ACCOUNTING_ADMIN" artifactGroupId="CALC_GRID_AUTHOR"
             authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>

@@ -630,16 +630,19 @@ along with this software (see the LICENSE.md file). If not, see
             authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_CALC_PROFILE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_CALC_PROFILE" entityFilterSetId="CALC_NO_MAILBOX"/>
     <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_MARKETING_ANALYST_CALC_PROFILE" userGroupId="BOSS_MARKETING_ANALYST" artifactGroupId="CALC_PROFILE_MARKETING"
             authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_ANALYST_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_ANALYST_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_ANALYST_CALC_PROFILE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_ANALYST_CALC_PROFILE" entityFilterSetId="CALC_NO_MAILBOX"/>
     <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_MARKETING_READ_CALC_PROFILE" userGroupId="BOSS_MARKETING_READ" artifactGroupId="CALC_PROFILE_MARKETING"
             authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_READ_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_READ_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_READ_CALC_PROFILE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_READ_CALC_PROFILE" entityFilterSetId="CALC_NO_MAILBOX"/>
     <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_MARKETING_CALC_AUTHOR" userGroupId="BOSS_MARKETING_ADMIN" artifactGroupId="CALC_GRID_AUTHOR"
             authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
