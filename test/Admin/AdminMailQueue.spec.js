@@ -125,7 +125,9 @@ feature(
             home.output.includes("opened no listeners")
             opened(configuration)
             configuration.output.includes("EffectiveProtocolSettings") && configuration.output.includes("ProtocolChecks")
-            configuration.output.includes("Gateway addresses allowed") && configuration.output.includes("After a restart")
+            // the SMTP listener's settings apply while the server runs (mr-moqui plans/Runtime-Config.md RC8)
+            configuration.output.includes("Gateway addresses allowed") && configuration.output.includes("While it runs")
+            !configuration.output.includes("After a restart")
             configuration.output.includes("Mail reception: Off")
             // one protocol's settings alone
             !configuration.output.includes("SIP port")
