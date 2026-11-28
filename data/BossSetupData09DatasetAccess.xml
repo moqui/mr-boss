@@ -47,6 +47,29 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_INS_DATASETS_DATA" userGroupId="BOSS_INSIGHTS_DATA"
                 authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <!-- The framework's dataset calcgrid (mr-moqui tools/report/calcgrid.json; docs/tools/Database.md, CalcGrid and access
+        profiles): a range of a saved CalcGrid document as a panel's table, read as the viewer under their CalcGrid access.
+        The report engine asks the dataset's own artifact and then the service it names, get#CalcFrame, each as the viewer's
+        own grant, which the Insights root's grant does not pass (mr-moqui plans/IronCalc-DB2.md CG1.1). Neither is a
+        ReportServices operation, so BOSS_INS_REPORT_ENGINE's deny does not reach them, and a plain ALLOW holds; the one it
+        asks below them, check#DefinitionRead, is the readers' (BOSS_INS_REPORT_READ, BossSetupData07). It reads no
+        index and is not a business dataset (the engine refuses a business dataset that names a service): get#CalcFrame
+        checks the document's share and the caller's access profile on each call, so this grant gives no row the reader's
+        own profile does not. Each Insights group reads it, as the business datasets above. -->
+    <artifactGroups artifactGroupId="BOSS_INS_CALC_DATASET" description="Insights: the CalcGrid range dataset">
+        <artifacts artifactName="org.moqui.report.dataset.calcgrid" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.calc.CalcServices.get#CalcFrame" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_CALC_DATASET_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_CALC_DATASET_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_CALC_DATASET_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_CALC_DATASET_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+        <authz artifactAuthzId="BOSS_INS_CALC_DATASET_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW"/>
+    </artifactGroups>
     <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderPart" userGroupId="BOSS_INSIGHTS_READ"/>
     <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderPart" userGroupId="BOSS_INSIGHTS_AUTHOR"/>
     <moqui.entity.document.DataDocumentUserGroup dataDocumentId="MantleSalesOrderPart" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"/>

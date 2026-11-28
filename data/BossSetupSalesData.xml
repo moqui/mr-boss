@@ -27,6 +27,23 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroup userGroupId="BOSS_SALES_CHANGE" description="Commercial change operator"/>
     <moqui.security.UserGroup userGroupId="BOSS_SALES_AGREEMENT" description="Sales agreement keeper"/>
     <moqui.security.UserGroup userGroupId="BOSS_SALES_READ" description="Sales reader"/>
+    <!-- CalcGrid's sales access profile for the sales managers and readers, as the Sales administrators hold it
+        (BossSetupData01GroupsAndLaunchers.xml, BOSS_SALES_CALC_PROFILE, with its reasons): ALWAYS for view, with the same filter
+        sets, so the finds CalcGrid makes under the profile read the organizations they work in, the active one when chosen,
+        and no private contact of another user's. Here and not beside it, since these groups are defined above. Reading only:
+        documents are made and edited by a holder of CALC_GRID_AUTHOR (the Sales administrators); a manager or a reader
+        opens the documents shared with them. CalcGrid is shown under Insights, so one of them reaches it as an Insights
+        user (mr-moqui plans/IronCalc-DB2.md CG1.6). -->
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_SALES_MGR_CALC_PROFILE" userGroupId="BOSS_SALES_MANAGER" artifactGroupId="CALC_PROFILE_SALES"
+            authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_MGR_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_MGR_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_MGR_CALC_PROFILE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_SALES_READ_CALC_PROFILE" userGroupId="BOSS_SALES_READ" artifactGroupId="CALC_PROFILE_SALES"
+            authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_READ_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_READ_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_READ_CALC_PROFILE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
     <!-- the root user group's authorization on the Sales root and the app's services (ironstone.sales: its context, record check,
         choices and palette), beside the administrators' rows of the BOSS_SALES artifact group in BossSetupData01GroupsAndLaunchers.xml. The root grant opens
         navigation only; each Mantle sales service checks the SALES_* permissions and the organization itself

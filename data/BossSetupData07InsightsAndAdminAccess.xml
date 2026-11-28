@@ -107,6 +107,11 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="org.moqui.report.ReportServices.preview#Report" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.audit#Export" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.export#Definitions" artifactTypeEnumId="AT_SERVICE"/>
+        <!-- whether the caller may still read a definition (its owner, group and read-only flag, nothing of its body): CalcGrid
+            asks it of a saved document on each call, its screen's and the dataset calcgrid's get#CalcFrame (mr-moqui
+            crates/moqui-calc/src/service.rs may_still_read), so without it every saved CalcGrid document under Insights, and
+            every panel over one, was refused by BOSS_INS_REPORT_ENGINE (mr-moqui plans/IronCalc-DB2.md CG1.1) -->
+        <artifacts artifactName="org.moqui.report.ReportServices.check#DefinitionRead" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_READ_READ" userGroupId="BOSS_INSIGHTS_READ"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_READ_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
