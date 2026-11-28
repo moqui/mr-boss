@@ -112,6 +112,10 @@ along with this software (see the LICENSE.md file). If not, see
             crates/moqui-calc/src/service.rs may_still_read), so without it every saved CalcGrid document under Insights, and
             every panel over one, was refused by BOSS_INS_REPORT_ENGINE (mr-moqui plans/IronCalc-DB2.md CG1.1) -->
         <artifacts artifactName="org.moqui.report.ReportServices.check#DefinitionRead" artifactTypeEnumId="AT_SERVICE"/>
+        <!-- which rows of a search dataset the reader reads, as a fingerprint: CalcGrid asks it for a data sheet over a dataset,
+            whose scope decides the room (mr-moqui crates/moqui-report/src/dataset_scope.rs, plans/IronCalc-DB2.md CG5.5); it
+            answers nothing of the filter, and the dataset's own grant still decides whether it reads -->
+        <artifacts artifactName="org.moqui.report.ReportServices.get#DatasetScope" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_READ_READ" userGroupId="BOSS_INSIGHTS_READ"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_READ_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"

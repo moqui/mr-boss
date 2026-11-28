@@ -139,7 +139,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- CalcGrid's sales access profile (mr-mantle data/10-seed/Sales.xml; mr-moqui docs/tools/Database.md, CalcGrid and
         access profiles) for the Sales administrators: orders, returns, invoices, payments, customers and products on a
         spreadsheet's data sheet, the rows of the organizations they work in (MANTLE_USER_ORG), of the active one when one is
-        chosen (MANTLE_ACTIVE_ORG), and no private contact of another user's. ALWAYS, for view: CalcGrid enters the profile
+        chosen (MANTLE_ACTIVE_ORG), no private contact of another user's, and no payroll-origin invoice or payment
+        (CALC_NO_PAYROLL: a person's pay is PAYROLL_VIEW's, AC-23). ALWAYS, for view: CalcGrid enters the profile
         before it reads, so these filters are the ones its finds get, whatever screen it is shown under. They also author
         documents (CALC_GRID_AUTHOR). CalcGrid itself is shown under Insights (screen/Insights.xml), whose root grant opens
         it: a Sales administrator reaches it as an Insights user. No grant names the framework's own screen. The sales managers
@@ -149,6 +150,7 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_CALC_PROFILE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_CALC_PROFILE" entityFilterSetId="CALC_NO_PAYROLL"/>
     <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_SALES_CALC_AUTHOR" userGroupId="BOSS_SALES_ADMIN" artifactGroupId="CALC_GRID_AUTHOR"
             authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
     <artifactGroups artifactGroupId="BOSS_MARKETING" description="IronStone Marketing App (via root screen)">

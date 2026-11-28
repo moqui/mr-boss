@@ -278,3 +278,58 @@ feature("a saved document an Insights author schedules for themselves is run and
         removeMade()
     },
 })
+
+// a search dataset's query as a data sheet under Insights (mr-moqui plans/IronCalc-DB2.md CG5.5): the sales profile, which
+// offers the spec's dataset for the feature, reads its documents as the author under the dataset's own row filter; its scope
+// is asked of get#DatasetScope, which Insights' report-engine deny would refuse but for its grant to the readers
+// (data/BossSetupData07InsightsAndAdminAccess.xml BOSS_INS_REPORT_READ)
+feature("an Insights author opens a dataset's documents as a data sheet under the sales profile, the ones of their own groups", {
+    when() {
+        const R = "org.moqui.report.ReportServices."
+        const author = system(() => ec.entity.find("moqui.security.UserAccount").condition("username", users.author).one().userId)
+        const rows = [["moqui.security.UserGroup", {userGroupId: "INSCG_DS", description: "InsightsCalcGrid dataset readers"}],
+            ["moqui.security.UserGroupMember", {userGroupId: "INSCG_DS", userId: author, fromDate: ec.user.nowTimestamp}],
+            ["moqui.basic.EnumerationType", {enumTypeId: "InscgDocs", description: "InsightsCalcGrid dataset spec"}],
+            ["moqui.entity.document.DataDocument", {dataDocumentId: "InscgDocs", indexName: "inscg_docs", documentName: "InscgDocs",
+                primaryEntityName: "moqui.basic.Enumeration"}],
+            ["moqui.entity.document.DataDocumentField", {dataDocumentId: "InscgDocs", fieldSeqId: "01", fieldPath: "enumId"}],
+            ["moqui.entity.document.DataDocumentField", {dataDocumentId: "InscgDocs", fieldSeqId: "02", fieldPath: "enumCode"}],
+            ["moqui.entity.document.DataDocumentUserGroup", {dataDocumentId: "InscgDocs", userGroupId: "INSCG_DS"}],
+            ["moqui.security.ArtifactGroup", {artifactGroupId: "INSCG_DS", description: "InsightsCalcGrid dataset"}],
+            ["moqui.security.ArtifactGroupMember", {artifactGroupId: "INSCG_DS", artifactName: "org.moqui.report.dataset.inscg-docs",
+                artifactTypeEnumId: "AT_SERVICE", nameIsPattern: "N", inheritAuthz: "N"}],
+            ["moqui.security.ArtifactAuthz", {artifactAuthzId: "INSCG_DS", artifactGroupId: "INSCG_DS", userGroupId: "INSCG_DS",
+                authzTypeEnumId: "AUTHZT_ALLOW", authzActionEnumId: "AUTHZA_VIEW"}],
+            // offered by the sales profile for the feature
+            ["moqui.security.ArtifactGroupMember", {artifactGroupId: "CALC_PROFILE_SALES", artifactName: "org.moqui.calc.dataset.inscg-docs",
+                artifactTypeEnumId: "AT_SERVICE", nameIsPattern: "N", inheritAuthz: "N"}]]
+        system(() => {
+            for (const [entityName, fields] of rows) ec.entity.makeValue(entityName).setAll(fields).createOrUpdate()
+        })
+        try {
+            call(R + "save#Definition", {definition: {id: "inscg-docs", type: "dataset", title: "inscg-docs", userGroupId: "INSCG_DS",
+                body: {documentType: "InscgDocs", timeField: "_timestamp", rowFilterService: R + "get#UserGroupRowFilter",
+                    rowFilterParameters: {groupField: "enumCode"}}}})
+            system(() => ec.search.indexDocuments([["INSCG-D1", "INSCG_DS"], ["INSCG-D2", "INSCG_OTHER"]]
+                .map(([enumId, enumCode]) => ({_type: "InscgDocs", _id: enumId, enumId, enumCode}))))
+            const opened = ask(users.author, "calcOpen", {profileId: "sales", datasetId: "inscg-docs"}, "post")
+            const cells = ask(users.author, "calcCells", {profileId: "sales", roomId: opened.json.roomId, sheet: 0, row: 1, column: 1, width: 5, height: 5})
+            const texts = Array.from(cells.json.texts || []).map((text) => String(text.text))
+            if (opened.json.roomId) ask(users.author, "calcClose", {roomId: opened.json.roomId}, "post")
+            return {opened, texts}
+        } finally {
+            system(() => {
+                for (const enumId of ["INSCG-D1", "INSCG-D2"]) ec.search.deleteDocument("InscgDocs", enumId)
+                for (const entityName of ["moqui.report.DefinitionVersion", "moqui.report.Definition"])
+                    ec.entity.find(entityName).condition("definitionId", "inscg-docs").deleteAll()
+                for (const [entityName, fields] of rows.slice().reverse()) ec.entity.find(entityName).condition(fields).deleteAll()
+            })
+        }
+    },
+    then({opened, texts}) {
+        !opened.json.errors
+        opened.json.sheets[0].dataRows == 1
+        texts.includes("INSCG-D1")
+        !texts.includes("INSCG-D2")
+    },
+})
