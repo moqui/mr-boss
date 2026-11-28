@@ -581,4 +581,30 @@ along with this software (see the LICENSE.md file). If not, see
         (OrderHoldType OhtPayment: a capture that failed, or an amount or account mismatch after placement), which Commerce
         shows; Mantle seeds PAYMENT_HOLD_RELEASE with its ADMIN grant -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_HOLD_RELEASE" fromDate="0"/>
+    <!-- CalcGrid's accounting access profile (mr-mantle data/10-seed/Accounting.xml; mr-moqui docs/tools/Database.md, CalcGrid and
+        access profiles; plans/IronCalc-DB2.md CG5) for the finance groups that read the books (ACCOUNTING_VIEW: the
+        administrators, general ledger posting and the financial readers): invoices, payments, financial accounts, ledger
+        transactions and time periods on a spreadsheet's data sheet, the rows of the organizations they work in
+        (MANTLE_USER_ORG), of the active one when one is chosen (MANTLE_ACTIVE_ORG), and no payroll-origin document
+        (CALC_NO_PAYROLL: a person's pay is PAYROLL_VIEW's, AC-23). ALWAYS, for view, as Sales' (BossSetupData01GroupsAndLaunchers.xml
+        BOSS_SALES_CALC_PROFILE, with its reasons). Not the receivables, payables, treasury, matching or payroll groups: each
+        reads only its own side of the books. The administrators also author documents (CALC_GRID_AUTHOR). CalcGrid is shown
+        under Insights, so one of them reaches it as an Insights user. -->
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_ACCOUNTING_CALC_PROFILE" userGroupId="BOSS_ACCOUNTING_ADMIN" artifactGroupId="CALC_PROFILE_ACCOUNTING"
+            authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_CALC_PROFILE" entityFilterSetId="CALC_NO_PAYROLL"/>
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_ACCOUNTING_GL_CALC_PROFILE" userGroupId="BOSS_ACCOUNTING_GL" artifactGroupId="CALC_PROFILE_ACCOUNTING"
+            authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_GL_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_GL_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_GL_CALC_PROFILE" entityFilterSetId="CALC_NO_PAYROLL"/>
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_ACCOUNTING_READ_CALC_PROFILE" userGroupId="BOSS_ACCOUNTING_READ" artifactGroupId="CALC_PROFILE_ACCOUNTING"
+            authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_READ_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_READ_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ACCOUNTING_READ_CALC_PROFILE" entityFilterSetId="CALC_NO_PAYROLL"/>
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_ACCOUNTING_CALC_AUTHOR" userGroupId="BOSS_ACCOUNTING_ADMIN" artifactGroupId="CALC_GRID_AUTHOR"
+            authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
 </entity-facade-xml>
