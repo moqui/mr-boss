@@ -619,4 +619,28 @@ along with this software (see the LICENSE.md file). If not, see
             description="count#Audience: for a Marketing topic list of the user's scope (topicListId) and optionally its source lists and segments (listIds, segmentIds) and exclusions (excludeListIds, excludeSegmentIds), how many people match and how many fall in each bucket (eligible, suppressed, withdrawn or not subscribed, needs evidence, duplicate address, no valid address, not available) and each reason, with the eligible people who do not allow tracking. Counts only: no name, address or contact id."
             classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
     <!-- ===== end of Marketing P20 ===== -->
+    <!-- CalcGrid's marketing access profile (mr-mantle data/10-seed/MarketingAndCommerce.xml; mr-moqui docs/tools/Database.md,
+        CalcGrid and access profiles; plans/IronCalc-DB2.md CG5) for the administrators, analysts and readers: campaigns,
+        contact lists and market segments on a spreadsheet's data sheet, the rows of the organizations they work in
+        (MANTLE_USER_ORG), of the active one when one is chosen (MANTLE_ACTIVE_ORG), and no mailbox list (CALC_NO_MAILBOX: the
+        organization filters let every mailbox through, to the Inbox's own rules). ALWAYS, for view, as Sales'
+        (BossSetupData01GroupsAndLaunchers.xml BOSS_SALES_CALC_PROFILE, with its reasons). The administrators also author
+        documents (CALC_GRID_AUTHOR). CalcGrid is shown under Insights, so one of them reaches it as an Insights user. -->
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_MARKETING_CALC_PROFILE" userGroupId="BOSS_MARKETING_ADMIN" artifactGroupId="CALC_PROFILE_MARKETING"
+            authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_CALC_PROFILE" entityFilterSetId="CALC_NO_MAILBOX"/>
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_MARKETING_ANALYST_CALC_PROFILE" userGroupId="BOSS_MARKETING_ANALYST" artifactGroupId="CALC_PROFILE_MARKETING"
+            authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_ANALYST_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_ANALYST_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_ANALYST_CALC_PROFILE" entityFilterSetId="CALC_NO_MAILBOX"/>
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_MARKETING_READ_CALC_PROFILE" userGroupId="BOSS_MARKETING_READ" artifactGroupId="CALC_PROFILE_MARKETING"
+            authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_READ_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_READ_CALC_PROFILE" entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_MARKETING_READ_CALC_PROFILE" entityFilterSetId="CALC_NO_MAILBOX"/>
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_MARKETING_CALC_AUTHOR" userGroupId="BOSS_MARKETING_ADMIN" artifactGroupId="CALC_GRID_AUTHOR"
+            authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
 </entity-facade-xml>
