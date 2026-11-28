@@ -38,7 +38,25 @@ function saveOrders(title) {
         {op: "input", sheet: 1, row: 2, column: 2, value: "=COUNTA(OrderHeaderAndPart[orderId])"}])}, "post")
     const saved = ask(users.author, "calcSave", {profileId: "sales", roomId: opened.json.roomId, title}, "post")
     ask(users.author, "calcClose", {roomId: saved.json.roomId || opened.json.roomId}, "post")
+    if (saved.json.definitionId) made.push(String(saved.json.definitionId))
     return {definitionId: saved.json.definitionId, errors: saved.json.errors}
+}
+// the documents a feature saved, removed in its cleanup with any schedule of them, whatever happened before
+const made = []
+function removeMade() {
+    for (const definitionId of made.splice(0)) {
+        system(() => {
+            for (const schedule of ec.entity.find("moqui.screen.ScreenScheduled").condition("reportDefinitionId", definitionId).useCache(false).list()) {
+                const key = {screenScheduledId: schedule.screenScheduledId}
+                for (const occurrence of ec.entity.find("moqui.report.ReportOccurrence").condition(key).list())
+                    ec.entity.find("moqui.report.ReportRecipientDelivery").condition("occurrenceId", occurrence.occurrenceId).deleteAll()
+                for (const entity of ["moqui.report.ReportOccurrence", "moqui.report.ReportScheduleRecipient", "moqui.screen.ScreenScheduledLock", "moqui.screen.ScreenScheduled"])
+                    ec.entity.find(entity).condition(key).deleteAll()
+            }
+        })
+        // the engine holds a definition's deletion to its owner
+        ask(users.author, "calcDelete", {definitionId}, "post")
+    }
 }
 // the report template's mail server for the spec (captured, never connected), and what it was
 const MAIL = {serverId: "INS_CG_MAIL", templateId: "BOSS_INSIGHTS_REPORT"}
@@ -68,18 +86,24 @@ spec({
     },
     cleanupSpec() {
         capture.reset()
+        // the users' memberships and the orders first, so a failed restore of the template leaves no sales member
         system(() => {
-            ec.entity.find("moqui.basic.email.EmailTemplate").condition("emailTemplateId", MAIL.templateId).useCache(false).one()
-                .setAll({emailServerId: MAIL.wasServerId, fromAddress: MAIL.wasFrom}).update()
-            ec.entity.find("moqui.basic.email.EmailServer").condition("emailServerId", MAIL.serverId).deleteAll()
             for (const [userGroupId, username] of SALES_MEMBERS) {
                 const user = ec.entity.find("moqui.security.UserAccount").condition("username", username).one()
-                ec.entity.find("moqui.security.UserGroupMember").condition("userGroupId", userGroupId).condition("userId", user.userId).deleteAll()
+                if (user) ec.entity.find("moqui.security.UserGroupMember").condition("userGroupId", userGroupId).condition("userId", user.userId).deleteAll()
             }
             for (const orderId of ["INSCG-O1", "INSCG-O2"]) {
                 ec.entity.find("mantle.order.OrderPart").condition("orderId", orderId).deleteAll()
                 ec.entity.find("mantle.order.OrderHeader").condition("orderId", orderId).deleteAll()
             }
+        })
+        system(() => {
+            // only when setupSpec read what the template had: else it is as the data left it
+            if ("wasServerId" in MAIL) {
+                ec.entity.find("moqui.basic.email.EmailTemplate").condition("emailTemplateId", MAIL.templateId).useCache(false).one()
+                    .setAll({emailServerId: MAIL.wasServerId, fromAddress: MAIL.wasFrom}).update()
+            }
+            ec.entity.find("moqui.basic.email.EmailServer").condition("emailServerId", MAIL.serverId).deleteAll()
         })
     }
 })
@@ -140,10 +164,9 @@ feature("a Sales administrator reads a saved document's range as a panel over th
         // a saved document is scheduled on Insights' Scheduled reports (the mount's schedules link), which preselects it: a
         // link from the request's root, asked here through webroot's apps as the browser does
         const access = {json: json(transition(users.author, "component://webroot/screen/webroot.xml", "apps/Insights/CalcGrid/calcAccess", {}, null))}
-        const deleted = ask(users.author, "calcDelete", {definitionId}, "post")
-        return {saved, againCells, author, reader, salesReader, access, deleted}
+        return {saved, againCells, author, reader, salesReader, access}
     },
-    then({saved, againCells, author, reader, salesReader, access, deleted}) {
+    then({saved, againCells, author, reader, salesReader, access}) {
         !saved.errors
         !!saved.definitionId
         !againCells.json.errors
@@ -162,7 +185,9 @@ feature("a Sales administrator reads a saved document's range as a panel over th
         salesReader.values.length == 0
         access.json.canSchedule === true
         access.json.schedulesPath == "/apps/Insights/ScheduledReports/Schedules"
-        !deleted.json.errors
+    },
+    cleanup() {
+        removeMade()
     },
 })
 
@@ -209,17 +234,9 @@ feature("a saved document an Insights author schedules for themselves is run and
         const sheet = bytes ? system(() => ec.service.sync().name("org.moqui.resource.SpreadsheetServices.read#Spreadsheet")
             .parameters({contentBytes: bytes, sheetName: "OrderHeaderAndPart"}).call() || {}) : {}
         const orderIds = Array.from(sheet.rowList || []).map((row) => String(row.orderId))
-        system(() => {
-            const key = {screenScheduledId}
-            for (const occurrence of ec.entity.find("moqui.report.ReportOccurrence").condition(key).list())
-                ec.entity.find("moqui.report.ReportRecipientDelivery").condition("occurrenceId", occurrence.occurrenceId).deleteAll()
-            for (const entity of ["moqui.report.ReportOccurrence", "moqui.report.ReportScheduleRecipient", "moqui.screen.ScreenScheduledLock", "moqui.screen.ScreenScheduled"])
-                ec.entity.find(entity).condition(key).deleteAll()
-        })
-        const deleted = ask(users.author, "calcDelete", {definitionId}, "post")
-        return {saved, created, screenScheduledId, sent, messages, delivery, report, orderIds, deleted}
+        return {saved, created, screenScheduledId, sent, messages, delivery, report, orderIds}
     },
-    then({saved, created, screenScheduledId, sent, messages, delivery, report, orderIds, deleted}) {
+    then({saved, created, screenScheduledId, sent, messages, delivery, report, orderIds}) {
         !saved.errors
         created.errors == ""
         screenScheduledId != ""
@@ -231,6 +248,10 @@ feature("a saved document an Insights author schedules for themselves is run and
         report.available === true
         report.contentType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         orderIds.join(",") == "INSCG-O1"
-        !deleted.json.errors
+    },
+    // the schedule (its runs, recipients and lock) and the document, whatever happened: a schedule left behind would send
+    // real mail once the template's server is put back
+    cleanup() {
+        removeMade()
     },
 })
