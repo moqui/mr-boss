@@ -68,6 +68,28 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_INS_REPORT_OWN_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
+    <!-- A CalcGrid document on a schedule (mr-moqui docs/tools/Database.md, Calc mode, On a schedule; plans/IronCalc-DB2.md
+        CG1.2): the engine asks each recipient's scope of it with get#CalcScope (store#Schedule's recipient check, and each
+        run's), and a run, Send now and a recipient's own report render it with render#CalcDocument, each in a context of
+        its own signed in as the owner or the recipient, outside any Insights screen, so the root's grant does not reach
+        them. Without these a CalcGrid schedule was refused at its saving (the owner's own scope unread: RECIPIENT_REFUSED,
+        denied-source). Both read again whether the caller may read the document and under which of their access
+        profiles, so the grant gives no row their profile does not. CalcServices, not ReportServices: BOSS_INS_REPORT_ENGINE's
+        deny does not reach them, and ALLOW holds. The scheduling groups, as BOSS_INS_REPORT_OWN above. -->
+    <artifactGroups artifactGroupId="BOSS_INS_CALC_SCHEDULE" description="Insights: CalcGrid documents on a schedule">
+        <artifacts artifactName="org.moqui.calc.CalcServices.get#CalcScope" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.calc.CalcServices.render#CalcDocument" artifactTypeEnumId="AT_SERVICE"/>
+        <authz artifactAuthzId="BOSS_INS_CALC_SCHEDULE_READ" userGroupId="BOSS_INSIGHTS_READ"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_CALC_SCHEDULE_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_CALC_SCHEDULE_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_CALC_SCHEDULE_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_CALC_SCHEDULE_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
     <!-- Reading deliveries: one's own occurrences and received deliveries, and one's own report rendered again as oneself; the
         engine answers a recipient their own delivery alone. The administrator reads a delivery to them as anyone does. -->
     <artifactGroups artifactGroupId="BOSS_INS_REPORT_DELIVERY" description="Insights: reading report deliveries">
