@@ -142,7 +142,8 @@ along with this software (see the LICENSE.md file). If not, see
         chosen (MANTLE_ACTIVE_ORG), and no private contact of another user's. ALWAYS, for view: CalcGrid enters the profile
         before it reads, so these filters are the ones its finds get, whatever screen it is shown under. They also author
         documents (CALC_GRID_AUTHOR). CalcGrid itself is shown under Insights (screen/Insights.xml), whose root grant opens
-        it: a Sales administrator reaches it as an Insights user. No grant names the framework's own screen. -->
+        it: a Sales administrator reaches it as an Insights user. No grant names the framework's own screen. The sales managers
+        and readers read the profile too, granted in BossSetupSalesData.xml where their groups are defined. -->
     <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_SALES_CALC_PROFILE" userGroupId="BOSS_SALES_ADMIN" artifactGroupId="CALC_PROFILE_SALES"
             authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_SALES_CALC_PROFILE" entityFilterSetId="MANTLE_USER_ORG"/>

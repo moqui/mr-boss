@@ -292,7 +292,10 @@ function reportLinks(capabilities) {
         // P6: each panel's menu offers Drill, Insights' own screen over the engine's get#Drill; Analysis is the author's
         // and the steward's
         drill: "//Insights/Drill",
-        analysis: authors ? "//Insights/ReportBuilder/Analysis" : null
+        analysis: authors ? "//Insights/ReportBuilder/Analysis" : null,
+        // CalcGrid's Schedule opens a saved document's schedule here (the list, ?definitionId= preselecting it), where the
+        // area adds the recipient cap to the policy (mr-moqui plans/IronCalc-DB2.md CG1.2)
+        schedules: "//Insights/ScheduledReports/Schedules"
     }
 }
 // Insights' policy for the framework report screens it shows, the reportPolicy map they read beside reportLinks (mr-moqui
